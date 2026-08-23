@@ -1,0 +1,10 @@
+{
+  "automationVersion": "21.0.6",
+  "runtimeBaseline": "21.0.4",
+  "runtimeBuildId": "powder-21.0.4-capacity-guard",
+  "scope": "supply-chain-repository-security",
+  "gameplayChanges": false,
+  "runtimeChanges": false,
+  "benchmarks": ["mrdoob/three.js", "nodejs/node", "vercel/next.js"],
+  "notes": "Repository security hardening only. Adds secret/file/workflow permission/action-source policy without requiring paid GitHub Advanced Security."
+}
