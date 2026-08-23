@@ -6,6 +6,7 @@
 - CI permission: contents read-only.
 - Release write permission: isolated to tag-triggered workflow.
 - PR CI: Ubuntu + Windows policy checks, then full regression.
+- Cross-platform line endings: text files are locked to LF via `.gitattributes` so SHA/gameplay-freeze evidence is stable on Windows.
 - Release: tag/version binding, full regression, ZIP, SHA-256, GitHub Release.
 - Dependency maintenance: Dependabot for GitHub Actions.
 - Large ZIP policy: source history continues to ignore `*.zip`.

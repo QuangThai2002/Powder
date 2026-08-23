@@ -14,6 +14,7 @@ Chỉ áp dụng pattern CI/release; không copy engine, gameplay hoặc framewo
 ## Powder CI
 - PR/push `main` tự chạy Policy Gate.
 - Policy Gate chạy cả Ubuntu và Windows.
+- `.gitattributes` khóa LF cho text để hash/gameplay freeze không sai trên Windows do CRLF.
 - Sau đó chạy Final Gate 21.0.4 hiện hành.
 - JSON kết quả được giữ 14 ngày dưới dạng GitHub Actions artifact.
 - Run cũ cùng branch tự hủy bằng `concurrency`.

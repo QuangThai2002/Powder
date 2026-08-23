@@ -23,5 +23,6 @@ ok('releaseSha256',release.includes('sha256sum')&&release.includes('.zip.sha256'
 ok('noSilentOfficialFlip',release.includes('never silently flips official=true'));
 ok('dependencyAutomation',exists('.github/dependabot.yml')&&read('.github/dependabot.yml').includes('package-ecosystem: github-actions'));
 const gi=read('.gitignore');ok('largeArtifactPolicy',gi.split(/\r?\n/).some(x=>x.trim()==='*.zip'));
+const ga=read('.gitattributes');ok('lineEndingPolicy',ga.includes('* text=auto eol=lf')&&ga.includes('*.webp -text')&&ga.includes('*.zip -text'));
 const freeze=JSON.parse(read('RELEASE-FREEZE-BASELINE-19.9.0.json')),changed=[];for(const x of freeze.critical||[]){const p=path.join(root,x.path);if(!fs.existsSync(p)){changed.push(x.path);continue}const b=fs.readFileSync(p),h=crypto.createHash('sha256').update(b).digest('hex');if(h!==x.sha256||b.length!==x.size)changed.push(x.path)}ok('gameplayFreeze22',freeze.criticalCount===22&&changed.length===0,{changed});
 o.pass=Object.values(o.checks).every(Boolean);console.log(JSON.stringify(o,null,2));if(!o.pass)process.exit(1);

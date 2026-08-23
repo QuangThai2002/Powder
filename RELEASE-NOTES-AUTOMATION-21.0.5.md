@@ -2,6 +2,7 @@
 
 - Added GitHub Actions CI for PR/push to main.
 - Added Ubuntu + Windows policy validation.
+- Added `.gitattributes` LF enforcement to keep hashes stable across Windows/Linux.
 - Added automatic current Final Gate execution.
 - Added CI concurrency cancellation for obsolete runs.
 - Added Final Gate JSON artifact retention.
