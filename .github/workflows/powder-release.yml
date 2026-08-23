@@ -1,0 +1,63 @@
+name: Powder Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+concurrency:
+  group: powder-release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact tag
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate tag and runtime metadata
+        shell: bash
+        run: |
+          VERSION="$(node -p "JSON.parse(require('fs').readFileSync('release.json','utf8')).version")"
+          EXPECTED="v${VERSION}"
+          test "${GITHUB_REF_NAME}" = "${EXPECTED}" || { echo "Tag ${GITHUB_REF_NAME} != ${EXPECTED}"; exit 1; }
+          test "$(node -p "JSON.parse(require('fs').readFileSync('release.json','utf8')).official")" = "false" || { echo "Automation never silently flips official=true"; exit 1; }
+      - name: Run repository automation policy
+        run: node tools/powder-ci-policy-gate-v21005.mjs .
+      - name: Run current runtime final gate
+        run: node tools/powder-final-gate-v21004.mjs . | tee FINAL-GATE-RELEASE.json
+      - name: Package release artifact
+        shell: bash
+        run: |
+          VERSION="$(node -p "JSON.parse(require('fs').readFileSync('release.json','utf8')).version")"
+          BUILD="$(node -p "JSON.parse(require('fs').readFileSync('release.json','utf8')).buildId")"
+          NAME="Powder-${VERSION}"
+          zip -qr "${NAME}.zip" . -x '.git/*' '.github/*' '*.zip' '*.sha256' 'CI-FINAL-GATE*' 'FINAL-GATE-RELEASE*'
+          sha256sum "${NAME}.zip" > "${NAME}.zip.sha256"
+          cp FINAL-GATE-RELEASE.json "${NAME}-FINAL-GATE.json"
+          printf '%s\n' "buildId=${BUILD}" > "${NAME}-BUILD.txt"
+      - name: Publish GitHub Release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          VERSION="$(node -p "JSON.parse(require('fs').readFileSync('release.json','utf8')).version")"
+          NAME="Powder-${VERSION}"
+          gh release create "${GITHUB_REF_NAME}" \
+            "${NAME}.zip" \
+            "${NAME}.zip.sha256" \
+            "${NAME}-FINAL-GATE.json" \
+            "${NAME}-BUILD.txt" \
+            --verify-tag \
+            --title "Powder ${VERSION}" \
+            --generate-notes
