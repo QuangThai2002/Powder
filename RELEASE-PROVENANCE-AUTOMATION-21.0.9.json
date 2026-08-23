@@ -1,0 +1,10 @@
+{
+  "automationVersion": "21.0.9",
+  "runtimeBaseline": "21.0.4+21.0.7-boot-hotfix",
+  "scope": "release-provenance-recovery-verification",
+  "gameplayChanges": false,
+  "runtimeChanges": false,
+  "benchmarks": ["slsa-framework/slsa-github-generator", "sigstore/cosign", "actions/attest-build-provenance"],
+  "attestationPolicy": "GitHub Artifact Attestations are optional because private repositories require eligible GitHub Enterprise Cloud support; Powder provenance must work without that paid capability.",
+  "notes": "Binds release ZIP SHA-256, Final Gate evidence, release metadata and exact Git commit/tree into verifiable provenance plus a human-approved rollback manifest."
+}
