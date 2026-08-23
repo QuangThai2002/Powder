@@ -31,6 +31,8 @@ jobs:
           node-version: '24'
       - name: Repository automation policy
         run: node tools/powder-ci-policy-gate-v21005.mjs .
+      - name: Supply-chain security policy
+        run: node tools/powder-supply-chain-gate-v21006.mjs .
 
   regression:
     name: Full Powder regression
