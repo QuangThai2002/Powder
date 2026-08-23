@@ -1,0 +1,39 @@
+name: Powder Adaptive Pressure
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: powder-adaptive-pressure-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  adaptive-pressure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify Chrome
+        run: google-chrome --version
+      - name: Run adaptive pressure gate
+        run: node tools/powder-adaptive-pressure-gate-v21011.mjs .
+      - name: Upload adaptive pressure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: powder-adaptive-pressure-${{ github.sha }}
+          path: artifacts/pressure-v21011/
+          if-no-files-found: error
+          retention-days: 14
