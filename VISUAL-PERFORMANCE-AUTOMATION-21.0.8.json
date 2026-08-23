@@ -1,0 +1,9 @@
+{
+  "automationVersion": "21.0.8",
+  "runtimeBaseline": "21.0.4+21.0.7-boot-hotfix",
+  "scope": "visual-regression-performance-budget",
+  "gameplayChanges": false,
+  "runtimeChanges": false,
+  "benchmarks": ["microsoft/playwright", "GoogleChrome/lighthouse-ci", "mrdoob/three.js"],
+  "notes": "Adds deterministic visual fingerprints, desktop/mobile/Admin evidence, and static/runtime performance budgets without adding a player runtime dependency."
+}
