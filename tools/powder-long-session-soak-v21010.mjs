@@ -226,6 +226,8 @@ try {
   const finalMetrics = pickMetrics(await cmd('Performance.getMetrics'));
   const finalState = await evalJs(cmd, `(()=>({
     activeView:document.body?.dataset?.activeView||'',
+    views:[...document.querySelectorAll('.view')].map(v=>({id:v.id,hidden:v.hidden})),
+    setup:document.querySelector('#setupScreen')?document.querySelector('#setupScreen').hidden:null,
     transient:document.querySelectorAll('.fx-ripple,.view-vfx-enter.is-orphan,[data-vfx-transient="true"]').length,
     lifecycle:window.POWDER_RUNTIME_LIFECYCLE_V1826?.diagnostics?.()||null,
     image:window.POWDER_IMAGE_RUNTIME_V1826?.diagnostics?.()||null,
@@ -233,28 +235,35 @@ try {
   }))()`);
   report.details.final = { metrics: finalMetrics, state: finalState };
 
-  const heapAllowance = Math.max(baselineMetrics.JSHeapUsedSize * 1.35, baselineMetrics.JSHeapUsedSize + 16 * 1024 * 1024);
-  const nodeAllowance = Math.max(baselineMetrics.Nodes * 1.15, baselineMetrics.Nodes + 900);
+  const heapAllowance = Math.min(baselineMetrics.JSHeapUsedSize * 1.18, baselineMetrics.JSHeapUsedSize + 8 * 1024 * 1024);
+  const nodeAllowance = Math.min(baselineMetrics.Nodes * 1.08, baselineMetrics.Nodes + 600);
+  const lateHeapSpreadAllowance = 3 * 1024 * 1024;
   const roundHeaps = report.details.rounds.map(x => x.metrics.JSHeapUsedSize);
   const lastThree = roundHeaps.slice(-3);
   const lateHeapSpread = lastThree.length ? Math.max(...lastThree) - Math.min(...lastThree) : Infinity;
+  const savedHidden = new Map((savedState.views || []).map(x => [x.id, !!x.hidden]));
+  const finalHidden = new Map((finalState.views || []).map(x => [x.id, !!x.hidden]));
+  const viewStateRestored = savedHidden.size === finalHidden.size && [...savedHidden].every(([id, hidden]) => finalHidden.get(id) === hidden);
 
   report.details.budgets = {
     heapAllowance,
     nodeAllowance,
-    lateHeapSpreadAllowance: 10 * 1024 * 1024,
+    lateHeapSpreadAllowance,
     baselineHeap: baselineMetrics.JSHeapUsedSize,
     finalHeap: finalMetrics.JSHeapUsedSize,
+    heapGrowthRatio: baselineMetrics.JSHeapUsedSize ? finalMetrics.JSHeapUsedSize / baselineMetrics.JSHeapUsedSize : null,
     baselineNodes: baselineMetrics.Nodes,
-    finalNodes: finalMetrics.Nodes
+    finalNodes: finalMetrics.Nodes,
+    nodeGrowthRatio: baselineMetrics.Nodes ? finalMetrics.Nodes / baselineMetrics.Nodes : null,
+    lateHeapSpread
   };
 
   report.checks.allRoundsExecuted = report.details.rounds.length === rounds && report.details.rounds.every(x => x.step?.touched >= 4);
   report.checks.transientsPurged = report.details.rounds.every(x => x.step?.transient === 0) && finalState.transient === 0;
   report.checks.heapReturnsWithinBudget = finalMetrics.JSHeapUsedSize <= heapAllowance;
   report.checks.nodesReturnWithinBudget = finalMetrics.Nodes <= nodeAllowance;
-  report.checks.lateHeapStabilizes = lateHeapSpread <= 10 * 1024 * 1024;
-  report.checks.stateRestored = finalState.activeView === (savedState.bodyActive || '');
+  report.checks.lateHeapStabilizes = lateHeapSpread <= lateHeapSpreadAllowance;
+  report.checks.stateRestored = finalState.activeView === (savedState.bodyActive || '') && finalState.setup === savedState.setup && viewStateRestored;
   report.details.seriousRuntimeExceptions = seriousExceptions(events);
   report.checks.noSeriousRuntimeException = report.details.seriousRuntimeExceptions.length === 0;
 
