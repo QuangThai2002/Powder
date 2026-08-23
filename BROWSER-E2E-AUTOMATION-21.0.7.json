@@ -1,0 +1,9 @@
+{
+  "automationVersion": "21.0.7",
+  "runtimeBaseline": "21.0.4",
+  "scope": "browser-e2e-automation",
+  "gameplayChanges": false,
+  "runtimeChanges": false,
+  "benchmarks": ["microsoft/playwright", "mrdoob/three.js", "excaliburjs/Excalibur"],
+  "notes": "Dependency-free Chrome DevTools Protocol smoke/E2E harness for Powder CI."
+}

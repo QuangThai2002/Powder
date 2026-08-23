@@ -1,0 +1,39 @@
+name: Powder Browser E2E
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: powder-browser-e2e-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  browser-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify Chrome
+        run: google-chrome --version
+      - name: Run Powder browser E2E
+        run: node tools/powder-browser-e2e-v21007.mjs .
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: powder-browser-e2e-${{ github.sha }}
+          path: artifacts/e2e-v21007/
+          if-no-files-found: error
+          retention-days: 14
