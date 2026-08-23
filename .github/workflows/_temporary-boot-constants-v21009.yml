@@ -1,0 +1,47 @@
+name: Temporary Boot Constants 21.0.9
+
+on:
+  push:
+    branches: [upgrade/21.0.9-release-provenance-recovery]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor == 'QuangThai2002'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: upgrade/21.0.9-release-provenance-recovery
+      - name: Restore missing boot constants
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('js/boot-loader-v21004.js')
+          text=p.read_text(encoding='utf-8')
+          if "const MAIN_STYLE=" not in text:
+              anchor="const LEGACY=[];\n"
+              assert anchor in text, 'LEGACY anchor missing'
+              block="""const MAIN_STYLE='css/powder-player-v1773.css';
+          const ENTRY_VISUALS=['assets/backgrounds/bg-loading-splash-1777.webp','assets/ui/powder-logo-project.webp','assets/backgrounds/bg-home.webp'].filter(u=>MANIFEST.some(a=>a.u===u));
+          const CRITICAL_VISUALS=[...new Set([...ENTRY_VISUALS,'assets/ui/base-fantasy.webp','assets/backgrounds/bg-powder-elemental-world.webp','assets/backgrounds/bg-shop-arcane-market.webp','assets/backgrounds/bg-chests-pow-hatchery.webp','assets/backgrounds/bg-adventure-crystal-plaza.webp','assets/backgrounds/bg-learning-arcane-academy.webp','assets/backgrounds/bg-gear-grand-armory.webp','assets/backgrounds/bg-battle-legend-cloud-arena.webp','assets/backgrounds/bg-boss-abyss-portal.webp','assets/backgrounds/bg-powdex-arcane-library.webp','assets/backgrounds/bg-inventory-crystal-sanctuary.webp','assets/backgrounds/bg-tamer-rank-hall.webp','assets/ui/combat/celestial-battlefield-theme-combat.webp','assets/items/ui-compact/military-coin.webp','assets/items/ui-compact/element-coin.webp','assets/ranks/rank-0.webp'])].filter(u=>MANIFEST.some(a=>a.u===u));
+          """
+              text=text.replace(anchor,anchor+block,1)
+              p.write_text(text,encoding='utf-8',newline='\n')
+      - name: Verify syntax and required constants
+        run: |
+          node --check js/boot-loader-v21004.js
+          grep -F "const MAIN_STYLE='css/powder-player-v1773.css'" js/boot-loader-v21004.js
+          grep -F "const ENTRY_VISUALS=" js/boot-loader-v21004.js
+          grep -F "const CRITICAL_VISUALS=" js/boot-loader-v21004.js
+      - name: Commit patch
+        run: |
+          git config user.name "Powder CI"
+          git config user.email "actions@users.noreply.github.com"
+          git add js/boot-loader-v21004.js
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "21.0.9: restore boot style and visual constants"
+          git push origin HEAD:upgrade/21.0.9-release-provenance-recovery
