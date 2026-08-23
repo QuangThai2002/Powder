@@ -54,9 +54,9 @@ const chrome=spawn(chromePath,['--headless=new','--no-sandbox','--disable-gpu','
 const report={version:'21.0.8',updateBaseline,static:staticMetrics(),screens:{},runtime:{},checks:{},errors:[]};
 try{
   await waitHttp('http://127.0.0.1:4173/index.html');const list=await(await waitHttp('http://127.0.0.1:9224/json/list')).json();const page=list.find(x=>x.type==='page');if(!page)throw new Error('No Chrome page');
-  const{ws,cmd}=await cdpSession(page.webSocketDebuggerUrl);await cmd('Page.enable');await cmd('Runtime.enable');await cmd('Performance.enable');
+  const{ws,cmd}=await cdpSession(page.webSocketDebuggerUrl);await cmd('Page.enable');await cmd('Runtime.enable');await cmd('Performance.enable');await cmd('HeapProfiler.enable');
   async function snap(name,url,width,height,wait=3500){
-    await cmd('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:width<600});await cmd('Page.navigate',{url});await waitReady(cmd);await sleep(wait);const dom=await evalJs(cmd,normalize);await sleep(150);const perf=stableRuntime(metricMap(await cmd('Performance.getMetrics')));const shot=await cmd('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});const file=path.join(outDir,`${name}.png`);fs.writeFileSync(file,Buffer.from(shot.data,'base64'));const fp=await fingerprintImage(cmd,`http://127.0.0.1:4173/artifacts/visual-v21008/${name}.png`);report.screens[name]={fingerprint:fp,dom};report.runtime[name]=perf;
+    await cmd('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:width<600});await cmd('Page.navigate',{url});await waitReady(cmd);await sleep(wait);const dom=await evalJs(cmd,normalize);await sleep(150);await cmd('HeapProfiler.collectGarbage');await sleep(80);const perf=stableRuntime(metricMap(await cmd('Performance.getMetrics')));const shot=await cmd('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});const file=path.join(outDir,`${name}.png`);fs.writeFileSync(file,Buffer.from(shot.data,'base64'));const fp=await fingerprintImage(cmd,`http://127.0.0.1:4173/artifacts/visual-v21008/${name}.png`);report.screens[name]={fingerprint:fp,dom};report.runtime[name]=perf;
   }
   await snap('index-desktop','http://127.0.0.1:4173/index.html',1440,1000,5000);
   await snap('index-mobile','http://127.0.0.1:4173/index.html',390,844,3500);
