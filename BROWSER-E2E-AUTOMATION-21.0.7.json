@@ -5,7 +5,10 @@
   "gameplayChanges": false,
   "runtimeChanges": true,
   "runtimeHotfix": true,
-  "hotfix": "Initialize TOTAL_BYTES from MANIFEST before boot state construction to prevent ReferenceError/loading stuck at 0%.",
+  "hotfixes": [
+    "Initialize TOTAL_BYTES from MANIFEST before boot state construction.",
+    "Define safe LEGACY cache source list to avoid ReferenceError during preload."
+  ],
   "benchmarks": ["microsoft/playwright", "mrdoob/three.js", "excaliburjs/Excalibur"],
-  "notes": "Adds dependency-free Chrome DevTools Protocol smoke/E2E coverage. The new browser gate discovered and fixed one real boot-loader runtime defect; combat/gameplay logic remains unchanged."
+  "notes": "Adds dependency-free Chrome DevTools Protocol smoke/E2E coverage. Browser testing discovered and fixed two real boot-loader ReferenceErrors; combat/gameplay logic remains unchanged."
 }
