@@ -1,0 +1,39 @@
+name: Powder Long Session Soak
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: powder-long-session-soak-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  long-session-soak:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify Chrome
+        run: google-chrome --version
+      - name: Run long-session soak and leak gate
+        run: node tools/powder-long-session-soak-v21010.mjs .
+      - name: Upload soak evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: powder-long-session-soak-${{ github.sha }}
+          path: artifacts/soak-v21010/
+          if-no-files-found: error
+          retention-days: 14
