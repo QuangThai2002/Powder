@@ -1,0 +1,5 @@
+(()=>{'use strict';
+const VERSION='20.19.0',BUILD_ID='powder-20.19.0-release-candidate-canary';
+function diagnostics(){const env=window.POWDER_ENV_V162||{},fg=window.POWDER_FULL_GAME_REGRESSION_V20180?.diagnostics?.()||{},freeze=(window.POWDER_RELEASE_FREEZE_V20190||window.POWDER_RELEASE_FREEZE_V20180)?.diagnostics?.()||{},checks={version:env.version===VERSION,buildId:env.buildId===BUILD_ID,fullGameRegression:fg.pass===true,freeze:freeze.pass===true,saveIntegrity:!!window.POWDER_SAVE_INTEGRITY_V20170,security:!!window.POWDER_SECURITY_STATUS_V20160,reliability:!!window.POWDER_RELIABILITY_V2080,transactionSafety:!!window.POWDER_TX_SAFETY_V2090,antiAbuse:!!window.POWDER_EXPLOIT_GUARD_V20130,passiveOnly:true};return{version:VERSION,buildId:BUILD_ID,checks,pass:Object.values(checks).every(Boolean),policy:{stages:[5,20,50,100],manualStageHealth:false,rollbackDrillRequired:true,official:false},at:Date.now()}}
+const api=Object.freeze({version:VERSION,buildId:BUILD_ID,diagnostics});window.POWDER_RELEASE_CANDIDATE_V20190=api;try{window.dispatchEvent(new CustomEvent('powder:release-candidate',{detail:diagnostics()}))}catch(_){}
+})();

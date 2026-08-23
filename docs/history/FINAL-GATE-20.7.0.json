@@ -1,0 +1,103 @@
+{
+  "version": "20.7.0",
+  "checks": {
+    "htmlDuplicateIds": true,
+    "localRefs": true,
+    "cssStructure": true,
+    "jsSyntax": true,
+    "releaseAndSW": true,
+    "manifestIntegrity": true,
+    "scriptOrder": true,
+    "noStalePlayerBoot": true,
+    "oldBootRemoved": true,
+    "gameplayFreeze22": true,
+    "eventOpsRegression": true,
+    "productionLaunchControlGate": true
+  },
+  "details": {
+    "htmlDuplicateIds": {
+      "index.html": [],
+      "admin.html": [],
+      "offline.html": [],
+      "privacy.html": [],
+      "terms.html": []
+    },
+    "localRefs": [],
+    "cssStructure": {
+      "count": 43,
+      "bad": []
+    },
+    "jsSyntax": {
+      "count": 153,
+      "bad": []
+    },
+    "releaseAndSW": {
+      "version": "20.7.0",
+      "channel": "production",
+      "buildId": "powder-20.7.0-production-launch-control-hardening",
+      "minimumVersion": "0.0.0",
+      "serviceWorker": "20.7.0",
+      "releaseState": "production-launch-control-hardening",
+      "official": false,
+      "notes": "Production Launch Control Hardening: immutable release authorization workflow, pinned rollback target/change window, server-derived rollout health from Observability, manual stage-health input removed, canary 5→20→50→100 remains fail-closed. Gameplay remains frozen."
+    },
+    "manifestIntegrity": {
+      "entries": 1260,
+      "hash": "646d7dee038b703c",
+      "calc": "646d7dee038b703c",
+      "bad": []
+    },
+    "scriptOrder": {
+      "count": 105
+    },
+    "noStalePlayerBoot": [],
+    "gameplayFreeze22": {
+      "changed": []
+    },
+    "productionLaunchControlGate": {
+      "version": "20.7.0",
+      "checks": {
+        "releaseMetadata": true,
+        "gameplayFreeze": true,
+        "serverVersion": true,
+        "authorizationWorkflow": true,
+        "ownerProductionMutations": true,
+        "manualStageHealthBlocked": true,
+        "serverDerivedHealth": true,
+        "stageHealthThresholds": true,
+        "immutablePlanBinding": true,
+        "rollbackPinned": true,
+        "changeWindow": true,
+        "failClosedPreflight": true,
+        "rolloutSequence": true,
+        "adminWiring": true,
+        "adminNoManualHealthFields": true,
+        "canonical99x396": true
+      },
+      "details": {
+        "releaseMetadata": {
+          "version": "20.7.0",
+          "channel": "production",
+          "buildId": "powder-20.7.0-production-launch-control-hardening",
+          "minimumVersion": "0.0.0",
+          "serviceWorker": "20.7.0",
+          "releaseState": "production-launch-control-hardening",
+          "official": false,
+          "notes": "Production Launch Control Hardening: immutable release authorization workflow, pinned rollback target/change window, server-derived rollout health from Observability, manual stage-health input removed, canary 5→20→50→100 remains fail-closed. Gameplay remains frozen."
+        },
+        "gameplayFreeze": {
+          "critical": 22,
+          "changed": []
+        },
+        "canonical99x396": {
+          "pows": 99,
+          "kits": 99,
+          "skills": 396,
+          "unique": 396
+        }
+      },
+      "pass": true
+    }
+  },
+  "pass": true
+}

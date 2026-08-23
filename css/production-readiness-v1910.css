@@ -1,0 +1,21 @@
+/* Powder 19.1.0 Production Readiness: additive mobile/network hardening only. */
+html,body{max-width:100%;overflow-x:hidden}
+.pr1910-network-banner{position:fixed;z-index:12050;left:50%;top:max(8px,env(safe-area-inset-top));transform:translateX(-50%);width:min(680px,calc(100% - 24px));padding:9px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(12,20,33,.94);color:#eef5ff;text-align:center;font-size:12px;font-weight:750;box-shadow:0 12px 34px rgba(0,0,0,.34);pointer-events:none;backdrop-filter:blur(9px)}
+.pr1910-network-banner[hidden]{display:none}.pr1910-network-banner.is-offline{border-color:rgba(255,111,132,.42);background:rgba(52,17,27,.95)}.pr1910-network-banner.is-reconnecting{border-color:rgba(236,198,92,.42);background:rgba(40,34,13,.95)}.pr1910-network-banner.is-online{border-color:rgba(87,222,169,.42);background:rgba(11,41,31,.95)}
+.pr1910-touch button,.pr1910-touch a.btn,.pr1910-touch .btn,.pr1910-touch input[type=button],.pr1910-touch input[type=submit]{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.pr1910-touch .pvp1870-shell button,.pr1910-touch .pvp1880-question-modal button,.pr1910-touch .pvp1880-question-modal label{min-height:44px}
+.pr1910-touch .pvp1870-unit{min-height:96px}.pr1910-touch .pvp1870-friend-challenge{min-height:40px}
+.pr1910-touch input,.pr1910-touch select,.pr1910-touch textarea{font-size:max(16px,1em)}
+@media(max-width:430px){
+ .pvp1870-shell{padding:8px!important;border-radius:14px!important}.pvp1870-head,.pvp1870-battle-head{gap:7px}.pvp1870-badges{gap:4px}.pvp1870-badges>*{max-width:100%}
+ .pvp1870-stats{gap:5px}.pvp1870-stats>div{padding:7px 6px}.pvp1870-arena{gap:7px;margin:8px 0}.pvp1870-active-row{gap:3px}.pvp1870-unit{padding:4px!important;border-radius:10px}.pvp1870-unit-art{height:54px!important}.pvp1870-unit-art>b{font-size:7px}.pvp1870-unit-copy strong{font-size:9px!important}.pvp1870-unit-copy small{font-size:7.5px!important}.pvp1870-statuses span{font-size:6.5px}
+ .pvp1870-command{padding:8px;border-radius:12px}.pvp1870-skills{gap:4px}.pvp1870-skills button{padding:8px 6px;min-width:0}.pvp1870-skills button b,.pvp1870-skills button strong{overflow:hidden;text-overflow:ellipsis}.pvp1870-action-row .btn{width:100%}
+ .pvp1870-log{padding:8px}.pvp1870-log article{grid-template-columns:62px minmax(0,1fr);gap:5px;padding:5px}.pvp1870-log article span{overflow-wrap:anywhere}
+ .pvp1870-replay-modal{padding:7px}.pvp1870-replay-modal>article{width:100%;padding:10px;border-radius:14px}.pvp1870-replay-head{align-items:flex-start}.pvp1870-replay-focus{grid-template-columns:40px minmax(0,1fr) 40px;padding:8px}.pvp1870-replay-focus code{overflow-wrap:anywhere}
+ .pvp1880-question-modal{padding:8px 5px!important}.pvp1880-question-modal>article{width:100%!important;padding:10px!important}.pvp1880-question-modal fieldset{padding:8px}.pvp1880-question-modal label{padding:8px}.pvp1880-qactions{align-items:stretch;flex-direction:column}.pvp1880-qactions .btn{width:100%}
+}
+@media(max-width:360px){
+ .pvp1870-shell{padding:6px!important}.pvp1870-unit-art{height:48px!important}.pvp1870-active-row{gap:2px}.pvp1870-unit{padding:3px!important}.pvp1870-skills{grid-template-columns:1fr 1fr}.pvp1870-skills button{font-size:10px}.pvp1870-result h2{font-size:28px}.pvp1870-team-order{grid-template-columns:1fr!important}.pvp1870-team-order article:nth-child(5){grid-column:auto!important}
+}
+@media(pointer:coarse){.pvp1870-unit:hover,.pvp1870-skills button:hover{transform:none!important}.pvp1870-log>div:last-child{-webkit-overflow-scrolling:touch}.pvp1870-replay-list{-webkit-overflow-scrolling:touch}}
+@media(prefers-reduced-motion:reduce){.pr1910-network-banner{transition:none!important;animation:none!important}}

@@ -1,0 +1,142 @@
+(()=>{
+  'use strict';
+  const D=window.POWDER_DATA, LM=window.POWDER_LEARNING_MASTER_V2;
+  if(!D||!LM)return;
+  const $=s=>document.querySelector(s);
+  const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const skillVN={Vocabulary:'Từ vựng',Hanzi:'Hán tự',Grammar:'Ngữ pháp',Reading:'Đọc hiểu',Writing:'Viết'};
+  const allQuestions=()=>{
+    const map=new Map();
+    for(const q of D.questions||[])if(q?.id)map.set(q.id,q);
+    for(const l of D.lessons||[])for(const q of l.questions||[])if(q?.id&&!map.has(q.id))map.set(q.id,{...q,lessonId:q.lessonId||l.id,language:q.language||l.language});
+    return map;
+  };
+  const questionMap=allQuestions();
+  const save=()=>window.POWDER_APP?.getSave?.()||null;
+  const classify=v=>v<=0?'unseen':v<70?'weak':v<90?'good':'mastered';
+  const label=v=>v<=0?'Chưa đánh giá':v<70?'Cần ôn':v<80?'Đang củng cố':v<90?'Ổn':'Thành thạo';
+  const fmtRelative=ms=>{
+    const n=Math.max(0,Math.round(ms/60000));
+    if(n<1)return'dưới 1 phút';
+    if(n<60)return`${n} phút`;
+    const h=Math.round(n/60); if(h<24)return`${h} giờ`;
+    return`${Math.round(h/24)} ngày`;
+  };
+  function findLessonForSkill(s,lang,skill){
+    const done=new Set(s.lessonsDone||[]);
+    const candidates=[];
+    for(const l of D.lessons||[]){
+      if(l.language!==lang||!done.has(l.id))continue;
+      let count=0,weak=0;
+      for(const q of l.questions||[]){
+        const m=q.learningMeta||LM.questionMeta?.({...q,lessonId:q.lessonId||l.id,language:q.language||l.language})||{};
+        if(m.SkillType!==skill)continue;
+        count++;
+        const st=s.questionProgress?.[q.id];
+        if(st?.seen&&(Number(st.mastery)||0)<80)weak++;
+      }
+      if(count)candidates.push({l,weak,count,mastery:LM.lessonMastery?.(s,l.id)||0});
+    }
+    candidates.sort((a,b)=>b.weak-a.weak||a.mastery-b.mastery);
+    return candidates[0]?.l||null;
+  }
+  function openLesson(id){if(!id)return;window.POWDER_APP?.openLessonFromDungeon?.(id)}
+  function startReview(lang){
+    window.POWDER_REVIEW_LANGUAGE_V149=lang||null;
+    const btn=$('#reviewDueBtn');
+    if(btn)btn.click();
+  }
+  function stats(s){
+    const states=Object.values(s.questionProgress||{}).filter(x=>Number(x.seen)>0),now=Date.now();
+    return{
+      urgent:states.filter(x=>Number(x.nextReview||0)<=now).length,
+      weak:states.filter(x=>(Number(x.mastery)||0)<70).length,
+      stable:states.filter(x=>(Number(x.mastery)||0)>=70&&(Number(x.mastery)||0)<90).length,
+      mastered:states.filter(x=>(Number(x.mastery)||0)>=90).length,
+      next:states.map(x=>Number(x.nextReview||0)).filter(t=>t>now).sort((a,b)=>a-b)[0]||0
+    };
+  }
+  function mistakeRows(s){
+    const ids=[...new Set([...(s.battleMistakes||[])].reverse())];
+    const rows=[];
+    for(const id of ids){
+      const q=questionMap.get(id); if(!q)continue;
+      const l=D.lessons.find(x=>x.id===(q.lessonId||q.learningMeta?.LessonID));
+      const m=q.learningMeta||LM.questionMeta?.(q)||{};
+      rows.push({q,l,skill:m.SkillType||'Grammar',lang:m.Language||q.language||l?.language||'ZH'});
+      if(rows.length>=4)break;
+    }
+    return rows;
+  }
+  function skillGroup(s,lang){
+    const data=LM.skillMasterySummary?.(s,lang)||{};
+    const keys=lang==='ZH'?['Vocabulary','Hanzi','Grammar','Reading','Writing']:['Vocabulary','Grammar','Reading','Writing'];
+    return keys.map(k=>({skill:k,value:Number(data[k])||0}));
+  }
+  let lastRenderSig='';
+  function render(){
+    const host=$('#learningCoachV149'); if(!host)return;
+    const s=save(); if(!s)return;
+    LM.normalizeSave?.(s);
+    const dueZH=LM.dueQuestions?.(s,'ZH')||[],dueEN=LM.dueQuestions?.(s,'EN')||[];
+    const z=skillGroup(s,'ZH'),e=skillGroup(s,'EN'),st=stats(s),mistakes=mistakeRows(s);
+    const learnedSkills=[...z.map(x=>({...x,lang:'ZH'})),...e.map(x=>({...x,lang:'EN'}))].filter(x=>x.value>0).sort((a,b)=>a.value-b.value);
+    const focus=learnedSkills[0]||null,focusLesson=focus?findLessonForSkill(s,focus.lang,focus.skill):null;
+    const nextReview=st.next?`Lượt ôn kế tiếp sau khoảng ${fmtRelative(st.next-Date.now())}.`:'Chưa có lịch ôn tiếp theo.';
+    const renderSig=JSON.stringify([dueZH.length,dueEN.length,st.urgent,st.weak,st.stable,st.mastered,st.next,z.map(x=>[x.skill,x.value]),e.map(x=>[x.skill,x.value]),mistakes.map(x=>x.q?.id||''),focus?.lang||'',focus?.skill||'',focus?.value||0,focusLesson?.id||'']);if(renderSig===lastRenderSig)return;lastRenderSig=renderSig;
+    const skillHtml=(lang,rows)=>`<section class="lc149-skill-group"><div class="lc149-skill-title"><span>${lang==='ZH'?'🇨🇳 Tiếng Trung':'🇬🇧 English'}</span><small>${lang==='ZH'?'HSK':'B1 → B2'}</small></div>${rows.map(({skill,value})=>`<div class="lc149-skill-row is-${classify(value)}"><span>${skillVN[skill]||skill}</span><span class="lc149-bar"><i style="width:${Math.max(0,Math.min(100,value))}%"></i></span><strong>${value?`${value}%`:'—'}</strong></div>`).join('')}</section>`;
+    const mistakesHtml=mistakes.length?mistakes.map(({q,l,skill,lang})=>`<article class="lc149-mistake"><div class="lc149-mistake-top"><span>${lang==='ZH'?'中文':'EN'} · ${esc(skillVN[skill]||skill)}${l?` · ${esc(l.title)}`:''}</span>${l?`<button type="button" data-lc149-lesson="${esc(l.id)}">Ôn bài này →</button>`:''}</div><p>${esc(q.prompt)}</p>${q.answer?`<small class="lc149-mistake-answer">Đáp án đúng: <b>${esc(q.answer)}</b></small>`:''}${q.explain?`<small>${esc(q.explain)}</small>`:''}</article>`).join(''):`<div class="lc149-empty">Chưa có lỗi gần đây. Tiếp tục học để Powder xác định điểm cần củng cố.</div>`;
+    let focusHtml='<div class="lc149-focus"><span><b>🎯 Chưa đủ dữ liệu để xác định điểm yếu</b><small>Hoàn thành một bài kiểm tra để hệ thống bắt đầu theo dõi.</small></span></div>';
+    if(focus){
+      const focusText=focusLesson?`Bài phù hợp: ${esc(focusLesson.title)}.`:'Hãy tiếp tục các bài có phần này.';
+      const focusButton=focusLesson?`<button class="btn secondary" type="button" data-lc149-lesson="${esc(focusLesson.id)}">Ôn ngay</button>`:'';
+      focusHtml=`<div class="lc149-focus"><span><b>🎯 Nên tập trung: ${focus.lang==='ZH'?'Tiếng Trung':'English'} · ${esc(skillVN[focus.skill]||focus.skill)} ${focus.value}%</b><small>${esc(label(focus.value))}. ${focusText}</small></span>${focusButton}</div>`;
+    }
+    host.innerHTML=`
+      <section class="lc149-head">
+        <div><p class="eyebrow">TRỢ LÝ ÔN TẬP</p><h2>Hôm nay nên ôn gì?</h2><p>${dueZH.length+dueEN.length?`Bạn có <b>${dueZH.length+dueEN.length}</b> câu đến hạn. Ôn ngắn trước khi học bài mới sẽ giúp giữ kiến thức ổn định.`:'Hiện không có câu đến hạn. Bạn có thể tiếp tục bài mới hoặc củng cố phần có điểm thấp nhất.'}</p></div>
+        <div class="lc149-head-actions"><button class="btn primary" type="button" data-lc149-review="auto" ${dueZH.length+dueEN.length?'':'disabled'}>🔁 Ôn nhanh 5 phút</button>${focusLesson?`<button class="btn secondary" type="button" data-lc149-lesson="${esc(focusLesson.id)}">🎯 Củng cố ${esc(skillVN[focus.skill]||focus.skill)}</button>`:''}</div>
+      </section>
+      <div class="lc149-grid">
+        <article class="lc149-card">
+          <div class="lc149-card-head"><div><p class="eyebrow">SRS HÔM NAY</p><h3>Câu cần ôn</h3></div><small>Mỗi lượt tối đa 8 câu</small></div>
+          <div class="lc149-due-grid">
+            <div class="lc149-due"><span class="lc149-due-icon">中</span><span><b>${dueZH.length} câu</b><small>Tiếng Trung đến hạn</small></span></div>
+            <div class="lc149-due"><span class="lc149-due-icon">EN</span><span><b>${dueEN.length} câu</b><small>English đến hạn</small></span></div>
+            <button class="btn secondary lc149-review-btn" type="button" data-lc149-review="ZH" ${dueZH.length?'':'disabled'}>Ôn Trung · tối đa 8 câu</button>
+            <button class="btn secondary lc149-review-btn" type="button" data-lc149-review="EN" ${dueEN.length?'':'disabled'}>Ôn Anh · tối đa 8 câu</button>
+            <p class="lc149-review-note">Một lượt SRS Trung và một lượt SRS Anh đạt ≥70% có thể tính vào Hành trình hôm nay. Không cần làm lại cùng một lượt để farm quà.</p>
+          </div>
+          <p class="lc149-next-review">${esc(nextReview)}</p>
+        </article>
+        <article class="lc149-card">
+          <div class="lc149-card-head"><div><p class="eyebrow">TRẠNG THÁI KIẾN THỨC</p><h3>Bộ nhớ của bạn</h3></div><small>${Object.values(s.questionProgress||{}).filter(x=>Number(x.seen)>0).length} câu đã theo dõi</small></div>
+          <div class="lc149-status-grid"><div class="lc149-status is-urgent"><b>${st.urgent}</b><small>Đến hạn</small></div><div class="lc149-status is-weak"><b>${st.weak}</b><small>Cần củng cố</small></div><div class="lc149-status is-stable"><b>${st.stable}</b><small>Đang ổn</small></div><div class="lc149-status is-mastered"><b>${st.mastered}</b><small>Thành thạo</small></div></div>
+          ${focusHtml}
+        </article>
+        <article class="lc149-card">
+          <div class="lc149-card-head"><div><p class="eyebrow">ĐỘ THÀNH THẠO</p><h3>Bạn mạnh ở đâu?</h3></div><small>≥80% tốt · ≥90% thành thạo</small></div>
+          <div class="lc149-skill-groups">${skillHtml('ZH',z)}${skillHtml('EN',e)}</div>
+        </article>
+        <article class="lc149-card">
+          <div class="lc149-card-head"><div><p class="eyebrow">ĐIỂM CẦN SỬA</p><h3>Các câu bạn vừa sai</h3></div><small>4 lỗi gần nhất</small></div>
+          <div class="lc149-mistakes">${mistakesHtml}</div>
+        </article>
+      </div>`;
+    host.querySelectorAll('[data-lc149-review]').forEach(b=>b.addEventListener('click',()=>startReview(b.dataset.lc149Review==='auto'?null:b.dataset.lc149Review)));
+    host.querySelectorAll('[data-lc149-lesson]').forEach(b=>b.addEventListener('click',()=>openLesson(b.dataset.lc149Lesson)));
+  }
+  function boot(){
+    const learn=$('#learnView'); if(!learn)return;
+    let host=$('#learningCoachV149');
+    if(!host){host=document.createElement('div');host.id='learningCoachV149';host.className='learning-coach-v149';const summary=$('#learningSummary');summary?.insertAdjacentElement('afterend',host)}
+    let renderFrame=0;const queueRender=()=>{if(learn.hidden)return;cancelAnimationFrame(renderFrame);renderFrame=requestAnimationFrame(()=>{renderFrame=0;render()})};
+    render();
+    const obs=new MutationObserver(queueRender);
+    obs.observe(learn,{attributes:true,attributeFilter:['hidden']});
+    const summary=$('#learningSummary');if(summary)obs.observe(summary,{childList:true,subtree:true});
+    document.addEventListener('click',e=>{if(e.target.closest('#lessonActionBtn,[data-close="lessonModal"],#reviewDueBtn'))setTimeout(queueRender,140)},true);
+    window.POWDER_LEARNING_HUB_V149={render,startReview};
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();

@@ -1,0 +1,63 @@
+{
+  "version": "21.0.1",
+  "checks": {
+    "metadata": true,
+    "predecessorOfficial": true,
+    "serverContract": true,
+    "automaticHaltOnlyWhenArmed": true,
+    "noAutomaticRollback": true,
+    "safeResume": true,
+    "serviceEvidenceOnly": true,
+    "securitySurface": true,
+    "adminBinding": true,
+    "manifest": true,
+    "bootOrder": true,
+    "singleBoot": true,
+    "gameplayFreeze22": true,
+    "runtime": true
+  },
+  "details": {
+    "metadata": {
+      "version": "21.0.1",
+      "channel": "production",
+      "buildId": "powder-21.0.1-launch-stabilization",
+      "minimumVersion": "0.0.0",
+      "serviceWorker": "21.0.1",
+      "releaseState": "launch-stabilization-readiness",
+      "official": false,
+      "promotedFrom": "powder-21.0.0-official-production",
+      "notes": "Post-launch stabilization guardrails over 21.0.0: health evidence, automatic halt when armed, incident thresholds, safe resume and rollback readiness. No gameplay changes."
+    },
+    "predecessorOfficial": {
+      "sha": "2c6f84209e9a9b60488caa4a0fd17d57343a0c69cd25f2311af5d2727328ec04"
+    },
+    "manifest": {
+      "entries": 1273,
+      "hash": "1f220f2fc1986225",
+      "calc": "1f220f2fc1986225",
+      "bad": []
+    },
+    "bootOrder": {
+      "count": 117,
+      "officialProduction": 114,
+      "launchStability": 115,
+      "officialLaunch": 116
+    },
+    "gameplayFreeze22": {
+      "changed": []
+    },
+    "runtime": {
+      "checks": {
+        "apiBoot": true,
+        "version": true,
+        "buildBinding": true,
+        "predecessor": true,
+        "passiveOnly": true,
+        "guardPolicy": true,
+        "diagnosticsPass": true
+      },
+      "stderr": ""
+    }
+  },
+  "pass": true
+}

@@ -1,0 +1,9 @@
+window.POWDER_ENV_V162={
+  channel:'production',
+  onlineEnabled:true,
+  supabaseUrl:'https://pxejydhqfzidnheudgnn.supabase.co',
+  supabasePublishableKey:'sb_publishable_EeppsefEV5sMaTcHrKWNCA_-dzAEA_H',
+  releaseEndpoint:'https://pxejydhqfzidnheudgnn.supabase.co/functions/v1/powder-release',
+  buildId:'powder-21.0.4-capacity-guard',
+  version:'21.0.4'
+};

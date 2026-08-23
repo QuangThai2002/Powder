@@ -1,0 +1,47 @@
+{
+  "version": "20.20.0",
+  "checks": {
+    "apiInstalled": true,
+    "version": true,
+    "buildId": true,
+    "diagnosticsPass": true,
+    "immutable": true,
+    "gameplayFrozen": true,
+    "officialFalse": true,
+    "passiveNoFetch": true,
+    "event": true
+  },
+  "details": {
+    "version": "20.20.0",
+    "buildId": "powder-20.20.0-gold-master",
+    "checks": {
+      "version": true,
+      "buildId": true,
+      "releaseRuntime": true,
+      "releaseFreeze": true,
+      "fullGameRegression": true,
+      "rcCanaryLineage": true,
+      "saveIntegrity": true,
+      "security": true,
+      "reliability": true,
+      "transactionSafety": true,
+      "antiAbuse": true,
+      "serverMutation": true,
+      "passiveOnly": true,
+      "officialFalse": true
+    },
+    "pass": true,
+    "policy": {
+      "immutableArtifact": true,
+      "codeFrozen": true,
+      "schemaFrozen": true,
+      "apiFrozen": true,
+      "assetsFrozen": true,
+      "gameplayChangesAllowed": false,
+      "predecessor": "powder-20.19.0-release-candidate-canary",
+      "official": false
+    },
+    "at": 1787483672106
+  },
+  "pass": true
+}

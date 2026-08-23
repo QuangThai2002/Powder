@@ -1,0 +1,114 @@
+{
+  "version": "20.4.0",
+  "recoveryGate": {
+    "version": "20.4.0",
+    "checks": {
+      "releaseMetadata": true,
+      "gameplayFreeze": true,
+      "canonical99x396": true,
+      "serviceWorker2040": true,
+      "runtimeRefs": true,
+      "noStaleRecovery": true,
+      "localRecoverySafety": true,
+      "adminNoProductionRestore": true,
+      "serverRecoveryPosture": true,
+      "edgeRoleSeparation": true,
+      "officialRecoveryGate": true,
+      "manifest": true,
+      "scriptOrder": true
+    },
+    "details": {
+      "releaseMetadata": {
+        "version": "20.4.0",
+        "channel": "production",
+        "buildId": "powder-20.4.0-disaster-recovery-backup-integrity",
+        "minimumVersion": "0.0.0",
+        "serviceWorker": "20.4.0",
+        "releaseState": "disaster-recovery-backup-integrity",
+        "official": false,
+        "notes": "Disaster Recovery & Backup Integrity: player-backup coverage, schema fingerprint, non-destructive sandbox restore, server-derived RPO/RTO real-restore evidence, Recovery hard gate for Official Launch. Gameplay remains frozen."
+      },
+      "gameplayFreeze": {
+        "critical": 22,
+        "changed": []
+      },
+      "canonical99x396": {
+        "pows": 99,
+        "kits": 99,
+        "skills": 396,
+        "unique": 396
+      },
+      "manifest": {
+        "entries": 1260,
+        "bad": [],
+        "hash": "cc1a979b9b0211a9",
+        "calc": "cc1a979b9b0211a9"
+      },
+      "scriptOrder": {
+        "count": 105,
+        "recoveryIndex": 96
+      }
+    },
+    "pass": true
+  },
+  "finalBuildGate": {
+    "version": "20.4.0",
+    "checks": {
+      "htmlDuplicateIds": true,
+      "localRefs": true,
+      "cssStructure": true,
+      "jsInventory": true,
+      "releaseAndSW": true,
+      "manifestIntegrity": true,
+      "scriptOrder": true,
+      "noStaleRuntime": true,
+      "recoveryServerSource": true
+    },
+    "details": {
+      "htmlDuplicateIds": {
+        "index.html": [],
+        "admin.html": [],
+        "offline.html": [],
+        "privacy.html": [],
+        "terms.html": []
+      },
+      "localRefs": [],
+      "cssStructure": {
+        "count": 40,
+        "bad": []
+      },
+      "jsInventory": {
+        "count": 145
+      },
+      "releaseAndSW": {
+        "version": "20.4.0",
+        "channel": "production",
+        "buildId": "powder-20.4.0-disaster-recovery-backup-integrity",
+        "minimumVersion": "0.0.0",
+        "serviceWorker": "20.4.0",
+        "releaseState": "disaster-recovery-backup-integrity",
+        "official": false,
+        "notes": "Disaster Recovery & Backup Integrity: player-backup coverage, schema fingerprint, non-destructive sandbox restore, server-derived RPO/RTO real-restore evidence, Recovery hard gate for Official Launch. Gameplay remains frozen."
+      },
+      "manifestIntegrity": {
+        "entries": 1260,
+        "hash": "cc1a979b9b0211a9",
+        "calc": "cc1a979b9b0211a9",
+        "bad": []
+      },
+      "scriptOrder": {
+        "count": 105
+      },
+      "noStaleRuntime": [],
+      "recoveryServerSource": [
+        "server/supabase/functions/powder-admin-recovery/index.ts",
+        "server/supabase/migrations/20260823_2040_disaster_recovery_backup_integrity.sql",
+        "server/supabase/migrations/20260823_2040_disaster_recovery_rpo_rto_server_derive.sql",
+        "server/supabase/migrations/20260823_2040_disaster_recovery_sandbox_evidence.sql",
+        "server/supabase/migrations/20260823_2040_official_launch_recovery_guard.sql"
+      ]
+    },
+    "pass": true
+  },
+  "pass": true
+}

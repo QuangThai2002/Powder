@@ -1,0 +1,47 @@
+{
+  "version": "20.15.0",
+  "checks": {
+    "releaseMetadata": true,
+    "gameplayFreeze22": true,
+    "serverSchema": true,
+    "sourceRestoreIsolation": true,
+    "serverCalculatedRpoRto": true,
+    "criticalDigestCoverage": true,
+    "failureRollbackDrill": true,
+    "rollbackEvidence": true,
+    "evidenceHashVerified": true,
+    "adminNoSelfPass": true,
+    "adminWired": true,
+    "passivePlayerRuntime": true,
+    "officialHardGate": true,
+    "failClosedDefault": true,
+    "runnerSelfTest": true,
+    "edgeSyntax": true
+  },
+  "details": {
+    "releaseMetadata": {
+      "version": "20.15.0",
+      "channel": "production",
+      "buildId": "powder-20.15.0-disaster-recovery-backup-validation",
+      "minimumVersion": "0.0.0",
+      "serviceWorker": "20.15.0",
+      "releaseState": "disaster-recovery-backup-validation",
+      "official": false,
+      "notes": "Disaster Recovery & Backup Validation: isolated pg_dump/restore evidence, source-vs-restore schema/table digests, server-derived RPO/RTO, fail-closed transaction recovery drill, rollback evidence and Official Launch hard gate. Gameplay remains frozen."
+    },
+    "gameplayFreeze22": {
+      "changed": []
+    },
+    "runnerSelfTest": {
+      "requiredTables": true,
+      "sourceRestoreDifferent": true,
+      "evidenceHash": true,
+      "allDigests": true,
+      "allSmoke": true,
+      "failClosed": true,
+      "rollback": true
+    },
+    "edgeSyntax": []
+  },
+  "pass": true
+}

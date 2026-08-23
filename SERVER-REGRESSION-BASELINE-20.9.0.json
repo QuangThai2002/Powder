@@ -1,0 +1,37 @@
+{
+  "version": "20.9.0",
+  "files": [
+    {
+      "path": "server/supabase/functions/powder-admin-events/index.ts",
+      "sha256": "30dd3a702a69bdb7531c9c9b271d8230897b8bccb83be9517e2654c0d689af77"
+    },
+    {
+      "path": "server/supabase/functions/powder-admin-reliability/index.ts",
+      "sha256": "0588bda6ddadde7449cab3c63a0c149c9b7d752519b72317868a68e691ca916d"
+    },
+    {
+      "path": "server/supabase/functions/powder-admin-transactions/index.ts",
+      "sha256": "302486ee34298d0aa3807158f970860f82a044812bb09e8b6f2b9c22bed9ddb0"
+    },
+    {
+      "path": "server/supabase/functions/powder-admin-recovery/index.ts",
+      "sha256": "d49ade78af62b52741a330b08d98e3d9290a293efdd499b18dd62e7b1de8f134"
+    },
+    {
+      "path": "server/supabase/functions/powder-admin-security/index.ts",
+      "sha256": "b9248ee680a4197f576142a37f94be71a1c0b600309657d7b6e8fbd91f2fb0c0"
+    },
+    {
+      "path": "server/supabase/functions/powder-admin-support/index.ts",
+      "sha256": "53277f290dd0f0ee276a0494c1e099d9ebe29a7baee4b41ca4cb58eaf53d0cc3"
+    },
+    {
+      "path": "server/supabase/functions/powder-admin-observability/index.ts",
+      "sha256": "ba76f2e01d882957cb0f36801a3c1627f2441920f14b024b3595ebad7df24895"
+    },
+    {
+      "path": "server/supabase/functions/powder-pvp/index.ts",
+      "sha256": "664533397143529b4923b48c9e42bd4bb95b645a4e61fc7ec3cf16567777f86f"
+    }
+  ]
+}

@@ -1,0 +1,93 @@
+{
+  "version": "20.8.0",
+  "checks": {
+    "htmlDuplicateIds": true,
+    "localRefs": true,
+    "cssStructure": true,
+    "jsSyntax": true,
+    "releaseAndSW": true,
+    "manifestIntegrity": true,
+    "scriptOrder": true,
+    "noStalePlayerBoot": true,
+    "oldBootRemoved": true,
+    "gameplayFreeze22": true,
+    "eventOpsRegression": true,
+    "reliabilityGate": true,
+    "launchForwardCompatible": true
+  },
+  "details": {
+    "htmlDuplicateIds": {
+      "index.html": [],
+      "admin.html": [],
+      "offline.html": [],
+      "privacy.html": [],
+      "terms.html": []
+    },
+    "localRefs": [],
+    "cssStructure": {
+      "count": 45,
+      "bad": []
+    },
+    "jsSyntax": {
+      "count": 157,
+      "bad": []
+    },
+    "releaseAndSW": {
+      "version": "20.8.0",
+      "channel": "production",
+      "buildId": "powder-20.8.0-production-reliability-incident-recovery",
+      "minimumVersion": "0.0.0",
+      "serviceWorker": "20.8.0",
+      "releaseState": "production-reliability-incident-recovery",
+      "official": false,
+      "notes": "Production Reliability & Incident Recovery: server-derived watchdog, circuit breaker, fail-closed read-only protection for Cloud Save/economy during critical incidents, stable recovery checks, player runtime auto-degrade, and Reliability as a hard Official Launch preflight gate. Gameplay remains frozen."
+    },
+    "manifestIntegrity": {
+      "entries": 1262,
+      "hash": "bae48b2040538976",
+      "calc": "bae48b2040538976",
+      "bad": []
+    },
+    "scriptOrder": {
+      "count": 106,
+      "reliabilityIndex": 73,
+      "onlineIndex": 74
+    },
+    "noStalePlayerBoot": [],
+    "gameplayFreeze22": {
+      "changed": []
+    },
+    "reliabilityGate": {
+      "version": "20.8.0",
+      "checks": {
+        "releaseMetadata": true,
+        "serverSchema": true,
+        "serverDerivedWatchdog": true,
+        "automationDisarmedByDefault": true,
+        "circuitModes": true,
+        "safePublicStatus": true,
+        "adminEdge": true,
+        "ownerDangerousMutations": true,
+        "clientSaveGuard": true,
+        "playerRuntime": true,
+        "adminWiring": true,
+        "launchHardGate": true,
+        "noClientHealthInjection": true
+      },
+      "details": {
+        "releaseMetadata": {
+          "version": "20.8.0",
+          "channel": "production",
+          "buildId": "powder-20.8.0-production-reliability-incident-recovery",
+          "minimumVersion": "0.0.0",
+          "serviceWorker": "20.8.0",
+          "releaseState": "production-reliability-incident-recovery",
+          "official": false,
+          "notes": "Production Reliability & Incident Recovery: server-derived watchdog, circuit breaker, fail-closed read-only protection for Cloud Save/economy during critical incidents, stable recovery checks, player runtime auto-degrade, and Reliability as a hard Official Launch preflight gate. Gameplay remains frozen."
+        }
+      },
+      "pass": true
+    }
+  },
+  "pass": true
+}

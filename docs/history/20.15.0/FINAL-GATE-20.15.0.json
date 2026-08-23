@@ -1,0 +1,192 @@
+{
+  "version": "20.15.0",
+  "checks": {
+    "htmlDuplicateIds": true,
+    "localRefs": true,
+    "cssStructure": true,
+    "jsSyntax": true,
+    "newEdgeSyntax": true,
+    "releaseAndSW": true,
+    "manifestIntegrity": true,
+    "scriptOrder": true,
+    "playerBoot20150": true,
+    "releaseQa20150": true,
+    "gameplayFreeze22": true,
+    "canonical99x396": true,
+    "eventOpsRegression": true,
+    "reliabilityRegression": true,
+    "transactionRuntime": true,
+    "canonicalAdapterRegression": true,
+    "reconciliationRuntime": true,
+    "exploitRuntime": true,
+    "loadSoakRegression": true,
+    "disasterRecoveryGate": true,
+    "disasterRecoveryRuntime": true,
+    "launchForwardCompatible": true,
+    "sqlStaticStructure": true,
+    "drEvidenceFailClosed": true,
+    "adminDrWired": true,
+    "safeRestoreArchitecture": true,
+    "legacyServerModulesUnchanged": true
+  },
+  "details": {
+    "htmlDuplicateIds": {
+      "index.html": [],
+      "admin.html": [],
+      "offline.html": [],
+      "privacy.html": [],
+      "terms.html": []
+    },
+    "localRefs": [],
+    "cssStructure": {
+      "count": 51,
+      "bad": []
+    },
+    "jsSyntax": {
+      "count": 197,
+      "bad": []
+    },
+    "newEdgeSyntax": [],
+    "releaseAndSW": {
+      "version": "20.15.0",
+      "channel": "production",
+      "buildId": "powder-20.15.0-disaster-recovery-backup-validation",
+      "minimumVersion": "0.0.0",
+      "serviceWorker": "20.15.0",
+      "releaseState": "disaster-recovery-backup-validation",
+      "official": false,
+      "notes": "Disaster Recovery & Backup Validation: isolated pg_dump/restore evidence, source-vs-restore schema/table digests, server-derived RPO/RTO, fail-closed transaction recovery drill, rollback evidence and Official Launch hard gate. Gameplay remains frozen."
+    },
+    "manifestIntegrity": {
+      "entries": 1267,
+      "hash": "8cc689c83369d6e8",
+      "calc": "8cc689c83369d6e8",
+      "bad": []
+    },
+    "scriptOrder": {
+      "count": 111,
+      "reliabilityIndex": 73,
+      "transactionIndex": 74,
+      "exploitIndex": 75,
+      "mutationIndex": 76,
+      "onlineIndex": 77,
+      "loadSoakIndex": 105,
+      "disasterRecoveryIndex": 106,
+      "loadIntegrityIndex": 107
+    },
+    "gameplayFreeze22": {
+      "changed": []
+    },
+    "canonical99x396": {
+      "pows": 99,
+      "kits": 99,
+      "skills": 396,
+      "unique": 396
+    },
+    "transactionRuntime": {
+      "checks": {
+        "stableClaimExecutesOnce": true,
+        "uncertainRetryReusesKey": true,
+        "completedPurchaseGetsNewKey": true,
+        "reliabilityFailClosed": true,
+        "eventsEmitted": true
+      },
+      "stderr": ""
+    },
+    "canonicalAdapterRegression": {
+      "checks": {
+        "routes18": true,
+        "routeRpcs": true,
+        "gatewayCurrent": true,
+        "gatewayOnly": true,
+        "ambiguityQuarantine": true,
+        "productionSourcesHonest": true,
+        "bridgeUnwrap": true,
+        "atomicUnwrap": true,
+        "networkNoFallback": true,
+        "sessionRequired": true,
+        "legacyModeBlocked": true,
+        "diagnostics": true
+      },
+      "stderr": ""
+    },
+    "reconciliationRuntime": {
+      "checks": {
+        "version": true,
+        "oneRpcPerEffect": true,
+        "txContextForwarded": true,
+        "effectFields": true,
+        "rpcFailureFailsClosed": true
+      },
+      "stderr": "(node:35352) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    "exploitRuntime": {
+      "checks": {
+        "version": true,
+        "schemas": true,
+        "validIntent": true,
+        "priceTamperBlocked": true,
+        "invalidCountBlocked": true,
+        "rewardTamperBlocked": true,
+        "clientWinBlocked": true
+      },
+      "stderr": ""
+    },
+    "loadSoakRegression": {
+      "checks": {
+        "schema": true,
+        "threeProfiles": true,
+        "serverCalculated": true,
+        "tokenIngest": true,
+        "playerPassive": true,
+        "officialCarriesGate": true,
+        "runnerSelfTest": true
+      },
+      "stderr": ""
+    },
+    "disasterRecoveryGate": {
+      "checks": {
+        "releaseMetadata": true,
+        "gameplayFreeze22": true,
+        "serverSchema": true,
+        "sourceRestoreIsolation": true,
+        "serverCalculatedRpoRto": true,
+        "criticalDigestCoverage": true,
+        "failureRollbackDrill": true,
+        "rollbackEvidence": true,
+        "evidenceHashVerified": true,
+        "adminNoSelfPass": true,
+        "adminWired": true,
+        "passivePlayerRuntime": true,
+        "officialHardGate": true,
+        "failClosedDefault": true,
+        "runnerSelfTest": true,
+        "edgeSyntax": true
+      },
+      "stderr": ""
+    },
+    "disasterRecoveryRuntime": {
+      "checks": {
+        "runnerSelfTest": true,
+        "requiredTables12": true,
+        "differentDatabaseGuard": true,
+        "digestRoundTrip": true,
+        "postRestoreSmoke": true,
+        "failClosedRecovery": true,
+        "rollbackEvidence": true,
+        "playerPassive": true,
+        "adminNoManualPass": true
+      },
+      "stderr": ""
+    },
+    "sqlStaticStructure": {
+      "functionTags": 8,
+      "dollarTags": 10
+    },
+    "legacyServerModulesUnchanged": {
+      "checked": 8,
+      "drift": []
+    }
+  },
+  "pass": true
+}

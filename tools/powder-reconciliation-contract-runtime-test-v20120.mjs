@@ -1,0 +1,14 @@
+import path from 'node:path';import {pathToFileURL} from 'node:url';
+const root=path.resolve(process.argv[2]||process.cwd());
+const mod=await import(pathToFileURL(path.join(root,'server/supabase/functions/_shared/reconciliation-v20120.ts')).href+'?t='+Date.now());
+const calls=[];let failAt=0;
+const db={rpc:async(name,args)=>{calls.push({name,args});if(failAt&&calls.length===failAt)return{data:null,error:new Error('rpc failed')};return{data:{ok:true,effectId:`e${calls.length}`,idempotent:false},error:null}}};
+const base={userId:'00000000-0000-4000-8000-000000000001',scope:'economy',txKey:'tx-test-20120',action:'buy_candy',requestSha256:'a'.repeat(64),resultSha256:'b'.repeat(64),source:'canonical_handler'};
+const effects=[{effectKey:'currency:coins',resourceType:'currency',resourceKey:'coins',deltaNumeric:-100,beforeState:{v:500},afterState:{v:400}},{effectKey:'inventory:candy_common',resourceType:'inventory',resourceKey:'candy_common',deltaNumeric:1,beforeState:{q:2},afterState:{q:3}}];
+const r=await mod.recordResourceEffectsV20120(db,{...base,effects});const checks={};
+checks.version=mod.RECONCILIATION_VERSION==='20.12.0';
+checks.oneRpcPerEffect=calls.length===2&&r.length===2&&calls.every(x=>x.name==='powder_resource_effect_record_v20120');
+checks.txContextForwarded=calls.every(x=>x.args.p_tx_key===base.txKey&&x.args.p_request_sha256===base.requestSha256&&x.args.p_result_sha256===base.resultSha256&&x.args.p_source==='canonical_handler');
+checks.effectFields=calls[0].args.p_effect_key==='currency:coins'&&calls[0].args.p_delta_numeric===-100&&calls[1].args.p_resource_type==='inventory';
+failAt=3;let rejected=false;try{await mod.recordResourceEffectsV20120(db,{...base,effects:[effects[0]]})}catch(e){rejected=/rpc failed/.test(String(e?.message||e))}checks.rpcFailureFailsClosed=rejected;
+const out={version:'20.12.0',checks,calls:calls.length,pass:Object.values(checks).every(Boolean)};console.log(JSON.stringify(out,null,2));if(!out.pass)process.exit(1);

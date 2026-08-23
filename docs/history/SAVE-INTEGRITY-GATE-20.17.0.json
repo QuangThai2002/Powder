@@ -1,0 +1,55 @@
+{
+  "version": "20.17.0",
+  "checks": {
+    "releaseMetadata": true,
+    "schemaTables": true,
+    "serverHashEnvelope": true,
+    "destructiveGuards": true,
+    "snapshotHistory": true,
+    "multiDeviceDiagnostics": true,
+    "authoritativeScan": true,
+    "postureFailClosed": true,
+    "adminCentralGuard": true,
+    "adminCriticalMfa": true,
+    "adminNoSelfPass": true,
+    "clientRuntimePassive": true,
+    "officialHardGate": true,
+    "officialEdge20170": true,
+    "bootBeforeOnline": true,
+    "adminUiWired": true,
+    "runtimeBehavior": true,
+    "gameplayFreezeBaseline": true
+  },
+  "details": {
+    "releaseMetadata": {
+      "version": "20.17.0",
+      "channel": "production",
+      "buildId": "powder-20.17.0-player-save-integrity-final",
+      "minimumVersion": "0.0.0",
+      "serviceWorker": "20.17.0",
+      "releaseState": "player-save-integrity-final",
+      "official": false,
+      "notes": "Player Save Integrity Final: server-side save hash envelope, revision snapshots, destructive-write guards, multi-device diagnostics, authoritative save scan and Official Launch hard gate. Gameplay remains frozen."
+    },
+    "bootBeforeOnline": {
+      "idxSave": 77,
+      "idxOnline": 78,
+      "count": 112
+    },
+    "runtimeBehavior": {
+      "checks": {
+        "validAllowsLegitimateDecrease": true,
+        "schemaDowngradeBlocked": true,
+        "ownedBranchLossBlocked": true,
+        "learningBranchLossBlocked": true,
+        "integrityEnvelopeAdded": true,
+        "wrapInstalled": true,
+        "wrappedApplyBlocksDestructiveImport": true,
+        "wrappedApplyAllowsValidImport": true,
+        "healthExposesGuard": true
+      },
+      "stderr": ""
+    }
+  },
+  "pass": true
+}

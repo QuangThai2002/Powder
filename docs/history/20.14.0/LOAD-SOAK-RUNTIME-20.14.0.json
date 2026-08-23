@@ -1,0 +1,13 @@
+{
+  "version": "20.14.0",
+  "checks": {
+    "runnerSelfTest": true,
+    "sixScenarios": true,
+    "safeReadTraffic": true,
+    "integrityDeltaZero": true,
+    "evidenceSha256": true,
+    "playerPassiveOnly": true,
+    "serverOwnsPass": true
+  },
+  "pass": true
+}

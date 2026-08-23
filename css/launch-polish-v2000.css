@@ -1,0 +1,82 @@
+/* Powder 19.8.0 — Launch Polish. Presentation-only overrides; no combat mechanics. */
+:root{
+  --powder-vvh:100dvh;
+  --powder-vvw:100vw;
+  --powder-kb:0px;
+  --powder-safe-top:env(safe-area-inset-top,0px);
+  --powder-safe-right:env(safe-area-inset-right,0px);
+  --powder-safe-bottom:env(safe-area-inset-bottom,0px);
+  --powder-safe-left:env(safe-area-inset-left,0px);
+}
+html{scrollbar-gutter:stable}
+html,body{overscroll-behavior-y:none}
+button,[role="button"],a[href],select,label{touch-action:manipulation}
+button:focus-visible,a[href]:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid #82e8ff;outline-offset:2px}
+img{max-width:100%}
+
+/* Mobile visual viewport / software keyboard. */
+html.powder-keyboard-open .topbar{position:relative}
+html.powder-keyboard-open .cv7-command,
+html.powder-keyboard-open .cv7-question{bottom:max(4px,var(--powder-kb))}
+html.powder-combat-fullscreen #battleView{height:var(--powder-vvh)!important;max-height:var(--powder-vvh)!important}
+html.powder-combat-fullscreen .combat-v7-mount,
+html.powder-combat-fullscreen .cv7-scene{min-height:var(--powder-vvh)!important;max-height:var(--powder-vvh)!important}
+html.powder-combat-fullscreen .cv7-field{height:calc(var(--powder-vvh) - 80px)!important}
+
+/* Combat FX readability: keep numbers/callouts inside the readable field without adding particles. */
+.combat-v7-mount .cv7-fx-layer{overflow:hidden;inset:2px;border-radius:12px}
+.combat-v7-mount .cv7-fx,
+.combat-v7-mount .cv7-vfx-label,
+.combat-v7-mount .cv7-banner{max-width:min(78vw,520px);overflow:hidden;text-overflow:ellipsis}
+.combat-v7-mount .cv7-fx{transform-origin:center;filter:drop-shadow(0 2px 3px rgba(0,0,0,.58))}
+.combat-v7-mount .cv7-attack-callout{max-width:min(540px,calc(100% - 24px));overflow:hidden}
+.combat-v7-mount .cv7-attack-callout>div{min-width:0}
+.combat-v7-mount .cv7-attack-callout b,
+.combat-v7-mount .cv7-attack-callout span,
+.combat-v7-mount .cv7-domain-cinematic-copy b,
+.combat-v7-mount .cv7-domain-cinematic-copy span{overflow-wrap:anywhere}
+.combat-v7-mount .cv7-domain-cinematic-copy{left:12px;right:12px;top:auto;bottom:max(18%,calc(var(--powder-safe-bottom) + 98px));justify-items:center}
+.combat-v7-mount .cv7-domain-cinematic-copy b{font-size:clamp(18px,4vw,26px)}
+.combat-v7-mount .cv7-skills{scrollbar-width:thin;scroll-snap-type:x proximity;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+.combat-v7-mount .cv7-skill{scroll-snap-align:center}
+.combat-v7-mount .cv7-question,
+.combat-v7-mount .cv7-command{padding-bottom:max(8px,var(--powder-safe-bottom))}
+.combat-v7-mount .cv7-options button{min-height:44px}
+
+/* PvP touch/readability polish. */
+.pvp1870-shell{max-width:100%;overflow:hidden}
+.pvp1870-network{overflow-wrap:anywhere}
+.pvp1870-skills button,
+.pvp1870-action-row button,
+.pvp1880-domain-grid button,
+.pvp1880-qactions button{min-height:44px}
+.pvp1870-skills{scroll-margin-bottom:var(--powder-safe-bottom)}
+.pvp1880-question-modal{padding-top:max(12px,var(--powder-safe-top));padding-right:max(8px,var(--powder-safe-right));padding-bottom:max(12px,var(--powder-safe-bottom));padding-left:max(8px,var(--powder-safe-left))}
+.pvp1880-question-modal>article{max-height:calc(var(--powder-vvh) - var(--powder-safe-top) - var(--powder-safe-bottom) - 24px);overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.pvp1880-question-modal label{min-height:44px}
+
+/* Stable network/reconnect toast: reuse the 19.1 readiness banner to avoid duplicate UI/layout work. */
+.pr1910-network-banner{top:max(10px,calc(var(--powder-safe-top) + 8px));width:min(560px,calc(100vw - 24px));backdrop-filter:none;-webkit-backdrop-filter:none;transition:opacity .16s ease,transform .16s ease}
+
+/* QA-only overlay (?polish=1). */
+.polish1980-panel{position:fixed;z-index:100040;right:max(10px,var(--powder-safe-right));bottom:max(10px,var(--powder-safe-bottom));width:min(360px,calc(100vw - 20px));max-height:min(70dvh,560px);overflow:auto;padding:12px;border:1px solid rgba(121,215,246,.28);border-radius:15px;background:rgba(5,18,27,.96);box-shadow:0 18px 50px rgba(0,0,0,.48);color:#eaf8ff;font-size:11px}
+.polish1980-panel header{display:flex;justify-content:space-between;gap:10px;align-items:center}.polish1980-panel header b{font-size:13px}.polish1980-panel header small{display:block;color:#82dff6}.polish1980-panel button{min-height:40px;border:1px solid rgba(255,255,255,.12);border-radius:9px;background:rgba(255,255,255,.06);color:#fff;padding:6px 9px;cursor:pointer}.polish1980-panel .grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:9px 0}.polish1980-panel .grid span{padding:7px;border-radius:8px;background:rgba(255,255,255,.035)}.polish1980-panel .grid small,.polish1980-panel .grid b{display:block}.polish1980-panel .grid small{color:#829cad}.polish1980-panel .ok{color:#83edb4}.polish1980-panel .bad{color:#ff9aa6}.polish1980-panel .actions{display:flex;gap:6px;flex-wrap:wrap}
+
+@media(max-width:680px){
+  .combat-v7-mount .cv7-fx.o-1{margin-left:8px}.combat-v7-mount .cv7-fx.o-2{margin-left:-8px;margin-top:8px}
+  .combat-v7-mount .cv7-fx.damage{font-size:23px}.combat-v7-mount .cv7-fx.crit{font-size:26px}.combat-v7-mount .cv7-fx.heal{font-size:22px}
+  .combat-v7-mount .cv7-attack-callout{top:78px;min-width:0;width:calc(100% - 20px)}
+  .combat-v7-mount .cv7-cine-cut{gap:10px;width:calc(100% - 20px);justify-content:center}.combat-v7-mount .cv7-cine-cut>div{min-width:0;max-width:52vw}.combat-v7-mount .cv7-cine-cut b{font-size:clamp(20px,6vw,27px)}.combat-v7-mount .cv7-cine-cut span{font-size:12px}
+  .pvp1870-shell{padding:10px}.pvp1870-active-row{gap:4px}.pvp1870-unit{min-width:0}.pvp1870-unit-art{height:58px}.pvp1870-skills{gap:5px}.pvp1870-skills button{padding:8px}
+}
+@media(max-width:430px){
+  .combat-v7-mount .cv7-field{padding-left:6px!important;padding-right:6px!important;padding-bottom:calc(158px + var(--powder-safe-bottom))!important}
+  .combat-v7-mount .cv7-unit{width:32vw!important;max-width:142px!important;height:202px!important}.combat-v7-mount .cv7-art-wrap{width:112px!important;height:104px!important}.combat-v7-mount .cv7-unit-info{left:2px;right:2px;padding:5px 6px}.combat-v7-mount .cv7-unit-info>b{font-size:11px}.combat-v7-mount .cv7-values,.combat-v7-mount .cv7-presence{font-size:7px}
+  .combat-v7-mount .cv73-command-v2{height:142px}.combat-v7-mount .cv73-command-v2 .cv7-skill{min-width:138px;height:126px}
+  .pvp1870-head h2,.pvp1870-battle-head h2{font-size:18px}.pvp1870-badges span{font-size:9px;padding:5px 7px}.pvp1870-server-timer{min-width:96px}.pvp1870-server-timer b{font-size:24px}.pvp1870-active-row{grid-template-columns:repeat(3,minmax(0,1fr))}.pvp1870-unit-art{height:52px}.pvp1870-unit-copy strong{font-size:9px}.pvp1870-statuses{max-height:30px;overflow:hidden}.pvp1870-skills{grid-template-columns:1fr 1fr}
+}
+@media(max-width:360px){
+  .combat-v7-mount .cv7-unit{height:190px!important}.combat-v7-mount .cv7-art-wrap{width:98px!important;height:92px!important}.combat-v7-mount .cv7-unit-top{gap:3px;font-size:8px}.combat-v7-mount .cv7-role{display:none}.combat-v7-mount .cv7-level{padding:3px 5px}.combat-v7-mount .cv7-element{width:21px;height:21px}.combat-v7-mount .cv7-statuses{height:17px}.combat-v7-mount .cv7-skill{min-width:132px!important}
+  .pvp1870-shell{padding:8px}.pvp1870-stats article{padding:9px}.pvp1870-stats b{font-size:18px}.pvp1870-unit{padding:3px}.pvp1870-unit-art{height:46px}.pvp1870-reserve-row{gap:3px}.pvp1870-skills button{font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){.pr1910-network-banner{transition:none}}

@@ -1,0 +1,13 @@
+{
+  "version": "20.16.0",
+  "checks": {
+    "claimsDecode": true,
+    "tokenSha256": true,
+    "guardRpcWiring": true,
+    "guardFailClosedUnavailable": true,
+    "tokenDenied": true,
+    "originDenied": true,
+    "aal2Denied": true
+  },
+  "pass": true
+}

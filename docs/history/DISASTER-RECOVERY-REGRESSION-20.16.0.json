@@ -1,0 +1,24 @@
+{
+  "version": "20.16.0",
+  "source": "20.15.0",
+  "checks": {
+    "gameplayFreeze22": true,
+    "serverSchema": true,
+    "sourceRestoreIsolation": true,
+    "serverCalculatedRpoRto": true,
+    "criticalDigestCoverage": true,
+    "failureRollbackDrill": true,
+    "rollbackEvidence": true,
+    "evidenceHashVerified": true,
+    "adminNoSelfPass": true,
+    "adminWired": true,
+    "passivePlayerRuntime": true,
+    "officialHardGate": true,
+    "failClosedDefault": true,
+    "runnerSelfTest": true,
+    "edgeSyntax": true,
+    "currentOfficialCarriesDr": true,
+    "currentCandidate": true
+  },
+  "pass": true
+}

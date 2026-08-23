@@ -1,0 +1,14 @@
+{
+  "version": "20.15.0",
+  "source": "20.14.0",
+  "checks": {
+    "schema": true,
+    "threeProfiles": true,
+    "serverCalculated": true,
+    "tokenIngest": true,
+    "playerPassive": true,
+    "officialCarriesGate": true,
+    "runnerSelfTest": true
+  },
+  "pass": true
+}

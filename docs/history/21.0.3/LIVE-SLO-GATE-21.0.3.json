@@ -1,0 +1,38 @@
+{
+  "version": "21.0.3",
+  "checks": {
+    "releaseMetadata": true,
+    "serverDerivedMetrics": true,
+    "multiWindowBurnRate": true,
+    "errorBudget30d": true,
+    "latencySlo": true,
+    "automaticHoldNoRollback": true,
+    "releaseAssert": true,
+    "serviceRoleOnly": true,
+    "adminSecurityContract": true,
+    "adminGuard": true,
+    "adminNoManualMetrics": true,
+    "serviceWorkerBuild": true,
+    "gameplayFreeze22": true,
+    "runtimePolicy": true,
+    "adminWired": true,
+    "indexBoot21003": true
+  },
+  "details": {
+    "releaseMetadata": {
+      "version": "21.0.3",
+      "channel": "production",
+      "buildId": "powder-21.0.3-live-observability-slo",
+      "minimumVersion": "0.0.0",
+      "serviceWorker": "21.0.3",
+      "releaseState": "live-observability-slo-readiness",
+      "official": false,
+      "promotedFrom": "powder-21.0.2-hotfix-safety",
+      "notes": "Live observability SLO/SLI and error-budget enforcement. No gameplay changes; server-derived multi-window burn-rate, automatic HOLD when armed, no automatic rollback."
+    },
+    "gameplayFreeze22": {
+      "changed": []
+    }
+  },
+  "pass": true
+}

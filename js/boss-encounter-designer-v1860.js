@@ -1,0 +1,48 @@
+(()=>{'use strict';
+const RT=window.POWDER_COMBAT_RUNTIME_V21,C=window.POWDER_COMBAT_CORE_V7,E=window.POWDER_ENGINE,AI=window.POWDER_PVE_AI_V1860;
+if(!RT||!C?.BattleCore||!E)throw new Error('Boss Encounter Designer 18.6.0 requires Runtime/Core/Engine.');
+const policy=t=>AI?.bossPolicy?.(t)||null;
+const ENCOUNTERS=Object.freeze({
+ daily:Object.freeze({id:'daily',name:'Boss ngày',thresholds:[.50],phaseNames:['Khai Chiến','Huyết Liệp Tăng Áp'],phasePower:1.12,phaseSpeed:1.06,phaseShield:.08,signature:Object.freeze({id:'blood_hunt',name:'Huyết Liệp',icon:'🎯',description:'Đếm ngược theo hành động Boss; đánh dấu Pow thấp HP nhất để Boss săn.',cadence:[3,2],effect:Object.freeze({kind:'mark-lowest-hp',status:'Boss Mark',turns:2})})}),
+ promotion:Object.freeze({id:'promotion',name:'Boss thăng Rank',thresholds:[.50],phaseNames:['Thẩm Định Đội Hình','Phá Trận Thăng Hạng'],phasePower:1.14,phaseSpeed:1.06,phaseShield:.10,signature:Object.freeze({id:'formation_break',name:'Phá Trận',icon:'⛓',description:'Đếm ngược theo hành động Boss; phá Giáp hiện tại và khóa hồi phục ngắn hạn.',cadence:[3,2],effect:Object.freeze({kind:'shield-break-antiheal',shieldRatio:.30,antiHeal:.25,turns:2})})}),
+ weekly:Object.freeze({id:'weekly',name:'Boss tuần',thresholds:[.70,.35],phaseNames:['Thăm Dò Trận Tuyến','Phá Vỡ Trận Tuyến','Đại Nạn Tối Hậu'],phasePower:1.16,phaseSpeed:1.08,phaseShield:.12,signature:Object.freeze({id:'cataclysm',name:'Đại Nạn',icon:'☄',description:'Đếm ngược theo hành động Boss; toàn đội chịu sát thương theo Max HP, bỏ qua DEF nhưng Giáp vẫn hấp thụ.',cadence:[3,3,2],effect:Object.freeze({kind:'max-hp-aoe',ratio:.08})})}),
+ story:Object.freeze({id:'story',name:'Boss cốt truyện',thresholds:[.55],phaseNames:['Thế Thủ Hộ Vệ','Bạo Phát Cốt Truyện'],phasePower:1.13,phaseSpeed:1.06,phaseShield:.08,signature:Object.freeze({id:'suppression',name:'Trấn Áp',icon:'⌛',description:'Đếm ngược theo hành động Boss; khóa nhịp Pow nhanh nhất bằng Chậm và giảm Thanh lượt.',cadence:[3,2],effect:Object.freeze({kind:'slow-fastest',status:'Slow',turns:2,meterLoss:14})})})
+});
+function encounter(t='daily'){
+ const base=ENCOUNTERS[t]||ENCOUNTERS.story,ap=policy(t);if(!ap?.thresholds)return base;
+ // AI policy is the canonical phase count. Encounter owns combat stat/signature values.
+ if(ap.thresholds.length===base.thresholds.length&&ap.thresholds.every((x,i)=>Math.abs(x-base.thresholds[i])<1e-9))return base;
+ return Object.freeze({...base,thresholds:[...ap.thresholds]});
+}
+function phaseFor(type,hpRatio){const cfg=encounter(type),r=Math.max(0,Math.min(1,Number(hpRatio)||0));let p=1;for(let i=0;i<cfg.thresholds.length;i++)if(r<=cfg.thresholds[i])p=i+2;return p;}
+function nextThreshold(type,phase=1){return encounter(type).thresholds[Math.max(0,Number(phase||1)-1)]??null;}
+function signatureFor(type,phase=1){const s=encounter(type).signature,c=s.cadence[Math.max(0,Math.min(s.cadence.length-1,Number(phase||1)-1))]||3;return{...s,cadence:c,effect:{...s.effect}};}
+function validate(){const issues=[];for(const [id,cfg] of Object.entries(ENCOUNTERS)){if(!Array.isArray(cfg.thresholds)||cfg.thresholds.some((x,i,a)=>!(x>0&&x<1)||(i&&x>=a[i-1])))issues.push(`${id}:thresholds`);if(cfg.phaseNames.length!==cfg.thresholds.length+1)issues.push(`${id}:phase-names`);if(!cfg.signature?.effect?.kind)issues.push(`${id}:signature`);const ap=policy(id);if(ap&&ap.thresholds?.length!==cfg.thresholds.length)issues.push(`${id}:ai-phase-count`);}return{ok:!issues.length,issues,count:Object.keys(ENCOUNTERS).length};}
+const P=C.BattleCore.prototype;
+P.bossEncounterConfig=function(boss=null){return encounter(this.bossType||boss?.bossType||'daily');};
+P.bossSignatureProfile=function(boss){return signatureFor(this.bossType||boss?.bossType||'daily',Math.max(1,Number(boss?.bossPhase)||1));};
+P.processBossSignature=function(boss){
+ if(this.mode!=='boss'||!boss||boss.defeated)return;
+ const sig=this.bossSignatureProfile(boss),cadence=Math.max(1,Number(sig.cadence)||3);boss.bossSigName=sig.name;boss.bossSigCounter=(Number(boss.bossSigCounter)||0)+1;
+ const ready=boss.bossSigCounter>=cadence,remaining=ready?0:cadence-boss.bossSigCounter;boss.bossSigRemaining=remaining;
+ if(!ready){this.pushEvent('boss-signature-charge',{bossId:boss.id,bossType:this.bossType,signatureId:sig.id,name:sig.name,remaining,cadence,description:sig.description});return;}
+ boss.bossSigCounter=0;boss.bossSigRemaining=cadence;const fx=sig.effect||{};
+ if(fx.kind==='mark-lowest-hp'){
+  const target=[...this.living('player')].sort((a,b)=>a.hp/Math.max(1,a.maxHp)-b.hp/Math.max(1,b.maxHp))[0];
+  if(target){target.customStatuses=target.customStatuses||{};target.customStatuses[fx.status||'Boss Mark']={turns:fx.turns||2,kind:'debuff',sourceId:boss.id};this.pushEvent('status-apply',{sourceId:boss.id,targetId:target.id,status:fx.status||'Boss Mark',turns:fx.turns||2,kind:'debuff'});this.pushEvent('boss-signature',{bossId:boss.id,bossType:this.bossType,signatureId:sig.id,name:sig.name,targetIds:[target.id],detail:`${target.name} bị đánh dấu săn.`});}
+ }else if(fx.kind==='shield-break-antiheal'){
+  const targetIds=[];let broken=0;for(const u of this.living('player')){targetIds.push(u.id);const before=Math.max(0,Number(u.shield)||0),lost=Math.round(before*(Number(fx.shieldRatio)||.30));u.shield=Math.max(0,before-lost);broken+=lost;u.customStatuses=u.customStatuses||{};u.customStatuses.AntiHeal={turns:fx.turns||2,kind:'debuff',sourceId:boss.id,healingReceived:-Math.abs(Number(fx.antiHeal)||.25)};this.pushEvent('status-apply',{sourceId:boss.id,targetId:u.id,status:'AntiHeal',turns:fx.turns||2,kind:'debuff'});}this.pushEvent('boss-signature',{bossId:boss.id,bossType:this.bossType,signatureId:sig.id,name:sig.name,targetIds,shieldBroken:broken,detail:`Phá ${broken} Giáp · hồi máu nhận -${Math.round((Number(fx.antiHeal)||.25)*100)}% trong ${fx.turns||2} lượt.`});
+ }else if(fx.kind==='max-hp-aoe'){
+  const targetIds=[];let total=0;for(const u of this.living('player')){const before=u.hp,shieldBefore=Math.max(0,Number(u.shield)||0),amount=Math.max(1,Math.round(u.maxHp*(Number(fx.ratio)||.08))),dealt=E.damageTarget(u,amount);targetIds.push(u.id);total+=Number(dealt.damage)||0;const shieldAfter=Math.max(0,Number(u.shield)||0);this.pushEvent('damage',{sourceId:boss.id,key:'boss-signature',ability:sig.name,impacts:[{targetId:u.id,damage:dealt.damage,absorbed:dealt.absorbed||0,crit:false,hpBefore:before,hpAfter:u.hp,shieldBefore,shieldAfter,shieldBreak:shieldBefore>0&&shieldAfter<=0,killed:u.defeated,evaded:false,hitChance:100,mitigation:0}],total:dealt.damage,bossSignature:true});if(u.defeated)this.pushEvent('kill',{sourceId:boss.id,targetId:u.id,ability:sig.name,crit:false});}this.pushEvent('boss-signature',{bossId:boss.id,bossType:this.bossType,signatureId:sig.id,name:sig.name,targetIds,totalDamage:total,detail:`Toàn đội chịu ${Math.round((Number(fx.ratio)||.08)*100)}% Max HP · tổng ${total} damage.`});this.queueReplacements();this.checkEnd();
+ }else if(fx.kind==='slow-fastest'){
+  const target=[...this.living('player')].sort((a,b)=>Number(this.effective?.(b)?.speed||b.stats?.speed||0)-Number(this.effective?.(a)?.speed||a.stats?.speed||0))[0];
+  if(target){target.customStatuses=target.customStatuses||{};target.customStatuses[fx.status||'Slow']={turns:fx.turns||2,kind:'debuff',sourceId:boss.id};target.meter=Math.max(0,(Number(target.meter)||0)-Math.max(0,Number(fx.meterLoss)||14));this.pushEvent('status-apply',{sourceId:boss.id,targetId:target.id,status:fx.status||'Slow',turns:fx.turns||2,kind:'debuff'});this.pushEvent('turn-meter',{sourceId:boss.id,targetId:target.id,delta:-Math.max(0,Number(fx.meterLoss)||14),reason:'BOSS_SUPPRESSION'});this.pushEvent('boss-signature',{bossId:boss.id,bossType:this.bossType,signatureId:sig.id,name:sig.name,targetIds:[target.id],detail:`${target.name} bị Chậm và mất ${Math.max(0,Number(fx.meterLoss)||14)}% Thanh lượt.`});}
+ }
+};
+P.checkBossPhase=function(){
+ const boss=this.state.enemies.find(u=>u.boss&&!u.defeated);if(!boss)return;const type=this.bossType||boss.bossType||'daily',cfg=encounter(type),ratio=boss.hp/Math.max(1,boss.maxHp),desired=phaseFor(type,ratio),maxPhase=cfg.thresholds.length+1;boss.bossMaxPhase=maxPhase;
+ const next=nextThreshold(type,boss.bossPhase);if(desired===boss.bossPhase&&next!=null&&ratio<=next+.10&&ratio>next&&boss._phaseWarned!==boss.bossPhase+1){boss._phaseWarned=boss.bossPhase+1;this.pushEvent('boss-phase-warning',{bossId:boss.id,phase:boss.bossPhase,nextPhase:boss.bossPhase+1,maxPhase,threshold:next,hpRatio:ratio});}
+ if(desired>boss.bossPhase){const from=boss.bossPhase;boss.bossPhase=desired;boss._phaseWarned=null;boss.bossSigCounter=0;boss.bossSigRemaining=this.bossSignatureProfile(boss).cadence;boss.stats.atk=Math.round(boss.stats.atk*cfg.phasePower);boss.stats.ap=Math.round(boss.stats.ap*cfg.phasePower);boss.stats.speed=Math.round(boss.stats.speed*cfg.phaseSpeed);boss.rage=100;boss.meter=Math.min(85,(Number(boss.meter)||0)+12);const shield=Math.max(1,Math.round(boss.maxHp*cfg.phaseShield));boss.shield=Math.max(0,Number(boss.shield)||0)+shield;this.pushEvent('shield',{sourceId:boss.id,targetId:boss.id,amount:shield,label:'Giáp chuyển pha'});const phaseName=cfg.phaseNames[desired-1]||`Pha ${desired}`;this.pushLog(`${boss.name} chuyển sang Pha ${desired}/${maxPhase}.`,'boss');this.pushEvent('boss-phase',{phase:desired,from,maxPhase,bossId:boss.id,bossType:type,phaseName,hpRatio:ratio,shield});}
+};
+const API={version:'18.6.0',ENCOUNTERS,encounter,phaseFor,nextThreshold,signatureFor,validate};window.POWDER_BOSS_ENCOUNTER_V1860=API;window.POWDER_BOSS_ENCOUNTER_V21=API;RT.register('boss-encounter-designer',API);
+})();

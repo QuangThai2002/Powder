@@ -1,0 +1,184 @@
+{
+  "version": "21.0.0",
+  "buildId": "powder-21.0.0-official-production",
+  "releaseState": "official-production-readiness",
+  "official": false,
+  "predecessor": "powder-20.20.0-gold-master",
+  "predecessorFreezeSha256": "cbf20d8583b75b9dab5acdf3fb50f0477fef64d4ce85b19669eed9a1e014a41c",
+  "manifestHash": "d51e7f66405fe8e3",
+  "gameplayCriticalCount": 22,
+  "gameplayCriticalSha256": "ee1397d37ec721d5f641baf992d5a3c9c330530cbe128fd11e1d3c66792d0d8e",
+  "launchContractSha256": "be28f3bac4579db4125fd06eefa37c8af58d1b3525f99014c86c6dce2762858e",
+  "gameplayChangesAllowed": false,
+  "criticalFiles": [
+    {
+      "path": "js/combat-core-v7.js",
+      "size": 112441,
+      "sha256": "a4f04a0200fbda09d130e54c7d4f201d96671a2051455abf7606024bb58f8ab6"
+    },
+    {
+      "path": "js/combat-mechanics-v17.js",
+      "size": 62035,
+      "sha256": "918d160906b1d9f68249545912764cca13ccfdb9fae4011c8ee4aa0e30784d2f"
+    },
+    {
+      "path": "js/combat-master-v9.js",
+      "size": 72843,
+      "sha256": "97fca62e633070e71b55c6bd7dc9c9642b1965dcc489a9da8e7b4ff1ce9b9e76"
+    },
+    {
+      "path": "js/combat-ai-v1860.js",
+      "size": 10481,
+      "sha256": "862ed0230a405a6a319f53ab6e44c0526caca16c01ef03784737e43318b6dcb9"
+    },
+    {
+      "path": "js/boss-combat-v1861.js",
+      "size": 15262,
+      "sha256": "021a5e1e54323f4db19811c5db24d0de101c61612be2532d820be417251a3128"
+    },
+    {
+      "path": "js/boss-encounter-designer-v1860.js",
+      "size": 9875,
+      "sha256": "7ff0ef0e51f62e7a8afadde9880c3d63b36014aba63bc8cb9f201a480841b0ef"
+    },
+    {
+      "path": "js/domain-system-v15.js",
+      "size": 55796,
+      "sha256": "a44ed0da15baf203a9020727b87a296387d0b270190d65b485729afdaca580c5"
+    },
+    {
+      "path": "js/ancient-exclusive-runtime-v18.js",
+      "size": 24402,
+      "sha256": "841572361243a81adc8893e845326f5694969d3f3fb191b3f3c58516f06d7665"
+    },
+    {
+      "path": "js/server-combat-v1862.js",
+      "size": 6210,
+      "sha256": "63a97c6629b73e50ae70d3de266bef7244f99e13e712a58e22038e6e5439bcbc"
+    },
+    {
+      "path": "js/pvp-online-v1881.js",
+      "size": 46722,
+      "sha256": "4131eabe5030e7691e4b6f72878396ee28e98d041a92630cc669215dccd15d12"
+    },
+    {
+      "path": "js/combat-identity-v1881.js",
+      "size": 7124,
+      "sha256": "c0e36ffd0dbb5d2b16a9376774b8c409f9767da52af6603ed1681efc957ec0d8"
+    },
+    {
+      "path": "js/combat-content-v1890.js",
+      "size": 15139,
+      "sha256": "b88e2db77df187cd4297fab35c85681205987d1f5f1aa902bc35ca42bddb06bb"
+    },
+    {
+      "path": "js/player-combat-scene-v1862.js",
+      "size": 180861,
+      "sha256": "970ccc44f88e5c6b4a062090e6715b1ff25b3af1221e45ae009c060399653b2f"
+    },
+    {
+      "path": "js/canonical-action-runtime-v1850.js",
+      "size": 11487,
+      "sha256": "3b1d46ba20aae07a9de9cf748cc96e5da294df8bec0128cc259e92ede7430294"
+    },
+    {
+      "path": "js/combat-buff-runtime-v17.js",
+      "size": 6182,
+      "sha256": "a64b29483fb555811fb3da534a5e5d48b01f68a73ef6b7dffc6868c4b2e0b754"
+    },
+    {
+      "path": "js/combat-runtime-v21.js",
+      "size": 2877,
+      "sha256": "1775f975525119a2f36300f9046d7444fe8232be0dd5e002ef82cb06cde15075"
+    },
+    {
+      "path": "js/marksman-combat-v174.js",
+      "size": 969,
+      "sha256": "e5da57bbbd9bdd173619866fd9febcfcd17d37afa0eeed1f6e72f8339d0ffb24"
+    },
+    {
+      "path": "js/starter-combat-runtime.js",
+      "size": 20257,
+      "sha256": "300df9fa03b9afe6fb283e26d5d56613c74a7ac69c47420cd0d99d8e2506a7f1"
+    },
+    {
+      "path": "js/combat-audio-v7.js",
+      "size": 35757,
+      "sha256": "97ff03474c3e4185198586c732c0309c0876b10caa77883619f6eda3f51308c8"
+    },
+    {
+      "path": "js/combat-entry-v177.js",
+      "size": 1209,
+      "sha256": "470ca10da0b4b678b6db4647a169353b2315f8d8c9a87ce5f36b65acb2b3dce0"
+    },
+    {
+      "path": "js/combat-rc-v1900.js",
+      "size": 6344,
+      "sha256": "920aecdf895dac97448506a83d990f25bc7be8dfb76c81f41e4b5fedcccbe5cf"
+    },
+    {
+      "path": "js/combat-content-ui-v1890.js",
+      "size": 4523,
+      "sha256": "a229cdd1dd572b035395decd446316427dbd2ddcef9c94f70d7faee970255f03"
+    }
+  ],
+  "launchContractFiles": [
+    {
+      "path": "release.json",
+      "size": 475,
+      "sha256": "72fcd466eabd4f233a7b7be07c4e3ab9211c28674921348e1fc6713e4a60f037"
+    },
+    {
+      "path": "js/environment-v162.js",
+      "size": 363,
+      "sha256": "4f2cb1d4d4cac2f54d8feaa2cc5dacfe9ac05e4b21043d6d920233ab68575ca0"
+    },
+    {
+      "path": "js/release-freeze-v2000.js",
+      "size": 9105,
+      "sha256": "d6d893a93a4545ca482cf55a54f97c05429b14256becb6d20e8b23ae6ef762ff"
+    },
+    {
+      "path": "js/gold-master-v20200.js",
+      "size": 1638,
+      "sha256": "459c5296c2f80cc73a483b2504e5c0c9d1eeba935670e4f450dedf8ff754e70b"
+    },
+    {
+      "path": "js/official-production-v21000.js",
+      "size": 1474,
+      "sha256": "8b4dac38099911d36f0f2b2bdf7319ffbbebd738d519a8fc7fc8e5d68dc58832"
+    },
+    {
+      "path": "js/official-launch-v2000.js",
+      "size": 7565,
+      "sha256": "750383a2b8d5a5c77b7ca0c39cc6e2c8625d0e025d60e853fcc568fc62618edd"
+    },
+    {
+      "path": "js/admin-official-launch-v2080.js",
+      "size": 17950,
+      "sha256": "d4c43dda0d7e383ada48e473b30c1130f6a7c2c7b44bdb9156413119b28e6d0f"
+    },
+    {
+      "path": "server/supabase/functions/powder-admin-official-launch/index.ts",
+      "size": 16677,
+      "sha256": "d57a73891a1d797d04c181ae98dd32bbbc376b549f0fb429120cf0fbb29ba648"
+    },
+    {
+      "path": "server/supabase/migrations/20260823_21000_release_candidate_canary.sql",
+      "size": 16472,
+      "sha256": "15b5982f1ca5bb1e5fb7b552fe3fd3ae6ab5d5a0228d37162c33321940c09a30"
+    },
+    {
+      "path": "server/supabase/migrations/20260823_21000_official_production_readiness.sql",
+      "size": 7038,
+      "sha256": "46a49a73d625c0db347ef656414ca5d6310098aed8f20c93198c1a16afa9d83c"
+    },
+    {
+      "path": "server/supabase/migrations/20260823_21000_official_launch_production_guard.sql",
+      "size": 19824,
+      "sha256": "6d2dc3fe79312a637b6adaa88ee4681c333847405f8cdf7aadc71ee7608f0444"
+    }
+  ],
+  "promotionSha256": "2c6f84209e9a9b60488caa4a0fd17d57343a0c69cd25f2311af5d2727328ec04",
+  "pass": true
+}

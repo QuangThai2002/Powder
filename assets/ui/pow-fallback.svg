@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 768 768">
+  <defs><radialGradient id="g"><stop offset="0" stop-color="#1f5864"/><stop offset="1" stop-color="#06171e"/></radialGradient></defs>
+  <rect width="768" height="768" rx="80" fill="url(#g)"/>
+  <circle cx="384" cy="330" r="170" fill="none" stroke="#7bdcc8" stroke-width="18" opacity=".65"/>
+  <text x="384" y="375" fill="#eefbff" font-family="Arial" font-size="150" text-anchor="middle" font-weight="700">P</text>
+  <text x="384" y="570" fill="#9fb9c2" font-family="Arial" font-size="42" text-anchor="middle">POW IMAGE</text>
+</svg>

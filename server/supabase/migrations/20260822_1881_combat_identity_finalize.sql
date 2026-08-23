@@ -1,0 +1,3 @@
+update public.pvp_pow_catalog c set role=i.primary_role from public.pvp_pow_identity_v1881 i where i.pow_id=c.pow_id and c.role is distinct from i.primary_role;
+update public.pvp_pow_audit_v1871 a set role=i.primary_role, archetype=i.archetype, reason_to_use=concat(i.primary_role,' · ',i.secondary_role,' · ',i.passive_name) from public.pvp_pow_identity_v1881 i where i.pow_id=a.pow_id;
+do $$ declare n int; u int; a int; begin select count(*),count(distinct signature),count(*) filter(where primary_role='Sát thủ') into n,u,a from public.pvp_pow_identity_v1881; if n<>99 or u<>99 or a<>10 then raise exception '18.8.1 identity gate failed rows=% unique=% assassin=%',n,u,a; end if; end $$;

@@ -1,0 +1,142 @@
+{
+  "version": "20.18.0",
+  "checks": {
+    "powDex99": true,
+    "skills396": true,
+    "rank7": true,
+    "roleCoverage99": true,
+    "equipment13x4": true,
+    "artifacts49": true,
+    "gearArtifactAssets": true,
+    "learningBank": true,
+    "learningPromptRegression": true,
+    "dailyBossContract": true,
+    "adventure12Islands": true,
+    "gachaRatesGuard": true,
+    "playerNavigation": true,
+    "coreSubsystemEntrypoints": true,
+    "combatFreeze22": true,
+    "runtimeSelfTest": true
+  },
+  "details": {
+    "powDex99": {
+      "pows": 99,
+      "duplicateIds": []
+    },
+    "skills396": {
+      "kits": 99,
+      "skills": 396,
+      "unique": 396
+    },
+    "rank7": [
+      "Nhập môn",
+      "Sơ cấp",
+      "Trung cấp",
+      "Cao cấp",
+      "Chuyên nghiệp",
+      "Cao thủ",
+      "Thách đấu"
+    ],
+    "roleCoverage99": {
+      "missing": []
+    },
+    "equipment13x4": {
+      "sets": 13,
+      "equipment": 52,
+      "setBroken": []
+    },
+    "artifacts49": {
+      "common": 7,
+      "rare": 7,
+      "super_rare": 7,
+      "epic": 7,
+      "legendary": 7,
+      "mythic": 7,
+      "ancient": 7
+    },
+    "gearArtifactAssets": {
+      "missing": []
+    },
+    "learningBank": {
+      "lessons": 73,
+      "questions": 10707,
+      "badQuestions": [],
+      "duplicateIds": [],
+      "undersized": []
+    },
+    "learningPromptRegression": {
+      "duplicatePromptGroups": 1033
+    },
+    "adventure12Islands": [
+      {
+        "id": 1,
+        "n": 10
+      },
+      {
+        "id": 2,
+        "n": 20
+      },
+      {
+        "id": 3,
+        "n": 20
+      },
+      {
+        "id": 4,
+        "n": 20
+      },
+      {
+        "id": 5,
+        "n": 20
+      },
+      {
+        "id": 6,
+        "n": 20
+      },
+      {
+        "id": 7,
+        "n": 20
+      },
+      {
+        "id": 8,
+        "n": 20
+      },
+      {
+        "id": 9,
+        "n": 20
+      },
+      {
+        "id": 10,
+        "n": 20
+      },
+      {
+        "id": 11,
+        "n": 20
+      },
+      {
+        "id": 12,
+        "n": 20
+      }
+    ],
+    "playerNavigation": {
+      "viewMissing": [],
+      "sectionMissing": []
+    },
+    "coreSubsystemEntrypoints": {
+      "missing": []
+    },
+    "combatFreeze22": {
+      "changed": []
+    },
+    "runtimeSelfTest": {
+      "checks": {
+        "healthyFixturePass": true,
+        "missingRoleDetected": true,
+        "badQuestionDetected": true,
+        "version": true,
+        "buildId": true
+      },
+      "stderr": ""
+    }
+  },
+  "pass": true
+}

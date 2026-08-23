@@ -1,0 +1,14 @@
+{
+  "version": "21.0.0",
+  "checks": {
+    "runtimeExports": true,
+    "version": true,
+    "buildId": true,
+    "predecessor": true,
+    "passiveOnly": true,
+    "goldMasterLineage": true,
+    "stagedCanary": true,
+    "noNetworkMutation": true
+  },
+  "pass": true
+}

@@ -1,0 +1,33 @@
+{
+  "version": "20.14.0",
+  "checks": {
+    "schema": true,
+    "threeProfiles": true,
+    "serverCalculatedPass": true,
+    "metrics": true,
+    "sandboxSafeWrite": true,
+    "scenarioCoverage": true,
+    "integrityGuards": true,
+    "overloadExplicit": true,
+    "evidenceToken": true,
+    "adminNoSelfPass": true,
+    "adminWired": true,
+    "runtimePassive": true,
+    "officialHardGate": true,
+    "defaultFailClosed": true,
+    "runnerSelfTest": true,
+    "edgeSyntax": true
+  },
+  "details": {
+    "runnerSelfTest": {
+      "scenarioCount": true,
+      "scenarioHash": true,
+      "integrityZero": true,
+      "evidenceHash": true,
+      "safeReads": true,
+      "build": true
+    },
+    "edgeSyntax": []
+  },
+  "pass": true
+}

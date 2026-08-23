@@ -1,0 +1,169 @@
+{
+  "version": "20.14.0",
+  "checks": {
+    "htmlDuplicateIds": true,
+    "localRefs": true,
+    "cssStructure": true,
+    "jsSyntax": true,
+    "newEdgeSyntax": true,
+    "releaseAndSW": true,
+    "manifestIntegrity": true,
+    "scriptOrder": true,
+    "playerBoot20140": true,
+    "releaseQa20140": true,
+    "gameplayFreeze22": true,
+    "eventOpsRegression": true,
+    "reliabilityRegression": true,
+    "transactionRuntime": true,
+    "canonicalAdapterRegression": true,
+    "reconciliationRuntime": true,
+    "exploitRuntime": true,
+    "loadSoakGate": true,
+    "loadSoakRuntime": true,
+    "launchForwardCompatible": true,
+    "sqlStaticStructure": true,
+    "loadEvidenceFailClosed": true,
+    "adminLoadSoakWired": true,
+    "safeLoadArchitecture": true,
+    "legacyServerModulesUnchanged": true
+  },
+  "details": {
+    "htmlDuplicateIds": {
+      "index.html": [],
+      "admin.html": [],
+      "offline.html": [],
+      "privacy.html": [],
+      "terms.html": []
+    },
+    "localRefs": [],
+    "cssStructure": {
+      "count": 50,
+      "bad": []
+    },
+    "jsSyntax": {
+      "count": 189,
+      "bad": []
+    },
+    "newEdgeSyntax": [],
+    "releaseAndSW": {
+      "version": "20.14.0",
+      "channel": "production",
+      "buildId": "powder-20.14.0-production-load-soak-testing",
+      "minimumVersion": "0.0.0",
+      "serviceWorker": "20.14.0",
+      "releaseState": "production-load-soak-testing",
+      "official": false,
+      "notes": "Production Load & Soak Testing: external server-calculated load/soak/overload evidence, DB connection utilization, Edge memory growth, safe sandbox write integrity, auto-degrade/recovery proof, and Official Launch hard gate. Gameplay remains frozen."
+    },
+    "manifestIntegrity": {
+      "entries": 1266,
+      "hash": "66d769dac9a9741e",
+      "calc": "66d769dac9a9741e",
+      "bad": []
+    },
+    "scriptOrder": {
+      "count": 110,
+      "reliabilityIndex": 73,
+      "transactionIndex": 74,
+      "exploitIndex": 75,
+      "mutationIndex": 76,
+      "onlineIndex": 77,
+      "loadSoakIndex": 105,
+      "loadIntegrityIndex": 106
+    },
+    "gameplayFreeze22": {
+      "changed": []
+    },
+    "transactionRuntime": {
+      "checks": {
+        "stableClaimExecutesOnce": true,
+        "uncertainRetryReusesKey": true,
+        "completedPurchaseGetsNewKey": true,
+        "reliabilityFailClosed": true,
+        "eventsEmitted": true
+      },
+      "stderr": ""
+    },
+    "canonicalAdapterRegression": {
+      "checks": {
+        "routes18": true,
+        "routeRpcs": true,
+        "gatewayCurrent": true,
+        "gatewayOnly": true,
+        "ambiguityQuarantine": true,
+        "productionSourcesHonest": true,
+        "bridgeUnwrap": true,
+        "atomicUnwrap": true,
+        "networkNoFallback": true,
+        "sessionRequired": true,
+        "legacyModeBlocked": true,
+        "diagnostics": true
+      },
+      "stderr": ""
+    },
+    "reconciliationRuntime": {
+      "checks": {
+        "version": true,
+        "oneRpcPerEffect": true,
+        "txContextForwarded": true,
+        "effectFields": true,
+        "rpcFailureFailsClosed": true
+      },
+      "stderr": "(node:28552) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    "exploitRuntime": {
+      "checks": {
+        "version": true,
+        "schemas": true,
+        "validIntent": true,
+        "priceTamperBlocked": true,
+        "invalidCountBlocked": true,
+        "rewardTamperBlocked": true,
+        "clientWinBlocked": true
+      },
+      "stderr": ""
+    },
+    "loadSoakGate": {
+      "checks": {
+        "schema": true,
+        "threeProfiles": true,
+        "serverCalculatedPass": true,
+        "metrics": true,
+        "sandboxSafeWrite": true,
+        "scenarioCoverage": true,
+        "integrityGuards": true,
+        "overloadExplicit": true,
+        "evidenceToken": true,
+        "adminNoSelfPass": true,
+        "adminWired": true,
+        "runtimePassive": true,
+        "officialHardGate": true,
+        "defaultFailClosed": true,
+        "runnerSelfTest": true,
+        "edgeSyntax": true
+      },
+      "stderr": ""
+    },
+    "loadSoakRuntime": {
+      "checks": {
+        "runnerSelfTest": true,
+        "sixScenarios": true,
+        "safeReadTraffic": true,
+        "integrityDeltaZero": true,
+        "evidenceSha256": true,
+        "playerPassiveOnly": true,
+        "serverOwnsPass": true
+      },
+      "stderr": ""
+    },
+    "sqlStaticStructure": {
+      "functionTags": 8,
+      "dollarTags": 14
+    },
+    "legacyServerModulesUnchanged": {
+      "checked": 8,
+      "drift": []
+    }
+  },
+  "pass": true
+}

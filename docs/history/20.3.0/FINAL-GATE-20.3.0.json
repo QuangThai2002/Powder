@@ -1,0 +1,52 @@
+{
+  "version": "20.3.0",
+  "html": {
+    "index.html": {
+      "ids": 230,
+      "duplicates": [],
+      "refs": 32,
+      "missing": []
+    },
+    "admin.html": {
+      "ids": 364,
+      "duplicates": [],
+      "refs": 70,
+      "missing": []
+    },
+    "offline.html": {
+      "ids": 0,
+      "duplicates": [],
+      "refs": 0,
+      "missing": []
+    },
+    "privacy.html": {
+      "ids": 0,
+      "duplicates": [],
+      "refs": 4,
+      "missing": []
+    },
+    "terms.html": {
+      "ids": 0,
+      "duplicates": [],
+      "refs": 4,
+      "missing": []
+    }
+  },
+  "css": {
+    "count": 40,
+    "bad": []
+  },
+  "js": {
+    "runtime": 137,
+    "tools": 6
+  },
+  "manifest": {
+    "entries": 1260,
+    "bad": [],
+    "hash": "bb4aecb9f3b6f08b",
+    "calc": "bb4aecb9f3b6f08b",
+    "scriptOrder": 105,
+    "missingOrder": []
+  },
+  "pass": true
+}

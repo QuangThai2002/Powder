@@ -1,0 +1,15 @@
+import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';import vm from 'node:vm';
+const root=path.resolve(process.argv[2]||process.cwd()),read=r=>fs.readFileSync(path.join(root,r),'utf8'),sha=r=>crypto.createHash('sha256').update(fs.readFileSync(path.join(root,r))).digest('hex');
+const out={version:'20.6.0',checks:{},details:{}},ok=(k,v,d)=>{out.checks[k]=!!v;if(d!==undefined)out.details[k]=d};
+const rel=JSON.parse(read('release.json'));ok('releaseMetadata',rel.version==='20.6.0'&&rel.buildId==='powder-20.6.0-live-event-operations-hardening'&&rel.releaseState==='live-event-operations-hardening'&&rel.official===false,rel);
+const base=JSON.parse(read('RELEASE-FREEZE-BASELINE-19.9.0.json')),changed=[];for(const x of base.critical){const p=path.join(root,x.path);if(!fs.existsSync(p)||sha(x.path)!==x.sha256||fs.statSync(p).size!==x.size)changed.push(x.path)}ok('gameplayFreeze',base.criticalCount===22&&changed.length===0,{critical:base.criticalCount,changed});
+const ctx={window:{},console:{log(){},info(){},warn(){},error(){}},setTimeout(){},clearTimeout(){}};ctx.window=ctx;vm.createContext(ctx);vm.runInContext(read('js/data.js'),ctx);vm.runInContext(read('js/skill-v81-data.js'),ctx);const pows=ctx.POWDER_DATA?.pows||[],kits=ctx.POWDER_SKILL_V81?.pows||{},ids=[];for(const k of Object.values(kits))for(const n of ['basic','skill1','skill2','ultimate'])if(k?.skills?.[n]?.id)ids.push(String(k.skills[n].id));ok('canonical99x396',pows.length===99&&Object.keys(kits).length===99&&ids.length===396&&new Set(ids).size===396,{pows:pows.length,kits:Object.keys(kits).length,skills:ids.length,unique:new Set(ids).size});
+const edge=read('server/supabase/functions/powder-admin-events/index.ts'),ui=read('js/admin-events-v167.js');
+ok('draftWorkflow',edge.includes("a==='save_draft'")&&edge.includes("a==='dry_run'")&&edge.includes("a==='submit'")&&edge.includes("a==='approve'")&&edge.includes("a==='publish'")&&edge.includes("a==='rollback'"));
+ok('legacyDirectWriteBlocked',edge.includes("if(a==='save')return out")&&edge.includes("if(a==='toggle'||a==='delete')return out"));
+ok('ownerApproval',edge.includes("role!=='owner'")&&edge.includes('Chỉ Owner được phê duyệt/publish/rollback'));
+ok('cohortModes',edge.includes("['all','pilot','percentage','explicit']")&&ui.includes('event206CohortMode')&&ui.includes('event206Excluded'));
+ok('rewardExposure',edge.includes('exposureAdd')&&edge.includes('max_reward_exposure')&&edge.includes('max_shop_limit'));
+ok('uiWorkflow',ui.includes("api('save_draft'")&&ui.includes("workflow('dry_run'")&&ui.includes("workflow('submit'")&&ui.includes("workflow('approve'")&&ui.includes("workflow('publish'")&&ui.includes("workflow('rollback'"));
+const idx=read('index.html'),adm=read('admin.html');ok('adminOnlyEventOps',adm.includes('admin-event-ops-v2060.css')&&!idx.includes('admin-event-ops-v2060'));
+out.pass=Object.values(out.checks).every(Boolean);console.log(JSON.stringify(out,null,2));if(!out.pass)process.exit(1);

@@ -1,0 +1,14 @@
+import fs from 'node:fs';import path from 'node:path';import vm from 'node:vm';
+const root=path.resolve(process.argv[2]||process.cwd()),code=fs.readFileSync(path.join(root,'js/server-mutation-v20110.js'),'utf8');
+let mode='gateway_only',session=true,kind='bridge',calls=0;
+const request=async(_url,opt)=>{calls++;const b=JSON.parse(opt.body||'{}');if(kind==='error')throw new Error('network unknown');if(b.action==='capability')return{ok:true,version:'20.11.0'};if(kind==='atomic')return{ok:true,atomic:true,idempotent:true,txKey:b.txKey,handler:'test',result:{coins:9}};return{ok:true,canonical:true,idempotent:false,routeKind:'legacy_edge_bridge',txKey:b.txKey,result:{coins:7},adapterVerified:false}};
+const window={POWDER_CONFIG:{serverMutationGatewayV20110:{get mode(){return mode}}},POWDER_ONLINE_V150:{hasSession:()=>session,request}};class CustomEvent{};
+const context=vm.createContext({window,CustomEvent,Date,JSON,Object,String,Number,Array,RegExp,Promise,Error});vm.runInContext(code,context,{filename:'server-mutation-v20110.js'});const api=window.POWDER_SERVER_MUTATION_V20110;
+const checks={};
+let r=await api.mutate({scope:'economy',action:'buy_candy',payload:{count:1},txKey:'t1'});checks.bridgeUnwrap=r.coins===7&&r.txKey==='t1'&&r.__mutation20110?.routeKind==='legacy_edge_bridge'&&r.__mutation20110?.adapterVerified===false;
+kind='atomic';r=await api.mutate({scope:'inventory',action:'item_lock',payload:{},txKey:'t2'});checks.atomicUnwrap=r.coins===9&&r.__mutation20110?.atomic===true&&r.__mutation20110?.handler==='test';
+kind='error';let threw=false;try{await api.mutate({scope:'event',action:'claim_mission',payload:{},txKey:'t3'})}catch(e){threw=/network unknown/.test(String(e?.message||e))}checks.networkNoFallback=threw;
+session=false;threw=false;try{await api.mutate({scope:'mail',action:'claim_mail',payload:{},txKey:'t4'})}catch(e){threw=/phiên Powder Online/i.test(String(e?.message||e))}checks.sessionRequired=threw;
+session=true;mode='legacy';threw=false;try{await api.mutate({scope:'economy',action:'buy_candy',payload:{},txKey:'t5'})}catch(e){threw=/vô hiệu hóa client legacy write bypass/i.test(String(e?.message||e))}checks.legacyModeBlocked=threw;
+const d=api.diagnostics();checks.diagnostics=d.version==='20.11.0'&&d.gateway===2&&d.blocked===1&&d.legacyFallback===0;
+const out={version:'20.11.0',checks,requestCalls:calls,diagnostics:d,pass:Object.values(checks).every(Boolean)};console.log(JSON.stringify(out,null,2));if(!out.pass)process.exit(1);

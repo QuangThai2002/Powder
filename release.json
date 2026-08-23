@@ -1,0 +1,11 @@
+{
+  "version": "21.0.4",
+  "channel": "production",
+  "buildId": "powder-21.0.4-capacity-guard",
+  "minimumVersion": "0.0.0",
+  "serviceWorker": "21.0.4",
+  "releaseState": "capacity-guard-graceful-degradation-readiness",
+  "official": false,
+  "promotedFrom": "powder-21.0.3-live-observability-slo",
+  "notes": "Capacity guard, server-derived backpressure, graceful degradation and hysteresis recovery. No gameplay changes; no automatic rollback."
+}

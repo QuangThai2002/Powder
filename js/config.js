@@ -1,0 +1,19 @@
+window.POWDER_CONFIG={
+  storageKey:"powder_pow_beta_v1",
+  appVersion:"20.15.0",
+  serverMutationGatewayV20110:{mode:"gateway_only"},
+  saveVersion:15,
+  battle:{enemyScaleByRank:0.1,extraTurnCap:0.35,guardDamageMultiplier:0.45},
+  starUpgrade:{
+    coinByTargetStar:{1:80,2:180,3:420,4:900,5:1800,6:3600,7:7200},
+    shardsByTargetStar:{1:10,2:20,3:35,4:55,5:85,6:130,7:200}
+  },
+  powProgression:{
+    levelCapsByStars:{0:10,1:20,2:30,3:40,4:50,5:60,6:80,7:100},
+    candyExp:60,
+    candyExpByType:{common:60,rare:300,legendary:1200},
+    candyPacks:{1:150,10:1350,50:6000},
+    correctAnswersPerCandy:8
+  },
+  weeklyBossBonus:{coins:0,chests:[]}
+};

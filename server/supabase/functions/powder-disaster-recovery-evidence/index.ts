@@ -1,0 +1,12 @@
+import { createClient } from "npm:@supabase/supabase-js@2";
+const VERSION='20.15.0',BUILD='powder-20.15.0-disaster-recovery-backup-validation';
+const cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type, x-powder-dr-evidence-token','Access-Control-Allow-Methods':'POST, OPTIONS','Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'};
+const out=(d:unknown,s=200)=>new Response(JSON.stringify(d),{status:s,headers:{...cors,'X-Powder-DR-Version':VERSION}});
+const stable=(v:any):string=>{if(v===null||typeof v!=='object')return JSON.stringify(v);if(Array.isArray(v))return '['+v.map(stable).join(',')+']';return '{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+stable(v[k])).join(',')+'}'};
+async function sha256(s:string){const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(d)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+Deno.serve(async(req:Request)=>{if(req.method==='OPTIONS')return new Response('ok',{headers:cors});if(req.method!=='POST')return out({error:'Method not allowed'},405);try{
+ const expected=Deno.env.get('POWDER_DR_EVIDENCE_TOKEN')||'',provided=req.headers.get('x-powder-dr-evidence-token')||'';if(expected.length<24||provided!==expected)return out({error:'DR evidence token invalid or not configured.'},401);
+ const report=await req.json().catch(()=>null);if(!report||typeof report!=='object')return out({error:'Invalid JSON report.'},400);if(report.version!==VERSION||report.buildId!==BUILD||report.schema!=='powder-disaster-recovery-evidence-v20150')return out({error:'Report version/build/schema mismatch.'},400);
+ const claimed=String(report.evidenceSha256||'').toLowerCase(),clone={...report};delete clone.evidenceSha256;const calculated=await sha256(stable(clone));if(!/^[0-9a-f]{64}$/.test(claimed)||claimed!==calculated)return out({error:'Evidence SHA-256 mismatch.',calculated},400);
+ const db=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,{auth:{persistSession:false,autoRefreshToken:false}});const {data,error}=await db.rpc('powder_dr_ingest_v20150',{p_report:report,p_actor:`external-dr-runner:${String(report.runnerRevision||'unknown').slice(0,80)}`});if(error)throw error;return out({ok:true,version:VERSION,validation:data?.validation||null,id:data?.id||null,serverTime:new Date().toISOString()});
+}catch(e:any){console.error('[powder-disaster-recovery-evidence 20.15]',e);return out({error:String(e?.message||e)},500)}});

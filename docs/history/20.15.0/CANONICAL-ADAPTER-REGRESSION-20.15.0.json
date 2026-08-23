@@ -1,0 +1,40 @@
+{
+  "version": "20.15.0",
+  "sourceAdapter": "20.11.0",
+  "routes": [
+    "economy/buy_candy",
+    "economy/consume_candy",
+    "economy/feed_candy",
+    "economy/open_powball",
+    "economy/upgrade_pow",
+    "reward/claim_daily",
+    "economy/daily_boss_entry",
+    "inventory/equipment_equip",
+    "inventory/equipment_unequip",
+    "inventory/artifact_equip",
+    "inventory/artifact_unequip",
+    "inventory/item_lock",
+    "mail/claim_mail",
+    "reward/claim_daily_login",
+    "event/claim_mission",
+    "event/claim_completion",
+    "purchase/event_buy",
+    "event/finish_combat"
+  ],
+  "checks": {
+    "routes18": true,
+    "routeRpcs": true,
+    "gatewayCurrent": true,
+    "gatewayOnly": true,
+    "ambiguityQuarantine": true,
+    "productionSourcesHonest": true,
+    "bridgeUnwrap": true,
+    "atomicUnwrap": true,
+    "networkNoFallback": true,
+    "sessionRequired": true,
+    "legacyModeBlocked": true,
+    "diagnostics": true
+  },
+  "requestCalls": 3,
+  "pass": true
+}

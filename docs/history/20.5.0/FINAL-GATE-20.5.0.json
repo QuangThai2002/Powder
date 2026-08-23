@@ -1,0 +1,93 @@
+{
+  "version": "20.5.0",
+  "checks": {
+    "htmlDuplicateIds": true,
+    "localRefs": true,
+    "cssStructure": true,
+    "jsSyntax": true,
+    "releaseAndSW": true,
+    "manifestIntegrity": true,
+    "scriptOrder": true,
+    "noStalePlayerBoot": true,
+    "oldBootRemoved": true,
+    "supportGate": true
+  },
+  "details": {
+    "htmlDuplicateIds": {
+      "index.html": [],
+      "admin.html": [],
+      "offline.html": [],
+      "privacy.html": [],
+      "terms.html": []
+    },
+    "localRefs": [],
+    "cssStructure": {
+      "count": 41,
+      "bad": []
+    },
+    "jsSyntax": {
+      "count": 148,
+      "bad": []
+    },
+    "releaseAndSW": {
+      "version": "20.5.0",
+      "channel": "production",
+      "buildId": "powder-20.5.0-player-support-gm-console",
+      "minimumVersion": "0.0.0",
+      "serviceWorker": "20.5.0",
+      "releaseState": "player-support-gm-console",
+      "official": false,
+      "notes": "Player Support / GM Console: redacted player lookup, support cases, audited notes, compensation requests through transactional Mail, Admin/Owner approval, moderation role separation, legacy Admin privilege fixes. Gameplay remains frozen."
+    },
+    "manifestIntegrity": {
+      "entries": 1260,
+      "hash": "15a77d81091b2731",
+      "calc": "15a77d81091b2731",
+      "bad": []
+    },
+    "scriptOrder": {
+      "count": 105
+    },
+    "noStalePlayerBoot": [],
+    "supportGate": {
+      "version": "20.5.0",
+      "checks": {
+        "releaseMetadata": true,
+        "gameplayFreeze": true,
+        "canonical99x396": true,
+        "supportNoRawSave": true,
+        "supportRedaction": true,
+        "supportRoleMatrix": true,
+        "legacyAdminHardened": true,
+        "compensationTransaction": true,
+        "supportRewardCaps": true,
+        "adminOnlyRuntime": true,
+        "supportUiRoleGuard": true
+      },
+      "details": {
+        "releaseMetadata": {
+          "version": "20.5.0",
+          "channel": "production",
+          "buildId": "powder-20.5.0-player-support-gm-console",
+          "minimumVersion": "0.0.0",
+          "serviceWorker": "20.5.0",
+          "releaseState": "player-support-gm-console",
+          "official": false,
+          "notes": "Player Support / GM Console: redacted player lookup, support cases, audited notes, compensation requests through transactional Mail, Admin/Owner approval, moderation role separation, legacy Admin privilege fixes. Gameplay remains frozen."
+        },
+        "gameplayFreeze": {
+          "critical": 22,
+          "changed": []
+        },
+        "canonical99x396": {
+          "pows": 99,
+          "kits": 99,
+          "skills": 396,
+          "unique": 396
+        }
+      },
+      "pass": true
+    }
+  },
+  "pass": true
+}

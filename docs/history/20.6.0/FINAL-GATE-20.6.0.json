@@ -1,0 +1,92 @@
+{
+  "version": "20.6.0",
+  "checks": {
+    "htmlDuplicateIds": true,
+    "localRefs": true,
+    "cssStructure": true,
+    "jsSyntax": true,
+    "releaseAndSW": true,
+    "manifestIntegrity": true,
+    "scriptOrder": true,
+    "noStalePlayerBoot": true,
+    "oldBootRemoved": true,
+    "eventOpsGate": true
+  },
+  "details": {
+    "htmlDuplicateIds": {
+      "index.html": [],
+      "admin.html": [],
+      "offline.html": [],
+      "privacy.html": [],
+      "terms.html": []
+    },
+    "localRefs": [],
+    "cssStructure": {
+      "count": 42,
+      "bad": []
+    },
+    "jsSyntax": {
+      "count": 150,
+      "bad": []
+    },
+    "releaseAndSW": {
+      "version": "20.6.0",
+      "channel": "production",
+      "buildId": "powder-20.6.0-live-event-operations-hardening",
+      "minimumVersion": "0.0.0",
+      "serviceWorker": "20.6.0",
+      "releaseState": "live-event-operations-hardening",
+      "official": false,
+      "notes": "Live Event Operations Hardening: Draft → Dry-run → Submit → Owner Approve → Publish workflow, cohort eligibility, reward exposure caps, transactional publish/rollback, Event Shop concurrency lock and anti-double-claim guards. Gameplay remains frozen."
+    },
+    "manifestIntegrity": {
+      "entries": 1260,
+      "hash": "8528c2fdd2534212",
+      "calc": "8528c2fdd2534212",
+      "bad": []
+    },
+    "scriptOrder": {
+      "count": 105
+    },
+    "noStalePlayerBoot": [],
+    "eventOpsGate": {
+      "version": "20.6.0",
+      "checks": {
+        "releaseMetadata": true,
+        "gameplayFreeze": true,
+        "canonical99x396": true,
+        "draftWorkflow": true,
+        "legacyDirectWriteBlocked": true,
+        "ownerApproval": true,
+        "cohortModes": true,
+        "rewardExposure": true,
+        "uiWorkflow": true,
+        "adminOnlyEventOps": true
+      },
+      "details": {
+        "releaseMetadata": {
+          "version": "20.6.0",
+          "channel": "production",
+          "buildId": "powder-20.6.0-live-event-operations-hardening",
+          "minimumVersion": "0.0.0",
+          "serviceWorker": "20.6.0",
+          "releaseState": "live-event-operations-hardening",
+          "official": false,
+          "notes": "Live Event Operations Hardening: Draft → Dry-run → Submit → Owner Approve → Publish workflow, cohort eligibility, reward exposure caps, transactional publish/rollback, Event Shop concurrency lock and anti-double-claim guards. Gameplay remains frozen."
+        },
+        "gameplayFreeze": {
+          "critical": 22,
+          "changed": []
+        },
+        "canonical99x396": {
+          "pows": 99,
+          "kits": 99,
+          "skills": 396,
+          "unique": 396
+        }
+      },
+      "pass": true
+    }
+  },
+  "pass": true
+}

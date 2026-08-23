@@ -1,0 +1,132 @@
+{
+  "version": "20.20.0",
+  "checks": {
+    "goldMasterMetadata": true,
+    "immutableLock": true,
+    "domainFreeze": true,
+    "cleanupGate": true,
+    "singleCurrentBoot": true,
+    "bootManifestIntegrity": true,
+    "goldMasterBootOrder": true,
+    "passiveGoldRuntime": true,
+    "goldMasterServerContract": true,
+    "goldMasterEvidenceComputed": true,
+    "goldMasterCanaryPolicy": true,
+    "officialGoldHardGate": true,
+    "officialEdgeGoldMaster": true,
+    "goldMasterUiBinding": true,
+    "gameplayFreeze22": true,
+    "predecessorRcEvidence": true,
+    "goldRuntimeSelfTest": true
+  },
+  "details": {
+    "goldMasterMetadata": {
+      "version": "20.20.0",
+      "channel": "production",
+      "buildId": "powder-20.20.0-gold-master",
+      "minimumVersion": "0.0.0",
+      "serviceWorker": "20.20.0",
+      "releaseState": "gold-master",
+      "official": false,
+      "notes": "Gold Master: immutable code/schema/API/assets freeze, deterministic artifact lock and production evidence gate. Gameplay/combat remains frozen; Official promotion still requires real production evidence."
+    },
+    "immutableLock": {
+      "version": "20.20.0",
+      "buildId": "powder-20.20.0-gold-master",
+      "releaseState": "gold-master",
+      "freezeSha256": "cbf20d8583b75b9dab5acdf3fb50f0477fef64d4ce85b19669eed9a1e014a41c",
+      "cleanup": {
+        "pass": true,
+        "badFiles": [],
+        "badMarkers": [],
+        "staleRootArtifacts": []
+      },
+      "categories": {
+        "code": {
+          "count": 226,
+          "bytes": 5412980,
+          "sha256": "638166099f073339a01ba591f69a3394430bec3a6f94edf6b3244eb53ef1209c"
+        },
+        "schema": {
+          "count": 44,
+          "bytes": 716639,
+          "sha256": "ca7063816ce73a5bc9a3a5c490a0491394725e17bb4cc319f0922068c1534092"
+        },
+        "api": {
+          "count": 29,
+          "bytes": 191440,
+          "sha256": "6fa1824554a6ee2d32b8753251ffd9daa04f50b3773e58692866b537bbc2e72b"
+        },
+        "assets": {
+          "count": 1141,
+          "bytes": 178967380,
+          "sha256": "342c0bd24fa2109d505e7b4b252a007bb1f99f2fd13397cb727d9d9d56621a0c"
+        }
+      }
+    },
+    "domainFreeze": {
+      "code": {
+        "count": 226,
+        "bytes": 5412980,
+        "sha256": "638166099f073339a01ba591f69a3394430bec3a6f94edf6b3244eb53ef1209c"
+      },
+      "schema": {
+        "count": 44,
+        "bytes": 716639,
+        "sha256": "ca7063816ce73a5bc9a3a5c490a0491394725e17bb4cc319f0922068c1534092"
+      },
+      "api": {
+        "count": 29,
+        "bytes": 191440,
+        "sha256": "6fa1824554a6ee2d32b8753251ffd9daa04f50b3773e58692866b537bbc2e72b"
+      },
+      "assets": {
+        "count": 1141,
+        "bytes": 178967380,
+        "sha256": "342c0bd24fa2109d505e7b4b252a007bb1f99f2fd13397cb727d9d9d56621a0c"
+      }
+    },
+    "cleanupGate": {
+      "pass": true,
+      "badFiles": [],
+      "badMarkers": [],
+      "staleRootArtifacts": []
+    },
+    "bootManifestIntegrity": {
+      "entries": 1271,
+      "hash": "bc4c0b52186a52b1",
+      "calc": "bc4c0b52186a52b1",
+      "bad": []
+    },
+    "goldMasterBootOrder": {
+      "count": 115,
+      "fullRegression": 100,
+      "rcCanary": 101,
+      "releaseFreeze": 112,
+      "goldMaster": 113,
+      "officialLaunch": 114
+    },
+    "gameplayFreeze22": {
+      "changed": []
+    },
+    "predecessorRcEvidence": {
+      "pass": true,
+      "version": "20.19.0"
+    },
+    "goldRuntimeSelfTest": {
+      "checks": {
+        "apiInstalled": true,
+        "version": true,
+        "buildId": true,
+        "diagnosticsPass": true,
+        "immutable": true,
+        "gameplayFrozen": true,
+        "officialFalse": true,
+        "passiveNoFetch": true,
+        "event": true
+      },
+      "stderr": ""
+    }
+  },
+  "pass": true
+}

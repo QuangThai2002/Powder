@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+
+<html lang="vi">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
+<title>Powder 21.0.4 · Capacity Guard & Graceful Degradation</title>
+<link crossorigin="" href="https://pxejydhqfzidnheudgnn.supabase.co" rel="preconnect"/>
+<link href="https://pxejydhqfzidnheudgnn.supabase.co" rel="dns-prefetch"/>
+<link href="manifest.webmanifest" rel="manifest"/>
+<meta content="#07101d" name="theme-color"/>
+<link rel="preload" as="image" href="assets/backgrounds/bg-loading-splash-1777.webp" fetchpriority="high"/>
+<link rel="preload" as="image" href="assets/ui/powder-logo-project.webp" fetchpriority="high"/>
+<link href="css/boot-loader-v21004.css?v=21004" rel="stylesheet"/><script defer src="js/boot-loader-v21004.js?v=21004"></script><script id="powderSelectionLock1786">
+(()=>{const editable=t=>{const e=t&&t.nodeType===1?t:t?.parentElement;return !!e?.closest?.('input,textarea,[contenteditable="true"],pre,code,.allow-text-select,[data-selectable="true"]')};document.addEventListener('selectstart',e=>{if(!editable(e.target))e.preventDefault()},true);document.addEventListener('pointerdown',e=>{if(editable(e.target))return;const s=getSelection?.();if(s&&s.rangeCount&&!s.isCollapsed)s.removeAllRanges()},true);document.addEventListener('selectionchange',()=>{const s=getSelection?.();if(!s||!s.rangeCount||s.isCollapsed)return;if(!editable(s.anchorNode))s.removeAllRanges()})})();
+</script><link href="css/pvp-online-v1881.css?v=18810" rel="stylesheet"/><link href="css/combat-identity-v1881.css?v=18810" rel="stylesheet"/><link href="css/production-readiness-v1910.css?v=21002" rel="stylesheet"/><link href="css/pilot-toolkit-v1930.css?v=21002" rel="stylesheet"/><link href="css/recovery-runtime-v2040.css?v=21002" rel="stylesheet"/><link href="css/live-rollout-v1950.css?v=21002" rel="stylesheet"/><link href="css/pilot-live-v2000.css?v=21002" rel="stylesheet"/><link href="css/launch-polish-v2000.css?v=21002" rel="stylesheet"/><link href="css/release-freeze-v2000.css?v=21002" rel="stylesheet"/><link href="css/official-launch-v2000.css?v=21002" rel="stylesheet"/><link href="css/live-ops-diagnostics-v2020.css?v=21002" rel="stylesheet"/><script defer src="js/live-ops-diagnostics-v2020.js?v=21002"></script><link href="css/reliability-runtime-v2080.css?v=21002" rel="stylesheet"/></head>
+<body>
+<div class="loading-screen boot1776" id="loadingScreen" aria-live="polite">
+  <div class="boot1776-world" aria-hidden="true"></div>
+  <div class="boot1776-vignette" aria-hidden="true"></div>
+  <div class="boot1776-aurora" aria-hidden="true"></div>
+
+  <main class="boot1776-shell">
+    <div class="boot1776-logo-wrap" aria-hidden="true">
+      <span class="boot1776-logo-ring boot1776-logo-ring-a"></span>
+      <img class="boot1776-logo" src="assets/ui/powder-logo-project.webp" alt="Powder" decoding="sync" fetchpriority="high"/>
+    </div>
+
+    <div class="boot1776-brand-copy">
+      <p class="boot1776-kicker">POWDER</p>
+      <h1>Đang tải thế giới Powder</h1>
+      <p class="boot1776-brand-sub">Chuẩn bị chuyến phiêu lưu của bạn...</p>
+    </div>
+
+    <section class="boot1776-card" aria-label="Tiến trình tải Powder">
+      <div class="boot1776-card-top">
+        <div>
+          <p class="boot1776-stage" id="bootStage">Đang chuẩn bị thế giới</p>
+          <p class="boot1776-detail" id="bootDetail">Sắp xếp bản đồ, Pow và hành trang...</p>
+        </div>
+        <strong class="boot1776-percent" id="bootProgressPct">0%</strong>
+      </div>
+
+      <div class="boot1776-progress-frame">
+        <div class="boot1776-progress" role="progressbar" aria-label="Tiến trình tải Powder" aria-valuemin="0" aria-valuemax="100" id="bootProgress">
+          <i id="bootProgressFill"></i>
+          <span class="boot1776-progress-glow" aria-hidden="true"></span>
+        </div>
+      </div>
+
+      <p class="boot1776-player-status" id="bootFiles">Đang chuẩn bị chuyến phiêu lưu...</p>
+    </section>
+
+    <aside class="boot1776-tip">
+      <div class="boot1776-tip-icon">✦</div>
+      <div><strong>MẸO</strong><span id="bootTip">Học mỗi ngày để phát triển Pow và mở thêm thử thách mới.</span></div>
+    </aside>
+
+    <p class="boot1776-error" id="bootError" hidden></p>
+    <div class="boot1776-actions">
+      <button id="bootRetry" type="button" hidden>Thử lại</button>
+      <button id="bootClear" type="button" hidden>Tải lại tài nguyên</button>
+    </div>
+  </main>
+
+  <div class="boot1776-version">21.0.4 Capacity Guard · Graceful Degradation</div>
+</div>
+<div class="setup-screen" hidden="" id="setupScreen">
+<div class="setup-copy"><p class="eyebrow">POW ORIGIN</p><h1>Chọn Pow khởi đầu</h1><p>Starter gốc bắt đầu từ 0★ và chỉ thức tỉnh tối đa 1★. Ba Starter tiến hóa đặc biệt bắt đầu từ 1★ và có 6 hình thái riêng.</p></div>
+<div class="starter-grid" id="starterGrid"></div>
+</div>
+<div class="app" hidden="" id="app">
+<header class="topbar">
+<button aria-label="Powder" class="brand brand-logo-only" id="brandBtn" type="button"><span class="brand-orb"><img alt="Powder" loading="eager" decoding="async" src="assets/ui/powder-logo-project.webp"/></span></button>
+<nav class="nav">
+<button class="nav-btn is-active" data-view="home">Căn cứ</button>
+<button class="nav-btn" data-view="gear">Cường Hóa</button>
+<button class="nav-btn" data-view="shop">Chợ</button>
+<button class="nav-btn" data-view="learn">Học</button>
+<button class="nav-btn nav-btn-world" data-view="adventure">Phiêu lưu</button>
+<button class="nav-btn" data-view="events">Sự kiện</button>
+<button class="nav-btn" data-view="chests">PowBall</button>
+<button class="nav-btn" data-view="tamer">Tamer</button>
+<button class="nav-btn" data-view="social">Cộng đồng</button>
+</nav>
+<div class="wallet"><span class="wallet-pill wallet-coin" title="Military Coin"><img alt="Coin" class="wallet-icon-img" loading="eager" decoding="async" src="assets/items/ui-compact/military-coin.webp"/><b id="coinsLabel">0</b></span><span class="wallet-pill element-coin" title="Tinh Tệ — tiền riêng của Cửa hàng"><img alt="Tinh Tệ" class="wallet-icon-img" loading="eager" decoding="async" src="assets/items/ui-compact/element-coin.webp"/><b id="shopCurrencyLabel">0</b></span><span class="wallet-pill wallet-hidden-resource" title="Điểm Hiểu Biết · chỉ dùng mở Boss ngày"><span class="wallet-icon">📘</span><b id="energyLabel">0</b></span><button class="wallet-pill online-account-pill" data-state="offline" id="onlineAccountBtn" title="Hồ sơ Tamer" type="button"><span class="online-account-avatar"><img alt="Tamer" id="onlineAccountAvatar" loading="eager" decoding="async" src="assets/ranks/rank-0.webp"/></span><span class="online-account-copy"><b id="onlineAccountLabel">Offline</b><small id="onlineAccountRank">Chưa đăng nhập</small></span><i aria-hidden="true" class="online-account-dot"></i></button></div>
+<button aria-label="Cài đặt" class="topbar-gear" data-open-view="settings" title="Cài đặt">⚙️</button>
+</header>
+<main>
+<section class="view" id="homeView">
+<div class="hero">
+<div><p class="eyebrow">TAMER COMMAND CENTER</p><h1>Căn cứ Tamer</h1><p id="homeHeroHintV147">Powder sẽ gợi ý việc phù hợp nhất dựa trên tiến độ hiện tại của bạn.</p><div class="button-row"><button class="btn primary" id="continueJourneyHeroV147" type="button">Tiếp tục hành trình</button><button class="btn secondary" data-open-view="learn">Học viện</button><button class="btn secondary" data-open-view="adventure">Phiêu lưu</button><button class="btn secondary" data-open-view="gear">Cường Hóa</button></div></div>
+<article class="rank-card"><div class="rank-badge" id="rankBadge">I</div><div><span>Cấp Tamer</span><h2 id="rankName">Nhập môn</h2><p id="rankSub"></p></div></article>
+</div>
+<section aria-label="Hành trình hôm nay" class="player-journey-v147" id="playerJourneyHubV147"></section>
+<div class="home-grid">
+<article class="panel active-pow-panel"><div class="panel-head"><div><p class="eyebrow">POW CHÍNH</p><h2 id="activePowName"></h2></div><span class="chip" id="activePowElement"></span></div><div class="big-art" id="activePowArt"></div><div class="chips" id="activePowInfo"></div><div class="home-pow-level-v144" id="activePowLevelProgress"></div></article>
+<article class="panel home-tamer-promotion-v144"><div class="panel-head"><div><p class="eyebrow">HÀNH TRÌNH TAMER</p><h2 id="tamerPromotionTitle">Tiến tới Sơ cấp</h2></div><b id="expLabel"></b></div><div class="home-tamer-next-v145" id="tamerNextGoal"></div><div class="progress-list" id="progressList"></div><div class="home-tamer-actions-v144"><button class="btn secondary" data-open-view="tamer" type="button">Xem toàn bộ lộ trình</button><button class="btn primary" id="promotionBtn">Tiếp tục</button></div></article>
+</div>
+<div class="base-facility-grid">
+<button class="base-facility storage" data-open-view="gear"><span>⚡</span><div><b>Điện Cường Hóa</b><small>Đội hình · Level · Sao · Kỹ năng</small></div></button>
+<button class="base-facility storage" data-open-view="shop"><span>🏪</span><div><b>Chợ</b><small>Trang bị theo Rank</small></div></button>
+<button class="base-facility academy" data-open-view="learn"><span>📚</span><div><b>Học viện Ngôn Ngữ</b><small>HSK1→HSK5 · B1→B2 · Bài học &amp; ôn tập</small></div></button>
+<button class="base-facility arena" data-open-view="adventure"><span>🗺️</span><div><b>Bản đồ Powder</b><small>12 đảo · Học kiến thức · Vượt thử thách · Chiến đấu</small></div></button>
+<button class="base-facility boss" data-open-view="boss"><span>👑</span><div><b>Điện Boss</b><small>Boss ngày, tuần và thăng rank</small></div></button>
+<button class="base-facility portal" data-open-view="events"><span>✦</span><div><b>Sự kiện</b><small>Hoạt động giới hạn thời gian · Quà đặc biệt</small></div></button>
+<button class="base-facility lab" data-open-view="tamer"><span>🔮</span><div><b>Viện Nguyên Tố</b><small>Xem khắc chế và tiến trình Tamer</small></div></button>
+</div>
+</section>
+<section class="view" hidden="" id="inventoryView">
+<div class="section-title inventory-title">
+<div><p class="eyebrow">SQUAD COMMAND CENTER</p><h1>Đội Hình Pow</h1></div>
+<p>Đội hình là trung tâm của trang. Thêm hoặc rời đội ngay trên thẻ Pow, không cần mở chi tiết hay kéo xuống cuối trang.</p>
+</div>
+<div class="inventory-summary">
+<article class="inventory-summary-card inventory-owned-highlight"><span>Pow sở hữu</span><b id="inventoryOwnedCount">0</b><small id="inventoryOwnedCopies">0 bản sao</small></article>
+<article class="inventory-summary-card"><span>Tổng lực chiến</span><b id="inventoryTeamPower">0</b></article>
+<article class="inventory-summary-card"><span>Đội hình</span><b id="inventoryTeamCount">0/5</b></article>
+<article class="inventory-summary-card"><span>Pow chính</span><b id="inventoryActiveName">—</b></article>
+</div>
+<section class="panel formation-command-center">
+<div class="formation-command-head"><div><p class="eyebrow">TRUNG TÂM ĐỘI HÌNH</p><h2>5 Pow chiến đấu</h2><p>3 Pow chính · 2 Pow dự bị. Chọn Pow phía dưới rồi bấm <b>＋ Vào đội</b>; thay đổi xuất hiện ngay tại đây.</p></div><div class="formation-command-meta"><span class="chip" id="formationTeamCount">0/5</span><span class="chip">Kéo thả để đổi thứ tự</span></div></div>
+<div class="inventory-team-slots formation-team-slots" id="inventoryTeamSlots"></div>
+</section>
+<div class="inventory-layout inventory-layout-roster">
+<section class="panel inventory-storage-panel">
+<div class="panel-head"><div><p class="eyebrow">POW ĐÃ SỞ HỮU</p><h2>Chọn Pow cho đội hình</h2></div><span class="chip" id="inventoryResultCount"></span></div>
+<div class="inventory-tools">
+<input class="inventory-search" id="inventorySearch" placeholder="Tìm tên Pow..." type="search"/>
+<select class="inventory-select" id="inventoryRarityFilter"><option value="all">Tất cả phẩm chất</option></select>
+<select class="inventory-select" id="inventoryElementFilter"><option value="all">Tất cả nguyên tố</option></select>
+<select class="inventory-select" id="inventoryRoleFilter"><option value="all">Tất cả vai trò</option></select>
+<select class="inventory-select" id="inventoryStarFilter"><option value="all">Tất cả sao</option><option value="0">0 sao</option><option value="1">1+ sao</option><option value="3">3+ sao</option><option value="5">5+ sao</option></select>
+<select class="inventory-select" id="inventorySpecialFilter"><option value="all">Tất cả</option><option value="shiny">Chỉ Shiny</option><option value="favorite">Yêu thích</option><option value="locked">Đã khóa</option></select>
+<select class="inventory-select" id="inventorySort"><option value="power">Lực chiến cao nhất</option><option value="rarity">Phẩm chất cao nhất</option><option value="level">Level cao nhất</option><option value="atk">ATK cao nhất</option><option value="def">DEF cao nhất</option><option value="ap">AP cao nhất</option><option value="speed">SPEED cao nhất</option><option value="crit">Crit Rate cao nhất</option><option value="name">Tên A–Z</option></select>
+</div>
+<div class="inventory-pow-grid" id="inventoryPowGrid"></div>
+</section>
+<aside class="inventory-side">
+<section class="panel inventory-detail-panel" id="inventoryDetail"></section>
+</aside>
+</div>
+</section>
+<section class="view" hidden="" id="gearView"></section>
+<section class="view" hidden="" id="shopView"></section>
+<section class="view" hidden="" id="learnView">
+<div class="section-title"><div><p class="eyebrow">LEARNING CORE · 60%</p><h1>Học tập Trung – Anh</h1></div><p>Tiếng Trung phổ thông HSK1→HSK5 · English ôn B1 rồi tiến lên B2. Công việc/IT chỉ là chuyên đề hỗ trợ sau HSK3.</p></div>
+<div class="learning-summary" id="learningSummary"></div>
+<section class="adaptive172-panel" id="adaptive172Panel"><div><p class="eyebrow">ADAPTIVE LEARNING 3.0</p><h2>Lộ trình hôm nay theo lỗi thật của bạn</h2><p id="adaptive172Status">Đang phân tích SRS và Mastery...</p><div class="adaptive172-actions"><button class="btn primary" id="adaptive172Start">Bắt đầu lộ trình</button><button class="btn secondary" id="adaptive172Refresh">Phân tích lại</button></div></div><div class="adaptive172-metrics"><span><small>SRS đến hạn</small><b id="adaptive172Due">0</b></span><span><small>Thời lượng</small><b id="adaptive172Minutes">15 phút</b></span><span><small>Số câu</small><b id="adaptive172Questions">12</b></span></div><div class="adaptive172-focus" id="adaptive172Focus"></div></section>
+<section class="srs166-panel" id="srs166Panel"><div><p class="eyebrow">SRS 2.0 · ADAPTIVE</p><h2>Ôn đúng phần bạn đang yếu</h2><p id="srs166Status">Đang tải tiến độ ôn tập...</p></div><div class="srs166-metrics"><span><small>Đến hạn</small><b id="srs166Due">0</b></span><span><small>Độ chính xác gần đây</small><b id="srs166Accuracy">—</b></span><span><small>Ngân hàng bài tập</small><b id="srs166Scale">—</b></span></div><div class="srs166-actions"><button class="btn primary" id="srs166Review">Ôn SRS Server</button><button class="btn secondary" id="srs166MockZh">Thi thử HSK</button><button class="btn secondary" id="srs166MockEn">English Mock</button></div><div class="srs166-weak" id="srs166Weak"></div></section>
+<div class="filter-row"><button class="filter-btn is-active" data-lesson-filter="all">Tất cả</button><button class="filter-btn" data-lesson-filter="ZH">Tiếng Trung</button><button class="filter-btn" data-lesson-filter="EN">Tiếng Anh</button><button class="filter-btn" id="reviewDueBtn">Ôn nhanh 5 phút</button></div>
+<div class="lesson-grid" id="lessonGrid"></div>
+</section>
+<section class="view event184-hub" hidden="" id="eventsView">
+<div class="event184-hero">
+<div><p class="eyebrow">POWDER EVENTS</p><h1>Sự kiện Powder</h1><p>Các hoạt động giới hạn thời gian đang diễn ra trên server sẽ xuất hiện tại đây.</p></div>
+<button class="btn secondary" id="event184Refresh" type="button">Làm mới</button>
+</div>
+<section class="event184-empty" id="event184Empty">
+<div class="event184-empty-icon">✦</div>
+<h2 id="event184EmptyTitle">Chưa có sự kiện</h2>
+<p id="event184EmptyText">Hiện tại server chưa có sự kiện đang diễn ra. Khi bạn tạo và bật sự kiện trong Admin, người chơi sẽ thấy tại đây.</p>
+<div class="button-row event184-empty-actions"><button class="btn secondary" id="event184RefreshEmpty" type="button">Làm mới sự kiện</button><button class="btn secondary" data-open-view="home" type="button">Về Căn cứ</button></div>
+</section>
+<section class="event167-panel" hidden="" id="event167Panel"><div class="event167-head"><div><p class="eyebrow" id="event167Badge">POWDER EVENT</p><h2 id="event167Title">Sự kiện Powder</h2><p id="event167Desc">Đang tải sự kiện...</p></div><div class="event167-currency"><small>Huy Hiệu Sự kiện</small><b id="event167Currency">0</b></div></div><div class="event167-grid"><div><h3>Nhiệm vụ</h3><div class="event167-list" id="event167Missions"></div></div><div><h3>Đổi thưởng</h3><div class="event167-list" id="event167Shop"></div></div></div><div class="event167-foot"><span id="event167Time"></span><button class="btn secondary" id="event167Refresh">Làm mới</button></div></section>
+</section>
+<section class="view" hidden="" id="adventureView"><div class="section-title world-section-title"><div><p class="eyebrow">POWDER WORLD</p><h1>Phiêu lưu &amp; Chiến tuyến</h1></div><p>Chiến đấu chỉ xuất hiện khi bạn đi Map, khiêu chiến Boss hoặc tham gia Sự kiện.</p></div><div class="world-view-switch"><button class="world-view-btn is-active" data-world-view="adventure">🗺️ Cốt truyện</button><button class="world-view-btn" data-world-view="boss">👑 Boss</button></div></section>
+<section class="view" hidden="" id="bossView">
+<div class="section-title world-section-title"><div><p class="eyebrow">BOSS CHALLENGES</p><h1>Điện Boss Powder</h1></div><p>Boss ngày gắn trực tiếp với bài đã học, mastery và SRS; Knowledge chỉ tiêu một lần khi mở Boss.</p></div><div class="world-view-switch"><button class="world-view-btn" data-world-view="adventure">🗺️ Cốt truyện</button><button class="world-view-btn is-active" data-world-view="boss">👑 Boss</button></div>
+<div class="boss-summary" id="bossSummary"></div>
+<div class="boss-grid" id="bossGrid"></div>
+<article class="panel boss-reward-guide"><h2>Quy tắc thưởng</h2><div id="bossRewardGuide"></div></article>
+</section>
+<section aria-label="Chiến đấu từ Map, Boss hoặc Sự kiện" class="view" hidden="" id="battleView"></section>
+<section class="view powball-hub-v142" hidden="" id="chestsView">
+<div class="pb142-header"><div><p class="eyebrow">POWBALL</p><h1>Chọn PowBall của bạn</h1><p>Mỗi bậc có tỷ lệ và nhóm Pow khác nhau. Chọn Ball để xem cơ hội nhận Pow trước khi mở.</p></div><div class="pb142-header-actions"><span class="chip">7 bậc · Bảo đảm Pow mới · Lịch sử mở</span><button class="btn secondary pb142-powdex-link" data-open-view="powdex" type="button">Powdex</button></div></div>
+<div class="pb142-summary" id="powballSummary"></div>
+<div class="pb142-layout"><aside class="pb142-tier-panel"><header><p class="eyebrow">BẬC POWBALL</p><h2>Chọn loại Ball</h2></header><div class="pb142-tier-list" id="powballTierRail"></div></aside><div class="pb142-main"><div id="powballDetail"></div><article class="pb142-history"><header><div><p class="eyebrow">LỊCH SỬ</p><h2>Pow vừa nhận</h2></div><span class="chip">8 gần nhất</span></header><div class="pb142-history-list" id="powballHistory"></div></article></div></div>
+<div hidden="" id="chestGrid"></div>
+</section>
+<section class="view" hidden="" id="powdexView"><div class="section-title powdex-title1793"><div><p class="eyebrow" id="powdexTotalLabel">99 POW</p><h1>Powdex</h1></div><div class="powdex-title-actions1793"><p id="collectionLabel"></p><button class="btn secondary powdex-back1793" data-open-view="chests" type="button">← Quay lại PowBall</button></div></div><div class="filter-row" id="rarityFilters"></div><div class="pow-grid" id="powGrid"></div></section>
+<section class="view tamer-hub-v142" hidden="" id="tamerView">
+<div class="tm142-header"><div><p class="eyebrow">HỒ SƠ TAMER</p><h1>Hành trình của bạn</h1><p>Xem bạn đang học tới đâu, còn thiếu gì trước cấp tiếp theo và đội hình đã mạnh đến mức nào.</p></div><span class="chip">Học · Ôn · Chiến đấu · Thăng hạng</span></div>
+<div class="tamer-next-v147" id="tamerNextActionV147"></div>
+<section class="report173-panel" id="report173Panel"><div class="report173-head"><div><p class="eyebrow">LEARNING REPORT 17.3</p><h2>Báo cáo năng lực &amp; chứng nhận tiến độ</h2><p>Theo dõi Mastery, SRS và Mock Test theo thời gian.</p></div><div class="report173-actions"><button class="btn secondary" id="report173Refresh">Làm mới</button><button class="btn secondary" id="report173Snapshot">Lưu báo cáo</button><button class="btn primary" id="report173CertZh">Chứng nhận Trung</button><button class="btn primary" id="report173CertEn">Chứng nhận Anh</button></div></div><div id="report173Body"><p class="muted">Đang tải báo cáo...</p></div></section>
+<div id="tamerProfileHero"></div>
+<div class="tm142-quick" id="tamerQuickStats"></div>
+<div class="tm142-dashboard"><article class="tm142-panel tm142-promotion" id="tamerPromotionProgress"></article><article class="tm142-panel tm142-mastery" id="tamerMastery"></article><article class="tm142-panel tm142-curriculum" id="tamerCurriculum"></article><article class="tm142-panel tm142-activity" id="tamerActivity"></article><article class="tm142-panel tm143-growth" id="tamerPowGrowth"></article></div>
+<article class="tm142-panel tm142-rank-section"><div class="tm142-panel-head"><div><p class="eyebrow">7 BẬC TAMER</p><h2>Con đường bạn đang chinh phục</h2></div><span class="chip">Bậc hiện tại được làm nổi bật</span></div><div class="tm142-rank-path" id="rankGrid"></div></article>
+<details class="tm142-elements"><summary><span>⚗️ Nguyên tố &amp; bảng khắc chế 13 hệ</span><small>Mở khi cần tra cứu</small></summary><div class="tm142-elements-body" id="tamerElementDetails"></div></details>
+<div hidden="" id="fusionGrid"></div><div hidden="" id="elementGuideBody"></div><div hidden="" id="damageFormulaText"></div>
+</section>
+<section class="view social-hub-v154" hidden="" id="socialView">
+<div class="social-shell-v154" id="socialHubV154">
+<div class="social-loading-v154"><span>🌐</span><h2>Cộng đồng Powder</h2><p>Đăng nhập Powder Online để tìm bạn bè và xem trạng thái Tamer.</p></div>
+</div>
+</section>
+<section class="view settings-page-v140" hidden="" id="settingsView">
+<div class="settings-header-v140">
+<div class="settings-header-copy">
+<p class="eyebrow">SYSTEM CONTROL</p>
+<h1>Cài đặt &amp; hỗ trợ</h1>
+<p>Quản lý dữ liệu, hiệu năng, âm thanh và gửi góp ý trực tiếp cho Powder.</p>
+</div>
+<div aria-label="Thông tin hệ thống" class="settings-status-v140">
+<span><small>Phiên bản</small><b>21.0.4 Capacity Guard · Graceful Degradation</b></span>
+<span><small>Lưu trữ</small><b>Trên thiết bị</b></span>
+<span><small>Hỗ trợ</small><b>Gmail · Zalo</b></span>
+</div>
+</div>
+<div class="settings-dashboard-v140">
+<article class="panel settings-card-v140 online-settings-card-v150" id="onlineSettingsCard"></article>
+<article class="panel settings-card-v140 settings-data-v140">
+<div class="settings-card-head-v140"><span class="settings-card-icon-v140">💾</span><div><p class="eyebrow">DỮ LIỆU</p><h2>Sao lưu cá nhân</h2></div></div>
+<p class="muted"><span id="dataBackupDescription">Offline có thể sao lưu tiến độ thiết bị. Khi đăng nhập Online, tài nguyên và tiến độ quan trọng chỉ được khôi phục từ Cloud Server.</span></p>
+<div class="settings-action-stack-v140">
+<button class="btn primary" id="exportBtn">⬇ Tải bản sao</button>
+<label class="btn secondary file-label" id="importDataLabel">⬆ Nhập save Offline<input accept="application/json" hidden="" id="importInput" type="file"/></label>
+<button class="btn secondary" id="restoreBackupBtn">↶ Khôi phục bản lưu gần nhất</button>
+</div>
+<div class="settings-note-v140"><b>Chống gian lận</b><span id="dataBackupNote">File Offline không có quyền ghi đè Coin, Pow, Rank, Kẹo, Trang bị hay Cổ vật của tài khoản Online.</span></div>
+</article>
+<article class="panel settings-card-v140 settings-performance-v140">
+<div class="settings-card-head-v140"><span class="settings-card-icon-v140">⚙️</span><div><p class="eyebrow">TRẢI NGHIỆM</p><h2>Hiệu năng &amp; thiết bị</h2></div></div>
+<div class="performance-profile-v182" role="group" aria-label="Chế độ hiệu năng">
+<button type="button" data-performance-profile="quality"><b>✨ Đẹp</b><small>Ưu tiên hình ảnh, vẫn tự hạ khi FPS tụt.</small></button>
+<button type="button" data-performance-profile="balanced"><b>⚖️ Cân bằng</b><small>Mặc định · giữ hiệu ứng quan trọng và giảm phần trang trí nặng.</small></button>
+<button type="button" data-performance-profile="performance"><b>⚡ Hiệu năng</b><small>Ưu tiên FPS, tắt blur/glow/particle không cần thiết.</small></button>
+</div>
+<div class="setting-toggles settings-toggle-grid-v140">
+<label><span class="toggle-copy-v140"><b>Âm thanh tổng</b><small>Cho phép hiệu ứng âm thanh trong game.</small></span><input id="soundToggle" type="checkbox"/></label>
+<label><span class="toggle-copy-v140"><b>Rung thiết bị</b><small>Phản hồi rung khi thiết bị hỗ trợ.</small></span><input id="vibrationToggle" type="checkbox"/></label>
+<label><span class="toggle-copy-v140"><b>Giảm chuyển động</b><small>Hạn chế animation và chuyển cảnh.</small></span><input id="motionToggle" type="checkbox"/></label>
+<label class="performance-priority-v140" hidden><span class="toggle-copy-v140"><b>Ưu tiên mượt</b><small>Chế độ tương thích cũ.</small></span><input id="performanceLiteToggle" type="checkbox"/></label>
+<label><span class="toggle-copy-v140"><b>Bỏ qua summon đã xem</b><small>Rút ngắn hoạt ảnh sau lần xem đầu.</small></span><input id="skipSummonToggle" type="checkbox"/></label>
+</div>
+<div class="settings-note-v140 settings-note-good-v140"><b id="performanceProfileLabel182">Cân bằng</b><span id="performanceProfileHint182">Không giảm dữ liệu HSK, logic Combat, tỷ lệ PowBall hay hiệu ứng trạng thái quan trọng.</span></div>
+</article>
+<article class="panel settings-card-v140 audio-settings-v811 settings-audio-v140">
+<div class="settings-card-head-v140"><span class="settings-card-icon-v140">🎧</span><div><p class="eyebrow">AUDIO MIX</p><h2>Âm thanh chiến đấu</h2></div></div>
+<div class="audio-mix-settings">
+<div class="audio-mix-head"><b>🎵 Nhạc nền Combat</b><label><input id="combatMusicToggle" type="checkbox"/> Bật nhạc</label></div>
+<label class="audio-volume-row"><span>Âm lượng BGM</span><input id="combatMusicVolume" max="100" min="0" type="range" value="46"/><strong id="combatMusicVolumeValue">46%</strong></label>
+<div class="audio-mix-head"><b>🗣 Bành Trướng Lãnh Địa</b><label><input id="domainVoiceToggle" type="checkbox"/> Bật thoại</label></div>
+<label class="audio-volume-row"><span>Âm lượng 4 đoạn đọc</span><input id="domainVoiceVolume" max="100" min="0" type="range" value="22"/><strong id="domainVoiceVolumeValue">22%</strong></label>
+<div class="button-row settings-audio-actions-v140"><button class="btn secondary small" id="combatMusicTestBtn" type="button">▶ Nghe thử BGM</button><button class="btn secondary small" id="domainVoiceTestBtn" type="button">▶ Nghe thử Bành Trướng</button></div>
+</div>
+</article>
+<article class="panel settings-card-v140 feedback-card-v140" id="feedbackCard">
+<div class="settings-card-head-v140 feedback-head-v140"><span class="settings-card-icon-v140">📨</span><div><p class="eyebrow">POWDER FEEDBACK</p><h2>Góp ý sức mạnh &amp; báo bug</h2><p class="muted">Chọn loại phản hồi, mô tả ngắn gọn rồi gửi qua Gmail hoặc Zalo.</p></div></div>
+<div class="feedback-contact-v140">
+<div><span>📧</span><p><small>Gmail</small><b>ngophamquangthai202@gmail.com</b></p></div>
+<div><span>💬</span><p><small>Zalo</small><b>0815126662</b></p></div>
+</div>
+<div aria-label="Loại góp ý" class="feedback-type-grid-v140" role="group">
+<button class="is-active" data-feedback-type="balance" type="button"><span>⚖️</span><b>Sức mạnh</b><small>Pow / skill / đội hình</small></button>
+<button data-feedback-type="bug" type="button"><span>🐞</span><b>Bug</b><small>Lỗi chức năng</small></button>
+<button data-feedback-type="performance" type="button"><span>⚡</span><b>Lag</b><small>Giật / chậm / FPS</small></button>
+<button data-feedback-type="learning" type="button"><span>📚</span><b>Học tập</b><small>Bài / đáp án / HSK</small></button>
+<button data-feedback-type="ui" type="button"><span>🎨</span><b>UI/UX</b><small>Hiển thị / thao tác</small></button>
+</div>
+<input id="feedbackType" type="hidden" value="balance"/>
+<div class="feedback-form-v140">
+<label><span>Tiêu đề</span><input id="feedbackSubject" maxlength="120" placeholder="VD: Frostmaw 6★ quá mạnh khi đi cùng team Băng" type="text"/></label>
+<div class="feedback-form-row-v140">
+<label><span>Pow / skill / màn hình liên quan</span><input id="feedbackTarget" maxlength="120" placeholder="VD: Frostmaw · Ultimate · Combat PvP" type="text"/></label>
+<label><span>Mức độ</span><select id="feedbackSeverity"><option value="Gợi ý">Gợi ý</option><option value="Nhẹ">Nhẹ</option><option value="Ảnh hưởng gameplay">Ảnh hưởng gameplay</option><option value="Nghiêm trọng">Nghiêm trọng</option></select></label>
+</div>
+<label><span id="feedbackMessageLabel">Nhận xét về sức mạnh</span><textarea id="feedbackMessage" maxlength="2500" placeholder="Mô tả Pow/skill đang mạnh hoặc yếu ở đâu, trong đội hình nào, cấp sao nào..." rows="5"></textarea></label>
+<label><span id="feedbackStepsLabel">Đề xuất điều chỉnh</span><textarea id="feedbackSteps" maxlength="1800" placeholder="VD: giảm hệ số Ultimate 15%, giữ nguyên hiệu ứng đóng băng..." rows="3"></textarea></label>
+<label class="feedback-tech-v140"><input checked="" id="feedbackIncludeTech" type="checkbox"/><span><b>Kèm thông tin kỹ thuật</b><small>Chỉ gồm phiên bản, trình duyệt, kích thước màn hình và chế độ hiệu năng. Không gửi save.</small></span></label>
+</div>
+<div class="feedback-actions-v140">
+<button class="btn primary" id="feedbackGmailBtn" type="button">📧 Gửi qua Gmail</button>
+<button class="btn secondary feedback-zalo-v140" id="feedbackZaloBtn" type="button">💬 Gửi qua Zalo</button>
+<button class="btn secondary" id="feedbackCopyBtn" type="button">📋 Sao chép nội dung</button>
+</div>
+<p aria-live="polite" class="feedback-status-v140" id="feedbackStatus"></p>
+<p class="muted feedback-hint-v140">Gmail sẽ mở thư đã điền sẵn. Zalo sẽ sao chép nội dung phản hồi rồi mở liên hệ để bạn dán và gửi kèm ảnh/video nếu cần.</p>
+</article>
+<article class="panel danger settings-card-v140 settings-danger-v140">
+<div><p class="eyebrow">DANGER ZONE</p><h2>Đặt lại toàn bộ tiến độ</h2><p class="muted">Xóa Pow, Learning, Shop, Trang bị, Cổ vật và dữ liệu lưu trên thiết bị này.</p></div>
+<button class="btn danger-btn" id="resetBtn">Xóa dữ liệu</button>
+</article>
+</div>
+</section>
+</main>
+</div>
+<section class="modal" hidden="" id="onlineAuthModal"><div class="backdrop"></div><article class="modal-card online-auth-card-v150"><header><div><p class="eyebrow">POWDER ONLINE</p><h2>Tài khoản Tamer</h2></div><button class="icon-btn" data-online-close="onlineAuthModal">×</button></header><div class="modal-body"><div class="online-auth-tabs-v150" id="onlineAuthTabs"><button class="is-active" data-mode="login">Đăng nhập</button><button data-mode="register">Tạo tài khoản</button></div><div class="online-auth-form-v150"><label hidden="" id="onlineNameRow"><span>Tên Tamer</span><input id="onlineName" maxlength="32" type="text"/></label><label><span>Email</span><input autocomplete="email" id="onlineEmail" type="email"/></label><label><span>Mật khẩu</span><input autocomplete="current-password" id="onlinePassword" type="password"/></label><div class="online-auth-note-v150">Cloud Save không tự ghi đè khi phát hiện hai thiết bị có tiến độ khác nhau.</div><p class="online-auth-status-v150" id="onlineAuthStatus"></p></div></div><footer><button class="btn primary" id="onlineAuthSubmit">Đăng nhập</button></footer></article></section><section class="modal" hidden="" id="onlineConflictModal"><div class="backdrop"></div><article class="modal-card online-conflict-card-v150"><header><div><p class="eyebrow">CLOUD SAVE</p><h2>Chọn tiến độ muốn tiếp tục</h2></div></header><div class="modal-body"><p class="muted">Powder phát hiện save trên thiết bị và Cloud khác nhau.</p><div class="online-conflict-grid-v150"><div class="online-conflict-choice-v150"><h3>💻 Thiết bị này</h3><div id="onlineConflictLocalInfo"></div><button class="btn secondary" id="onlineConflictUseLocal">Dùng tiến độ thiết bị</button></div><div class="online-conflict-choice-v150"><h3>☁ Cloud Save</h3><div id="onlineConflictCloudInfo"></div><button class="btn primary" id="onlineConflictUseCloud">Dùng tiến độ Cloud</button></div></div></div></article></section><section class="modal" hidden="" id="lessonModal"><div class="backdrop"></div><article class="modal-card large"><header><div><p class="eyebrow">BÀI HỌC</p><h2 id="lessonTitle"></h2></div><button class="icon-btn" data-close="lessonModal">×</button></header><div class="modal-body" id="lessonBody"></div><footer><button class="btn primary" id="lessonActionBtn">Bắt đầu kiểm tra</button></footer></article></section>
+<section class="modal" hidden="" id="powModal"><div class="backdrop"></div><article class="modal-card large"><header><div><p class="eyebrow">POW PROFILE</p><h2 id="powModalName"></h2></div><button class="icon-btn" data-close="powModal">×</button></header><div class="modal-body" id="powModalBody"></div><footer id="powModalFooter"></footer></article></section>
+<section class="modal" hidden="" id="summonModal"><div class="backdrop"></div><article class="modal-card summon summon-modal-card"><p class="eyebrow">POW BALL OPENING</p><h2 id="summonStageTitle">Chuẩn bị mở Pow Ball</h2><p class="muted" id="summonStageText">Bóng Pow đang cộng hưởng năng lượng theo phẩm chất.</p><div class="summon-sequence" id="summonSequence"></div><div class="summon-reveal" hidden="" id="summonReveal"><div class="summon-art" id="summonArt"></div><h2 id="summonName"></h2><div class="stars" id="summonStars"></div><p id="summonText"></p></div><footer class="button-row summon-actions"><button class="btn secondary" hidden="" id="summonSkipBtn">Bỏ qua hoạt ảnh</button><button class="btn secondary" hidden="" id="summonAgainBtn">Mở Pow Ball tiếp</button><button class="btn primary" data-close="summonModal" disabled="" id="summonClaimBtn">Đang mở Pow Ball...</button></footer></article></section>
+<section class="modal" hidden="" id="bossModal"><div class="backdrop"></div><article class="modal-card large boss-modal-card"><header><div><p class="eyebrow">BOSS KNOWLEDGE TRIAL</p><h2 id="bossModalTitle">Boss</h2></div><button class="icon-btn" id="bossModalClose">×</button></header><div class="modal-body"><div id="bossQuestionArea"><div class="boss-progress"><span id="bossQuestionCounter"></span><span id="bossAccuracy"></span></div><div class="hpbar enemy-hp"><i id="bossHpFill"></i></div><p class="question-prompt" id="bossQuestionPrompt"></p><button class="btn secondary small" hidden="" id="bossSpeakBtn">🔊 Nghe câu</button><div class="question-options" id="bossQuestionOptions"></div><div class="feedback" id="bossQuestionFeedback"></div></div><div hidden="" id="bossResultArea"></div></div><footer><button class="btn primary" disabled="" id="bossAnswerBtn">Xác nhận</button></footer></article></section>
+<audio id="powder-domain-epic-expansion" preload="none" src="assets/audio/domain/domain-expansion-epic.mp3"></audio>
+<audio id="powder-domain-epic-frenzy" preload="none" src="assets/audio/domain/domain-frenzy-epic.mp3"></audio>
+<audio id="powder-domain-epic-fortress" preload="none" src="assets/audio/domain/domain-fortress-epic.mp3"></audio>
+<audio id="powder-domain-epic-timeflow" preload="none" src="assets/audio/domain/domain-timeflow-epic.mp3"></audio>
+<audio id="powder-domain-epic-vitality" preload="none" src="assets/audio/domain/domain-vitality-epic.mp3"></audio>
+<audio id="powder-domain-voice-sample-1" preload="none" src="assets/audio/domain/domain-voice-usercut-1.m4a"></audio>
+<audio id="powder-domain-voice-sample-2" preload="none" src="assets/audio/domain/domain-voice-usercut-2.m4a"></audio>
+<audio id="powder-domain-voice-sample-3" preload="none" src="assets/audio/domain/domain-voice-usercut-3.m4a"></audio>
+<audio id="powder-domain-voice-sample-4" preload="none" src="assets/audio/domain/domain-voice-usercut-4.m4a"></audio>
+<audio id="powder-battle-music-user" loop="" preload="none" src="assets/audio/combat/user-combat-bgm.mp3"></audio>
+<div class="toast" hidden="" id="toast"></div>
+
+
+</body>
+</html>

@@ -1,0 +1,260 @@
+{
+  "version": "21.0.4",
+  "checks": {
+    "releaseMetadata": true,
+    "htmlDuplicateIds": true,
+    "localRefs": true,
+    "cssStructure": true,
+    "jsSyntax": true,
+    "edgeTsSyntax": true,
+    "manifestIntegrity": true,
+    "scriptOrder": true,
+    "singleCurrentBoot": true,
+    "serviceWorkerBinding": true,
+    "gameplayFreeze22": true,
+    "canonical99x396": true,
+    "capacityGate": true,
+    "capacityRuntime": true,
+    "fullGameGate": true,
+    "transactionRuntime": true,
+    "canonicalAdapterRegression": true,
+    "reconciliationRuntime": true,
+    "exploitRuntime": true,
+    "loadSoakRegression": true,
+    "disasterRecoveryRegression": true,
+    "securityRuntime": true,
+    "saveIntegrityRuntime": true,
+    "officialProductionRuntime": true
+  },
+  "details": {
+    "releaseMetadata": {
+      "version": "21.0.4",
+      "channel": "production",
+      "buildId": "powder-21.0.4-capacity-guard",
+      "minimumVersion": "0.0.0",
+      "serviceWorker": "21.0.4",
+      "releaseState": "capacity-guard-graceful-degradation-readiness",
+      "official": false,
+      "promotedFrom": "powder-21.0.3-live-observability-slo",
+      "notes": "Capacity guard, server-derived backpressure, graceful degradation and hysteresis recovery. No gameplay changes; no automatic rollback."
+    },
+    "htmlDuplicateIds": {
+      "index.html": [],
+      "admin.html": [],
+      "offline.html": [],
+      "privacy.html": [],
+      "terms.html": []
+    },
+    "localRefs": [],
+    "cssStructure": {
+      "count": 58,
+      "bad": []
+    },
+    "jsSyntax": {
+      "count": 247,
+      "bad": []
+    },
+    "edgeTsSyntax": {
+      "count": 33,
+      "bad": []
+    },
+    "manifestIntegrity": {
+      "entries": 1276,
+      "hash": "96f75434f69d3d31",
+      "calc": "96f75434f69d3d31",
+      "bad": []
+    },
+    "scriptOrder": {
+      "count": 121,
+      "seq": [
+        115,
+        116,
+        117,
+        118,
+        119,
+        120
+      ]
+    },
+    "gameplayFreeze22": {
+      "changed": []
+    },
+    "canonical99x396": {
+      "pows": 99,
+      "kits": 99,
+      "skills": 396
+    },
+    "capacityGate": {
+      "checks": {
+        "releaseMetadata": true,
+        "serverDerivedCapacity": true,
+        "queueAndDbPressure": true,
+        "reliabilityActuation": true,
+        "hysteresis": true,
+        "admissionControl": true,
+        "noAutomaticRollback": true,
+        "adminSecurity": true,
+        "securitySurfaceFix": true,
+        "adminGuard": true,
+        "gatewayBackpressure": true,
+        "playerNoExtraPolling": true,
+        "serviceWorkerBuild": true,
+        "bootOrder": true,
+        "gameplayFreeze22": true,
+        "adminWired": true,
+        "indexBoot21004": true
+      },
+      "stderr": ""
+    },
+    "capacityRuntime": {
+      "checks": {
+        "exists": true,
+        "pass": true,
+        "identity": true,
+        "noPolling": true,
+        "normal": true,
+        "soft": true,
+        "hard": true,
+        "safe": true
+      },
+      "stderr": ""
+    },
+    "fullGameGate": {
+      "checks": {
+        "powDex99": true,
+        "skills396": true,
+        "rank7": true,
+        "roleCoverage99": true,
+        "equipment13x4": true,
+        "artifacts49": true,
+        "gearArtifactAssets": true,
+        "learningBank": true,
+        "learningPromptRegression": true,
+        "dailyBossContract": true,
+        "adventure12Islands": true,
+        "gachaRatesGuard": true,
+        "playerNavigation": true,
+        "coreSubsystemEntrypoints": true,
+        "combatFreeze22": true,
+        "runtimeSelfTest": true
+      },
+      "stderr": ""
+    },
+    "transactionRuntime": {
+      "checks": {
+        "stableClaimExecutesOnce": true,
+        "uncertainRetryReusesKey": true,
+        "completedPurchaseGetsNewKey": true,
+        "reliabilityFailClosed": true,
+        "eventsEmitted": true
+      },
+      "stderr": ""
+    },
+    "canonicalAdapterRegression": {
+      "checks": {
+        "routes18": true,
+        "routeRpcs": true,
+        "gatewayCurrent": true,
+        "ambiguityQuarantine": true,
+        "capacityBeforeRoute": true,
+        "noLegacySources": true
+      },
+      "stderr": ""
+    },
+    "reconciliationRuntime": {
+      "checks": {
+        "version": true,
+        "oneRpcPerEffect": true,
+        "txContextForwarded": true,
+        "effectFields": true,
+        "rpcFailureFailsClosed": true
+      },
+      "stderr": "(node:132280) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    "exploitRuntime": {
+      "checks": {
+        "version": true,
+        "schemas": true,
+        "validIntent": true,
+        "priceTamperBlocked": true,
+        "invalidCountBlocked": true,
+        "rewardTamperBlocked": true,
+        "clientWinBlocked": true
+      },
+      "stderr": ""
+    },
+    "loadSoakRegression": {
+      "checks": {
+        "schema": true,
+        "threeProfiles": true,
+        "serverCalculated": true,
+        "tokenIngest": true,
+        "playerPassive": true,
+        "officialCarriesGate": true,
+        "runnerSelfTest": true
+      },
+      "stderr": ""
+    },
+    "disasterRecoveryRegression": {
+      "checks": {
+        "gameplayFreeze22": true,
+        "serverSchema": true,
+        "sourceRestoreIsolation": true,
+        "serverCalculatedRpoRto": true,
+        "criticalDigestCoverage": true,
+        "failureRollbackDrill": true,
+        "rollbackEvidence": true,
+        "evidenceHashVerified": true,
+        "adminNoSelfPass": true,
+        "adminWired": true,
+        "passivePlayerRuntime": true,
+        "officialHardGate": true,
+        "failClosedDefault": true,
+        "runnerSelfTest": true,
+        "edgeSyntax": true,
+        "currentOfficialCarriesDr": true,
+        "currentCandidate": true
+      },
+      "stderr": ""
+    },
+    "securityRuntime": {
+      "checks": {
+        "claimsDecode": true,
+        "tokenSha256": true,
+        "guardRpcWiring": true,
+        "guardFailClosedUnavailable": true,
+        "tokenDenied": true,
+        "originDenied": true,
+        "aal2Denied": true
+      },
+      "stderr": "(node:132378) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    "saveIntegrityRuntime": {
+      "checks": {
+        "validAllowsLegitimateDecrease": true,
+        "schemaDowngradeBlocked": true,
+        "ownedBranchLossBlocked": true,
+        "learningBranchLossBlocked": true,
+        "integrityEnvelopeAdded": true,
+        "wrapInstalled": true,
+        "wrappedApplyBlocksDestructiveImport": true,
+        "wrappedApplyAllowsValidImport": true,
+        "healthExposesGuard": true
+      },
+      "stderr": ""
+    },
+    "officialProductionRuntime": {
+      "checks": {
+        "runtimeExports": true,
+        "version": true,
+        "buildId": true,
+        "predecessor": true,
+        "passiveOnly": true,
+        "goldMasterLineage": true,
+        "stagedCanary": true,
+        "noNetworkMutation": true
+      },
+      "stderr": ""
+    }
+  },
+  "pass": true
+}
