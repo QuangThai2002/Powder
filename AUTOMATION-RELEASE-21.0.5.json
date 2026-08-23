@@ -1,0 +1,9 @@
+{
+  "automationVersion": "21.0.5",
+  "runtimeBaseline": "21.0.4",
+  "runtimeBuildId": "powder-21.0.4-capacity-guard",
+  "scope": "repository-ci-cd-release-automation",
+  "gameplayChanges": false,
+  "runtimeChanges": false,
+  "notes": "Repository tooling patch. Player runtime remains 21.0.4 intentionally."
+}
