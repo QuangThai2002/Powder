@@ -1,0 +1,69 @@
+name: Powder Release Provenance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/powder-release.yml'
+      - '.github/workflows/powder-release-provenance.yml'
+      - 'tools/powder-release-provenance-v21009.mjs'
+      - 'release.json'
+      - 'RELEASE-PROVENANCE-AUTOMATION-21.0.9.json'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/powder-release.yml'
+      - '.github/workflows/powder-release-provenance.yml'
+      - 'tools/powder-release-provenance-v21009.mjs'
+      - 'release.json'
+      - 'RELEASE-PROVENANCE-AUTOMATION-21.0.9.json'
+  workflow_dispatch:
+
+concurrency:
+  group: powder-release-provenance-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  provenance-dry-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout full source identity
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Final regression evidence
+        run: node tools/powder-final-gate-v21004.mjs . | tee PROVENANCE-DRYRUN-FINAL-GATE.json
+      - name: Package dry-run release artifact
+        shell: bash
+        run: |
+          VERSION="$(node -p "JSON.parse(require('fs').readFileSync('release.json','utf8')).version")"
+          NAME="Powder-${VERSION}-ProvenanceDryRun"
+          zip -qr "${NAME}.zip" . -x '.git/*' '.github/*' 'artifacts/*' '*.zip' '*.sha256' 'CI-FINAL-GATE*' 'FINAL-GATE-RELEASE*' 'PROVENANCE-DRYRUN*' '*-PROVENANCE.json' '*-PROVENANCE-VERIFY.json' '*-RECOVERY.json'
+          sha256sum "${NAME}.zip" > "${NAME}.zip.sha256"
+          echo "DRY_NAME=${NAME}" >> "$GITHUB_ENV"
+      - name: Generate and verify provenance
+        run: |
+          node tools/powder-release-provenance-v21009.mjs generate . "${DRY_NAME}.zip" PROVENANCE-DRYRUN-FINAL-GATE.json "${DRY_NAME}"
+          node tools/powder-release-provenance-v21009.mjs verify . "${DRY_NAME}.zip" PROVENANCE-DRYRUN-FINAL-GATE.json "${DRY_NAME}"
+      - name: Upload provenance evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: powder-release-provenance-${{ github.sha }}
+          path: |
+            PROVENANCE-DRYRUN-FINAL-GATE.json
+            *-ProvenanceDryRun.zip.sha256
+            *-ProvenanceDryRun-PROVENANCE.json
+            *-ProvenanceDryRun-PROVENANCE.json.sha256
+            *-ProvenanceDryRun-PROVENANCE-VERIFY.json
+            *-ProvenanceDryRun-RECOVERY.json
+          if-no-files-found: error
+          retention-days: 30

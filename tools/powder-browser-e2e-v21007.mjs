@@ -49,6 +49,15 @@ async function evalJs(cmd, expression){
   const r=await cmd('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});
   return r.result?.value;
 }
+function argText(a){
+  if(a?.value!==undefined){try{return typeof a.value==='string'?a.value:JSON.stringify(a.value)}catch{return String(a.value)}}
+  return a?.description||a?.unserializableValue||'';
+}
+function diagnostics(events){
+  const consoleErrors=events.filter(e=>e.method==='Runtime.consoleAPICalled'&&['error','warning'].includes(e.params?.type)).map(e=>({type:e.params?.type,args:(e.params?.args||[]).map(argText),timestamp:e.params?.timestamp||null}));
+  const logErrors=events.filter(e=>e.method==='Log.entryAdded'&&['error','warning'].includes(e.params?.entry?.level)).map(e=>({level:e.params.entry.level,text:e.params.entry.text||'',url:e.params.entry.url||'',line:e.params.entry.lineNumber??null}));
+  return {consoleErrors,logErrors};
+}
 
 const server = spawn('python3',['-m','http.server','4173','--bind','127.0.0.1'],{cwd:root,stdio:'ignore'});
 const chromePath=findChrome();
@@ -59,7 +68,7 @@ const chrome=spawn(chromePath,[
   '--remote-debugging-port=9222',`--user-data-dir=${profile}`,'about:blank'
 ],{stdio:'ignore'});
 
-const report={version:'21.0.7',chrome:chromePath,checks:{},details:{},errors:[]};
+const report={version:'21.0.7',diagnosticsRevision:'21.0.9',chrome:chromePath,checks:{},details:{},errors:[]};
 try {
   await waitHttp('http://127.0.0.1:4173/index.html');
   const version=await waitHttp('http://127.0.0.1:9222/json/version');
@@ -89,9 +98,15 @@ try {
     setupVisible:!!document.querySelector('#setupScreen')&&!document.querySelector('#setupScreen').hidden,
     loadingVisible:!!document.querySelector('#loadingScreen')&&!document.querySelector('#loadingScreen').hidden,
     bootError:document.querySelector('#bootError')?.hidden===false?document.querySelector('#bootError')?.textContent.trim():'',
+    bootStage:document.querySelector('#bootStage')?.textContent?.trim()||'',
+    bootDetail:document.querySelector('#bootDetail')?.textContent?.trim()||'',
+    bootFiles:document.querySelector('#bootFiles')?.textContent?.trim()||'',
+    retryVisible:document.querySelector('#bootRetry')?.hidden===false,
+    clearVisible:document.querySelector('#bootClear')?.hidden===false,
     progress:document.querySelector('#bootProgressPct')?.textContent||''
   }))()`);
   report.details.index=shell;
+  report.details.bootDiagnostics=diagnostics(events);
   report.checks.indexTitle=/Powder/i.test(shell.title||'');
   report.checks.navigationPresent=shell.nav>=8;
   report.checks.coreViewsPresent=!!(shell.home&&shell.learn&&shell.adventure&&shell.powball);
