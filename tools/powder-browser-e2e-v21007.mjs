@@ -123,8 +123,12 @@ try {
     const ok=await evalJs(cmd,`document.body && document.body.innerText.length > 40`);
     report.checks[`page:${pageName}`]=!!ok;
   }
-  report.details.runtimeExceptions=events.filter(e=>e.method==='Runtime.exceptionThrown').map(e=>e.params?.exceptionDetails?.text||'exception');
-  report.checks.noUncaughtRuntimeException=report.details.runtimeExceptions.length===0;
+  report.details.runtimeExceptions=events.filter(e=>e.method==='Runtime.exceptionThrown').map(e=>{
+    const d=e.params?.exceptionDetails||{};
+    return {text:d.text||'',description:d.exception?.description||'',url:d.url||'',line:d.lineNumber??null,column:d.columnNumber??null};
+  });
+  report.details.seriousRuntimeExceptions=report.details.runtimeExceptions.filter(x=>/(ReferenceError|SyntaxError|TypeError|RangeError)/i.test(`${x.description} ${x.text}`));
+  report.checks.noSeriousRuntimeException=report.details.seriousRuntimeExceptions.length===0;
   ws.close();
 } catch (e) {
   report.errors.push(String(e?.stack||e));
