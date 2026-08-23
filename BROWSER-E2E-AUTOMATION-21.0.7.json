@@ -1,9 +1,11 @@
 {
   "automationVersion": "21.0.7",
   "runtimeBaseline": "21.0.4",
-  "scope": "browser-e2e-automation",
+  "scope": "browser-e2e-automation-and-boot-hotfix",
   "gameplayChanges": false,
-  "runtimeChanges": false,
+  "runtimeChanges": true,
+  "runtimeHotfix": true,
+  "hotfix": "Initialize TOTAL_BYTES from MANIFEST before boot state construction to prevent ReferenceError/loading stuck at 0%.",
   "benchmarks": ["microsoft/playwright", "mrdoob/three.js", "excaliburjs/Excalibur"],
-  "notes": "Dependency-free Chrome DevTools Protocol smoke/E2E harness for Powder CI."
+  "notes": "Adds dependency-free Chrome DevTools Protocol smoke/E2E coverage. The new browser gate discovered and fixed one real boot-loader runtime defect; combat/gameplay logic remains unchanged."
 }
