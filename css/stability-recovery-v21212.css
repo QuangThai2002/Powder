@@ -12,7 +12,7 @@ html{scroll-behavior:auto}
 #lessonModal{padding:16px!important;align-items:center!important;justify-items:center!important}
 #lessonModal .modal-card{width:min(940px,calc(100vw - 32px))!important;max-width:940px!important;height:auto!important;max-height:calc(100dvh - 32px)!important;display:grid!important;grid-template-rows:auto minmax(0,1fr) auto!important;overflow:hidden!important;border-radius:22px!important}
 #lessonModal .modal-card>header,#lessonModal .modal-card>footer{flex:0 0 auto!important}
-#lessonModal .modal-body,#lessonBody{min-height:0!important;max-height:none!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;padding:18px!important}
+#lessonModal .modal-body,#lessonBody{min-height:0!important;max-height:none!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;-webkit-overflow-scrolling:touch!important;padding:18px!important}
 #lessonModal .vocab-table{width:100%!important;table-layout:auto!important}
 #lessonModal .lesson-theory,#lessonModal .lesson-dialogue,#lessonModal .lesson-challenge-hint{max-width:100%!important;overflow-wrap:anywhere!important}
 #lessonModal .question-options{width:100%!important;max-width:760px!important;margin-inline:auto!important}
