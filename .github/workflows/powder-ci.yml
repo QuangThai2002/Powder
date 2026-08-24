@@ -52,6 +52,16 @@ jobs:
       - name: Verify Chrome
         run: google-chrome --version
 
+      - name: Prepare browser E2E diagnostics
+        if: ${{ always() }}
+        run: |
+          mkdir -p artifacts/e2e-v21007
+          if node --check tools/powder-browser-e2e-v21007.mjs > artifacts/e2e-v21007/SYNTAX-CHECK.txt 2>&1; then
+            echo "syntax=ok" >> artifacts/e2e-v21007/SYNTAX-CHECK.txt
+          else
+            echo "syntax=failed" >> artifacts/e2e-v21007/SYNTAX-CHECK.txt
+          fi
+
       - name: Run Powder browser E2E
         run: node tools/powder-browser-e2e-v21007.mjs .
 
@@ -61,5 +71,5 @@ jobs:
         with:
           name: powder-browser-e2e-${{ github.run_attempt }}
           path: artifacts/e2e-v21007
-          if-no-files-found: ignore
+          if-no-files-found: warn
           retention-days: 7
