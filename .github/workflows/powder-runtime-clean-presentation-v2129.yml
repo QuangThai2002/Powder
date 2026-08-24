@@ -1,0 +1,35 @@
+name: Powder Runtime Clean Presentation 21.2.9
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'js/runtime-clean-presentation-v2129.js'
+      - 'js/learning-performance-hardening-v2125.js'
+      - 'tools/powder-runtime-clean-presentation-gate-v2129.mjs'
+      - '.github/workflows/powder-runtime-clean-presentation-v2129.yml'
+      - '*.md'
+      - '*.json'
+      - '*.txt'
+  workflow_dispatch:
+permissions: {contents: read}
+concurrency: {group: 'powder-runtime-clean-presentation-v2129-${{ github.ref }}', cancel-in-progress: true}
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-node@v4
+        with: {node-version: '24'}
+      - name: Syntax guard
+        run: |
+          node --check js/runtime-clean-presentation-v2129.js
+          node --check js/learning-performance-hardening-v2125.js
+          node --check tools/powder-runtime-clean-presentation-gate-v2129.mjs
+      - name: Combat and core gameplay isolation
+        run: git diff --exit-code origin/main...HEAD -- js/app.js js/combat-core-v7.js js/combat-mechanics-v17.js js/combat-master-v9.js js/combat-entry-v177.js server
+      - name: Runtime clean presentation regression
+        run: node tools/powder-runtime-clean-presentation-gate-v2129.mjs .
+      - name: Learning production regression
+        run: node tools/powder-learning-production-gate-v2128.mjs .
