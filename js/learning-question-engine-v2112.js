@@ -2,7 +2,7 @@
 const VERSION='21.1.2',D=window.POWDER_DATA;
 const FAMILY_ORDER=['Recognition','Recall','Grammar','Context','Reading','Production','Application'];
 const ROWS={
- Recognition:['meaning_select','term_select','pinyin_select','hanzi_from_pinyin','correct_pair','reverse_pair','odd_one_out','category_select','spelling_recognition','similar_character','radical_hint','synonym_recognition'],
+ Recognition:['meaning_select','term_select','pinyin_select','hanzi_from_pinyin','correct_pair','reverse_pair','odd_one_out','category_select','spelling_recognition','similar_character','radical_hint','synonym_recognition','match_term_meaning','multi_correct_pairs'],
  Recall:['vi_to_zh_text','vi_to_en_text','zh_to_vi_text','en_to_vi_text','hanzi_to_pinyin_text','pinyin_to_hanzi_text','spelling_text','missing_letters','missing_character','word_reconstruction','translation_short'],
  Grammar:['fill_particle','fill_word','sentence_order','sentence_transform','choose_correct_sentence','error_detection','error_correction','grammar_function','pattern_match','example_match','tense_choice','preposition_choice','measure_word_choice'],
  Context:['context_cloze','situation_response','dialogue_response','dialogue_completion','dialogue_next_line','register_choice','formality_choice','collocation_choice','phrasal_verb_context','word_in_context','pragmatic_intent'],
