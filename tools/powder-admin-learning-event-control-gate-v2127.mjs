@@ -47,4 +47,4 @@ elements['#event183MissionList'].textContent+=' · Thắng Combat sự kiện';a
 elements['#event183Type'].value='study';elements['#event183MissionList'].textContent='';a=api.audit();ok('study without learning blocked',a.ready===false&&a.blockers.some(x=>x.includes('học tập')));
 elements['#event183Type'].value='custom';elements['#event191QuestionEnabled'].checked=false;a=api.audit();ok('custom event remains flexible',a.ready===true);
 
-console.log(`Powder 21.2.7 Admin Learning & Event Control: ${n}/23 checks passed`);
+console.log(`Powder 21.2.7 Admin Learning & Event Control: ${n}/24 checks passed`);
