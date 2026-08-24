@@ -8,51 +8,48 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: powder-ci-${{ github.workflow }}-${{ github.ref }}
+  group: powder-ci-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  policy:
-    name: Policy · ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-      - name: Repository automation policy
-        run: node tools/powder-ci-policy-gate-v21005.mjs .
-      - name: Supply-chain security policy
-        run: node tools/powder-supply-chain-gate-v21006.mjs .
-
-  regression:
-    name: Full Powder regression
-    needs: policy
+  project-gate:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Run current runtime final gate
-        run: node tools/powder-final-gate-v21004.mjs . | tee CI-FINAL-GATE.json
-      - name: Upload regression report
-        if: always()
-        uses: actions/upload-artifact@v4
+
+      - name: Project hygiene and runtime integrity
+        run: node tools/powder-project-gate-v21214.mjs .
+
+      - name: Verify clean checkout
+        run: git diff --exit-code
+
+  browser-e2e:
+    needs: project-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          name: powder-ci-gate-${{ github.sha }}
-          path: CI-FINAL-GATE.json
-          if-no-files-found: error
-          retention-days: 14
+          node-version: '24'
+
+      - name: Verify Chrome
+        run: google-chrome --version
+
+      - name: Run Powder browser E2E
+        run: node tools/powder-browser-e2e-v21007.mjs .
