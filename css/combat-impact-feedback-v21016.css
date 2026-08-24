@@ -1,0 +1,54 @@
+/* Powder 21.0.16 — Combat Impact & Status Feedback 2.0
+   One-shot presentation only. Reuses Combat V7 pulse/status classes; no gameplay values. */
+.combat-v7-mount.ci216-ready .cv7-unit{--ci216-impact-rank:0;--ci216-impact-line:rgba(225,246,255,.84);--ci216-impact-ms:.34s;--ci216-impact-scale:1.12}
+.combat-v7-mount.ci216-ready .cv7-unit[data-ci216-impact="light"]{--ci216-impact-rank:1;--ci216-impact-line:rgba(255,171,177,.86);--ci216-impact-ms:.32s;--ci216-impact-scale:1.08}
+.combat-v7-mount.ci216-ready .cv7-unit[data-ci216-impact="medium"]{--ci216-impact-rank:2;--ci216-impact-line:rgba(255,143,153,.94);--ci216-impact-ms:.40s;--ci216-impact-scale:1.16}
+.combat-v7-mount.ci216-ready .cv7-unit[data-ci216-impact="heavy"]{--ci216-impact-rank:3;--ci216-impact-line:rgba(255,219,103,.98);--ci216-impact-ms:.50s;--ci216-impact-scale:1.25}
+.combat-v7-mount.ci216-ready .cv7-unit[data-ci216-impact="fatal"]{--ci216-impact-rank:4;--ci216-impact-line:rgba(255,239,190,1);--ci216-impact-ms:.58s;--ci216-impact-scale:1.34}
+.combat-v7-mount.ci216-ready .cv7-ring{overflow:visible}
+.combat-v7-mount.ci216-ready .cv7-ring::after{content:'';position:absolute;inset:-12px;border-radius:50%;pointer-events:none;opacity:0}
+.combat-v7-mount.ci216-ready .cv7-unit[data-ci216-impact]:not([data-ci216-impact="none"]) .cv7-ring::after{border:2px solid var(--ci216-impact-line);animation:ci216ImpactPulse var(--ci216-impact-ms) cubic-bezier(.16,.68,.18,1) both;animation-delay:var(--pulse-age,0ms)}
+.combat-v7-mount.ci216-ready .cv7-unit[data-ci216-impact="heavy"] .cv7-ring::after,.combat-v7-mount.ci216-ready .cv7-unit[data-ci216-impact="fatal"] .cv7-ring::after{border-width:3px}
+@keyframes ci216ImpactPulse{0%{opacity:0;transform:scale(.76)}22%{opacity:.96}100%{opacity:0;transform:scale(var(--ci216-impact-scale))}}
+.combat-v7-mount.ci216-ready .cv7-unit[data-ci216-impact="medium"] .cv7-unit-info,.combat-v7-mount.ci216-ready .cv7-unit[data-ci216-impact="heavy"] .cv7-unit-info,.combat-v7-mount.ci216-ready .cv7-unit[data-ci216-impact="fatal"] .cv7-unit-info{animation:ci216PanelImpact .34s ease-out both;animation-delay:var(--pulse-age,0ms)}
+@keyframes ci216PanelImpact{0%,100%{transform:translate3d(0,0,0)}32%{transform:translate3d(0,2px,0)}}
+
+/* Shield / guard / break use a different timing language than raw damage. */
+.combat-v7-mount.ci216-ready .cv7-unit[data-ci216-feedback="shield"] .cv7-ring::after{border:2px solid rgba(142,230,255,.95);animation:ci216ShieldPulse .48s ease-out both;animation-delay:var(--pulse-age,0ms)}
+@keyframes ci216ShieldPulse{0%{opacity:0;transform:scale(.9)}35%{opacity:.92;transform:scale(1.06)}100%{opacity:0;transform:scale(1.18)}}
+.combat-v7-mount.ci216-ready .cv7-unit[data-ci216-feedback="break"] .cv7-ring::after{border:3px dashed rgba(183,232,255,.98);animation:ci216BreakPulse .46s cubic-bezier(.2,.7,.18,1) both;animation-delay:var(--pulse-age,0ms)}
+.combat-v7-mount.ci216-ready .cv7-unit[data-ci216-feedback="break"] .cv7-unit-info{animation:ci216BreakInfo .46s ease-out both;animation-delay:var(--pulse-age,0ms)}
+@keyframes ci216BreakPulse{0%{opacity:0;transform:scale(.82) rotate(0)}28%{opacity:1}100%{opacity:0;transform:scale(1.28) rotate(10deg)}}
+@keyframes ci216BreakInfo{0%,100%{border-color:inherit}35%{border-color:rgba(166,232,255,.95)}}
+
+/* Healing is deliberately softer and timed around the HP bar update. */
+.combat-v7-mount.ci216-ready .cv7-unit[data-ci216-feedback="heal"] .cv7-ring::after{border:2px solid rgba(116,247,171,.92);animation:ci216HealPulse .54s ease-out both;animation-delay:var(--pulse-age,0ms)}
+.combat-v7-mount.ci216-ready .cv7-unit[data-ci216-feedback="heal"] .cv7-bars .hp{animation:ci216HealBar .54s ease-out both;animation-delay:var(--pulse-age,0ms)}
+@keyframes ci216HealPulse{0%{opacity:0;transform:scale(.92)}42%{opacity:.86;transform:scale(1.04)}100%{opacity:0;transform:scale(1.17)}}
+@keyframes ci216HealBar{0%,100%{box-shadow:none}42%{box-shadow:0 0 0 2px rgba(103,236,160,.22)}}
+
+/* Cast punctuation for Ultimate / Exclusive sources without another cinematic layer. */
+.combat-v7-mount.ci216-ready .cv7-unit[data-ci216-feedback="ultimate-cast"] .cv7-ring::after{border:3px solid rgba(255,214,91,.96);animation:ci216CastPulse .62s ease-out both;animation-delay:var(--pulse-age,0ms)}
+.combat-v7-mount.ci216-ready .cv7-unit[data-ci216-feedback="exclusive-cast"] .cv7-ring::after{border:2px solid rgba(206,150,255,.95);animation:ci216CastPulse .56s ease-out both;animation-delay:var(--pulse-age,0ms)}
+@keyframes ci216CastPulse{0%{opacity:0;transform:scale(.84)}38%{opacity:.95;transform:scale(1.05)}100%{opacity:0;transform:scale(1.24)}}
+
+/* Control remains readable after the one-shot reaction finishes. */
+.combat-v7-mount.ci216-ready .cv7-unit[data-ci216-control="freeze"] .cv7-cc-lock{border-color:rgba(162,235,255,.88);background:rgba(5,26,37,.96);color:#d8f7ff}
+.combat-v7-mount.ci216-ready .cv7-unit[data-ci216-control="stun"] .cv7-cc-lock{border-color:rgba(255,225,105,.9);background:rgba(35,28,5,.96);color:#fff1ad}
+.combat-v7-mount.ci216-ready .cv7-unit[data-ci216-control="locked"] .cv7-cc-lock{border-color:rgba(255,210,105,.72)}
+.combat-v7-mount.ci216-ready .cv7-unit[data-ci216-skip="1"] .cv7-cc-lock small{font-size:8px;font-weight:1000;letter-spacing:.08em}
+.combat-v7-mount.ci216-ready .cv7-unit[data-ci216-feedback="control"] .cv7-cc-lock{animation:ci216ControlLock .46s ease-out both;animation-delay:var(--pulse-age,0ms)}
+@keyframes ci216ControlLock{0%,100%{transform:translate(-50%,-50%) scale(1)}22%{transform:translate(-50%,-50%) scale(1.06)}46%{transform:translate(-50%,-50%) scale(.98)}}
+
+/* Hot / critical pressure removes secondary paint, never the core cue. */
+.combat-v7-mount.ci216-ready.ci216-pressure-reduced .cv7-unit-info{animation:none!important}
+.combat-v7-mount.ci216-ready.ci216-pressure-reduced .cv7-ring::after{box-shadow:none!important;animation-duration:.24s!important}
+.combat-v7-mount.ci216-ready.ci216-pressure-reduced .cv7-bars .hp{animation:none!important}
+.combat-v7-mount.ci216-ready.ci216-pressure-reduced .cv7-cc-lock{box-shadow:none!important}
+
+@media(max-width:850px){
+ .combat-v7-mount.ci216-ready .cv7-ring::after{inset:-9px}
+ .combat-v7-mount.ci216-ready .cv7-unit[data-ci216-skip="1"] .cv7-cc-lock small{font-size:7px}
+}
+html.reduce-motion .combat-v7-mount.ci216-ready .cv7-ring::after{animation:none!important;opacity:.62!important;transform:scale(1.06)!important}
+html.reduce-motion .combat-v7-mount.ci216-ready .cv7-unit-info,html.reduce-motion .combat-v7-mount.ci216-ready .cv7-bars .hp,html.reduce-motion .combat-v7-mount.ci216-ready .cv7-cc-lock{animation:none!important}
