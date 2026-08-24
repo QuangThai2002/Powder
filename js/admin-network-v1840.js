@@ -27,5 +27,7 @@ window.fetch=function(input,init={}){
   const key=keyOf(input,init),prior=inflight.get(key);if(prior){stats.joined++;return prior.then(r=>r.clone())}
   stats.started++;const p=transport(input,init).then(r=>{stats.completed++;return r},e=>{stats.failed++;throw e}).finally(()=>inflight.delete(key));inflight.set(key,p);return p.then(r=>r.clone());
 };
-window.POWDER_ADMIN_NETWORK_V1832={version:VERSION,stats:()=>({...stats,inflight:inflight.size,online:navigator.onLine!==false})};window.POWDER_ADMIN_NETWORK_V1831=window.POWDER_ADMIN_NETWORK_V1832;window.POWDER_ADMIN_NETWORK_V1830=window.POWDER_ADMIN_NETWORK_V1832;window.POWDER_ADMIN_NETWORK_V1827=window.POWDER_ADMIN_NETWORK_V1832;
+function activateAdminLearningEventControl2127(){if(typeof document!=='object'||window.POWDER_ADMIN_LEARNING_EVENT_CONTROL_V2127||document.getElementById('powderAdminLearningEventRuntime2127'))return false;const s=document.createElement('script');s.id='powderAdminLearningEventRuntime2127';s.src='js/admin-learning-event-control-v2127.js?v=2127';s.async=true;document.head.appendChild(s);return true}
+window.POWDER_ADMIN_NETWORK_V1832={version:VERSION,stats:()=>({...stats,inflight:inflight.size,online:navigator.onLine!==false}),activateAdminLearningEventControl2127};window.POWDER_ADMIN_NETWORK_V1831=window.POWDER_ADMIN_NETWORK_V1832;window.POWDER_ADMIN_NETWORK_V1830=window.POWDER_ADMIN_NETWORK_V1832;window.POWDER_ADMIN_NETWORK_V1827=window.POWDER_ADMIN_NETWORK_V1832;
+activateAdminLearningEventControl2127();
 })();
