@@ -28,7 +28,7 @@ jobs:
       - name: Verify Chrome
         run: google-chrome --version
       - name: Visual regression and performance budgets
-        run: node tools/powder-visual-performance-gate-v21008.mjs .
+        run: node tools/powder-visual-performance-gate-v21016.mjs .
       - name: Upload visual/performance evidence
         if: always()
         uses: actions/upload-artifact@v4
