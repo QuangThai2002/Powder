@@ -8,7 +8,7 @@ const now=()=>performance?.now?.()||Date.now();
 const data=()=>window.POWDER_DATA||null;
 const save=()=>{try{return window.POWDER_APP?.getSave?.()||null}catch(_){return null}};
 const pressure=()=>String(window.POWDER_ADAPTIVE_PRESSURE_V21011?.level?.()||document.documentElement.dataset.resourcePressure||'calm');
-function limits(level=pressure()){return level==='calm'?{cap:3,team:5,enemy:3,skills:5,max:15}:level==='warm'?{cap:2,team:3,enemy:3,skills:4,max:12}:level==='hot'?{cap:1,team:3,enemy:1,skills:0,max:6}:{cap:0,team:0,enemy:0,skills:0,max:0}}
+function limits(level=pressure()){if(level==='critical')return{cap:0,team:0,enemy:0,skills:0,max:0};if(level==='hot')return{cap:1,team:3,enemy:1,skills:0,max:6};if(level==='warm')return{cap:2,team:3,enemy:3,skills:4,max:12};return{cap:3,team:5,enemy:3,skills:5,max:15}}
 function pow(id){const list=data()?.pows||[],key=String(id||'');return list.find(p=>String(p?.id||'')===key)||null}
 function combatAsset(asset){const s=String(asset||'');if(!s)return'';return window.POWDER_COMBAT_ASSETS?.[s]|| (s.includes('assets/pow-beta12/')?s.replace('assets/pow-beta12/','assets/pow-combat-512/'):s)}
 function skillAssets(p){if(!p)return[];const art=window.POWDER_SKILL_ART;if(!art?.get)return[];const a=p.abilities||{},list=[a.basic,...(a.skills||[]),a.ultimate,p.exclusiveSkill,a.exclusive].filter(Boolean),out=[];for(const x of list){const u=art.get(x);if(u&&!out.includes(u))out.push(u)}return out}
