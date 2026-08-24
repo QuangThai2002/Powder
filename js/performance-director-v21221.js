@@ -12,8 +12,9 @@ function requestRemeasure(reason='recovery'){const now=Date.now();if(document.hi
 function snapshot(){return{version:VERSION,...state,pressure:pressure(),highRefresh:hs(),frameBudget:fb(),combatGovernor:cg(),scrollPipeline:sp(),policy:'60 FPS floor + native refresh ceiling; event-driven recovery; no continuous polling'}}
 function onView(){collect('view');requestRemeasure('view-settle')}
 function onRelief(){collect('pressure-relief');requestRemeasure('pressure-relief')}
-function boot(){collect('boot')}
+function activateCombatFoundation(){if(window.POWDER_COMBAT_FOUNDATION_V2130||document.getElementById('powderCombatFoundation2130'))return;const s=document.createElement('script');s.id='powderCombatFoundation2130';s.src='js/combat-foundation-v2130.js?v=2130';s.async=true;document.head.appendChild(s)}
+function boot(){collect('boot');activateCombatFoundation()}
 window.addEventListener('powder:high-refresh-profile',()=>collect('high-refresh'),{passive:true});window.addEventListener('powder:frame-budget',()=>collect('frame-budget'),{passive:true});window.addEventListener('powder:combat-refresh-governor',()=>collect('combat-governor'),{passive:true});window.addEventListener('powder:view-changed',onView,{passive:true});window.addEventListener('powder:pressure-relief',onRelief,{passive:true});window.addEventListener('pageshow',()=>{collect('pageshow');requestRemeasure('pageshow')},{passive:true});document.addEventListener('visibilitychange',()=>{if(!document.hidden){collect('visibility');requestRemeasure('visibility')}else{clearTimeout(timer);timer=0}},{passive:true});window.addEventListener('pagehide',()=>{clearTimeout(timer);timer=0},{once:true});
-window.POWDER_PERFORMANCE_DIRECTOR_V21221={version:VERSION,snapshot,refresh:()=>collect('manual'),remeasure:()=>requestRemeasure('manual')};
+window.POWDER_PERFORMANCE_DIRECTOR_V21221={version:VERSION,snapshot,refresh:()=>collect('manual'),remeasure:()=>requestRemeasure('manual'),activateCombatFoundation};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
