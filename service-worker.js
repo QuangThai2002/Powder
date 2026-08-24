@@ -31,7 +31,7 @@ const BUILD_SENSITIVE=/\.(?:html?|js|mjs|css|json|webmanifest)$/i;
 const CACHEABLE=/\.(?:js|mjs|css|json|webmanifest|webp|png|jpg|jpeg|svg|mp3|m4a|ogg|wav|woff2?)$/i;
 const TRANSIENT_STATUS=new Set([408,425,429,500,502,503,504]);
 const DOMAIN_LOCK_BAD='.filter(id=>EXP[id]?.special)';
-const DOMAIN_LOCK_FIXED=".filter(id=>EXP[id].kind>'r')";
+const DOMAIN_LOCK_FIXED=".filter(id=>EXP[id]?.kind==='special')";
 const AUTH_REFRESH_BAD='if(/JWT|token|expired/i.test(e.message)&&await refresh())';
 const AUTH_REFRESH_FIXED="if((Number(e?.status)===401||/JWT|token|expired|unauthorized/i.test(String(e?.message||'')))&&await refresh())";
 const AUTH_SESSION_BAD='hasSession:()=>!!st.session';
