@@ -8,7 +8,7 @@
 .combat-v7-mount.cp215-ready .cv7-unit.current .cv7-ring{box-shadow:0 0 12px color-mix(in srgb,var(--el) 42%,transparent)}
 
 /* Numeric readability + collision lanes. */
-.combat-v7-mount.cp215-ready .cv7-fx{margin-left:calc(var(--cp-lane-index,0)*28px);margin-top:calc(abs(var(--cp-lane-index,0))*6px);font-variant-numeric:tabular-nums lining-nums;text-shadow:0 2px 8px rgba(0,0,0,.84)}
+.combat-v7-mount.cp215-ready .cv7-fx{margin-left:var(--cp-lane-x,0px);margin-top:var(--cp-lane-y,0px);font-variant-numeric:tabular-nums lining-nums;text-shadow:0 2px 8px rgba(0,0,0,.84)}
 .combat-v7-mount.cp215-ready .cv7-fx.damage,.combat-v7-mount.cp215-ready .cv7-fx.crit,.combat-v7-mount.cp215-ready .cv7-fx.heal,.combat-v7-mount.cp215-ready .cv7-fx.shield-gain{padding:4px 8px;border-radius:9px;backdrop-filter:none}
 .combat-v7-mount.cp215-ready .cv7-fx.damage{background:rgba(42,10,15,.82);border:1px solid rgba(255,126,139,.42)}
 .combat-v7-mount.cp215-ready .cv7-fx.crit{background:rgba(43,31,5,.9);border-color:rgba(255,211,93,.72);box-shadow:0 0 12px rgba(255,205,73,.2)}
@@ -38,7 +38,7 @@
 .combat-v7-mount.cp215-ready.cp215-pressure-reduced .cv7-fx.element-hit{display:none!important}
 
 @media(max-width:850px){
- .combat-v7-mount.cp215-ready .cv7-fx{margin-left:calc(var(--cp-lane-index,0)*22px)}
+ .combat-v7-mount.cp215-ready .cv7-fx{margin-left:calc(var(--cp-lane-x,0px)*.72);margin-top:calc(var(--cp-lane-y,0px)*.72)}
  .combat-v7-mount.cp215-ready .cv7-fx.damage{font-size:25px}.combat-v7-mount.cp215-ready .cv7-fx.crit{font-size:28px}.combat-v7-mount.cp215-ready .cv7-fx.heal,.combat-v7-mount.cp215-ready .cv7-fx.shield-gain{font-size:23px}
  .combat-v7-mount.cp215-ready .cv7-bars .hp{height:8px}.combat-v7-mount.cp215-ready .cv7-values{font-size:9px}
  .combat-v7-mount.cp215-ready .cv7-cc-lock{min-width:98px;padding:6px 8px}
