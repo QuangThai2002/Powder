@@ -1,0 +1,59 @@
+name: Powder Mastery Recovery 21.1.6
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'js/learning-mastery-recovery-v2116.js'
+      - 'js/learning-srs-intelligence-v2114.js'
+      - 'tools/powder-mastery-recovery-gate-v2116.mjs'
+      - '.github/workflows/powder-mastery-recovery-v2116.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: powder-mastery-recovery-v2116
+  cancel-in-progress: true
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Syntax guard
+        run: |
+          node --check js/learning-mastery-recovery-v2116.js
+          node --check js/learning-srs-intelligence-v2114.js
+          node --check tools/powder-mastery-recovery-gate-v2116.mjs
+
+      - name: Mastery Recovery regression
+        run: node tools/powder-mastery-recovery-gate-v2116.mjs .
+
+      - name: Daily Study regression
+        run: node tools/powder-daily-study-orchestrator-gate-v2115.mjs .
+
+      - name: SRS Intelligence regression
+        run: node tools/powder-srs-intelligence-gate-v2114.mjs .
+
+      - name: Academic Content regression
+        run: node tools/powder-academic-content-gate-v2113.mjs .
+
+      - name: Learning Question Engine regression
+        run: node tools/powder-learning-question-engine-gate-v2112.mjs .
+
+      - name: Final regression gate
+        run: node tools/powder-final-gate-v21004.mjs .
+
+      - name: Verify workflow is read-only
+        run: |
+          test -z "$(git status --porcelain)" || { git status --short; exit 1; }
