@@ -7,7 +7,7 @@ function pow(id){return(D.pows||[]).find(p=>p.id===id)||null}
 function save(){try{return window.POWDER_APP?.getSave?.()||JSON.parse(localStorage.getItem(C.storageKey)||'{}')}catch(_){return{}}}
 function stars(id){const p=pow(id),raw=save().owned?.[id]?.stars;return Math.max(0,Number(raw??p?.startStars??0)||0)}
 function kit(p){return V.pows?.[typeof p==='string'?p:p?.id]||null}
-function abilityForSlot(p,key){if(!p)return null;if(key==='basic')return p.abilities?.basic||null;if(key==='skill1')return p.abilities?.skills?.[0]||null;if(key==='skill2')return p.abilities?.skills?.[1]||null;if(key==='ultimate')return p.abilities?.ultimate||null;if(key==='exclusive')return p.exclusiveSkill||p.abilities?.exclusive||null;return null}
+function abilityForSlot(p,key){if(!p)return null;const k=kit(p);if(key==='basic')return p.abilities?.basic||k?.skills?.basic||null;if(key==='skill1')return p.abilities?.skills?.[0]||k?.skills?.skill1||null;if(key==='skill2')return p.abilities?.skills?.[1]||k?.skills?.skill2||null;if(key==='ultimate')return p.abilities?.ultimate||k?.skills?.ultimate||null;if(key==='exclusive')return p.exclusiveSkill||p.abilities?.exclusive||k?.skills?.exclusive||null;return null}
 function defaults(p){const k=kit(p);return{basic:k?.skills?.basic?.id||abilityForSlot(p,'basic')?.id||null,skill1:k?.skills?.skill1?.id||abilityForSlot(p,'skill1')?.id||null,skill2:k?.skills?.skill2?.id||abilityForSlot(p,'skill2')?.id||null,ultimate:k?.skills?.ultimate?.id||abilityForSlot(p,'ultimate')?.id||null}}
 function getLoadout(id){const p=pow(id);return p?defaults(p):null}
 function saveLoadout(){return false}
