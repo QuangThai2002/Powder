@@ -1,0 +1,69 @@
+name: Powder Boot Manifest Compatibility 21.2.13
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'js/**'
+      - 'css/**'
+      - 'assets/**'
+      - 'service-worker.js'
+      - 'tools/powder-boot-manifest-compat-gate-v21213.mjs'
+      - '.github/workflows/powder-boot-manifest-compat-v21213.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'js/**'
+      - 'css/**'
+      - 'assets/**'
+      - 'service-worker.js'
+      - 'tools/powder-boot-manifest-compat-gate-v21213.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  boot-manifest-compat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Syntax check hotfix JavaScript
+        run: |
+          node --check js/skill-loadout.js
+          node --check js/combat-presentation-v21015.js
+          node --check js/combat-entry-v177.js
+          node --check js/combat-content-ui-v1890.js
+          node --check js/learning-hub-v149.js
+          node --check js/secure-learning-v176.js
+          node --check js/progression-unlocks-v1782.js
+          node --check js/full-game-regression-v20180.js
+          node --check js/adaptive-runtime-pressure-v21011.js
+          node --check service-worker.js
+          node --check tools/powder-boot-manifest-compat-gate-v21213.mjs
+
+      - name: Verify complete Boot Loader manifest
+        run: node tools/powder-boot-manifest-compat-gate-v21213.mjs
+
+      - name: Verify canonical combat audio unchanged
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          git fetch origin main --depth=2
+          if git diff --name-only origin/main...HEAD | grep -E '^(assets/audio/combat/user-combat-bgm\.mp3|assets/audio/domain/domain-voice-usercut-[1-4]\.m4a)$'; then
+            echo 'Protected canonical audio changed unexpectedly.'
+            exit 1
+          fi
+
+      - name: Verify clean checkout
+        run: git diff --exit-code
