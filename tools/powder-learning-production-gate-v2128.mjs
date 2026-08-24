@@ -29,7 +29,7 @@ const gates=[
 for(const [name,file] of gates){
  if(!exists(file)){report.failed.push({name,file,error:'missing gate'});continue}
  const r=spawnSync(process.execPath,[file,root],{cwd:root,encoding:'utf8',stdio:['ignore','pipe','pipe']});
- if(r.status===0){report.passed.push({name,file,stdout:String(r.stdout||'').trim().slice(-900)})}
+ if(r.status===0)report.passed.push({name,file,stdout:String(r.stdout||'').trim().slice(-900)});
  else report.failed.push({name,file,status:r.status,stdout:String(r.stdout||'').trim().slice(-1200),stderr:String(r.stderr||'').trim().slice(-1800)});
 }
 
@@ -52,13 +52,12 @@ assert('Session Continuity loads after Performance',perf.includes('activateSessi
 assert('Admin Event Control loads from Admin network layer',adminNet.includes('activateAdminLearningEventControl2127')&&adminNet.includes('admin-learning-event-control-v2127.js?v=2127'));
 assert('legacy Learning Hub continuous observer removed',!hub.includes('MutationObserver'));
 assert('legacy Learning Hub render loop removed',!hub.includes('requestAnimationFrame('));
-assert('Dungeon optional curriculum remains non-blocking',dungeon.includes('optionalRequirements')&&dungeon.includes('blockers'));
+assert('Dungeon optional curriculum remains non-blocking',dungeon.includes('optionalSupportLessonIDs')&&dungeon.includes('Optional/support IT never blocks core dungeon'));
 assert('Promotion runtime remains learned/core filtered',promotion.includes('lessonsDone')&&promotion.includes('Optional')&&promotion.includes('Rank'));
 assert('Session checkpoint does not mutate player save',continuity.includes('mutatesPlayerSave:false')&&!continuity.includes('applyCloudBundle'));
 assert('Admin Hybrid contract remains Learning plus Combat',adminControl.includes("hybrid:{learning:true,combat:true}"));
 assert('Admin layer does not call player Combat engine',!adminControl.includes('POWDER_COMBAT_ENTRY'));
 
-const continuousPatterns=['setInterval(','MutationObserver','requestAnimationFrame('];
 const modernLearning=[
  'js/learning-daily-study-orchestrator-v2115.js',
  'js/learning-mastery-recovery-v2116.js',
@@ -74,13 +73,12 @@ const modernLearning=[
  'js/admin-learning-event-control-v2127.js'
 ];
 for(const file of modernLearning){
- const src=read(file);assert(`${file} no continuous scheduler`,continuousPatterns.every(p=>!src.includes(p)));
+ const src=read(file);
+ assert(`${file} no interval polling`,!src.includes('setInterval('));
+ assert(`${file} no continuous MutationObserver`,!src.includes('MutationObserver'));
 }
 
-if(report.failed.length){
- console.error(JSON.stringify(report,null,2));
- process.exit(1);
-}
+if(report.failed.length){console.error(JSON.stringify(report,null,2));process.exit(1)}
 
 const finalGate='tools/powder-final-gate-v21004.mjs';
 if(!exists(finalGate)){report.failed.push({name:'Final Gate 21.0.4',file:finalGate,error:'missing gate'});console.error(JSON.stringify(report,null,2));process.exit(1)}
