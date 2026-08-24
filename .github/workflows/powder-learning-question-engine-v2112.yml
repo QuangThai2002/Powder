@@ -1,0 +1,46 @@
+name: Powder Learning Question Engine
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'js/learning-question-engine-v2112.js'
+      - 'css/learning-question-engine-v2112.css'
+      - 'js/app.js'
+      - 'js/boot-loader-v21004.js'
+      - 'tools/powder-learning-question-engine-gate-v2112.mjs'
+      - 'tools/powder-refresh-boot-manifest-v2112.mjs'
+      - '.github/workflows/powder-learning-question-engine-v2112.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  learning-question-engine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify Chrome
+        run: google-chrome --version
+      - name: Verify 21.1.2 source
+        run: |
+          node --check js/learning-question-engine-v2112.js
+          node --check js/app.js
+          node --check tools/powder-learning-question-engine-gate-v2112.mjs
+          node --check tools/powder-refresh-boot-manifest-v2112.mjs
+          node tools/powder-refresh-boot-manifest-v2112.mjs .
+      - name: Run learning question engine gate
+        run: node tools/powder-learning-question-engine-gate-v2112.mjs .
+      - name: Upload learning engine evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: powder-learning-question-engine-${{ github.sha }}
+          path: artifacts/learning-question-engine-v2112/
+          if-no-files-found: warn
+          retention-days: 14
