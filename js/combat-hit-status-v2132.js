@@ -30,8 +30,9 @@ function patch(){raf=0;const v=view(),m=mount();if(!v||v.hidden||!m)return snaps
 function schedule(){if(!raf)raf=requestAnimationFrame(patch)}function settle(){clearTimeout(settleTimer);settleTimer=setTimeout(()=>{settleTimer=0;schedule()},120)}
 function onView(e){const v=String(e?.detail?.view||document.body?.dataset?.activeView||'');if(/battle|combat|boss/i.test(v)){schedule();settle()}}
 function snapshot(){return{version:VERSION,...state,protectedFeedback:['damage','crit','heal','shield','hard-cc','target'],visualRule:'source/target/core numbers before decoration',performance:'no particles, no new animation loop, event-driven rAF only',gameplayMutation:false}}
-function boot(){installStyle();onView({detail:{view:document.body?.dataset?.activeView||''}})}
+function activateNext(){if(window.POWDER_TAMER_DOMAIN_MEMORY_V2133||document.getElementById('powderTamerDomainMemory2133'))return;const s=document.createElement('script');s.id='powderTamerDomainMemory2133';s.src='js/tamer-domain-memory-v2133.js?v=2133';s.async=true;document.head.appendChild(s)}
+function boot(){installStyle();activateNext();onView({detail:{view:document.body?.dataset?.activeView||''}})}
 window.addEventListener('powder:view-changed',onView,{passive:true});window.addEventListener('powder:rendered',schedule,{passive:true});window.addEventListener('powder:combat-state',schedule,{passive:true});window.addEventListener('pagehide',()=>{if(raf)cancelAnimationFrame(raf);clearTimeout(settleTimer)},{once:true});
-window.POWDER_COMBAT_HIT_STATUS_V2132={version:VERSION,snapshot,refresh:patch};
+window.POWDER_COMBAT_HIT_STATUS_V2132={version:VERSION,snapshot,refresh:patch,activateNext};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
