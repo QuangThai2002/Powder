@@ -1,0 +1,65 @@
+name: Powder 21.1.0 Finalize
+
+on:
+  push:
+    branches: [upgrade/21.1.0-core-player-journey]
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: ${{ !contains(github.event.head_commit.message, '[v2110-finalize]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: upgrade/21.1.0-core-player-journey
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Bind 21.1.0 final gate
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const f='tools/powder-final-gate-v21004.mjs';
+          let s=fs.readFileSync(f,'utf8');
+          s=s.replace('manifest.length===1290','manifest.length===1292').replace('order.length===130','order.length===131');
+          const a="appIndex=order.indexOf('js/app.js'),playerSceneIndex=";
+          if(s.includes(a))s=s.replace(a,"appIndex=order.indexOf('js/app.js'),playerJourneyIndex=order.indexOf('js/player-journey-v2110.js'),playerSceneIndex=");
+          else if(!s.includes('playerJourneyIndex'))throw new Error('player journey order anchor missing');
+          const b='mobileIndex===appIndex-1&&combatPresentationIndex';
+          if(s.includes(b))s=s.replace(b,'mobileIndex===appIndex-1&&playerJourneyIndex===appIndex+1&&combatPresentationIndex');
+          else if(!s.includes('playerJourneyIndex===appIndex+1'))throw new Error('player journey order condition missing');
+          const c="combatWarmupSource=read('js/combat-warmup-v21019.js'),liveOpsSource=";
+          if(s.includes(c))s=s.replace(c,"combatWarmupSource=read('js/combat-warmup-v21019.js'),playerJourneySource=read('js/player-journey-v2110.js'),playerJourneyCss=read('css/player-journey-v2110.css'),liveOpsSource=");
+          else if(!s.includes('playerJourneySource='))throw new Error('player journey source anchor missing');
+          const marker="const refresh=spawnSync(process.execPath,[path.join(root,'tools/powder-refresh-boot-manifest-v21020.mjs'),root],{encoding:'utf8'});";
+          const check="ok('playerJourneyIntegration',playerJourneySource.includes(\"VERSION='21.1.0'\")&&playerJourneySource.includes('POWDER_APP')&&playerJourneySource.includes('powder:local-save')&&!playerJourneySource.includes('setInterval')&&playerJourneyCss.includes('.pj211-lanes')&&manifest.some(x=>x.u==='js/player-journey-v2110.js'&&x.k==='script')&&manifest.some(x=>x.u==='css/player-journey-v2110.css'&&x.k==='style')&&playerJourneyIndex===appIndex+1,{playerJourneyIndex,appIndex});\n";
+          if(s.includes(marker))s=s.replace(marker,check+marker.replace('v21020','v2110'));
+          else if(s.includes("powder-refresh-boot-manifest-v21020.mjs"))s=s.replace('powder-refresh-boot-manifest-v21020.mjs','powder-refresh-boot-manifest-v2110.mjs');
+          else if(!s.includes('playerJourneyIntegration'))throw new Error('21.1.0 refresh anchor missing');
+          fs.writeFileSync(f,s);
+          NODE
+      - name: Refresh boot integrity
+        run: node tools/powder-refresh-boot-manifest-v2110.mjs . --write
+      - name: Verify final integration
+        run: |
+          node --check js/player-journey-v2110.js
+          node --check tools/powder-player-journey-gate-v2110.mjs
+          node --check tools/powder-refresh-boot-manifest-v2110.mjs
+          node --check tools/powder-final-gate-v21004.mjs
+          node tools/powder-refresh-boot-manifest-v2110.mjs .
+          node tools/powder-final-gate-v21004.mjs .
+      - name: Commit generated integration
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add js/boot-loader-v21004.js tools/powder-final-gate-v21004.mjs
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "build: bind 21.1.0 player journey [v2110-finalize]"
+          git push origin HEAD:upgrade/21.1.0-core-player-journey
