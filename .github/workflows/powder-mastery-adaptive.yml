@@ -1,0 +1,34 @@
+name: Powder Mastery Adaptive
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: powder-mastery-adaptive-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mastery-adaptive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify source
+        run: |
+          node --check js/learning-mastery-adaptive-v2114.js
+          node --check tools/powder-mastery-adaptive-gate-v2114.mjs
+          node --check tools/powder-refresh-boot-manifest-v2114.mjs
+      - name: Verify deterministic boot
+        run: node tools/powder-refresh-boot-manifest-v2114.mjs .
+      - name: Run mastery adaptive gate
+        run: node tools/powder-mastery-adaptive-gate-v2114.mjs .
+      - name: Run final regression gate
+        run: node tools/powder-final-gate-v21004.mjs .
