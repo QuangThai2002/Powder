@@ -11,8 +11,9 @@ html.powder-scroll-active .view:not(#battleView):not(#chestsView) .panel::before
 function writeActive(){raf=0;state.rafWrites++;if(!state.active){state.active=true;state.bursts++;root.classList.add('powder-scroll-active')}clearTimeout(stopTimer);stopTimer=setTimeout(()=>{stopTimer=0;state.active=false;root.classList.remove('powder-scroll-active')},120)}
 function onScroll(){state.scrollEvents++;state.lastAt=Date.now();if(!raf)raf=requestAnimationFrame(writeActive)}
 function snapshot(){return{version:VERSION,...state,pendingRaf:!!raf,pendingStop:!!stopTimer,policy:'passive scroll input; one coalesced rAF write; pause decorative non-combat motion during scroll'}}
+function activatePageScrollRecovery(){if(window.POWDER_PAGE_SCROLL_RECOVERY_V2137||document.getElementById('powderPageScrollRecovery2137'))return;const s=document.createElement('script');s.id='powderPageScrollRecovery2137';s.src='js/page-scroll-recovery-v2137.js?v=2137';s.async=true;document.head.appendChild(s)}
 function activateNext(){if(window.POWDER_PERFORMANCE_DIRECTOR_V21221||document.getElementById('powderPerformanceDirector21221'))return;const s=document.createElement('script');s.id='powderPerformanceDirector21221';s.src='js/performance-director-v21221.js?v=21221';s.async=true;document.head.appendChild(s)}
-function boot(){style();activateNext()}
+function boot(){style();activatePageScrollRecovery();activateNext()}
 window.addEventListener('scroll',onScroll,{passive:true,capture:true});window.addEventListener('pagehide',()=>{if(raf)cancelAnimationFrame(raf);clearTimeout(stopTimer);root.classList.remove('powder-scroll-active')},{once:true});
 window.POWDER_SCROLL_PIPELINE_V21220={version:VERSION,snapshot};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
