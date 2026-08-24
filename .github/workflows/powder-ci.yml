@@ -36,6 +36,7 @@ jobs:
         run: git diff --exit-code
 
   browser-e2e:
+    if: ${{ always() }}
     needs: project-gate
     runs-on: ubuntu-latest
     timeout-minutes: 20
