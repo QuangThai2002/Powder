@@ -48,12 +48,14 @@ function activateAdaptiveQuestionMix2117(){if(typeof document!=='object'||window
 function activateExplanationCoverage2118(){if(typeof document!=='object'||window.POWDER_EXPLANATION_COVERAGE_V2118||document.getElementById('powderExplanationCoverageRuntime2118'))return false;const s=document.createElement('script');s.id='powderExplanationCoverageRuntime2118';s.src='js/learning-explanation-coverage-v2118.js?v=2118';s.async=true;document.head.appendChild(s);return true}
 function activateDailyRotation2119(){if(typeof document!=='object'||window.POWDER_DAILY_ROTATION_RUNNER_V2119||document.getElementById('powderDailyRotationRuntime2119'))return false;const s=document.createElement('script');s.id='powderDailyRotationRuntime2119';s.src='js/learning-daily-rotation-runner-v2119.js?v=2119';s.async=true;document.head.appendChild(s);return true}
 function activateLearningCommand2120(){if(typeof document!=='object'||window.POWDER_LEARNING_COMMAND_CENTER_V2120||document.getElementById('powderLearningCommandRuntime2120'))return false;const s=document.createElement('script');s.id='powderLearningCommandRuntime2120';s.src='js/learning-command-center-v2120.js?v=2120';s.async=true;document.head.appendChild(s);return true}
+function activateDailyBoss2121(){if(typeof document!=='object'||window.POWDER_DAILY_BOSS_INTELLIGENCE_V2121||document.getElementById('powderDailyBossRuntime2121'))return false;const s=document.createElement('script');s.id='powderDailyBossRuntime2121';s.src='js/learning-daily-boss-intelligence-v2121.js?v=2121';s.async=true;document.head.appendChild(s);return true}
 LM.dueQuestions=rankDueQuestions;LM.chooseReviewLanguage=chooseReviewLanguage;LM.srs={...(LM.srs||{}),intelligenceVersion:VERSION,priority:'overdue + weakness + lapse + dimension weakness - recent repetition',eligibility:'canonical due set unchanged'};E.selectQuestions=patchedSelectQuestions;
-window.POWDER_SRS_INTELLIGENCE_V2114={version:VERSION,priority,rankDueQuestions,selectReview,chooseReviewLanguage,reviewUrgency,audit,original,activateDailyStudy2115,activateMasteryRecovery2116,activateAdaptiveQuestionMix2117,activateExplanationCoverage2118,activateDailyRotation2119,activateLearningCommand2120};
+window.POWDER_SRS_INTELLIGENCE_V2114={version:VERSION,priority,rankDueQuestions,selectReview,chooseReviewLanguage,reviewUrgency,audit,original,activateDailyStudy2115,activateMasteryRecovery2116,activateAdaptiveQuestionMix2117,activateExplanationCoverage2118,activateDailyRotation2119,activateLearningCommand2120,activateDailyBoss2121};
 activateDailyStudy2115();
 activateMasteryRecovery2116();
 activateAdaptiveQuestionMix2117();
 activateExplanationCoverage2118();
 activateDailyRotation2119();
 activateLearningCommand2120();
+activateDailyBoss2121();
 })();
