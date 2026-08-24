@@ -1,0 +1,47 @@
+/* Powder 21.0.15 — Combat Presentation 3.0
+   Presentation-only. Reuses Combat V7 signals; no gameplay values are changed. */
+.combat-v7-mount.cp215-ready .cv7-attack-trace{height:4px;opacity:.96;background:linear-gradient(90deg,transparent 0,var(--attack-line) 18%,#fff 52%,var(--attack-line) 78%,transparent 100%);box-shadow:0 0 8px color-mix(in srgb,var(--attack-line) 72%,transparent)}
+.combat-v7-mount.cp215-ready .cv7-attack-hit{width:60px;height:60px;filter:brightness(1.08)}
+.combat-v7-mount.cp215-ready .cv7-attack-hit-ring{display:block;width:74px;height:74px;border:2px solid var(--attack-line);animation:cp215TargetImpact .44s ease-out both;animation-delay:var(--impact-delay,420ms)}
+@keyframes cp215TargetImpact{0%{opacity:0;transform:translate(50%,-50%) scale(.42)}35%{opacity:.95}100%{opacity:0;transform:translate(50%,-50%) scale(1.22)}}
+.combat-v7-mount.cp215-ready .cv7-unit.telegraph-target .cv7-ring,.combat-v7-mount.cp215-ready .cv7-unit.cv69-locked-target .cv7-ring{border-width:3px;box-shadow:0 0 0 3px rgba(255,212,100,.14),0 0 16px rgba(255,212,100,.34)}
+.combat-v7-mount.cp215-ready .cv7-unit.current .cv7-ring{box-shadow:0 0 12px color-mix(in srgb,var(--el) 42%,transparent)}
+
+/* Numeric readability + collision lanes. */
+.combat-v7-mount.cp215-ready .cv7-fx{margin-left:calc(var(--cp-lane-index,0)*28px);margin-top:calc(abs(var(--cp-lane-index,0))*6px);font-variant-numeric:tabular-nums lining-nums;text-shadow:0 2px 8px rgba(0,0,0,.84)}
+.combat-v7-mount.cp215-ready .cv7-fx.damage,.combat-v7-mount.cp215-ready .cv7-fx.crit,.combat-v7-mount.cp215-ready .cv7-fx.heal,.combat-v7-mount.cp215-ready .cv7-fx.shield-gain{padding:4px 8px;border-radius:9px;backdrop-filter:none}
+.combat-v7-mount.cp215-ready .cv7-fx.damage{background:rgba(42,10,15,.82);border:1px solid rgba(255,126,139,.42)}
+.combat-v7-mount.cp215-ready .cv7-fx.crit{background:rgba(43,31,5,.9);border-color:rgba(255,211,93,.72);box-shadow:0 0 12px rgba(255,205,73,.2)}
+.combat-v7-mount.cp215-ready .cv7-fx.heal{background:rgba(6,40,25,.84);border:1px solid rgba(110,245,164,.38)}
+.combat-v7-mount.cp215-ready .cv7-fx.shield-gain{background:rgba(4,35,48,.88);border-color:rgba(143,232,255,.55)}
+.combat-v7-mount.cp215-ready .cv7-fx.status-control{min-width:116px;text-align:center;padding:6px 10px;border-width:2px;background:rgba(31,24,6,.94);color:#ffe58c}
+
+/* Vitals are deliberately thicker than decoration. */
+.combat-v7-mount.cp215-ready .cv7-bars{gap:4px;margin-top:6px}
+.combat-v7-mount.cp215-ready .cv7-bars i{height:7px}
+.combat-v7-mount.cp215-ready .cv7-bars .hp{height:9px;outline:1px solid rgba(255,255,255,.08);outline-offset:1px}
+.combat-v7-mount.cp215-ready .cv7-bars .mana{height:6px}
+.combat-v7-mount.cp215-ready .cv7-values{font-size:10px;font-weight:800;color:#d2e5ec}
+.combat-v7-mount.cp215-ready .cv7-values>span:first-child{font-variant-numeric:tabular-nums}
+.combat-v7-mount.cp215-ready .cv7-unit[data-cp-state="wounded"] .cv7-unit-info{border-color:rgba(255,191,92,.58)}
+.combat-v7-mount.cp215-ready .cv7-unit[data-cp-state="critical"] .cv7-unit-info{border-width:2px;border-color:rgba(255,87,104,.8);box-shadow:0 0 0 2px rgba(255,82,96,.08)}
+.combat-v7-mount.cp215-ready .cv7-unit[data-cp-state="control"] .cv7-unit-info{border-width:2px;border-color:rgba(255,220,100,.72)}
+.combat-v7-mount.cp215-ready .cv7-unit[data-cp-state="control"] .cv7-art-wrap{filter:saturate(.82)}
+.combat-v7-mount.cp215-ready .cv7-cc-lock{min-width:112px;padding:7px 10px;border-width:2px;border-color:rgba(255,220,100,.65);background:rgba(20,17,6,.95);box-shadow:0 8px 20px rgba(0,0,0,.38)}
+.combat-v7-mount.cp215-ready .cv7-cc-lock i{font-size:18px}.combat-v7-mount.cp215-ready .cv7-cc-lock b{font-size:10px}.combat-v7-mount.cp215-ready .cv7-cc-lock small{font-size:7px;color:#ffe596}
+.combat-v7-mount.cp215-ready .cv7-status-chip{border-color:rgba(255,255,255,.23);background:#0b2935}
+
+/* Pressure reductions remove decoration, never core state/numbers. */
+.combat-v7-mount.cp215-ready.cp215-pressure-reduced .cv7-attack-hit-ring{display:none}
+.combat-v7-mount.cp215-ready.cp215-pressure-reduced .cv7-attack-trace{box-shadow:none;height:3px}
+.combat-v7-mount.cp215-ready.cp215-pressure-reduced .cv7-fx{box-shadow:none!important}
+.combat-v7-mount.cp215-ready.cp215-pressure-reduced .cv7-fx.element-hit{display:none!important}
+
+@media(max-width:850px){
+ .combat-v7-mount.cp215-ready .cv7-fx{margin-left:calc(var(--cp-lane-index,0)*22px)}
+ .combat-v7-mount.cp215-ready .cv7-fx.damage{font-size:25px}.combat-v7-mount.cp215-ready .cv7-fx.crit{font-size:28px}.combat-v7-mount.cp215-ready .cv7-fx.heal,.combat-v7-mount.cp215-ready .cv7-fx.shield-gain{font-size:23px}
+ .combat-v7-mount.cp215-ready .cv7-bars .hp{height:8px}.combat-v7-mount.cp215-ready .cv7-values{font-size:9px}
+ .combat-v7-mount.cp215-ready .cv7-cc-lock{min-width:98px;padding:6px 8px}
+}
+html.reduce-motion .combat-v7-mount.cp215-ready .cv7-attack-hit-ring{animation:none!important;opacity:.7!important;transform:translate(50%,-50%) scale(1)!important}
+html.reduce-motion .combat-v7-mount.cp215-ready .cv7-attack-trace{box-shadow:none!important}
