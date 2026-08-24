@@ -23,6 +23,14 @@ const tools=exists('tools')?fs.readdirSync(path.join(root,'tools')).sort():[];
 const expectedTools=['powder-browser-e2e-v21007.mjs','powder-project-gate-v21214.mjs'];
 check('tools directory is lean',JSON.stringify(tools)===JSON.stringify(expectedTools),tools.join(', '));
 
+const provenOrphans=[
+  'js/learning-daily-study-orchestrator-v2115.js','js/learning-mastery-recovery-v2116.js','js/learning-daily-rotation-runner-v2119.js','js/learning-command-center-v2120.js',
+  'js/learning-performance-hardening-v2125.js','js/learning-session-continuity-v2126.js','js/learning-runtime-recovery-v21210.js','js/runtime-clean-presentation-v2129.js',
+  'js/admin-official-launch-v2000.js','js/admin-reliability-v169.js','js/admin-security-v2030.js','js/security-status-v2030.js',
+  'css/admin-official-launch-v2000.css','css/admin-reliability-v169.css','css/admin-security-v2030.css','css/save-integrity-v20170.css'
+];
+check('proven runtime orphans stay removed',provenOrphans.every(p=>!exists(p)),provenOrphans.filter(exists).join(', '));
+
 const htmlFiles=['index.html','admin.html','offline.html','privacy.html','terms.html'];
 const missingRefs=[];
 for(const file of htmlFiles){
@@ -70,7 +78,9 @@ const index=read('index.html');
 check('post-boot Learning runtime remains connected',index.includes('learning-srs-intelligence-v2114.js')&&exists('js/learning-srs-intelligence-v2114.js'),'SRS loader missing');
 check('logo asset remains connected',index.includes('assets/ui/powder-logo-project.webp')&&exists('assets/ui/powder-logo-project.webp'),'Powder logo missing');
 check('Service Worker remains present and versioned',/const V='[^']+'/.test(read('service-worker.js')),'Service Worker version marker missing');
+const adminBootstrap=read('js/admin-capacity-guard-v21004.js');
+check('Admin Learning/Event control is connected',exists('js/admin-learning-event-control-v2127.js')&&adminBootstrap.includes('admin-learning-event-control-v2127.js')&&adminBootstrap.includes('POWDER_ADMIN_LEARNING_EVENT_CONTROL_V2127'),'Admin event contract loader missing');
 
-const result={version:'21.2.14',checks:checks.length,passed:checks.filter(x=>x.pass).length,failed:failures.length,failures};
+const result={version:'21.2.16',checks:checks.length,passed:checks.filter(x=>x.pass).length,failed:failures.length,failures};
 console.log(JSON.stringify(result,null,2));
 if(failures.length)process.exit(1);
