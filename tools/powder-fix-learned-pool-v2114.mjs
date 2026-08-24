@@ -13,4 +13,11 @@ import fs from'node:fs';
  if(s.includes(old))s=s.replace(old,next);else if(!s.includes(next))throw new Error('academic-content boot binding anchor missing');
  fs.writeFileSync(f,s);
 }
-console.log(JSON.stringify({version:'21.1.4',patched:true,guards:['learned-only source provenance','21.1.3 strict boot compatibility']},null,2));
+{
+ const f='tools/powder-final-gate-v21004.mjs';let s=fs.readFileSync(f,'utf8');
+ const old='academicContentIndex===learningQuestionEngineIndex-1&&learningQuestionEngineIndex===appIndex-1';
+ const next='academicContentIndex===learningQuestionEngineIndex-1&&learningQuestionEngineIndex===masteryAdaptiveIndex-1&&masteryAdaptiveIndex===appIndex-1';
+ if(s.includes(old))s=s.split(old).join(next);else if(!s.includes(next))throw new Error('final-gate academic order anchor missing');
+ fs.writeFileSync(f,s);
+}
+console.log(JSON.stringify({version:'21.1.4',patched:true,guards:['learned-only source provenance','21.1.3 strict boot compatibility','final-gate strict Academic → Engine → Mastery → app order']},null,2));
