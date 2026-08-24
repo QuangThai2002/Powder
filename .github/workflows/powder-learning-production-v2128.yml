@@ -1,0 +1,35 @@
+name: Powder Learning Production Gate 21.2.8
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'js/learning-*.js'
+      - 'js/admin-learning-event-control-v2127.js'
+      - 'js/admin-network-v1840.js'
+      - 'tools/powder-*-gate-v21*.mjs'
+      - 'tools/powder-learning-production-gate-v2128.mjs'
+      - '.github/workflows/powder-learning-production-v2128.yml'
+  workflow_dispatch:
+permissions: {contents: read}
+concurrency:
+  group: 'powder-learning-production-v2128-${{ github.ref }}'
+  cancel-in-progress: true
+jobs:
+  production-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-node@v4
+        with: {node-version: '24'}
+      - name: Syntax guard
+        run: node --check tools/powder-learning-production-gate-v2128.mjs
+      - name: Freeze player and Combat critical path
+        run: |
+          git diff --exit-code origin/main...HEAD -- index.html js/boot-loader-v21004.js js/app.js
+          git diff --exit-code origin/main...HEAD -- js/player-combat-scene-v1862.js js/combat-core-v7.js js/combat-mechanics-v17.js js/combat-master-v9.js js/combat-entry-v177.js
+      - name: Learning production regression 21.2.8
+        run: node tools/powder-learning-production-gate-v2128.mjs .
+      - name: Prove workflow is read only
+        run: git diff --exit-code
