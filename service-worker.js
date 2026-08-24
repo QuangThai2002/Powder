@@ -1,5 +1,5 @@
-const V='21.0.4';
-const BUILD='21004';
+const V='21.2.10-hotfix';
+const BUILD='21210';
 const SHELL=`powder-shell-${V}`;
 const RUNTIME=`powder-runtime-${V}`;
 const PRELOAD=`powder-assets-v21004`;
@@ -36,16 +36,18 @@ const CACHEABLE=/\.(?:js|mjs|css|json|webmanifest|webp|png|jpg|jpeg|svg|mp3|m4a|
 const TRANSIENT_STATUS=new Set([408,425,429,500,502,503,504]);
 
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
-function timeoutFetch(request,ms){
+function timeoutFetch(request,ms,forceReload=false){
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),ms);
-  return fetch(request,{signal:controller.signal}).finally(()=>clearTimeout(timer));
+  const init={signal:controller.signal};
+  if(forceReload)init.cache='reload';
+  return fetch(request,init).finally(()=>clearTimeout(timer));
 }
-async function fetchWithRetry(request,{timeout=ASSET_TIMEOUT,retries=1}={}){
+async function fetchWithRetry(request,{timeout=ASSET_TIMEOUT,retries=1,forceReload=false}={}){
   let lastError=null;
   for(let attempt=0;attempt<=retries;attempt++){
     try{
-      const response=await timeoutFetch(request,timeout);
+      const response=await timeoutFetch(request,timeout,forceReload);
       if(!TRANSIENT_STATUS.has(response.status)||attempt>=retries)return response;
       lastError=new Error(`HTTP ${response.status}`);
     }catch(error){
@@ -66,11 +68,11 @@ async function exactMatch(cacheName,request){
 }
 async function preloadMatch(request){
   try{
+    const url=new URL(request.url);
+    if(BUILD_SENSITIVE.test(url.pathname))return null;
     const cache=await caches.open(PRELOAD);
     let hit=await cache.match(request);
     if(hit)return hit;
-    const url=new URL(request.url);
-    if(BUILD_SENSITIVE.test(url.pathname))return null;
     url.search='';
     return cache.match(new Request(url.href,{credentials:'same-origin'}));
   }catch{return null}
@@ -84,11 +86,12 @@ async function runtimePut(request,response){
   }catch{}
 }
 async function assetResponse(request){
+  const url=new URL(request.url),sensitive=BUILD_SENSITIVE.test(url.pathname);
   const preload=await preloadMatch(request);if(preload)return preload;
   let hit=await exactMatch(SHELL,request);if(hit)return hit;
   hit=await exactMatch(RUNTIME,request);if(hit)return hit;
   try{
-    const response=await fetchWithRetry(request,{timeout:ASSET_TIMEOUT,retries:BUILD_SENSITIVE.test(new URL(request.url).pathname)?0:1});
+    const response=await fetchWithRetry(request,{timeout:ASSET_TIMEOUT,retries:sensitive?0:1,forceReload:sensitive});
     if(response.ok)runtimePut(request,response);
     return response;
   }catch(error){
@@ -99,7 +102,7 @@ async function assetResponse(request){
 }
 async function navigationResponse(request){
   try{
-    const response=await fetchWithRetry(request,{timeout:NAV_TIMEOUT,retries:0});
+    const response=await fetchWithRetry(request,{timeout:NAV_TIMEOUT,retries:0,forceReload:true});
     if(response.ok)runtimePut(request,response);
     return response;
   }catch{
