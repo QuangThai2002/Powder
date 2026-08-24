@@ -49,9 +49,6 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Verify Chrome
-        run: google-chrome --version
-
       - name: Prepare browser E2E diagnostics
         if: ${{ always() }}
         run: |
@@ -67,6 +64,7 @@ jobs:
 
       - name: Upload browser E2E diagnostics
         if: ${{ always() }}
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: powder-browser-e2e-${{ github.run_attempt }}
