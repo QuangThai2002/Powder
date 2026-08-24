@@ -1,0 +1,88 @@
+name: Powder Daily Study Orchestrator 21.1.5
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'js/learning-daily-study-orchestrator-v2115.js'
+      - 'tools/powder-daily-study-orchestrator-gate-v2115.mjs'
+      - 'tools/powder-refresh-boot-manifest-v2115.mjs'
+      - '.github/workflows/powder-daily-study-orchestrator-v2115.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: powder-daily-study-orchestrator-v2115
+  cancel-in-progress: false
+
+jobs:
+  regression-and-bind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Syntax guard
+        run: |
+          node --check js/learning-daily-study-orchestrator-v2115.js
+          node --check tools/powder-daily-study-orchestrator-gate-v2115.mjs
+          node --check tools/powder-refresh-boot-manifest-v2115.mjs
+          node --check tools/powder-refresh-boot-manifest-v2114.mjs
+
+      - name: Complete 21.1.4 boot binding
+        run: node tools/powder-refresh-boot-manifest-v2114.mjs . --write
+
+      - name: Bind 21.1.5 into boot manifest
+        run: node tools/powder-refresh-boot-manifest-v2115.mjs . --write
+
+      - name: Daily study orchestrator regression
+        run: node tools/powder-daily-study-orchestrator-gate-v2115.mjs .
+
+      - name: SRS intelligence regression
+        run: node tools/powder-srs-intelligence-gate-v2114.mjs .
+
+      - name: Academic content regression
+        run: node tools/powder-academic-content-gate-v2113.mjs .
+
+      - name: Learning question engine regression
+        run: node tools/powder-learning-question-engine-gate-v2112.mjs .
+
+      - name: Final regression gate
+        run: node tools/powder-final-gate-v21004.mjs .
+
+      - name: Verify 21.1.5 boot binding is stable
+        run: node tools/powder-refresh-boot-manifest-v2115.mjs .
+
+      - name: Commit validated 21.1.4 + 21.1.5 binding
+        run: |
+          git add js/boot-loader-v21004.js tools
+          if git diff --cached --quiet; then
+            echo 'No generated binding changes to commit.'
+            exit 0
+          fi
+          git config user.name 'Powder Release Bot'
+          git config user.email 'powder-release-bot@users.noreply.github.com'
+          git commit -m 'Powder 21.1.5: bind Daily Study Orchestrator'
+          git push
+
+      - name: Upload regression evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: powder-daily-study-orchestrator-v2115
+          path: |
+            artifacts/daily-study-orchestrator-v2115
+            artifacts/srs-intelligence-v2114
+            artifacts/academic-content-v2113
+            artifacts/learning-question-engine-v2112
+          if-no-files-found: ignore
