@@ -20,6 +20,7 @@
 .combat-v7-mount.cp215-ready .cv7-bars{gap:4px;margin-top:6px}
 .combat-v7-mount.cp215-ready .cv7-bars i{height:7px}
 .combat-v7-mount.cp215-ready .cv7-bars .hp{height:9px;outline:1px solid rgba(255,255,255,.08);outline-offset:1px}
+.combat-v7-mount.cp215-ready .cv7-unit.hp-critical:not(.dead) .cv7-bars .hp{height:11px}
 .combat-v7-mount.cp215-ready .cv7-bars .mana{height:6px}
 .combat-v7-mount.cp215-ready .cv7-values{font-size:10px;font-weight:800;color:#d2e5ec}
 .combat-v7-mount.cp215-ready .cv7-values>span:first-child{font-variant-numeric:tabular-nums}
@@ -40,7 +41,7 @@
 @media(max-width:850px){
  .combat-v7-mount.cp215-ready .cv7-fx{margin-left:calc(var(--cp-lane-x,0px)*.72);margin-top:calc(var(--cp-lane-y,0px)*.72)}
  .combat-v7-mount.cp215-ready .cv7-fx.damage{font-size:25px}.combat-v7-mount.cp215-ready .cv7-fx.crit{font-size:28px}.combat-v7-mount.cp215-ready .cv7-fx.heal,.combat-v7-mount.cp215-ready .cv7-fx.shield-gain{font-size:23px}
- .combat-v7-mount.cp215-ready .cv7-bars .hp{height:8px}.combat-v7-mount.cp215-ready .cv7-values{font-size:9px}
+ .combat-v7-mount.cp215-ready .cv7-bars .hp{height:8px}.combat-v7-mount.cp215-ready .cv7-unit.hp-critical:not(.dead) .cv7-bars .hp{height:10px}.combat-v7-mount.cp215-ready .cv7-values{font-size:9px}
  .combat-v7-mount.cp215-ready .cv7-cc-lock{min-width:98px;padding:6px 8px}
 }
 html.reduce-motion .combat-v7-mount.cp215-ready .cv7-attack-hit-ring{animation:none!important;opacity:.7!important;transform:translate(50%,-50%) scale(1)!important}
