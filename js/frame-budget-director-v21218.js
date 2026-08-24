@@ -1,0 +1,21 @@
+(()=>{'use strict';
+if(window.POWDER_FRAME_BUDGET_V21218)return;
+const VERSION='21.2.18',root=document.documentElement,STYLE_ID='powderFrameBudgetStyle21218';
+const state={displayHz:60,currentFps:60,frameBudgetMs:16.667,ratio:1,refreshTier:'60hz',pressure:'calm',mode:'standard',updates:0,lastAt:0};
+function snap(){try{return window.POWDER_HIGH_REFRESH_V21217?.snapshot?.()||{}}catch(_){return{}}}
+function pressure(){return String(window.POWDER_ADAPTIVE_PRESSURE_V21011?.level?.()||root.dataset.resourcePressure||'calm')}
+function style(){if(document.getElementById(STYLE_ID))return;const s=document.createElement('style');s.id=STYLE_ID;s.textContent=`
+html.powder-fps-priority-high .topbar,html.powder-fps-priority-high .wallet-pill,html.powder-fps-priority-high .wallet span{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html.powder-fps-priority-high .view:not(#battleView):not(#chestsView) .panel,html.powder-fps-priority-high .view:not(#battleView):not(#chestsView) .lesson-card,html.powder-fps-priority-high .view:not(#battleView):not(#chestsView) .pow-card,html.powder-fps-priority-high .view:not(#battleView):not(#chestsView) .inventory-pow-card{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:0 6px 18px rgba(0,0,0,.18)!important}
+html.powder-fps-priority-high .lesson-card,html.powder-fps-priority-high .pow-card,html.powder-fps-priority-high .inventory-pow-card,html.powder-fps-priority-high .rank-item,html.powder-fps-priority-high .soc154-user{content-visibility:auto;contain-intrinsic-size:auto 260px}
+html.powder-fps-priority-ultra .view:not(#battleView):not(#chestsView) .ambient-particle,html.powder-fps-priority-ultra .view:not(#battleView):not(#chestsView) .vfx-ambient,html.powder-fps-priority-ultra .view:not(#battleView):not(#chestsView) .spark:not(.shiny-mark){display:none!important}
+html.powder-fps-recovery .view:not(#battleView):not(#chestsView) .panel::after,html.powder-fps-recovery .view:not(#battleView):not(#chestsView) .lesson-card::after{display:none!important}
+`;document.head.appendChild(s)}
+function compute(reason='event'){const h=snap(),hz=Math.max(60,Number(h.displayHz)||60),fps=Math.max(1,Number(h.currentFps)||Number(root.dataset.nativeFps)||60),p=pressure(),ratio=fps/hz,mode=p==='critical'||fps<48?'recovery':hz>=180?'ultra':hz>=120?'high':hz>=90?'elevated':'standard';state.displayHz=hz;state.currentFps=fps;state.frameBudgetMs=Number((1000/hz).toFixed(3));state.ratio=Number(ratio.toFixed(3));state.refreshTier=hz>=180?'ultra':hz>=120?'high':hz>=90?'elevated':'standard';state.pressure=p;state.mode=mode;state.updates++;state.lastAt=Date.now();root.classList.toggle('powder-fps-priority',hz>=90);root.classList.toggle('powder-fps-priority-high',hz>=120);root.classList.toggle('powder-fps-priority-ultra',hz>=180);root.classList.toggle('powder-fps-recovery',mode==='recovery'||p==='hot');root.dataset.frameBudgetMs=String(state.frameBudgetMs);root.dataset.nativeRefreshRatio=String(state.ratio);root.dataset.frameBudgetMode=mode;root.style.setProperty('--powder-frame-budget-ms',`${state.frameBudgetMs}ms`);try{window.dispatchEvent(new CustomEvent('powder:frame-budget',{detail:{...state,reason}}))}catch(_){}return snapshot()}
+function snapshot(){return{version:VERSION,...state,baselineFps:60,policy:'native refresh budget; preserve gameplay timing; optimize decorative UI first'}}
+function activateNext(){if(window.POWDER_COMBAT_REFRESH_GOVERNOR_V21219||document.getElementById('powderCombatRefreshGovernor21219'))return;const s=document.createElement('script');s.id='powderCombatRefreshGovernor21219';s.src='js/combat-refresh-governor-v21219.js?v=21219';s.async=true;document.head.appendChild(s)}
+function boot(){style();compute('boot');activateNext()}
+window.addEventListener('powder:high-refresh-profile',()=>compute('high-refresh'),{passive:true});window.addEventListener('powder:resource-pressure',()=>compute('pressure'),{passive:true});window.addEventListener('powder:view-changed',()=>compute('view'),{passive:true});
+window.POWDER_FRAME_BUDGET_V21218={version:VERSION,snapshot,refresh:()=>compute('manual'),baselineFps:60};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
