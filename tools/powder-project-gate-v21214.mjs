@@ -83,11 +83,28 @@ check('Admin Learning/Event control is connected',exists('js/admin-learning-even
 
 const liveOps=read('js/live-ops-diagnostics-v2020.js');
 const highRefresh=exists('js/high-refresh-runtime-v21217.js')?read('js/high-refresh-runtime-v21217.js'):'';
+const frameBudget=exists('js/frame-budget-director-v21218.js')?read('js/frame-budget-director-v21218.js'):'';
+const combatRefresh=exists('js/combat-refresh-governor-v21219.js')?read('js/combat-refresh-governor-v21219.js'):'';
+const scrollPipeline=exists('js/scroll-pipeline-v21220.js')?read('js/scroll-pipeline-v21220.js'):'';
+const performanceDirector=exists('js/performance-director-v21221.js')?read('js/performance-director-v21221.js'):'';
 check('High Refresh runtime is connected post-boot',!!highRefresh&&liveOps.includes('high-refresh-runtime-v21217.js?v=21217')&&liveOps.includes('POWDER_HIGH_REFRESH_V21217'),'21.2.17 loader missing');
 check('60 FPS is baseline, not a render cap',highRefresh.includes('BASELINE_FPS=60')&&highRefresh.includes('uncapped:true')&&highRefresh.includes("maxFps:'native-refresh'")&&highRefresh.includes('requestAnimationFrame/native display cadence; no artificial 60/120 FPS cap'),'uncapped/native-refresh contract missing');
 check('High Refresh sampling stays bounded and event-driven',highRefresh.includes('SAMPLE_FRAMES=96')&&highRefresh.includes('MAX_SAMPLE_MS=2400')&&!highRefresh.includes('setInterval(')&&highRefresh.includes("'powder:view-changed'")&&highRefresh.includes("'visibilitychange'"),'sampling policy regressed');
 check('High Refresh stays outside signed Boot manifest',!manifest.some(x=>x.u==='js/high-refresh-runtime-v21217.js'),'high-refresh runtime must remain post-boot');
 
-const result={version:'21.2.17',checks:checks.length,passed:checks.filter(x=>x.pass).length,failed:failures.length,failures};
+check('21.2.18-21.2.21 performance chain files exist',!!frameBudget&&!!combatRefresh&&!!scrollPipeline&&!!performanceDirector,'one or more high-FPS runtime files missing');
+check('performance chain waits for Boot completion',highRefresh.includes("root.classList.contains('powder-boot-complete')")&&highRefresh.includes("new MutationObserver")&&highRefresh.includes("function ready(reasonName,delay){activateNext();schedule(reasonName,delay)}"),'performance chain must not race signed boot');
+check('performance chain activation order',highRefresh.includes('frame-budget-director-v21218.js?v=21218')&&frameBudget.includes('combat-refresh-governor-v21219.js?v=21219')&&combatRefresh.includes('scroll-pipeline-v21220.js?v=21220')&&scrollPipeline.includes('performance-director-v21221.js?v=21221'),'post-boot chain broken');
+check('native frame budget scales to display refresh',frameBudget.includes('1000/hz')&&frameBudget.includes('powder-fps-priority-high')&&frameBudget.includes('powder-fps-priority-ultra')&&!frameBudget.includes('setInterval('),'frame budget policy regressed');
+check('Combat governor preserves readable combat feedback',combatRefresh.includes("preservedFeedback:['damage','heal','shield','stun','freeze','skip-turn','core hit reaction']")&&!combatRefresh.includes('.cv7-fx.damage{display:none')&&!combatRefresh.includes('.cv7-fx.heal{display:none'),'core feedback must never be hidden');
+check('Combat governor is native-refresh aware',combatRefresh.includes('hz>=180&&ratio<.58')&&combatRefresh.includes('hz>=120&&ratio<.68')&&combatRefresh.includes('data-native-fx-cap')&&combatRefresh.includes('nativeFxCap'),'native refresh FX policy missing');
+check('Combat governor timers are bounded',combatRefresh.includes('let timer=0,followTimer=0')&&combatRefresh.includes('function clearTimers()')&&!combatRefresh.includes('setInterval('),'combat follow-up timers must be bounded');
+check('scroll pipeline coalesces writes',scrollPipeline.includes("addEventListener('scroll',onScroll,{passive:true,capture:true})")&&scrollPipeline.includes('requestAnimationFrame(writeActive)')&&!scrollPipeline.includes('setInterval('),'scroll pipeline must stay passive and event-driven');
+check('performance director avoids continuous polling',performanceDirector.includes("policy:'60 FPS floor + native refresh ceiling; event-driven recovery; no continuous polling'")&&!performanceDirector.includes('setInterval(')&&performanceDirector.includes('requestRemeasure'),'director polling regression');
+const postBootPerf=['js/frame-budget-director-v21218.js','js/combat-refresh-governor-v21219.js','js/scroll-pipeline-v21220.js','js/performance-director-v21221.js'];
+check('new performance runtimes stay outside signed Boot manifest',postBootPerf.every(p=>!manifest.some(x=>x.u===p)),postBootPerf.filter(p=>manifest.some(x=>x.u===p)).join(', '));
+check('Live Ops exposes complete performance diagnostics',liveOps.includes('frameBudget=window.POWDER_FRAME_BUDGET_V21218')&&liveOps.includes('combatRefresh=window.POWDER_COMBAT_REFRESH_GOVERNOR_V21219')&&liveOps.includes('scrollPipeline=window.POWDER_SCROLL_PIPELINE_V21220')&&liveOps.includes('performanceDirector=window.POWDER_PERFORMANCE_DIRECTOR_V21221'),'performance diagnostics missing');
+
+const result={version:'21.2.21',checks:checks.length,passed:checks.filter(x=>x.pass).length,failed:failures.length,failures};
 console.log(JSON.stringify(result,null,2));
 if(failures.length)process.exit(1);
