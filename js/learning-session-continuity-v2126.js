@@ -1,0 +1,42 @@
+(()=>{'use strict';
+const VERSION='21.2.6',LM=window.POWDER_LEARNING_MASTER_V2,D=window.POWDER_DATA||{},DOC=typeof document==='object'?document:null,KEY='powder_learning_continuity_v2126';
+if(!LM||!D)return;if(window.POWDER_LEARNING_SESSION_CONTINUITY_V2126?.version===VERSION)return;
+// Design references: Open edX Resume Course, Moodle activity completion state,
+// and Kolibri learner progress. Powder keeps progression/rewards in existing systems;
+// this module stores only a local UI checkpoint and never mutates academic/economy data.
+let memory=null,lastSig='';
+const clone=x=>JSON.parse(JSON.stringify(x)),esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const dayKey=()=>LM.dayKey?.()||new Date().toISOString().slice(0,10);
+function read(){try{const raw=window.localStorage?.getItem(KEY);return raw?JSON.parse(raw):memory}catch(_){return memory}}
+function write(row){const value=row?clone(row):null;memory=value;try{if(value)window.localStorage?.setItem(KEY,JSON.stringify(value));else window.localStorage?.removeItem(KEY)}catch(_){}return value}
+function clear(){write(null);render();return true}
+function save(){return window.POWDER_APP?.getSave?.()||null}
+function lesson(id){return(D.lessons||[]).find(x=>String(x.id)===String(id))||null}
+function meta(l){return LM.unitMeta?.(l)||l?.learningMeta||{Rank:Number(l?.rank)||0,Optional:!!l?.optional,Language:l?.language||'ZH'}}
+function lessonAllowed(s,l){if(!s||!l)return false;const m=meta(l);return !m.Optional&&Number(m.Rank||0)<=Number(s.rank||0)}
+function dueForLesson(s,id){const rows=LM.dueQuestionsForLesson?.(s,id);if(Array.isArray(rows))return rows.length;return(LM.dueQuestions?.(s)||[]).filter(q=>String(q?.lessonId||q?.learningMeta?.LessonID||'')===String(id)).length}
+function normalizeCheckpoint(s,row=read()){
+ if(!s||!row||row.day!==dayKey())return null;
+ if(row.type==='lesson'){
+  const l=lesson(row.lessonId);if(!lessonAllowed(s,l))return null;
+  const done=new Set(s.lessonsDone||[]).has(String(l.id));if(done&&dueForLesson(s,l.id)<=0)return null;
+  return{type:'lesson',lessonId:l.id,language:l.language||meta(l).Language||'ZH',title:l.title||l.id,detail:done?'Bài đã học còn nội dung SRS đến hạn':'Quay lại Learning Unit đang học',day:row.day,at:Number(row.at)||0,source:'checkpoint'};
+ }
+ if(row.type==='reviewBatch'){
+  const language=row.language==='EN'?'EN':'ZH',due=(LM.dueQuestions?.(s,language)||[]).length;if(!due)return null;
+  return{type:'reviewBatch',language,title:`Ôn SRS ${language==='ZH'?'Tiếng Trung':'English'}`,detail:`Còn ${due} câu đến hạn`,day:row.day,at:Number(row.at)||0,source:'checkpoint'};
+ }
+ return null;
+}
+function planAction(s){const orch=window.POWDER_DAILY_STUDY_ORCHESTRATOR_V2115,a=orch?.dailyPlan?.(s)?.action;if(!a||!['lesson','reviewBatch'].includes(a.type))return null;if(a.type==='lesson'){const l=lesson(a.lessonId);if(!lessonAllowed(s,l))return null;return{type:'lesson',lessonId:l.id,language:l.language||a.language||'ZH',title:l.title||a.title||l.id,detail:a.detail||'Bước học tiếp theo',day:dayKey(),at:0,source:'daily-plan'}}const language=a.language==='EN'?'EN':'ZH';if(!(LM.dueQuestions?.(s,language)||[]).length)return null;return{type:'reviewBatch',language,title:a.title||`Ôn SRS ${language}`,detail:a.detail||'Ôn các câu đến hạn',day:dayKey(),at:0,source:'daily-plan'}}
+function recommendation(s=save()){return normalizeCheckpoint(s)||planAction(s)}
+function markAction(action){const s=save();if(!s||!action)return false;if(action.type==='lesson'){const l=lesson(action.lessonId);if(!lessonAllowed(s,l))return false;write({type:'lesson',lessonId:l.id,language:l.language||'ZH',day:dayKey(),at:Date.now()});render();return true}if(action.type==='reviewBatch'){const language=action.language==='EN'?'EN':'ZH';if(!(LM.dueQuestions?.(s,language)||[]).length)return false;write({type:'reviewBatch',language,day:dayKey(),at:Date.now()});render();return true}return false}
+function start(action=recommendation()){if(!action)return false;markAction(action);const orch=window.POWDER_DAILY_STUDY_ORCHESTRATOR_V2115;if(orch?.startAction?.(action))return true;if(action.type==='lesson'&&action.lessonId)return!!window.POWDER_APP?.openLessonFromDungeon?.(action.lessonId);if(action.type==='reviewBatch'){window.POWDER_REVIEW_LANGUAGE_V149=action.language||null;const b=DOC?.querySelector('#reviewDueBtn');if(b){b.click();return true}}return false}
+function injectStyle(){if(!DOC||DOC.getElementById('powderLearningContinuityStyle2126'))return;const s=DOC.createElement('style');s.id='powderLearningContinuityStyle2126';s.textContent=`#learningContinuity2126{margin:8px 0 14px;padding:10px 12px;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(8,12,24,.58)}#learningContinuity2126[hidden]{display:none}#learningContinuity2126 .lsc-row{display:flex;align-items:center;justify-content:space-between;gap:12px}#learningContinuity2126 .lsc-copy{display:grid;gap:2px;min-width:0}#learningContinuity2126 .lsc-copy b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#learningContinuity2126 .lsc-copy small{opacity:.72}#learningContinuity2126 .lsc-actions{display:flex;gap:8px;flex:0 0 auto}#learningContinuity2126 button{min-height:40px}@media(max-width:640px){#learningContinuity2126 .lsc-row{align-items:stretch;flex-direction:column}#learningContinuity2126 .lsc-actions{width:100%}#learningContinuity2126 .lsc-actions button{flex:1}}`;DOC.head?.appendChild(s)}
+function render(){if(!DOC)return false;const learn=DOC.querySelector('#learnView'),s=save();if(!learn||!s)return false;injectStyle();let host=DOC.querySelector('#learningContinuity2126');if(!host){host=DOC.createElement('section');host.id='learningContinuity2126';const command=DOC.querySelector('#learningCommandCenter2120'),daily=DOC.querySelector('#learningDailyPlan2115'),summary=DOC.querySelector('#learningSummary');if(command?.parentNode)command.insertAdjacentElement('afterend',host);else if(daily?.parentNode)daily.insertAdjacentElement('afterend',host);else summary?.insertAdjacentElement('afterend',host);if(!host.isConnected)learn.prepend(host)}const cp=normalizeCheckpoint(s);if(!cp){host.hidden=true;lastSig='';return false}const sig=JSON.stringify([cp.type,cp.lessonId,cp.language,cp.title,cp.detail,cp.day]);if(sig===lastSig&&host.hidden===false)return true;lastSig=sig;host.hidden=false;host.innerHTML=`<div class="lsc-row"><span class="lsc-copy"><small>TIẾP TỤC PHIÊN HỌC · 21.2.6</small><b>${esc(cp.title)}</b><small>${esc(cp.detail)}</small></span><span class="lsc-actions"><button type="button" class="btn primary" data-lsc2126-resume>Tiếp tục</button><button type="button" class="btn secondary" data-lsc2126-clear>Bỏ</button></span></div>`;host.querySelector('[data-lsc2126-resume]').onclick=()=>start(cp);host.querySelector('[data-lsc2126-clear]').onclick=clear;return true}
+let queued=false;function queueRender(){if(queued)return;queued=true;Promise.resolve().then(()=>{queued=false;const s=save(),raw=read();if(raw&&!normalizeCheckpoint(s,raw))write(null);render()})}
+function captureAction(e){const t=e.target?.closest?.('[data-lesson],#reviewDueBtn,[data-ldp2115-action]');if(!t)return;if(t.matches('[data-lesson]')){markAction({type:'lesson',lessonId:t.dataset.lesson});return}if(t.id==='reviewDueBtn'){const forced=window.POWDER_REVIEW_LANGUAGE_V149,language=forced==='EN'?'EN':forced==='ZH'?'ZH':LM.chooseReviewLanguage?.(save())||'ZH';markAction({type:'reviewBatch',language});return}if(t.dataset.ldp2115Action==='lesson')markAction({type:'lesson',lessonId:t.dataset.ldp2115Lesson});else if(t.dataset.ldp2115Action==='reviewBatch')markAction({type:'reviewBatch',language:t.dataset.ldp2115Lang})}
+function boot(){if(!DOC)return;render();DOC.addEventListener('click',captureAction,true);DOC.addEventListener('powder:local-save',queueRender);window.addEventListener('powder:view-changed',e=>{if(e?.detail?.view==='learn')queueRender()},{passive:true})}
+window.POWDER_LEARNING_SESSION_CONTINUITY_V2126={version:VERSION,key:KEY,readCheckpoint:()=>clone(read()),normalizeCheckpoint,recommendation,markAction,start,clear,render,diagnostics:()=>({version:VERSION,checkpoint:read(),recommendation:recommendation(),scheduler:'event-driven',mutatesPlayerSave:false}),designReferences:['Open edX Resume Course','Moodle activity completion','Kolibri learner progress']};
+if(DOC){if(DOC.readyState==='loading')DOC.addEventListener('DOMContentLoaded',boot,{once:true});else boot()}
+})();
