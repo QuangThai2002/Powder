@@ -1,0 +1,33 @@
+name: Powder Combat Impact
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  combat-impact:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify Chrome
+        run: google-chrome --version
+      - name: Run combat impact gate
+        run: node tools/powder-combat-impact-gate-v21016.mjs .
+      - name: Upload combat impact evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: powder-combat-impact-${{ github.sha }}
+          path: artifacts/combat-impact-v21016/
+          if-no-files-found: warn
+          retention-days: 14
