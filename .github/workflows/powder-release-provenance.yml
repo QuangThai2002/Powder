@@ -55,7 +55,7 @@ jobs:
           node tools/powder-release-provenance-v21009.mjs verify . "${DRY_NAME}.zip" PROVENANCE-DRYRUN-FINAL-GATE.json "${DRY_NAME}"
       - name: Upload provenance evidence only
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: powder-release-provenance-${{ github.sha }}
           path: |
