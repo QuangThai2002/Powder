@@ -46,8 +46,9 @@ function schedule(reason='event'){if(!raf)raf=requestAnimationFrame(()=>patch(re
 function settle(reason='settle'){clearTimeout(settleTimer);settleTimer=setTimeout(()=>{settleTimer=0;schedule(reason)},160)}
 function onView(e){const v=String(e?.detail?.view||document.body?.dataset?.activeView||'');if(/battle|combat|boss/i.test(v)){schedule('view');settle('view-settle')}}
 function snapshot(){return{version:VERSION,...state,principles:['Pow first','HP/Mana/Rage readable','turn order visible','four core skills stable','target state explicit'],gameplayMutation:false,performance:'event-driven; single coalesced rAF; no polling'}}
-function boot(){installStyle();onView({detail:{view:document.body?.dataset?.activeView||''}})}
+function activateNext(){if(window.POWDER_COMBAT_HIT_STATUS_V2132||document.getElementById('powderCombatHitStatus2132'))return;const s=document.createElement('script');s.id='powderCombatHitStatus2132';s.src='js/combat-hit-status-v2132.js?v=2132';s.async=true;document.head.appendChild(s)}
+function boot(){installStyle();activateNext();onView({detail:{view:document.body?.dataset?.activeView||''}})}
 window.addEventListener('powder:view-changed',onView,{passive:true});window.addEventListener('powder:rendered',()=>schedule('rendered'),{passive:true});window.addEventListener('powder:combat-state',()=>schedule('combat-state'),{passive:true});window.addEventListener('pagehide',()=>{if(raf)cancelAnimationFrame(raf);clearTimeout(settleTimer)},{once:true});
-window.POWDER_COMBAT_UI_READABILITY_V2131={version:VERSION,snapshot,refresh:()=>patch('manual')};
+window.POWDER_COMBAT_UI_READABILITY_V2131={version:VERSION,snapshot,refresh:()=>patch('manual'),activateNext};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
