@@ -20,7 +20,7 @@ function installStyle(){if(document.getElementById(STYLE_ID))return;const s=docu
 .combat-v7-mount .cv7-unit.dead{opacity:.54;filter:saturate(.45)}
 .combat-v7-mount .cv7-unit.dead .cv7-art{filter:grayscale(.65) brightness(.7)}
 .combat-v7-mount .cv7-statuses>span{border-width:1px;min-height:20px}
-.combat-v7-mount[data-native-fx-cap='low'] .cv7-fx,.combat-v7-mount.cv71-fx-low .cv7-fx{text-shadow:0 2px 6px rgba(0,0,0,.78)}
+html[data-native-fx-cap='low'] .combat-v7-mount .cv7-fx,.combat-v7-mount.cv71-fx-low .cv7-fx{text-shadow:0 2px 6px rgba(0,0,0,.78)}
 @media(max-width:620px){.combat-v7-mount .cv7-unit.telegraph-target:not(.dead)::before,.combat-v7-mount .cv7-unit.cv69-locked-target:not(.dead)::before{top:-6px;font-size:7px}.combat-v7-mount .cv7-cc-lock{min-width:72px;padding:4px 6px!important}}
 @media(prefers-reduced-motion:reduce){.combat-v7-mount .cv7-unit.targetable:hover,.combat-v7-mount .cv7-unit.targetable:focus-visible{transform:none!important}}
 `;document.head.appendChild(s)}
