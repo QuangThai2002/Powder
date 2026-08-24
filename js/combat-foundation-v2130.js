@@ -37,8 +37,9 @@ function settle(reason='settle',delay=180){clearTimeout(settleTimer);settleTimer
 function onView(e){const v=String(e?.detail?.view||document.body?.dataset?.activeView||'');state.lastView=v;if(/battle|boss|combat/i.test(v)){schedule('view');settle('view-settle',220)}}
 function onRendered(){const view=battleView();if(view&&!view.hidden)schedule('rendered')}
 function snapshot(){return{version:VERSION,...state,formation:{main:3,reserve:2},coreSkills:['basic','skill1','skill2','ultimate'],domainPolicy:'pre-battle picker hidden; domain ownership/equip belongs to Tamer',performancePolicy:'event-driven + single coalesced rAF; no polling',gameplayMutation:false}}
-function boot(){style();onView({detail:{view:document.body?.dataset?.activeView||''}})}
+function activateNext(){if(window.POWDER_COMBAT_UI_READABILITY_V2131||document.getElementById('powderCombatUiReadability2131'))return;const s=document.createElement('script');s.id='powderCombatUiReadability2131';s.src='js/combat-ui-readability-v2131.js?v=2131';s.async=true;document.head.appendChild(s)}
+function boot(){style();activateNext();onView({detail:{view:document.body?.dataset?.activeView||''}})}
 window.addEventListener('powder:view-changed',onView,{passive:true});window.addEventListener('powder:rendered',onRendered,{passive:true});window.addEventListener('powder:combat-state',()=>schedule('combat-state'),{passive:true});window.addEventListener('pagehide',()=>{if(raf)cancelAnimationFrame(raf);clearTimeout(settleTimer)},{once:true});
-window.POWDER_COMBAT_FOUNDATION_V2130={version:VERSION,snapshot,refresh:()=>patch('manual')};
+window.POWDER_COMBAT_FOUNDATION_V2130={version:VERSION,snapshot,refresh:()=>patch('manual'),activateNext};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
