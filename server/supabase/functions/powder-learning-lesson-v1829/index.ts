@@ -4,6 +4,7 @@ const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"au
 const out=(d:unknown,s=200,extra:Record<string,string>={})=>new Response(JSON.stringify(d),{status:s,headers:{...cors,...extra}});
 const str=(v:unknown,n=180)=>String(v??'').trim().slice(0,n);
 const ids=(v:unknown,n=5000)=>[...new Set((Array.isArray(v)?v:[]).map(x=>str(x,220)).filter(Boolean))].slice(0,n);
+const canonical=(id:string)=>String(id||'').replace(/^rotq178:\d+:/,'');
 function jwtIat(jwt:string){try{let x=jwt.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');while(x.length%4)x+='=';return Number(JSON.parse(atob(x)).iat||0)}catch{return 0}}
 
 Deno.serve(async(req:Request)=>{
@@ -40,13 +41,22 @@ Deno.serve(async(req:Request)=>{
   if(be)throw be;
   const serverIds=[...new Set((bank||[]).map((x:any)=>String(x.question_id||'')).filter(Boolean))];
   const lo=lesson.difficulty==='hard'?40:lesson.difficulty==='deep'?55:30;
-  const candidateSet=new Set(requestedCandidates),eligible=requestedCandidates.length?serverIds.filter(id=>candidateSet.has(id)):serverIds;
+  const candidateSet=new Set(requestedCandidates);
+  const eligible=requestedCandidates.length?serverIds.filter(id=>candidateSet.has(id)||candidateSet.has(canonical(id))):serverIds;
   if(eligible.length<lo){
    return out({error:`Bộ câu Online chưa khớp bản game hiện tại (${eligible.length}/${lo}). Hãy cập nhật trang rồi thử lại.`,code:'CLIENT_BANK_MISMATCH',required:lo,serverAvailable:serverIds.length,clientCandidates:requestedCandidates.length,overlap:eligible.length},409);
   }
-  const eligibleSet=new Set(eligible),core=preferred.filter(id=>eligibleSet.has(id)).slice(0,65);
+  const eligibleSet=new Set(eligible),used=new Set<string>(),core:string[]=[];
+  for(const clientId of preferred){
+   const exact=eligibleSet.has(clientId)?clientId:eligible.find(id=>!used.has(id)&&canonical(id)===clientId);
+   if(exact&&!used.has(exact)){used.add(exact);core.push(exact)}
+   if(core.length>=65)break;
+  }
   const {data,error}=await db.rpc('powder_learning_session_start_v176',{p_user:user.id,p_type:'lesson',p_lesson:lessonId,p_language:String(lesson.language||''),p_level:str(b.level,40),p_question_ids:{core,pool:eligible},p_client:str(b.clientVersion||clientVersion,100),p_device:str(b.deviceId||deviceId,120)});
   if(error)throw error;
-  return out({ok:true,result:{...(data||{}),difficulty:lesson.difficulty,authority:'server-client-intersection-v21210',eligibleCount:eligible.length,preferredCount:core.length}});
+  const serverQuestionIds=ids((data as any)?.questionIds,65);
+  const aliases=serverQuestionIds.map(serverId=>({serverId,clientId:candidateSet.has(serverId)?serverId:canonical(serverId)}));
+  if(aliases.some(x=>!candidateSet.has(x.clientId)))return out({error:'Máy chủ tạo phiên có câu không tồn tại trong bản game hiện tại.',code:'SESSION_ALIAS_MISMATCH'},409);
+  return out({ok:true,result:{...(data||{}),difficulty:lesson.difficulty,authority:'server-canonical-alias-v21210',eligibleCount:eligible.length,preferredCount:core.length,questionAliases:aliases}});
  }catch(e:any){console.error(e);return out({error:e?.message||'Secure lesson server error'},Number(e?.status)||400)}
 });
