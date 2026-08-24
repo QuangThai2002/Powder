@@ -1,4 +1,5 @@
 import fs from'node:fs';
+// Temporary one-shot patch. Removed before release.
 const f='js/onboarding-v146.js';
 let s=fs.readFileSync(f,'utf8');
 const old="const hole=maskAround(r,8);focus.hidden=false;focus.style.left=`${hole.left}px`;focus.style.top=`${hole.top}px`;focus.style.width=`${hole.width}px`;focus.style.height=`${hole.height}px`;";
