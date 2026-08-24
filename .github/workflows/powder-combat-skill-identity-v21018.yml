@@ -1,0 +1,36 @@
+name: Powder Combat Skill Identity
+
+on:
+  push:
+    branches:
+      - upgrade/21.0.18-combat-skill-identity
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  combat-skill-identity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify Chrome
+        run: google-chrome --version
+      - name: Run combat skill identity gate
+        run: node tools/powder-combat-skill-identity-gate-v21018.mjs .
+      - name: Upload combat skill identity evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: powder-combat-skill-identity-${{ github.sha }}
+          path: artifacts/combat-skill-identity-v21018/
+          if-no-files-found: warn
+          retention-days: 14

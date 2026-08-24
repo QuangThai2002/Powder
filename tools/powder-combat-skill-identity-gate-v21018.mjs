@@ -1,0 +1,81 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {spawn,spawnSync} from 'node:child_process';
+
+const root=path.resolve(process.argv[2]||'.');
+const artifacts=path.join(root,'artifacts','combat-skill-identity-v21018');
+fs.mkdirSync(artifacts,{recursive:true});
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+function findChrome(){
+  for(const c of [process.env.CHROME_PATH,'google-chrome','google-chrome-stable','chromium','chromium-browser'].filter(Boolean)){
+    if(c.includes('/')&&fs.existsSync(c))return c;
+    const r=spawnSync('which',[c],{encoding:'utf8'});
+    if(r.status===0&&r.stdout.trim())return r.stdout.trim();
+  }
+  throw new Error('Chrome not found');
+}
+async function waitHttp(url,timeout=15000){
+  const started=Date.now();
+  while(Date.now()-started<timeout){try{const r=await fetch(url);if(r.ok)return r}catch{}await sleep(150)}
+  throw new Error(`Timeout ${url}`);
+}
+async function connectCdp(wsUrl){
+  const ws=new WebSocket(wsUrl);await new Promise((resolve,reject)=>{ws.onopen=resolve;ws.onerror=reject});
+  let id=0;const pending=new Map(),events=[];
+  ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.id&&pending.has(m.id)){const p=pending.get(m.id);pending.delete(m.id);m.error?p.reject(new Error(m.error.message)):p.resolve(m.result||{})}else events.push(m)};
+  const cmd=(method,params={})=>new Promise((resolve,reject)=>{const x=++id;pending.set(x,{resolve,reject});ws.send(JSON.stringify({id:x,method,params}));setTimeout(()=>{if(pending.has(x)){pending.delete(x);reject(new Error(`CDP timeout ${method}`))}},20000)});
+  return{ws,cmd,events};
+}
+async function evaluate(cmd,expression){
+  const r=await cmd('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});
+  if(r.exceptionDetails)throw new Error(r.exceptionDetails.exception?.description||r.exceptionDetails.text||'Runtime.evaluate failed');
+  return r.result?.value;
+}
+function serious(events){return events.filter(e=>e.method==='Runtime.exceptionThrown').map(e=>e.params?.exceptionDetails||{}).map(d=>`${d.text||''} ${d.exception?.description||''}`).filter(x=>/(ReferenceError|SyntaxError|TypeError|RangeError|out of memory|allocation failed)/i.test(x))}
+
+const server=spawn('python3',['-m','http.server','4181','--bind','127.0.0.1'],{cwd:root,stdio:'ignore'});
+const chromePath=findChrome(),profile=fs.mkdtempSync(path.join(os.tmpdir(),'powder-csi218-'));
+const browser=spawn(chromePath,['--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--no-first-run','--no-default-browser-check','--disable-background-networking','--remote-debugging-port=9234',`--user-data-dir=${profile}`,'about:blank'],{stdio:'ignore'});
+const report={version:'21.0.18',purpose:'Combat skill tier identity and Ultimate presentation hierarchy gate',checks:{},details:{},errors:[]};
+
+try{
+  await waitHttp('http://127.0.0.1:4181/index.html');
+  const version=await waitHttp('http://127.0.0.1:9234/json/version');report.details.chromeVersion=(await version.json()).Browser;
+  const pages=await(await waitHttp('http://127.0.0.1:9234/json/list')).json(),page=pages.find(x=>x.type==='page');if(!page)throw new Error('No page');
+  const{ws,cmd,events}=await connectCdp(page.webSocketDebuggerUrl);await cmd('Page.enable');await cmd('Runtime.enable');await cmd('Log.enable');await cmd('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});await cmd('Page.navigate',{url:'http://127.0.0.1:4181/index.html'});
+
+  let ready=null;
+  for(let i=0;i<280;i++){
+    ready=await evaluate(cmd,`(()=>({state:document.readyState,skill:!!window.POWDER_COMBAT_SKILL_IDENTITY_V21018,turn:!!window.POWDER_COMBAT_TURN_FLOW_V21017,impact:!!window.POWDER_COMBAT_IMPACT_FEEDBACK_V21016,presentation:!!window.POWDER_COMBAT_PRESENTATION_V21015,pressure:!!window.POWDER_ADAPTIVE_PRESSURE_V21011,style:!!document.getElementById('powderCombatSkillIdentityStyle21018')}))()`);
+    if(ready.state==='complete'&&ready.skill&&ready.turn&&ready.impact&&ready.presentation&&ready.pressure&&ready.style)break;await sleep(150);
+  }
+  report.details.ready=ready;report.checks.runtimeAvailable=!!ready?.skill;report.checks.dependencies=!!(ready?.turn&&ready?.impact&&ready?.presentation&&ready?.pressure);report.checks.styleInstalled=!!ready?.style;
+  if(!ready?.skill||!ready?.style)throw new Error('21.0.18 runtime/style not ready');
+  const baseline=await evaluate(cmd,`window.POWDER_COMBAT_SKILL_IDENTITY_V21018.snapshot()`);report.details.telemetryBaseline=baseline;
+
+  await evaluate(cmd,`(()=>{document.getElementById('csi218Gate')?.remove();const m=document.createElement('div');m.id='csi218Gate';m.className='combat-v7-mount';m.dataset.tf217Phase='turn';m.style.cssText='position:fixed;inset:0;z-index:2147483000;background:#071923;color:white';m.innerHTML='<div class="cv7-field" style="position:relative;width:100%;height:100%"><div class="tf217-hud"><small data-tf217-actor>Pyrion</small><b data-tf217-ability>—</b><b data-tf217-target>Frostmaw</b></div><button id="csiActor" class="cv7-unit player slot-0 current" data-tf217-actor="1"><div class="cv7-ring"></div><div class="cv7-unit-info"><b>Pyrion</b></div></button><button id="csiTarget" class="cv7-unit enemy slot-0 telegraph-target" data-tf217-target="1"><div class="cv7-ring"></div><div class="cv7-unit-info"><b>Frostmaw</b></div></button><div id="csiCommands"><button data-cv7-skill="basic"><b>Thiên Hỏa Trảm</b></button><button data-cv7-skill="skill1"><b>Viêm Tinh</b></button><button data-cv7-skill="skill2"><b>Hỏa Long Phá</b></button><button data-cv7-skill="exclusive"><b>Hoàng Viêm Bí Kỹ</b></button><button data-cv7-skill="ultimate"><b>Cửu Trùng Viêm Quan</b></button></div></div>';document.body.appendChild(m);window.POWDER_COMBAT_TURN_FLOW_V21017.sync();window.POWDER_COMBAT_SKILL_IDENTITY_V21018.sync();return true})()`);await sleep(220);
+
+  const snap=()=>evaluate(cmd,`(()=>{const m=document.getElementById('csi218Gate'),s=m?.querySelector('.csi218-stage'),f=m?.querySelector('.cv7-attack-flow'),c=m?.querySelector('.cv7-attack-callout');return{key:m?.dataset.csi218Key,rank:Number(m?.dataset.csi218Rank||0),phase:m?.dataset.csi218Phase,pressure:m?.dataset.csi218Pressure,stage:!!s,display:s?getComputedStyle(s).display:'none',width:s?s.getBoundingClientRect().width:0,tier:s?.querySelector('[data-csi218-tier]')?.textContent||'',name:s?.querySelector('[data-csi218-name]')?.textContent||'',actor:s?.querySelector('[data-csi218-actor]')?.textContent||'',target:s?.querySelector('[data-csi218-target]')?.textContent||'',beat:s?.querySelector('[data-csi218-beat]')?.textContent||'',nameFont:s?parseFloat(getComputedStyle(s.querySelector('[data-csi218-name]')).fontSize):0,shadow:s?getComputedStyle(s).boxShadow:'',borderStyle:s?getComputedStyle(s).borderTopStyle:'',flowKey:f?.dataset.csi218Key,calloutKey:c?.dataset.csi218Key,telemetry:window.POWDER_COMBAT_SKILL_IDENTITY_V21018.snapshot()}})()`);
+  const defs={basic:['Thiên Hỏa Trảm','ĐÒN CƠ BẢN',1],skill1:['Viêm Tinh','KỸ NĂNG I',2],skill2:['Hỏa Long Phá','KỸ NĂNG II',3],exclusive:['Hoàng Viêm Bí Kỹ','ĐỘC QUYỀN',4],ultimate:['Cửu Trùng Viêm Quan','TỐI THƯỢNG',5]},samples={};
+  for(const[key,[ability,label,rank]]of Object.entries(defs)){
+    await evaluate(cmd,`(()=>{const m=document.getElementById('csi218Gate'),f=m.querySelector('.cv7-field');m.dataset.tf217Phase='charge';m.querySelector('.tf217-hud [data-tf217-ability]').textContent=${JSON.stringify(ability)};m.querySelector('[data-cv7-skill="${key}"]').click();m.querySelector('.cv7-attack-callout')?.remove();m.querySelector('.cv7-attack-flow-layer')?.remove();const c=document.createElement('div');c.className='cv7-attack-callout player ${key==='ultimate'?'ultimate':key==='exclusive'?'exclusive':''}';c.innerHTML='<div><b>Pyrion</b><span>${ability}</span></div>';f.appendChild(c);window.dispatchEvent(new CustomEvent('powder:combat-presentation-sync',{detail:{version:'gate'}}));return true})()`);await sleep(130);const charge=await snap();
+    await evaluate(cmd,`(()=>{const m=document.getElementById('csi218Gate'),f=m.querySelector('.cv7-field');m.dataset.tf217Phase='release';const l=document.createElement('div');l.className='cv7-attack-flow-layer';l.innerHTML='<div class="cv7-attack-flow ${key}"><i class="cv7-attack-trace"></i></div>';f.appendChild(l);window.dispatchEvent(new CustomEvent('powder:combat-presentation-sync',{detail:{version:'gate'}}));return true})()`);await sleep(130);const release=await snap();
+    samples[key]={charge,release};report.checks[`tier_${key}`]=charge.key===key&&charge.rank===rank&&charge.tier===label&&charge.name===ability&&charge.actor==='Pyrion'&&charge.target==='Frostmaw'&&charge.display!=='none'&&release.key===key&&release.rank===rank&&release.flowKey===key&&release.calloutKey===key;
+  }
+  report.details.samples=samples;report.checks.rankOrdering=['basic','skill1','skill2','exclusive','ultimate'].map(k=>samples[k].release.rank).join(',')==='1,2,3,4,5';report.checks.visualHierarchy=samples.basic.charge.width<samples.skill2.charge.width&&samples.skill2.charge.width<samples.ultimate.charge.width&&samples.ultimate.charge.nameFont>samples.skill2.charge.nameFont&&samples.basic.charge.borderStyle==='dashed';
+
+  await evaluate(cmd,`(()=>{const m=document.getElementById('csi218Gate');m.dataset.tf217Phase='impact';m.querySelector('.cv7-attack-flow-layer')?.remove();window.dispatchEvent(new CustomEvent('powder:combat-impact-feedback',{detail:{version:'21.0.16',unitId:'x',severity:'heavy',feedback:'impact'}}));return true})()`);await sleep(150);const impact=await snap();report.details.impact=impact;report.checks.ultimateImpactLatch=impact.phase==='impact'&&impact.key==='ultimate'&&impact.rank===5&&impact.tier==='TỐI THƯỢNG'&&impact.beat==='KẾT QUẢ';
+  await evaluate(cmd,`window.POWDER_ADAPTIVE_PRESSURE_V21011.setDebugPressure?.('hot')`);await sleep(220);await evaluate(cmd,`window.dispatchEvent(new CustomEvent('powder:resource-pressure',{detail:{level:'hot'}}))`);await sleep(120);const hot=await snap();report.details.hot=hot;report.checks.pressureReduction=hot.pressure==='hot'&&hot.key==='ultimate'&&hot.shadow==='none'&&hot.display!=='none';
+
+  await sleep(1050);
+  const reduced=await evaluate(cmd,`(()=>{const api=window.POWDER_COMBAT_SKILL_IDENTITY_V21018,html=document.documentElement,prevReason=html.dataset.perfReason||'',m=document.getElementById('csi218Gate'),f=m.querySelector('.cv7-field');html.dataset.perfReason='reduced-motion';const before=api.snapshot().phaseBeats;m.dataset.tf217Phase='charge';m.querySelector('.cv7-attack-flow-layer')?.remove();m.querySelector('.cv7-attack-callout')?.remove();const c=document.createElement('div');c.className='cv7-attack-callout player';c.innerHTML='<div><b>Pyrion</b><span>Viêm Tinh</span></div>';f.appendChild(c);api.sync();const s=m.querySelector('.csi218-stage'),snap=api.snapshot(),result={key:m.dataset.csi218Key,tier:s?.querySelector('[data-csi218-tier]')?.textContent||'',display:s?getComputedStyle(s).display:'none',target:s?.querySelector('[data-csi218-target]')?.textContent||'',before,after:snap.phaseBeats,reasonActive:html.dataset.perfReason==='reduced-motion',reducedMotion:snap.reducedMotion===true};if(prevReason)html.dataset.perfReason=prevReason;else delete html.dataset.perfReason;return result})()`);
+  report.details.reducedMotion=reduced;report.checks.reducedMotion=reduced.reasonActive&&reduced.reducedMotion&&reduced.key==='skill1'&&reduced.tier==='KỸ NĂNG I'&&reduced.target==='Frostmaw'&&reduced.display!=='none'&&reduced.after===reduced.before;
+
+  const telemetry=await evaluate(cmd,`window.POWDER_COMBAT_SKILL_IDENTITY_V21018.snapshot()`);const delta={stageCreates:telemetry.stageCreates-baseline.stageCreates,classifications:telemetry.classifications-baseline.classifications,inputHints:telemetry.inputHints-baseline.inputHints,phaseBeats:telemetry.phaseBeats-baseline.phaseBeats,ultimateBeats:telemetry.ultimateBeats-baseline.ultimateBeats,impactLatches:telemetry.impactLatches-baseline.impactLatches,pressureReductions:telemetry.pressureReductions-baseline.pressureReductions,keys:Object.fromEntries(Object.keys(telemetry.keys).map(k=>[k,(telemetry.keys[k]||0)-(baseline.keys?.[k]||0)]))};report.details.telemetry=telemetry;report.details.telemetryDelta=delta;report.checks.telemetry=delta.stageCreates===1&&delta.classifications>=10&&delta.inputHints>=5&&delta.phaseBeats>=8&&delta.ultimateBeats>=2&&delta.impactLatches>=1&&delta.pressureReductions>=1&&['basic','skill1','skill2','exclusive','ultimate'].every(k=>delta.keys[k]>=2);
+  const shot=await cmd('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});fs.writeFileSync(path.join(artifacts,'combat-skill-identity-final.png'),Buffer.from(shot.data,'base64'));
+  await evaluate(cmd,`(()=>{window.POWDER_ADAPTIVE_PRESSURE_V21011.setDebugPressure?.(null);document.documentElement.classList.remove('reduce-motion');window.POWDER_COMBAT_SKILL_IDENTITY_V21018.detach();document.getElementById('csi218Gate')?.remove();return true})()`);await sleep(160);report.checks.stateRestored=!await evaluate(cmd,`!!document.getElementById('csi218Gate')`);report.details.seriousRuntimeExceptions=serious(events);report.checks.noSeriousRuntimeException=report.details.seriousRuntimeExceptions.length===0;ws.close();
+}catch(e){report.errors.push(String(e?.stack||e))}finally{server.kill('SIGTERM');browser.kill('SIGTERM');try{fs.rmSync(profile,{recursive:true,force:true})}catch{}}
+
+report.pass=report.errors.length===0&&Object.values(report.checks).every(Boolean);fs.writeFileSync(path.join(artifacts,'COMBAT-SKILL-IDENTITY-GATE-21.0.18.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report,null,2));if(!report.pass)process.exit(1);
