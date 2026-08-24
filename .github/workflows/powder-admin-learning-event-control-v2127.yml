@@ -1,0 +1,31 @@
+name: Powder Admin Learning Event Control 21.2.7
+on:
+  pull_request:
+    branches: [main]
+    paths: ['js/admin-learning-event-control-v2127.js','js/admin-network-v1840.js','tools/powder-admin-learning-event-control-gate-v2127.mjs','.github/workflows/powder-admin-learning-event-control-v2127.yml']
+  workflow_dispatch:
+permissions: {contents: read}
+concurrency: {group: 'powder-admin-learning-event-control-v2127-${{ github.ref }}', cancel-in-progress: true}
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-node@v4
+        with: {node-version: '24'}
+      - name: Syntax guard
+        run: |
+          node --check js/admin-learning-event-control-v2127.js
+          node --check js/admin-network-v1840.js
+          node --check tools/powder-admin-learning-event-control-gate-v2127.mjs
+          node --check js/admin-events-v167.js
+          node --check js/admin-liveops-v156.js
+          node --check js/learning-events-v167.js
+      - name: Player critical path isolation
+        run: git diff --exit-code origin/main...HEAD -- index.html js/boot-loader-v21004.js js/app.js js/player-combat-scene-v1862.js js/combat-core-v7.js
+      - run: node tools/powder-admin-learning-event-control-gate-v2127.mjs .
+      - run: node tools/powder-learning-session-continuity-gate-v2126.mjs .
+      - run: node tools/powder-learning-performance-gate-v2125.mjs .
+      - run: node tools/powder-final-gate-v21004.mjs .
