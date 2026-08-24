@@ -45,9 +45,11 @@ function audit(save,now=Date.now()){const zh=reviewUrgency(save,'ZH',now),en=rev
 function activateDailyStudy2115(){if(typeof document!=='object'||window.POWDER_DAILY_STUDY_ORCHESTRATOR_V2115||document.getElementById('powderDailyStudyRuntime2115'))return false;const s=document.createElement('script');s.id='powderDailyStudyRuntime2115';s.src='js/learning-daily-study-orchestrator-v2115.js?v=2115';s.async=true;document.head.appendChild(s);return true}
 function activateMasteryRecovery2116(){if(typeof document!=='object'||window.POWDER_MASTERY_RECOVERY_V2116||document.getElementById('powderMasteryRecoveryRuntime2116'))return false;const s=document.createElement('script');s.id='powderMasteryRecoveryRuntime2116';s.src='js/learning-mastery-recovery-v2116.js?v=2116';s.async=true;document.head.appendChild(s);return true}
 function activateAdaptiveQuestionMix2117(){if(typeof document!=='object'||window.POWDER_ADAPTIVE_QUESTION_MIX_V2117||document.getElementById('powderAdaptiveQuestionMixRuntime2117'))return false;const s=document.createElement('script');s.id='powderAdaptiveQuestionMixRuntime2117';s.src='js/learning-adaptive-question-mix-v2117.js?v=2117';s.async=true;document.head.appendChild(s);return true}
+function activateExplanationCoverage2118(){if(typeof document!=='object'||window.POWDER_EXPLANATION_COVERAGE_V2118||document.getElementById('powderExplanationCoverageRuntime2118'))return false;const s=document.createElement('script');s.id='powderExplanationCoverageRuntime2118';s.src='js/learning-explanation-coverage-v2118.js?v=2118';s.async=true;document.head.appendChild(s);return true}
 LM.dueQuestions=rankDueQuestions;LM.chooseReviewLanguage=chooseReviewLanguage;LM.srs={...(LM.srs||{}),intelligenceVersion:VERSION,priority:'overdue + weakness + lapse + dimension weakness - recent repetition',eligibility:'canonical due set unchanged'};E.selectQuestions=patchedSelectQuestions;
-window.POWDER_SRS_INTELLIGENCE_V2114={version:VERSION,priority,rankDueQuestions,selectReview,chooseReviewLanguage,reviewUrgency,audit,original,activateDailyStudy2115,activateMasteryRecovery2116,activateAdaptiveQuestionMix2117};
+window.POWDER_SRS_INTELLIGENCE_V2114={version:VERSION,priority,rankDueQuestions,selectReview,chooseReviewLanguage,reviewUrgency,audit,original,activateDailyStudy2115,activateMasteryRecovery2116,activateAdaptiveQuestionMix2117,activateExplanationCoverage2118};
 activateDailyStudy2115();
 activateMasteryRecovery2116();
 activateAdaptiveQuestionMix2117();
+activateExplanationCoverage2118();
 })();

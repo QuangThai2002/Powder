@@ -1,0 +1,74 @@
+name: Powder Explanation Coverage 21.1.8
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'js/learning-explanation-coverage-v2118.js'
+      - 'js/learning-srs-intelligence-v2114.js'
+      - 'tools/powder-explanation-coverage-gate-v2118.mjs'
+      - '.github/workflows/powder-explanation-coverage-v2118.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: powder-explanation-coverage-v2118-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Syntax guard
+        run: |
+          node --check js/learning-explanation-coverage-v2118.js
+          node --check tools/powder-explanation-coverage-gate-v2118.mjs
+
+      - name: Critical path isolation
+        run: git diff --exit-code origin/main...HEAD -- index.html js/boot-loader-v21004.js js/app.js
+
+      - name: Explanation coverage regression
+        run: node tools/powder-explanation-coverage-gate-v2118.mjs .
+
+      - name: Adaptive question mix regression
+        run: node tools/powder-adaptive-question-mix-gate-v2117.mjs .
+
+      - name: Mastery recovery regression
+        run: node tools/powder-mastery-recovery-gate-v2116.mjs .
+
+      - name: Daily study orchestrator regression
+        run: node tools/powder-daily-study-orchestrator-gate-v2115.mjs .
+
+      - name: SRS intelligence regression
+        run: node tools/powder-srs-intelligence-gate-v2114.mjs .
+
+      - name: Academic content regression
+        run: node tools/powder-academic-content-gate-v2113.mjs .
+
+      - name: Learning question engine regression
+        run: node tools/powder-learning-question-engine-gate-v2112.mjs .
+
+      - name: Final regression gate
+        run: node tools/powder-final-gate-v21004.mjs .
+
+      - name: Upload regression evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: powder-explanation-coverage-v2118
+          path: |
+            artifacts/explanation-coverage-v2118
+          if-no-files-found: ignore
