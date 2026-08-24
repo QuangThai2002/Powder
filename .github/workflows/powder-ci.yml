@@ -22,10 +22,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
+      - name: Runner Node diagnostics
+        run: node --version
 
       - name: Syntax check Admin Combat
         run: node --check js/admin-combat-lab-v1882.js
