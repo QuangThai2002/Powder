@@ -1,0 +1,68 @@
+name: Powder Adaptive Question Mix 21.1.7
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'js/learning-adaptive-question-mix-v2117.js'
+      - 'js/learning-srs-intelligence-v2114.js'
+      - 'tools/powder-adaptive-question-mix-gate-v2117.mjs'
+      - '.github/workflows/powder-adaptive-question-mix-v2117.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'js/learning-adaptive-question-mix-v2117.js'
+      - 'js/learning-srs-intelligence-v2114.js'
+      - 'tools/powder-adaptive-question-mix-gate-v2117.mjs'
+      - '.github/workflows/powder-adaptive-question-mix-v2117.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: powder-adaptive-question-mix-v2117-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Syntax guard
+        run: |
+          node --check js/learning-adaptive-question-mix-v2117.js
+          node --check tools/powder-adaptive-question-mix-gate-v2117.mjs
+          node --check js/learning-srs-intelligence-v2114.js
+
+      - name: Adaptive question mix regression
+        run: node tools/powder-adaptive-question-mix-gate-v2117.mjs .
+
+      - name: Mastery recovery regression
+        run: node tools/powder-mastery-recovery-gate-v2116.mjs .
+
+      - name: Daily study regression
+        run: node tools/powder-daily-study-orchestrator-gate-v2115.mjs .
+
+      - name: SRS intelligence regression
+        run: node tools/powder-srs-intelligence-gate-v2114.mjs .
+
+      - name: Academic content regression
+        run: node tools/powder-academic-content-gate-v2113.mjs .
+
+      - name: Learning question engine regression
+        run: node tools/powder-learning-question-engine-gate-v2112.mjs .
+
+      - name: Final regression gate
+        run: node tools/powder-final-gate-v21004.mjs .
+
+      - name: Prove workflow is read only
+        run: git diff --exit-code
