@@ -4,9 +4,9 @@ on:
   push:
     branches: [main]
     paths:
+      - 'index.html'
       - 'js/learning-daily-study-orchestrator-v2115.js'
       - 'tools/powder-daily-study-orchestrator-gate-v2115.mjs'
-      - 'tools/powder-refresh-boot-manifest-v2115.mjs'
       - '.github/workflows/powder-daily-study-orchestrator-v2115.yml'
   workflow_dispatch:
 
@@ -18,7 +18,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  regression-and-bind:
+  regression-and-activate:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -36,14 +36,40 @@ jobs:
         run: |
           node --check js/learning-daily-study-orchestrator-v2115.js
           node --check tools/powder-daily-study-orchestrator-gate-v2115.mjs
-          node --check tools/powder-refresh-boot-manifest-v2115.mjs
-          node --check tools/powder-refresh-boot-manifest-v2114.mjs
 
-      - name: Complete 21.1.4 boot binding
-        run: node tools/powder-refresh-boot-manifest-v2114.mjs . --write
+      - name: Activate 21.1.5 after safe boot and SRS
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs');
+          const file='index.html';
+          let html=fs.readFileSync(file,'utf8');
+          const id='powderDailyStudyLoader2115';
+          if(!html.includes(id)){
+            const anchor='</script><link href="css/pvp-online-v1881.css?v=18810"';
+            if(!html.includes(anchor))throw new Error('21.1.5 activation anchor missing');
+            const bridge=`</script><script id="${id}">
+          (()=>{const loadDaily=()=>{if(window.POWDER_DAILY_STUDY_ORCHESTRATOR_V2115||document.getElementById('powderDailyStudyRuntime2115'))return;const d=document.createElement('script');d.id='powderDailyStudyRuntime2115';d.src='js/learning-daily-study-orchestrator-v2115.js?v=2115';d.async=true;document.head.appendChild(d)};const ensureSrs=()=>{if(window.POWDER_SRS_INTELLIGENCE_V2114){loadDaily();return}let s=document.getElementById('powderSrsIntelligenceRuntime2114');if(!s){s=document.createElement('script');s.id='powderSrsIntelligenceRuntime2114';s.src='js/learning-srs-intelligence-v2114.js?v=2114';s.async=true;document.head.appendChild(s)}s.addEventListener('load',loadDaily,{once:true});s.addEventListener('error',loadDaily,{once:true})};if(document.documentElement.classList.contains('powder-boot-complete'))ensureSrs();else{const o=new MutationObserver(()=>{if(document.documentElement.classList.contains('powder-boot-complete')){o.disconnect();ensureSrs()}});o.observe(document.documentElement,{attributes:true,attributeFilter:['class']})}})();
+          </script><link href="css/pvp-online-v1881.css?v=18810"`;
+            html=html.replace(anchor,bridge);
+            fs.writeFileSync(file,html);
+          }
+          NODE
 
-      - name: Bind 21.1.5 into boot manifest
-        run: node tools/powder-refresh-boot-manifest-v2115.mjs . --write
+      - name: Activation bridge guard
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs');
+          const html=fs.readFileSync('index.html','utf8');
+          const id='powderDailyStudyLoader2115';
+          const url='js/learning-daily-study-orchestrator-v2115.js?v=2115';
+          const count=(html.match(new RegExp(id,'g'))||[]).length;
+          if(count!==1)throw new Error(`Expected one 21.1.5 loader, got ${count}`);
+          if(!html.includes(url))throw new Error('21.1.5 runtime URL missing');
+          if(!html.includes("s.addEventListener('load',loadDaily,{once:true})"))throw new Error('SRS sequencing guard missing');
+          if(!html.includes("classList.contains('powder-boot-complete')"))throw new Error('Post-boot guard missing');
+          const boot=html.indexOf('js/boot-loader-v21004.js?v=21004'),srs=html.indexOf('powderSrsIntelligenceLoader2114'),daily=html.indexOf(id),head=html.indexOf('</head>');
+          if(!(boot>=0&&boot<srs&&srs<daily&&daily<head))throw new Error(`Unsafe loader order: ${JSON.stringify({boot,srs,daily,head})}`);
+          NODE
 
       - name: Daily study orchestrator regression
         run: node tools/powder-daily-study-orchestrator-gate-v2115.mjs .
@@ -60,19 +86,19 @@ jobs:
       - name: Final regression gate
         run: node tools/powder-final-gate-v21004.mjs .
 
-      - name: Verify 21.1.5 boot binding is stable
-        run: node tools/powder-refresh-boot-manifest-v2115.mjs .
+      - name: Prove frozen boot loader is untouched
+        run: git diff --exit-code -- js/boot-loader-v21004.js
 
-      - name: Commit validated 21.1.4 + 21.1.5 binding
+      - name: Commit validated 21.1.5 post-boot activation
         run: |
-          git add js/boot-loader-v21004.js tools
+          git add index.html
           if git diff --cached --quiet; then
-            echo 'No generated binding changes to commit.'
+            echo '21.1.5 activation is already stable.'
             exit 0
           fi
           git config user.name 'Powder Release Bot'
           git config user.email 'powder-release-bot@users.noreply.github.com'
-          git commit -m 'Powder 21.1.5: bind Daily Study Orchestrator'
+          git commit -m 'Powder 21.1.5: activate Daily Study Orchestrator after safe boot'
           git push
 
       - name: Upload regression evidence
