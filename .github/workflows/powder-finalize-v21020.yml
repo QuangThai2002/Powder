@@ -1,0 +1,61 @@
+name: Powder 21.0.20 Finalize
+
+on:
+  push:
+    branches:
+      - upgrade/21.0.20-player-experience-final-audit
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: ${{ !contains(github.event.head_commit.message, '[v21020-finalize]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: upgrade/21.0.20-player-experience-final-audit
+          fetch-depth: 0
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Bind 21.0.20 final gate
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const f='tools/powder-final-gate-v21004.mjs';
+          let s=fs.readFileSync(f,'utf8');
+          const old="mobileCss.includes('safe-area-inset-top')&&mobileCss.includes('min-height:44px')";
+          const next="mobileCss.includes('safe-area-inset-top')&&mobileCss.includes('min-height:44px')&&mobileCss.includes('.powdex-back1793{min-height:44px!important}')";
+          if(s.includes(old))s=s.replace(old,next);
+          else if(!s.includes(".powdex-back1793{min-height:44px!important}"))throw new Error('21.0.20 mobile gate anchor missing');
+          if(s.includes('tools/powder-refresh-boot-manifest-v21019.mjs'))s=s.replace('tools/powder-refresh-boot-manifest-v21019.mjs','tools/powder-refresh-boot-manifest-v21020.mjs');
+          else if(!s.includes('tools/powder-refresh-boot-manifest-v21020.mjs'))throw new Error('21.0.20 refresher anchor missing');
+          fs.writeFileSync(f,s);
+          NODE
+      - name: Refresh boot integrity
+        run: node tools/powder-refresh-boot-manifest-v21020.mjs . --write
+      - name: Verify final integration
+        run: |
+          node --check tools/powder-player-experience-final-gate-v21020.mjs
+          node --check tools/powder-refresh-boot-manifest-v21020.mjs
+          node --check tools/powder-final-gate-v21004.mjs
+          node tools/powder-refresh-boot-manifest-v21020.mjs .
+          node tools/powder-final-gate-v21004.mjs .
+      - name: Commit generated integration
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add js/boot-loader-v21004.js tools/powder-final-gate-v21004.mjs
+          if git diff --cached --quiet; then
+            echo "21.0.20 final integration already current"
+            exit 0
+          fi
+          git commit -m "fix: bind 21.0.20 mobile audit hardening [v21020-finalize]"
+          git push origin HEAD:upgrade/21.0.20-player-experience-final-audit
