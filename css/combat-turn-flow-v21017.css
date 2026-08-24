@@ -1,0 +1,32 @@
+/* Powder 21.0.17 — Combat Turn Flow & Action Readability 2.0
+   Presentation-only. Uses existing Combat V7 / 21.0.15 / 21.0.16 signals. */
+.combat-v7-mount[data-tf217-ready="1"] .tf217-hud{position:absolute;z-index:38;top:9px;left:50%;width:min(760px,calc(100% - 300px));min-height:48px;transform:translateX(-50%);display:grid;grid-template-columns:auto minmax(150px,1.4fr) 18px minmax(105px,.8fr) minmax(105px,.8fr) minmax(105px,.8fr);align-items:center;gap:7px;padding:7px 9px;border:1px solid rgba(174,226,255,.3);border-radius:15px;background:linear-gradient(180deg,rgba(5,25,35,.96),rgba(4,18,27,.92));box-shadow:0 8px 24px rgba(0,0,0,.34);pointer-events:none;contain:layout paint}
+.combat-v7-mount[data-tf217-ready="1"] .tf217-hud>span{min-width:0;padding:4px 7px;border-left:1px solid rgba(255,255,255,.09)}
+.combat-v7-mount[data-tf217-ready="1"] .tf217-hud>span:first-child{border-left:0}
+.combat-v7-mount[data-tf217-ready="1"] .tf217-hud small{display:block;margin-bottom:2px;color:#91afbd;font-size:7px;font-weight:900;letter-spacing:.1em;line-height:1.1;white-space:nowrap}
+.combat-v7-mount[data-tf217-ready="1"] .tf217-hud b{display:block;overflow:hidden;color:#f5fbff;font-size:10px;font-weight:950;line-height:1.22;text-overflow:ellipsis;white-space:nowrap}
+.combat-v7-mount[data-tf217-ready="1"] .tf217-hud>i{color:#9fdcf8;font-style:normal;font-weight:1000;text-align:center;opacity:.78}
+.combat-v7-mount[data-tf217-ready="1"] .tf217-phase{min-width:82px;text-align:center}
+.combat-v7-mount[data-tf217-ready="1"] .tf217-phase b{color:#ffd96d;letter-spacing:.05em}
+.combat-v7-mount[data-tf217-ready="1"] .tf217-action small{color:#b9d9e8;font-size:8px}.combat-v7-mount[data-tf217-ready="1"] .tf217-action b{font-size:11px;color:#fff}
+.combat-v7-mount[data-tf217-ready="1"] .tf217-target b{color:#ffd98a}.combat-v7-mount[data-tf217-ready="1"] .tf217-result b{color:#8ff2bb}.combat-v7-mount[data-tf217-ready="1"] .tf217-next b{color:#9fdcff}
+.combat-v7-mount[data-tf217-phase="charge"] .tf217-hud{border-color:rgba(255,214,99,.48);animation:tf217Charge .28s ease-out both}
+.combat-v7-mount[data-tf217-phase="release"] .tf217-hud{border-color:rgba(112,207,255,.58);animation:tf217Release .24s ease-out both}
+.combat-v7-mount[data-tf217-phase="impact"] .tf217-hud{border-color:rgba(132,243,179,.6);animation:tf217Impact .3s ease-out both}
+@keyframes tf217Charge{from{opacity:.78;transform:translateX(-50%) scale(.985)}to{opacity:1;transform:translateX(-50%) scale(1)}}
+@keyframes tf217Release{0%{transform:translateX(-50%) translateY(1px)}45%{transform:translateX(-50%) translateY(-2px)}100%{transform:translateX(-50%) translateY(0)}}
+@keyframes tf217Impact{0%{box-shadow:0 0 0 rgba(0,0,0,0)}40%{box-shadow:0 0 18px rgba(110,237,168,.23)}100%{box-shadow:0 8px 24px rgba(0,0,0,.34)}}
+/* Existing unit / queue markup is only annotated with data-*; no gameplay class is changed. */
+.combat-v7-mount[data-tf217-ready="1"] .cv7-unit[data-tf217-actor="1"] .cv7-ring{outline:2px solid rgba(136,218,255,.72);outline-offset:3px}
+.combat-v7-mount[data-tf217-ready="1"] .cv7-unit[data-tf217-target="1"] .cv7-ring{outline:2px solid rgba(255,216,104,.82);outline-offset:4px}
+.combat-v7-mount[data-tf217-ready="1"] .cv7-turn-order>span[data-tf217-now="1"]{border-color:rgba(255,220,103,.78);box-shadow:0 0 0 1px rgba(255,220,103,.2)}
+.combat-v7-mount[data-tf217-ready="1"] .cv7-turn-order>span[data-tf217-next="1"]{border-color:rgba(125,211,255,.56);box-shadow:0 0 0 1px rgba(125,211,255,.12)}
+.combat-v7-mount[data-tf217-ready="1"] .cv7-turn-order>span[data-tf217-next="1"] small{color:#9fdcff}
+/* Pressure removes secondary paint only; actor, target, result and next-turn text stay visible. */
+.combat-v7-mount[data-tf217-pressure="hot"] .tf217-hud,.combat-v7-mount[data-tf217-pressure="critical"] .tf217-hud{box-shadow:none;background:rgba(4,20,29,.96)}
+.combat-v7-mount[data-tf217-pressure="hot"] .tf217-hud,.combat-v7-mount[data-tf217-pressure="critical"] .tf217-hud{animation-duration:.12s!important}
+.combat-v7-mount[data-tf217-pressure="critical"] .cv7-unit[data-tf217-actor="1"] .cv7-ring,.combat-v7-mount[data-tf217-pressure="critical"] .cv7-unit[data-tf217-target="1"] .cv7-ring{outline-width:1px}
+@media(max-width:1100px){.combat-v7-mount[data-tf217-ready="1"] .tf217-hud{width:min(680px,calc(100% - 190px));grid-template-columns:auto minmax(135px,1.2fr) 14px minmax(92px,.8fr) minmax(92px,.8fr) minmax(92px,.8fr);gap:5px}.combat-v7-mount[data-tf217-ready="1"] .tf217-hud>span{padding-inline:5px}}
+@media(max-width:850px){.combat-v7-mount[data-tf217-ready="1"] .tf217-hud{top:6px;width:calc(100% - 12px);min-height:56px;grid-template-columns:78px minmax(0,1.5fr) minmax(88px,.8fr) minmax(88px,.8fr);gap:4px;padding:6px}.combat-v7-mount[data-tf217-ready="1"] .tf217-hud>i{display:none}.combat-v7-mount[data-tf217-ready="1"] .tf217-result{display:none}.combat-v7-mount[data-tf217-ready="1"] .tf217-hud small{font-size:6px}.combat-v7-mount[data-tf217-ready="1"] .tf217-hud b{font-size:9px}.combat-v7-mount[data-tf217-ready="1"] .tf217-action b{font-size:10px}}
+@media(max-width:560px){.combat-v7-mount[data-tf217-ready="1"] .tf217-hud{grid-template-columns:72px minmax(0,1fr) 88px}.combat-v7-mount[data-tf217-ready="1"] .tf217-target{display:none}.combat-v7-mount[data-tf217-ready="1"] .tf217-next{border-left:1px solid rgba(255,255,255,.09)}}
+html.reduce-motion .combat-v7-mount[data-tf217-ready="1"] .tf217-hud{animation:none!important;transition:none!important}
