@@ -1,0 +1,45 @@
+(()=>{'use strict';
+const VERSION='21.1.0',ID='powderJourney2110';
+const stats={renders:0,actions:0,learnActions:0,bossActions:0,tamerActions:0,adventureActions:0,lastTarget:'',lastReason:'',lastAt:0};
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num=v=>Math.max(0,Math.floor(Number(v)||0));
+function app(){return window.POWDER_APP||null}
+function data(){return window.POWDER_DATA||null}
+function learning(){return window.POWDER_LEARNING_MASTER_V2||null}
+function coreLesson(l){return !l?.learningMeta?.Optional&&!l?.optional&&String(l?.track||'core')==='core'}
+function lessonRank(l){return Math.max(0,Number(l?.learningMeta?.Rank??l?.rank??0)||0)}
+function lessonLang(l){return String(l?.language||'').toUpperCase()}
+function coreCounts(save,D){const done=new Set(save.lessonsDone||[]),eligible=(D.lessons||[]).filter(l=>coreLesson(l)&&lessonRank(l)<=num(save.rank));return{zh:eligible.filter(l=>lessonLang(l)==='ZH'&&done.has(l.id)).length,en:eligible.filter(l=>lessonLang(l)==='EN'&&done.has(l.id)).length}}
+function nextLesson(save,D,lang=''){const done=new Set(save.lessonsDone||[]),rank=num(save.rank),items=(D.lessons||[]).map((l,i)=>({l,i})).filter(x=>coreLesson(x.l)&&lessonRank(x.l)<=rank&&!done.has(x.l.id));items.sort((a,b)=>lessonRank(a.l)-lessonRank(b.l)||a.i-b.i);if(lang){const hit=items.find(x=>lessonLang(x.l)===lang);if(hit)return hit.l}return items[0]?.l||null}
+function rankProgress(save,learn,D){const idx=num(save.rank),r=D.ranks?.[idx],req=r?.req||{},counts=coreCounts(save,D),mastery=Math.round(Number(learn?.mastery)||0),rows=[
+ {k:'zh',label:'Bài Trung',v:counts.zh,m:num(req.zh)},
+ {k:'en',label:'Bài Anh',v:counts.en,m:num(req.en)},
+ {k:'mastery',label:'Mastery',v:mastery,m:num(req.mastery)},
+ {k:'exp',label:'Tamer EXP',v:num(save.exp),m:num(req.exp)},
+ {k:'wins',label:'Trận thắng',v:num(save.wins),m:num(req.wins)}
+].map(x=>({...x,ok:x.m<=0||x.v>=x.m}));return{final:idx>=Math.max(0,(D.ranks?.length||1)-1),rows,done:rows.filter(x=>x.ok).length,total:rows.length,ready:rows.every(x=>x.ok),counts}}
+function model(){const A=app(),D=data(),LM=learning();if(!A||!D)return null;const save=A.getSave?.();if(!save?.starterId)return null;const learn=A.getLearningState?.()||{},daily=learn.daily||{total:0,zh:0,en:0},rank=rankProgress(save,learn,D),boss=save.bosses?.daily||{},promotion=save.bosses?.promotionPending,bossGate=LM?.dailyBossStatus?.(save,num(save.rank))||null;let target='adventure',title='Tiếp tục Phiêu lưu',reason='Đội hình đã sẵn sàng để tiếp tục tiến trình chiến đấu.',lesson=null,action='Vào Phiêu lưu';
+ if(promotion!=null){target='boss';title='Boss thăng hạng đang chờ';reason=`Bạn đã vượt kỳ thi. Hãy hoàn tất Boss để lên ${D.ranks?.[Number(promotion)]?.name||'Rank mới'}.`;action='Đến Điện Boss'}
+ else if(!boss.completed){
+   if(num(daily.zh)<4){lesson=nextLesson(save,D,'ZH');target='learn';title='Ưu tiên tiếng Trung hôm nay';reason=`Đã hoàn thành ${num(daily.zh)}/4 Learning Unit tiếng Trung cho Boss ngày.`;action=lesson?'Học bài Trung tiếp theo':'Mở Học viện'}
+   else if(num(daily.en)<2){lesson=nextLesson(save,D,'EN');target='learn';title='Hoàn thành phần English hôm nay';reason=`Đã hoàn thành ${num(daily.en)}/2 Learning Unit tiếng Anh cho Boss ngày.`;action=lesson?'Học bài Anh tiếp theo':'Mở Học viện'}
+   else if(num(daily.total)<6){lesson=nextLesson(save,D);target='learn';title='Còn Learning Unit hôm nay';reason=`Đã hoàn thành ${num(daily.total)}/6 Learning Unit hợp lệ.`;action=lesson?'Học bài tiếp theo':'Mở Học viện'}
+   else if(bossGate?.ready||boss.qualified||bossGate?.paid){target='boss';title=boss.qualified?'Combat Boss ngày đã mở':'Boss ngày đã sẵn sàng';reason=boss.qualified?'Bạn đã vượt vòng kiến thức. Bước tiếp theo là Combat Boss.':'Đủ Learning Unit hôm nay. Vào Điện Boss để tiếp tục.';action='Đến Điện Boss'}
+   else {lesson=nextLesson(save,D);target='learn';title='Tích lũy thêm Knowledge';reason=bossGate?.reasons?.[0]||'Learning Unit đã đủ nhưng Knowledge/Boss gate chưa sẵn sàng.';action=lesson?'Tiếp tục học':'Mở Học viện'}
+ } else if(!rank.final){
+   if(rank.ready){target='tamer';title='Đủ điều kiện thi thăng Rank';reason=`Các yêu cầu của ${D.ranks?.[num(save.rank)]?.name||'Rank hiện tại'} đã hoàn thành.`;action='Mở Tamer'}
+   else {const miss=rank.rows.find(x=>!x.ok);if(miss?.k==='zh'){lesson=nextLesson(save,D,'ZH');target='learn';title='Tiếp tục curriculum tiếng Trung';reason=`${miss.v}/${miss.m} bài Trung cho mốc Rank hiện tại.`;action=lesson?'Học bài tiếp theo':'Mở Học viện'}else if(miss?.k==='en'){lesson=nextLesson(save,D,'EN');target='learn';title='Tiếp tục curriculum English';reason=`${miss.v}/${miss.m} bài Anh cho mốc Rank hiện tại.`;action=lesson?'Học bài tiếp theo':'Mở Học viện'}else if(miss?.k==='mastery'){target='learn';title='Củng cố Mastery';reason=`Mastery ${miss.v}%/${miss.m}% — ưu tiên ôn SRS và sửa câu sai.`;action='Mở Học viện'}else{target='adventure';title='Rèn luyện Tamer qua chiến đấu';reason=miss?`${miss.label}: ${miss.v}/${miss.m}.`:'Tiếp tục tăng sức mạnh và tiến trình.';action='Vào Phiêu lưu'}}
+ }
+ return{save,learn,daily,rank,boss,bossGate,promotion,target,title,reason,lesson,action}}
+function pct(v,m){return m?Math.max(0,Math.min(100,Math.round(num(v)/m*100))):100}
+function lane(label,value,sub,p){return`<article class="pj211-lane"><div><small>${esc(label)}</small><b>${esc(value)}</b><span>${esc(sub)}</span></div><i><em style="width:${pct(p.v,p.m)}%"></em></i></article>`}
+function render(){const m=model(),home=document.getElementById('homeView');if(!m||!home)return false;let root=document.getElementById(ID);if(!root){root=document.createElement('section');root.id=ID;root.className='pj211';const hero=home.querySelector('.hero');hero?.insertAdjacentElement('afterend',root);if(!root.isConnected)home.prepend(root)}
+ const bossReady=!!(m.boss.completed||m.boss.qualified||m.bossGate?.ready||m.bossGate?.paid),rankName=data()?.ranks?.[num(m.save.rank)]?.name||'Tamer',nextName=m.rank.final?'Hoàn tất':data()?.ranks?.[num(m.save.rank)+1]?.name||'Rank tiếp theo';
+ root.innerHTML=`<div class="pj211-focus"><div class="pj211-copy"><p class="eyebrow">HÀNH TRÌNH HIỆN TẠI</p><h2>${esc(m.title)}</h2><p>${esc(m.reason)}</p>${m.lesson?`<span class="pj211-lesson">Bài gợi ý · ${esc(m.lesson.title||m.lesson.topic||m.lesson.id)}</span>`:''}</div><div class="pj211-actions"><button class="btn primary" data-pj211-action="primary">${esc(m.action)}</button><button class="btn secondary" data-pj211-action="free">Tự chọn khu vực</button></div></div><div class="pj211-lanes">${lane('Học hôm nay',`${num(m.daily.total)}/6`,`中文 ${num(m.daily.zh)}/4 · EN ${num(m.daily.en)}/2`,{v:m.daily.total,m:6})}${lane('Boss ngày',m.boss.completed?'Đã thắng':m.boss.qualified?'Combat đã mở':bossReady?'Sẵn sàng':'Chưa mở',m.boss.completed?'Phần thưởng kỳ này đã hoàn tất':'6 Learning Unit + Knowledge',{v:m.boss.completed||m.boss.qualified?1:(bossReady?0.75:0),m:1})}${lane('Thăng hạng',m.rank.final?'Thách đấu':`${m.rank.done}/${m.rank.total} điều kiện`,m.rank.final?'Đã đạt Rank cao nhất':`${rankName} → ${nextName}`,{v:m.rank.done,m:m.rank.total})}</div><p class="pj211-note">Đây là gợi ý theo tiến độ thật, không tự động học hay chiến đấu thay người chơi.</p>`;
+ root.querySelector('[data-pj211-action="primary"]')?.addEventListener('click',()=>go(m));root.querySelector('[data-pj211-action="free"]')?.addEventListener('click',()=>{stats.actions++;stats.lastTarget='free';stats.lastReason='manual-choice';stats.lastAt=Date.now();home.querySelector('.home-grid,.base-facility-grid')?.scrollIntoView?.({behavior:'smooth',block:'start'})});stats.renders++;stats.lastTarget=m.target;stats.lastReason=m.reason;stats.lastAt=Date.now();return true}
+function go(m){const A=app();if(!A)return false;stats.actions++;stats.lastTarget=m.target;stats.lastReason=m.reason;stats.lastAt=Date.now();if(m.target==='learn'){stats.learnActions++;if(m.lesson&&A.openLessonFromDungeon)return A.openLessonFromDungeon(m.lesson.id);return A.showView?.('learn')}if(m.target==='boss'){stats.bossActions++;return A.showView?.('boss')}if(m.target==='tamer'){stats.tamerActions++;return A.showView?.('tamer')}stats.adventureActions++;return A.showView?.('adventure')}
+let raf=0;function queue(){cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>{raf=0;if(document.body?.dataset?.activeView==='home')render()})}
+for(const e of['powder:app-booted','powder:rendered','powder:view-changed','powder:local-save','powder:server-state-dirty'])window.addEventListener(e,queue,{passive:true});
+window.POWDER_PLAYER_JOURNEY_V2110={version:VERSION,render,model:()=>{const m=model();return m?{target:m.target,title:m.title,reason:m.reason,lessonId:m.lesson?.id||'',daily:{total:num(m.daily.total),zh:num(m.daily.zh),en:num(m.daily.en)},boss:{completed:!!m.boss.completed,qualified:!!m.boss.qualified,ready:!!(m.bossGate?.ready||m.bossGate?.paid)},rank:{done:m.rank.done,total:m.rank.total,ready:m.rank.ready,final:m.rank.final}}:null},snapshot:()=>({version:VERSION,...stats,installed:!!document.getElementById(ID)})};
+if(window.__POWDER_APP_BOOTED__)queue();
+})();

@@ -1,0 +1,42 @@
+name: Powder Player Journey
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [upgrade/21.1.0-core-player-journey]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: powder-player-journey-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  player-journey:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify Chrome
+        run: google-chrome --version
+      - name: Verify 21.1.0 source
+        run: |
+          node --check js/player-journey-v2110.js
+          node --check tools/powder-player-journey-gate-v2110.mjs
+          node --check tools/powder-refresh-boot-manifest-v2110.mjs
+          node tools/powder-refresh-boot-manifest-v2110.mjs .
+      - name: Run player journey gate
+        run: node tools/powder-player-journey-gate-v2110.mjs .
+      - name: Upload player journey evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: powder-player-journey-${{ github.sha }}
+          path: artifacts/player-journey-v2110/
+          if-no-files-found: warn
+          retention-days: 14
