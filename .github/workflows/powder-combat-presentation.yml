@@ -1,0 +1,33 @@
+name: Powder Combat Presentation
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  combat-presentation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify Chrome
+        run: google-chrome --version
+      - name: Run combat presentation gate
+        run: node tools/powder-combat-presentation-gate-v21015.mjs .
+      - name: Upload combat presentation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: powder-combat-presentation-${{ github.sha }}
+          path: artifacts/combat-presentation-v21015/
+          if-no-files-found: warn
+          retention-days: 14
