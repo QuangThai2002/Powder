@@ -1,5 +1,5 @@
-const V='21.2.13-boot-manifest-compat';
-const BUILD='21213';
+const V='21.3.4-boot-cache-self-heal';
+const BUILD='2134';
 const SHELL=`powder-shell-${V}`;
 const RUNTIME=`powder-runtime-${V}`;
 const PRELOAD=`powder-assets-v21004`;
