@@ -39,6 +39,12 @@ Không thêm gameplay mới. Không sửa 22 file gameplay freeze trừ khi có 
 - Không có serious Runtime exception.
 - Không có visible enabled control giữ `data-busy="1"` ở cuối flow.
 
+## Regression thực tế được tìm thấy
+
+Lần chạy audit đầu phát hiện đúng một lỗi UX: nút `← Quay lại PowBall` trong PowDex mobile chỉ cao 38px do override cũ `.powdex-back1793{min-height:38px!important}` thắng rule mobile chung. Các check Starter, desktop navigation, rapid settle, modal, save, overflow, cleanup và runtime exception đều đã PASS.
+
+Fix 21.0.20 đặt riêng `.powdex-back1793{min-height:44px!important}` trong mobile stylesheet. Không đổi desktop, gameplay, economy hay dữ liệu học tập. Final Gate phải giữ assertion cho selector 44px này để chống regression.
+
 ## Evidence
 
 Gate tạo:
