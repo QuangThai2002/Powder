@@ -1,0 +1,31 @@
+name: Powder Learning Session Continuity 21.2.6
+on:
+  pull_request:
+    branches: [main]
+    paths: ['js/learning-session-continuity-v2126.js','js/learning-performance-hardening-v2125.js','tools/powder-learning-session-continuity-gate-v2126.mjs','.github/workflows/powder-learning-session-continuity-v2126.yml']
+  workflow_dispatch:
+permissions: {contents: read}
+concurrency: {group: 'powder-learning-session-continuity-v2126-${{ github.ref }}', cancel-in-progress: true}
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-node@v4
+        with: {node-version: '24'}
+      - name: Syntax guard
+        run: |
+          node --check js/learning-session-continuity-v2126.js
+          node --check js/learning-performance-hardening-v2125.js
+          node --check tools/powder-learning-session-continuity-gate-v2126.mjs
+      - name: Critical path isolation
+        run: git diff --exit-code origin/main...HEAD -- index.html js/boot-loader-v21004.js js/app.js
+      - run: node tools/powder-learning-session-continuity-gate-v2126.mjs .
+      - run: node tools/powder-learning-performance-gate-v2125.mjs .
+      - run: node tools/powder-rank-promotion-exam-gate-v2123.mjs .
+      - run: node tools/powder-dungeon-curriculum-gate-v2122.mjs .
+      - run: node tools/powder-daily-boss-intelligence-gate-v2121.mjs .
+      - run: node tools/powder-learning-command-center-gate-v2120.mjs .
+      - run: node tools/powder-final-gate-v21004.mjs .
