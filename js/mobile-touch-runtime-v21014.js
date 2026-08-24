@@ -1,0 +1,25 @@
+(()=>{'use strict';
+if(window.POWDER_MOBILE_TOUCH_V21014)return;
+const VERSION='21.0.14',root=document.documentElement,vv=window.visualViewport||null;
+const ACTIONABLE='button,[role="button"],a[href],input,select,textarea,.btn,.nav-btn,.filter-btn,.base-facility';
+let raf=0,measurements=0,viewportChanges=0,keyboardOpens=0,keyboardCloses=0,touchSamples=0,smallTargets=0,clippedTargets=0,overflowSamples=0,overflowMax=0,focusScrolls=0,lastViewport=null;
+const baselines={portrait:0,landscape:0};
+const now=()=>performance.now();
+const editable=el=>!!el?.matches?.('input,textarea,select,[contenteditable="true"]');
+const orientation=()=>innerWidth>innerHeight?'landscape':'portrait';
+function classifyViewport({layoutHeight,visualHeight,offsetTop=0,focused=false,baseline=0}={}){const lh=Math.max(0,Number(layoutHeight)||0),vh=Math.max(0,Number(visualHeight)||lh),top=Math.max(0,Number(offsetTop)||0),base=Math.max(vh,Number(baseline)||0),inset=Math.max(0,Math.round((lh-vh-top)*100)/100),baselineLoss=Math.max(0,Math.round((base-vh)*100)/100),keyboard=!!focused&&(inset>=120||baselineLoss>=120);return{keyboard,inset,baselineLoss,visualHeight:vh,layoutHeight:lh,offsetTop:top}}
+function mobileLike(){return innerWidth<=720||navigator.maxTouchPoints>0||!!matchMedia?.('(pointer:coarse)')?.matches}
+function setVar(name,value){root.style.setProperty(name,value)}
+function focusedElement(){const el=document.activeElement;return editable(el)?el:null}
+function ensureFocusVisible(el){if(!el||!vv)return;requestAnimationFrame(()=>{if(!el.isConnected)return;const r=el.getBoundingClientRect(),top=vv.offsetTop+8,bottom=vv.offsetTop+vv.height-12;if(r.top<top||r.bottom>bottom){try{el.scrollIntoView({block:'nearest',inline:'nearest',behavior:'auto'});focusScrolls++}catch(_){} }})}
+function measure(){raf=0;measurements++;const o=orientation(),visualWidth=vv?.width||innerWidth,visualHeight=vv?.height||innerHeight,offsetTop=vv?.offsetTop||0,focus=focusedElement();if(!focus){baselines[o]=Math.max(baselines[o]||0,visualHeight)}const c=classifyViewport({layoutHeight:innerHeight,visualHeight,offsetTop,focused:!!focus,baseline:baselines[o]||visualHeight}),was=root.dataset.powKeyboard==='open';root.dataset.powMobile=mobileLike()?'1':'0';root.dataset.powOrientation=o;root.dataset.powKeyboard=c.keyboard?'open':'closed';setVar('--pow-visual-height',`${Math.max(1,visualHeight)}px`);setVar('--pow-visual-width',`${Math.max(1,visualWidth)}px`);setVar('--pow-keyboard-inset',`${c.keyboard?Math.max(c.inset,c.baselineLoss):0}px`);lastViewport={at:now(),width:visualWidth,height:visualHeight,offsetTop,layoutHeight:innerHeight,keyboard:c.keyboard,keyboardInset:c.keyboard?Math.max(c.inset,c.baselineLoss):0,orientation:o,mobile:mobileLike()};if(c.keyboard&&!was)keyboardOpens++;if(!c.keyboard&&was)keyboardCloses++;if(c.keyboard&&focus)ensureFocusVisible(focus);const overflow=Math.max(0,document.documentElement.scrollWidth-visualWidth);overflowSamples++;overflowMax=Math.max(overflowMax,overflow);root.dataset.powHorizontalOverflow=overflow>2?'1':'0'}
+function schedule(){viewportChanges++;if(raf)return;raf=requestAnimationFrame(measure)}
+function onPointer(e){if(e.pointerType!=='touch')return;const el=e.target instanceof Element?e.target.closest(ACTIONABLE):null;if(!el)return;touchSamples++;const r=el.getBoundingClientRect();if(r.width<40||r.height<40)smallTargets++;const vw=vv?.width||innerWidth,vh=vv?.height||innerHeight,top=vv?.offsetTop||0;if(r.right<0||r.left>vw||r.bottom<top||r.top>top+vh)clippedTargets++}
+function onFocus(e){if(editable(e.target)){schedule();setTimeout(()=>{schedule();ensureFocusVisible(e.target)},80)}}
+function onBlur(){setTimeout(schedule,40)}
+vv?.addEventListener('resize',schedule,{passive:true});vv?.addEventListener('scroll',schedule,{passive:true});window.addEventListener('resize',schedule,{passive:true});window.addEventListener('orientationchange',schedule,{passive:true});document.addEventListener('focusin',onFocus,true);document.addEventListener('focusout',onBlur,true);document.addEventListener('pointerdown',onPointer,true);window.addEventListener('powder:view-changed',schedule,{passive:true});window.addEventListener('powder:rendered',schedule,{passive:true});
+function snapshot(){return{version:VERSION,mobile:root.dataset.powMobile==='1',orientation:root.dataset.powOrientation||orientation(),keyboard:root.dataset.powKeyboard||'closed',measurements,viewportChanges,keyboardOpens,keyboardCloses,touchSamples,smallTargets,clippedTargets,overflowSamples,overflowMax,focusScrolls,visualViewportSupported:!!vv,lastViewport:lastViewport?{...lastViewport}:null,baselines:{...baselines}}}
+function resetMetrics(){measurements=viewportChanges=keyboardOpens=keyboardCloses=touchSamples=smallTargets=clippedTargets=overflowSamples=overflowMax=focusScrolls=0;lastViewport=null;measure();return snapshot()}
+root.dataset.powKeyboard='closed';measure();
+window.POWDER_MOBILE_TOUCH_V21014={version:VERSION,snapshot,resetMetrics,classifyViewport,remeasure:schedule};
+})();
