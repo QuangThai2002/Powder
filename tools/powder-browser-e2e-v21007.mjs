@@ -68,7 +68,7 @@ const chrome=spawn(chromePath,[
   '--remote-debugging-port=9222',`--user-data-dir=${profile}`,'about:blank'
 ],{stdio:'ignore'});
 
-const report={version:'21.0.7',diagnosticsRevision:'21.0.9',chrome:chromePath,checks:{},details:{},errors:[]};
+const report={version:'21.3.8',diagnosticsRevision:'21.3.8-scroll-combat-regression',chrome:chromePath,checks:{},details:{},errors:[]};
 try {
   await waitHttp('http://127.0.0.1:4173/index.html');
   const version=await waitHttp('http://127.0.0.1:9222/json/version');
@@ -123,6 +123,57 @@ try {
     report.details.navigationClick='Skipped because fresh profile is in setup/loading state; DOM navigation contract verified.';
   }
 
+  for(let i=0;i<28;i++){
+    const loaded=await evalJs(cmd,'!!window.POWDER_PAGE_SCROLL_RECOVERY_V2137');
+    if(loaded) break;
+    await sleep(150);
+  }
+  report.checks.pageScrollRecoveryLoaded=!!(await evalJs(cmd,'!!window.POWDER_PAGE_SCROLL_RECOVERY_V2137'));
+  const scrollSetup=await evalJs(cmd,`(async()=>{
+    const app=document.querySelector('#app'),setup=document.querySelector('#setupScreen'),loading=document.querySelector('#loadingScreen');
+    if(!app)return{ready:false,reason:'missing-app'};
+    const views=[...document.querySelectorAll('#app>main>.view')];
+    window.__powderE2eScrollRestore={appHidden:app.hidden,setupHidden:setup?.hidden??true,loadingHidden:loading?.hidden??true,views:views.map(v=>[v.id,v.hidden])};
+    app.hidden=false;if(setup)setup.hidden=true;if(loading)loading.hidden=true;
+    for(const v of views)v.hidden=v.id!=='homeView';
+    const home=document.querySelector('#homeView'),main=document.querySelector('#app>main'),topbar=document.querySelector('#app>.topbar');
+    if(!home||!main||!topbar)return{ready:false,reason:'missing-main-contract'};
+    const probe=document.createElement('div');probe.id='powderE2eMainScrollProbe';probe.style.cssText='height:2400px;min-height:2400px;pointer-events:none';home.appendChild(probe);
+    window.POWDER_PAGE_SCROLL_RECOVERY_V2137?.refresh?.();
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    main.scrollTop=0;await new Promise(r=>requestAnimationFrame(r));
+    const rect=main.getBoundingClientRect(),style=getComputedStyle(main),bodyTop=document.scrollingElement?.scrollTop||0;
+    return{ready:true,overflowY:style.overflowY,scrollHeight:main.scrollHeight,clientHeight:main.clientHeight,before:main.scrollTop,bodyTop,topbarTop:topbar.getBoundingClientRect().top,point:{x:Math.round(rect.left+rect.width/2),y:Math.round(rect.top+Math.min(240,Math.max(80,rect.height/3)))}};
+  })()`);
+  report.details.mainScrollSetup=scrollSetup;
+  if(scrollSetup?.ready){
+    await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',x:scrollSetup.point.x,y:scrollSetup.point.y});
+    await cmd('Input.dispatchMouseEvent',{type:'mouseWheel',x:scrollSetup.point.x,y:scrollSetup.point.y,deltaX:0,deltaY:640});
+    await sleep(260);
+    const scrollAfter=await evalJs(cmd,`(()=>{const main=document.querySelector('#app>main'),topbar=document.querySelector('#app>.topbar');return{scrollTop:main?.scrollTop||0,bodyTop:document.scrollingElement?.scrollTop||0,topbarTop:topbar?.getBoundingClientRect().top??999,rootClass:document.documentElement.classList.contains('powder-main-scroll-v2137')}})()`);
+    report.details.mainScrollAfter=scrollAfter;
+    report.checks.mainContentIsNativeScrollSurface=/auto|scroll/.test(scrollSetup.overflowY||'')&&scrollSetup.scrollHeight>scrollSetup.clientHeight+200&&!!scrollAfter.rootClass;
+    report.checks.mainContentWheelScrolls=scrollAfter.scrollTop>80;
+    report.checks.topbarStaysOutsideScroller=Math.abs(scrollAfter.topbarTop-scrollSetup.topbarTop)<1.5;
+    report.checks.bodyDoesNotStealPageScroll=Math.abs(scrollAfter.bodyTop-scrollSetup.bodyTop)<2;
+    const staleLock=await evalJs(cmd,`(()=>{for(const m of document.querySelectorAll('.modal'))m.hidden=true;document.documentElement.classList.add('v131-modal-open');document.body.style.overflow='hidden';document.body.style.touchAction='none';window.POWDER_PAGE_SCROLL_RECOVERY_V2137?.repairModalLock?.();return{locked:document.documentElement.classList.contains('v131-modal-open'),overflow:document.body.style.overflow,touch:document.body.style.touchAction}})()`);
+    report.details.staleModalLock=staleLock;
+    report.checks.staleModalLockSelfHeals=!staleLock.locked&&!staleLock.overflow&&!staleLock.touch;
+  }else{
+    report.checks.mainContentIsNativeScrollSurface=false;
+    report.checks.mainContentWheelScrolls=false;
+    report.checks.topbarStaysOutsideScroller=false;
+    report.checks.bodyDoesNotStealPageScroll=false;
+    report.checks.staleModalLockSelfHeals=false;
+  }
+  await evalJs(cmd,`(()=>{const r=window.__powderE2eScrollRestore,probe=document.querySelector('#powderE2eMainScrollProbe');probe?.remove();if(r){const app=document.querySelector('#app'),setup=document.querySelector('#setupScreen'),loading=document.querySelector('#loadingScreen');for(const [id,hidden] of r.views||[]){const v=document.getElementById(id);if(v)v.hidden=hidden}if(app)app.hidden=r.appHidden;if(setup)setup.hidden=r.setupHidden;if(loading)loading.hidden=r.loadingHidden;delete window.__powderE2eScrollRestore}window.POWDER_PAGE_SCROLL_RECOVERY_V2137?.refresh?.();return true})()`);
+
+  const combatRuntime=await evalJs(cmd,`(()=>({loaded:!!window.POWDER_COMBAT_ACTION_CLARITY_V2138,script:!!document.querySelector('#powderCombatActionClarity2138'),snapshot:window.POWDER_COMBAT_ACTION_CLARITY_V2138?.snapshot?.()||null}))()`);
+  report.details.combat2138=combatRuntime;
+  report.checks.combatActionClarityConnected=!!(combatRuntime.loaded||combatRuntime.script);
+  report.checks.combatActionClarityNoGameplayMutation=combatRuntime.snapshot?combatRuntime.snapshot.gameplayMutation===false:true;
+  report.checks.combatActionClarityNoScrollMutation=combatRuntime.snapshot?combatRuntime.snapshot.scrollMutation===false:true;
+
   const shot=await cmd('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
   fs.writeFileSync(path.join(artifacts,'index.png'),Buffer.from(shot.data,'base64'));
 
@@ -152,6 +203,6 @@ try {
   try { fs.rmSync(profile,{recursive:true,force:true}); } catch {}
 }
 report.pass=report.errors.length===0&&Object.values(report.checks).every(Boolean);
-fs.writeFileSync(path.join(artifacts,'BROWSER-E2E-21.0.7.json'),JSON.stringify(report,null,2));
+fs.writeFileSync(path.join(artifacts,'BROWSER-E2E-21.3.8.json'),JSON.stringify(report,null,2));
 console.log(JSON.stringify(report,null,2));
 if(!report.pass) process.exit(1);
