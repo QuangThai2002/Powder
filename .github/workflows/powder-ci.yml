@@ -15,19 +15,23 @@ permissions:
   contents: read
 
 jobs:
+  admin-combat-syntax:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Runner Node diagnostics
+        run: node --version
+      - name: Syntax check Admin Combat
+        run: node --check js/admin-combat-lab-v1882.js
+
   admin-combat-contract:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Runner Node diagnostics
-        run: node --version
-
-      - name: Syntax check Admin Combat
-        run: node --check js/admin-combat-lab-v1882.js
-
       - name: Admin Combat 21.3.9 regression contract
         run: node tools/powder-admin-combat-contract-v2139.mjs .
 
