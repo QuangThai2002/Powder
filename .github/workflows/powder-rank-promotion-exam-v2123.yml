@@ -1,0 +1,29 @@
+name: Powder Rank Promotion Exam 21.2.3
+on:
+  pull_request:
+    branches: [main]
+    paths: ['js/learning-rank-promotion-exam-v2123.js','js/learning-srs-intelligence-v2114.js','tools/powder-rank-promotion-exam-gate-v2123.mjs','.github/workflows/powder-rank-promotion-exam-v2123.yml']
+  workflow_dispatch:
+permissions: {contents: read}
+concurrency: {group: 'powder-rank-promotion-exam-v2123-${{ github.ref }}', cancel-in-progress: true}
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-node@v4
+        with: {node-version: '24'}
+      - name: Syntax guard
+        run: |
+          node --check js/learning-rank-promotion-exam-v2123.js
+          node --check tools/powder-rank-promotion-exam-gate-v2123.mjs
+      - name: Critical path isolation
+        run: git diff --exit-code origin/main...HEAD -- index.html js/boot-loader-v21004.js js/app.js
+      - run: node tools/powder-rank-promotion-exam-gate-v2123.mjs .
+      - run: node tools/powder-dungeon-curriculum-gate-v2122.mjs .
+      - run: node tools/powder-daily-boss-intelligence-gate-v2121.mjs .
+      - run: node tools/powder-learning-command-center-gate-v2120.mjs .
+      - run: node tools/powder-daily-rotation-runner-gate-v2119.mjs .
+      - run: node tools/powder-final-gate-v21004.mjs .
