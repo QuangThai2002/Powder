@@ -81,6 +81,13 @@ check('Service Worker remains present and versioned',/const V='[^']+'/.test(read
 const adminBootstrap=read('js/admin-capacity-guard-v21004.js');
 check('Admin Learning/Event control is connected',exists('js/admin-learning-event-control-v2127.js')&&adminBootstrap.includes('admin-learning-event-control-v2127.js')&&adminBootstrap.includes('POWDER_ADMIN_LEARNING_EVENT_CONTROL_V2127'),'Admin event contract loader missing');
 
-const result={version:'21.2.16',checks:checks.length,passed:checks.filter(x=>x.pass).length,failed:failures.length,failures};
+const liveOps=read('js/live-ops-diagnostics-v2020.js');
+const highRefresh=exists('js/high-refresh-runtime-v21217.js')?read('js/high-refresh-runtime-v21217.js'):'';
+check('High Refresh runtime is connected post-boot',!!highRefresh&&liveOps.includes('high-refresh-runtime-v21217.js?v=21217')&&liveOps.includes('POWDER_HIGH_REFRESH_V21217'),'21.2.17 loader missing');
+check('60 FPS is baseline, not a render cap',highRefresh.includes('BASELINE_FPS=60')&&highRefresh.includes('uncapped:true')&&highRefresh.includes("maxFps:'native-refresh'")&&highRefresh.includes('requestAnimationFrame/native display cadence; no artificial 60/120 FPS cap'),'uncapped/native-refresh contract missing');
+check('High Refresh sampling stays bounded and event-driven',highRefresh.includes('SAMPLE_FRAMES=96')&&highRefresh.includes('MAX_SAMPLE_MS=2400')&&!highRefresh.includes('setInterval(')&&highRefresh.includes("'powder:view-changed'")&&highRefresh.includes("'visibilitychange'"),'sampling policy regressed');
+check('High Refresh stays outside signed Boot manifest',!manifest.some(x=>x.u==='js/high-refresh-runtime-v21217.js'),'high-refresh runtime must remain post-boot');
+
+const result={version:'21.2.17',checks:checks.length,passed:checks.filter(x=>x.pass).length,failed:failures.length,failures};
 console.log(JSON.stringify(result,null,2));
 if(failures.length)process.exit(1);
