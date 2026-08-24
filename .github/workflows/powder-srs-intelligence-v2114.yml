@@ -1,4 +1,3 @@
-# Release binding retry: 2026-08-24
 name: Powder SRS Intelligence 21.1.4
 
 on:
@@ -7,26 +6,23 @@ on:
     paths:
       - 'js/learning-srs-intelligence-v2114.js'
       - 'tools/powder-srs-intelligence-gate-v2114.mjs'
-      - 'tools/powder-refresh-boot-manifest-v2114.mjs'
       - '.github/workflows/powder-srs-intelligence-v2114.yml'
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: powder-srs-intelligence-v2114
   cancel-in-progress: false
 
 jobs:
-  regression-and-bind:
+  regression:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -37,10 +33,6 @@ jobs:
         run: |
           node --check js/learning-srs-intelligence-v2114.js
           node --check tools/powder-srs-intelligence-gate-v2114.mjs
-          node --check tools/powder-refresh-boot-manifest-v2114.mjs
-
-      - name: Bind 21.1.4 into boot manifest
-        run: node tools/powder-refresh-boot-manifest-v2114.mjs . --write
 
       - name: SRS intelligence regression
         run: node tools/powder-srs-intelligence-gate-v2114.mjs .
@@ -53,21 +45,6 @@ jobs:
 
       - name: Final regression gate
         run: node tools/powder-final-gate-v21004.mjs .
-
-      - name: Verify boot binding is stable
-        run: node tools/powder-refresh-boot-manifest-v2114.mjs .
-
-      - name: Commit validated 21.1.4 binding
-        run: |
-          git add js/boot-loader-v21004.js tools
-          if git diff --cached --quiet; then
-            echo 'No generated binding changes to commit.'
-            exit 0
-          fi
-          git config user.name 'Powder Release Bot'
-          git config user.email 'powder-release-bot@users.noreply.github.com'
-          git commit -m 'Powder 21.1.4: bind SRS Review Intelligence'
-          git push
 
       - name: Upload regression evidence
         if: always()
