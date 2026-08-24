@@ -15,6 +15,24 @@ permissions:
   contents: read
 
 jobs:
+  admin-combat-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Syntax check Admin Combat
+        run: node --check js/admin-combat-lab-v1882.js
+
+      - name: Admin Combat 21.3.9 regression contract
+        run: node tools/powder-admin-combat-contract-v2139.mjs .
+
   project-gate:
     runs-on: ubuntu-latest
     timeout-minutes: 20
