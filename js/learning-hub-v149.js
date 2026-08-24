@@ -11,7 +11,6 @@
   const classify=v=>v<=0?'unseen':v<70?'weak':v<90?'good':'mastered';
   const label=v=>v<=0?'Chưa đánh giá':v<70?'Cần ôn':v<80?'Đang củng cố':v<90?'Ổn':'Thành thạo';
   const fmtRelative=ms=>{const n=Math.max(0,Math.round(ms/60000));if(n<1)return'dưới 1 phút';if(n<60)return`${n} phút`;const h=Math.round(n/60);if(h<24)return`${h} giờ`;return`${Math.round(h/24)} ngày`};
-  const lessonModalOpen=()=>{const m=$('#lessonModal');return !!(m&&!m.hidden)};
   function findLessonForSkill(s,lang,skill){const done=new Set(s.lessonsDone||[]),candidates=[];for(const l of D.lessons||[]){if(l.language!==lang||!done.has(l.id))continue;let count=0,weak=0;for(const q of l.questions||[]){const m=q.learningMeta||LM.questionMeta?.({...q,lessonId:q.lessonId||l.id,language:q.language||l.language})||{};if(m.SkillType!==skill)continue;count++;const st=s.questionProgress?.[q.id];if(st?.seen&&(Number(st.mastery)||0)<80)weak++}if(count)candidates.push({l,weak,count,mastery:LM.lessonMastery?.(s,l.id)||0})}candidates.sort((a,b)=>b.weak-a.weak||a.mastery-b.mastery);return candidates[0]?.l||null}
   function openLesson(id){if(id)window.POWDER_APP?.openLessonFromDungeon?.(id)}
   function startReview(lang){window.POWDER_REVIEW_LANGUAGE_V149=lang||null;$('#reviewDueBtn')?.click()}
@@ -20,7 +19,7 @@
   function skillGroup(s,lang){const data=LM.skillMasterySummary?.(s,lang)||{},keys=lang==='ZH'?['Vocabulary','Hanzi','Grammar','Reading','Writing']:['Vocabulary','Grammar','Reading','Writing'];return keys.map(k=>({skill:k,value:Number(data[k])||0}))}
   let lastRenderSig='';
   function render(force=false){
-    const host=$('#learningCoachV149');if(!host||lessonModalOpen())return false;
+    const host=$('#learningCoachV149');if(!host)return false;
     if(!force&&document.body.classList.contains('powder-learning-command-2120')&&!document.body.classList.contains('powder-learning-memory-open-2120'))return false;
     const s=save();if(!s)return false;LM.normalizeSave?.(s);
     const dueZH=LM.dueQuestions?.(s,'ZH')||[],dueEN=LM.dueQuestions?.(s,'EN')||[],z=skillGroup(s,'ZH'),e=skillGroup(s,'EN'),st=stats(s),mistakes=mistakeRows(s),learnedSkills=[...z.map(x=>({...x,lang:'ZH'})),...e.map(x=>({...x,lang:'EN'}))].filter(x=>x.value>0).sort((a,b)=>a.value-b.value),focus=learnedSkills[0]||null,focusLesson=focus?findLessonForSkill(s,focus.lang,focus.skill):null,nextReview=st.next?`Lượt ôn kế tiếp sau khoảng ${fmtRelative(st.next-Date.now())}.`:'Chưa có lịch ôn tiếp theo.';
@@ -34,13 +33,12 @@
   }
   function boot(){
     const learn=$('#learnView');if(!learn)return;let host=$('#learningCoachV149');if(!host){host=document.createElement('div');host.id='learningCoachV149';host.className='learning-coach-v149';$('#learningSummary')?.insertAdjacentElement('afterend',host)}
-    let queued=false,dirtyWhileLesson=false;const queueRender=(force=false)=>{if(learn.hidden&&!force)return;if(lessonModalOpen()&&!force){dirtyWhileLesson=true;return}if(queued)return;queued=true;Promise.resolve().then(()=>{queued=false;if(lessonModalOpen()&&!force){dirtyWhileLesson=true;return}dirtyWhileLesson=false;render(force)})};
+    let queued=false;const queueRender=(force=false)=>{if(learn.hidden&&!force)return;if(queued)return;queued=true;Promise.resolve().then(()=>{queued=false;render(force)})};
     render(true);
     document.addEventListener('powder:local-save',()=>queueRender(false));
     window.addEventListener('powder:view-changed',e=>{if(e?.detail?.view==='learn')queueRender(false)},{passive:true});
-    window.addEventListener('powder:secure-learning-finished',()=>queueRender(false),{passive:true});
-    document.addEventListener('click',e=>{if(e.target.closest('[data-close="lessonModal"]'))Promise.resolve().then(()=>queueRender(dirtyWhileLesson));else if(e.target.closest('#reviewDueBtn'))queueRender(false)},true);
-    window.POWDER_LEARNING_HUB_V149={render:()=>render(true),startReview,queueRender,mode:'event-driven-21.2.12-no-background-rebuild'};
+    document.addEventListener('click',e=>{if(e.target.closest('#lessonActionBtn,[data-close="lessonModal"],#reviewDueBtn'))queueRender(false)},true);
+    window.POWDER_LEARNING_HUB_V149={render:()=>render(true),startReview,queueRender,mode:'event-driven-21.2.5'};
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
