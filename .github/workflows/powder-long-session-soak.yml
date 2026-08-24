@@ -31,7 +31,7 @@ jobs:
         run: node tools/powder-long-session-soak-v21010.mjs .
       - name: Upload soak evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: powder-long-session-soak-${{ github.sha }}
           path: artifacts/soak-v21010/

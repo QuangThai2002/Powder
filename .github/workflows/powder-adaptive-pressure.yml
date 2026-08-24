@@ -31,7 +31,7 @@ jobs:
         run: node tools/powder-adaptive-pressure-gate-v21011.mjs .
       - name: Upload adaptive pressure evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: powder-adaptive-pressure-${{ github.sha }}
           path: artifacts/pressure-v21011/

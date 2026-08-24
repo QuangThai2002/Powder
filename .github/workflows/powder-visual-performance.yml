@@ -31,7 +31,7 @@ jobs:
         run: node tools/powder-visual-performance-gate-v21016.mjs .
       - name: Upload visual/performance evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: powder-visual-performance-${{ github.sha }}
           path: artifacts/visual-v21008/
