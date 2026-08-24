@@ -1,0 +1,33 @@
+name: Powder Mobile Touch
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mobile-touch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify Chrome
+        run: google-chrome --version
+      - name: Run mobile touch gate
+        run: node tools/powder-mobile-touch-gate-v21014.mjs .
+      - name: Upload mobile evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: powder-mobile-touch-${{ github.sha }}
+          path: artifacts/mobile-v21014/
+          if-no-files-found: warn
+          retention-days: 14
