@@ -1,15 +1,15 @@
 name: Powder 21.1.3 Spotlight Integrator
 
 on:
-  push:
-    branches: [upgrade/21.1.3-academic-content-expansion]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write
 
 jobs:
   integrate:
-    if: ${{ !contains(github.event.head_commit.message, '[v2113-spotlight]') }}
+    if: ${{ github.head_ref == 'upgrade/21.1.3-academic-content-expansion' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
