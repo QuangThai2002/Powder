@@ -1,6 +1,6 @@
 (()=>{'use strict';
 const C=()=>window.POWDER_COMBAT_CONTENT_V1890,A=()=>window.POWDER_ADVENTURE_DATA;
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let busy=false,lastSig='',scheduled=false;
 function chips(content){const rows=[content?.eliteAffix,content?.dungeonModifier,content?.weather,content?.bossModifier].filter(Boolean);return rows.map(x=>`<span class="cc1890-chip"><i>${esc(x.icon||'◆')}</i><b>${esc(x.name)}</b><small>${esc(x.desc)}</small></span>`).join('')}
 function renderHub(root){const api=C();if(!api)return;let host=root.querySelector('#cc1890Hub');if(!host){host=document.createElement('section');host.id='cc1890Hub';host.className='cc1890-hub';const anchor=root.querySelector('.adv-mode-cards')||root.querySelector('.adv-world-head');anchor?.insertAdjacentElement('afterend',host)}if(!host)return;
