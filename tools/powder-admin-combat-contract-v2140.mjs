@@ -6,6 +6,7 @@ const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const lab=read('js/admin-combat-lab-v1882.js');
 const launcher=read('js/admin-combat-real-launcher-v2140.js');
 const bridge=read('js/combat-runtime-qa-bridge-v2140.js');
+const domainRecovery=read('js/domain-system-export-recovery-v2140.js');
 const director=read('js/performance-director-v21221.js');
 const adminLoader=read('js/admin-capacity-guard-v21004.js');
 const domain=read('js/domain-system-v15.js');
@@ -34,14 +35,15 @@ const checks={
   adventureIsolated:bridge.includes("a.updateAdventure=()=>({adminTest:true,mutated:false})"),
   appRestored:bridge.includes('function restoreApp()')&&bridge.includes('for(const [k,v] of Object.entries(originalApp))a[k]=v'),
   noServerPvpTicket:!launcher.includes('serverCombatSessionId')&&!bridge.includes('SC()?.act')&&!bridge.includes('POWDER_SERVER_COMBAT'),
-  noContinuousPolling:!launcher.includes('setInterval(')&&!bridge.includes('setInterval('),
+  noContinuousPolling:!launcher.includes('setInterval(')&&!bridge.includes('setInterval(')&&!domainRecovery.includes('setInterval('),
   performanceCaptured:bridge.includes('getPerformance?.()')&&launcher.includes('perf.fps'),
-  canonical3Simple:simpleIds.every(id=>domain.includes(`${id}:`))&&domain.includes('lockedSimpleCount:3'),
-  canonical9Expansion:domainIds.every(id=>domain.includes(`${id}:`))&&domain.includes('lockedExpansionCount:9')&&domain.includes('normalExpansionCount:6')&&domain.includes('specialExpansionCount:3'),
-  canonicalSpecials:specialIds.every(id=>bridge.includes(id)||launcher.includes(id)),
+  canonical3Simple:simpleIds.every(id=>domain.includes(`${id}:{id:'${id}'`)),
+  canonical9Expansion:domainIds.every(id=>domain.includes(`${id}:{id:'${id}'`))&&domain.includes('lockedExpansionCount:9')&&domain.includes('normalExpansionCount:6')&&domain.includes('specialExpansionCount:3'),
+  canonicalSpecials:specialIds.every(id=>domain.includes(`${id}:{id:'${id}'`))&&(domain.match(/kind:'special'/g)||[]).length===3,
+  domainExportRecovery:domainRecovery.includes('POWDER_DOMAIN_EXPORT_RECOVERY_V2140')&&domainRecovery.includes('simpleIds.length!==3')&&domainRecovery.includes('expansionIds.length!==9')&&domainRecovery.includes("E[id]?.kind==='special'"),
   canonicalDomainEvents:bridge.includes("e?.type==='domain-simple'")&&bridge.includes("e?.type==='domain-expansion'")&&bridge.includes("type:'tamer-expansion'"),
   actionDurationUi:bridge.includes("lab.textContent='HÀNH ĐỘNG'")&&bridge.includes('durationActions'),
-  playerLoaderWired:director.includes('combat-runtime-qa-bridge-v2140.js?v=2140')&&director.includes('activateCombatRuntimeQaBridge'),
+  playerLoaderWired:director.includes('domain-system-export-recovery-v2140.js?v=2140')&&director.includes('combat-runtime-qa-bridge-v2140.js?v=2140')&&director.includes('activateCombatRuntimeQaBridge'),
   adminLoaderWired:adminLoader.includes('admin-combat-real-launcher-v2140.js?v=2140'),
   scrollRecoveryPreserved:scroll.includes("ROOT_CLASS='powder-main-scroll-v2137'")&&scroll.includes('overflow-y:auto!important')&&scroll.includes('repairModalLock'),
   scrollPipelineWired:scrollPipeline.includes('page-scroll-recovery-v2137.js?v=2137'),
@@ -49,6 +51,6 @@ const checks={
 };
 
 const failed=Object.entries(checks).filter(([,ok])=>!ok).map(([name])=>name);
-const report={version:'21.4.0',contract:'admin-real-combat-runtime-and-scroll-regression',checks,failed,pass:failed.length===0};
+const report={version:'21.4.0',contract:'admin-real-combat-runtime-domain-export-and-scroll-regression',checks,failed,pass:failed.length===0};
 console.log(JSON.stringify(report,null,2));
 if(failed.length)process.exit(1);
