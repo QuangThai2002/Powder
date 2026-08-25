@@ -1,14 +1,14 @@
 (()=>{'use strict';
 if(window.POWDER_COMBAT_PLAYER_EXPERIENCE_V2201)return;
-const VERSION='22.0.1',CSS_ID='powderCombatPlayerExperience2201Css',CSS_HREF='css/combat-player-experience-v2201.css?v=2201';
+const VERSION='22.0.1',CSS_ID='powderCombatPlayerExperience2201Css',CSS_HREF='css/combat-player-experience-v2201.css?v=22012';
 const LEGACY_DECOR='.cfx2151-echo,.cfx2151-spell-trail,.cfx2153-spell-projectile,.cfx2154-clash-ring,.cfx2155-barrier-magic,.cfx2156-aura,.cfx2157-cast-pose,.cfx2157-release-mark,.cfx2158-elemental-field,.cfx2159-spell-camera,.cfx2160-afterglow,.cfx2162-signature-seal';
 const state={patches:0,pruned:0,skillLayouts:0,scaledSceneTimers:0,castSounds:0,impactSounds:0,lastAt:0,active:false};let raf=0,audioCtx=null,audioGain=null,oldSfxMuted=false;
 const q=(s,r=document)=>r.querySelector(s),qa=(s,r=document)=>[...r.querySelectorAll(s)];
 const nativeSetTimeout=window.setTimeout.bind(window);
-function style(){let l=document.getElementById(CSS_ID);if(!l){l=document.createElement('link');l.id=CSS_ID;l.rel='stylesheet';document.head.appendChild(l)}if(!String(l.href).includes('v=2201'))l.href=CSS_HREF}
+function style(){let l=document.getElementById(CSS_ID);if(!l){l=document.createElement('link');l.id=CSS_ID;l.rel='stylesheet';document.head.appendChild(l)}if(!String(l.href).includes('v=22012'))l.href=CSS_HREF}
 function mount(){return q('#battleView:not([hidden]) .combat-v7-mount .cv7-scene')?.closest('.combat-v7-mount')||null}
 function combatActive(){return Boolean(mount())}
-function installTimerGovernor(){if(window.setTimeout.__px2201)return;const wrapped=function(fn,ms,...args){let next=Number(ms)||0;if(next>=350&&document.documentElement.classList.contains('px2201-player-combat')){let stack='';try{stack=String(new Error().stack||'')}catch(_){}if(stack.includes('player-combat-scene-v1862.js')&&(stack.includes('sleep')||stack.includes('preCastTelegraph')||stack.includes('castPending')||stack.includes('advanceFlow'))){next=Math.max(120,Math.round(next*.46));state.scaledSceneTimers++}}return nativeSetTimeout(fn,next,...args)};wrapped.__px2201=true;window.setTimeout=wrapped}
+function installTimerGovernor(){if(window.setTimeout.__px2201)return;const wrapped=function(fn,ms,...args){let next=Number(ms)||0;if(next>=350&&document.documentElement.classList.contains('px2201-player-combat')){let stack='';try{stack=String(new Error().stack||'')}catch(_){}if(stack.includes('player-combat-scene-v1862.js')){next=Math.max(120,Math.round(next*.46));state.scaledSceneTimers++}}return nativeSetTimeout(fn,next,...args)};wrapped.__px2201=true;window.setTimeout=wrapped}
 function prune(m){if(!m)return;for(const n of qa(LEGACY_DECOR,m)){n.remove();state.pruned++}}
 function skillLayout(m){for(const dock of qa('.cv7-command',m)){const skills=qa('.cv7-skill[data-cv7-skill]',dock);if(!skills.length)continue;const count=Math.max(1,skills.length);if(dock.style.getPropertyValue('--px2201-skill-count')!==String(count)){dock.style.setProperty('--px2201-skill-count',String(count));state.skillLayouts++}}}
 function ensureAudio(){if(audioCtx)return audioCtx;try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;audioCtx=new AC();audioGain=audioCtx.createGain();audioGain.gain.value=.72;audioGain.connect(audioCtx.destination);return audioCtx}catch(_){return null}}
@@ -24,9 +24,9 @@ function schedule(){if(!raf)raf=requestAnimationFrame(patch)}
 installTimerGovernor();
 ['powder:rendered','powder:combat-state','powder:combat-action','powder:view-changed','powder:performance-tier','resize'].forEach(e=>window.addEventListener(e,schedule,{passive:true}));
 window.addEventListener('powder:combat-impact-feedback',e=>{if(combatActive())impactSfx(e?.detail||{})},{passive:true});
-document.addEventListener('click',e=>{const b=e.target?.closest?.('#battleView:not([hidden]) .cv7-skill[data-cv7-skill]');if(!b||b.disabled)return;resumeAudio();muteOldSfx(true);castSfx(String(b.dataset.cv7Skill||'basic'));schedule()},true);
+document.addEventListener('click',e=>{const b=e.target?.closest?.('#battleView:not([hidden]) .cv7-skill[data-cv7-skill]');if(!b||b.disabled)return;resumeAudio();muteOldSfx(true);nativeSetTimeout(()=>muteOldSfx(true),0);castSfx(String(b.dataset.cv7Skill||'basic'));schedule()},true);
 document.addEventListener('pointerover',e=>{if(e.target?.closest?.('#battleView:not([hidden]) .cv7-skill[data-cv7-skill]'))schedule()},{passive:true,capture:true});
 window.addEventListener('pagehide',()=>{if(raf)cancelAnimationFrame(raf);muteOldSfx(false);document.documentElement.classList.remove('px2201-player-combat');try{audioCtx?.close?.()}catch(_){}},{once:true});
-function snapshot(){return{version:VERSION,...state,css:CSS_HREF,presentation:'single native scene pipeline; legacy decorative stack suppressed',skillUi:'icon + name only; one detailed inspector',timing:'scene sleep governor only while visible combat is active',audio:'runtime combat SFX bus; legacy SFX gain muted only during active combat and restored on exit',performance:'event-driven + rAF; no interval/MutationObserver',gameplayMutation:false,damageFormulaMutation:false,skillDataMutation:false,serverMutation:false,saveMutation:false}}
+function snapshot(){return{version:VERSION,...state,css:CSS_HREF,presentation:'single native scene pipeline; legacy decorative stack suppressed',skillUi:'icon + name only; one detailed inspector',timing:'all long timers originating from Combat Scene are scaled only while visible combat is active',audio:'runtime combat SFX bus; legacy SFX gain muted only during active combat and restored on exit',performance:'event-driven + rAF; no interval/MutationObserver',gameplayMutation:false,damageFormulaMutation:false,skillDataMutation:false,serverMutation:false,saveMutation:false}}
 window.POWDER_COMBAT_PLAYER_EXPERIENCE_V2201={version:VERSION,refresh:schedule,snapshot};style();schedule();
 })();
