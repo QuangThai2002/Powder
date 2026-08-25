@@ -65,6 +65,7 @@ jobs:
           node --check js/combat-command-readability-v2188.js
           node --check js/combat-reserve-entry-v2189.js
           node --check js/combat-turn-flow-v2190.js
+          node --check js/combat-action-feedback-v2191.js
           node --check js/performance-director-v21221.js
           node --check js/admin-capacity-guard-v21004.js
           node --check tools/powder-admin-combat-contract-v2140.mjs
@@ -81,6 +82,7 @@ jobs:
           node --check tools/powder-combat-command-readability-contract-v2188.mjs
           node --check tools/powder-combat-reserve-entry-contract-v2189.mjs
           node --check tools/powder-combat-turn-flow-contract-v2190.mjs
+          node --check tools/powder-combat-action-feedback-contract-v2191.mjs
 
   admin-combat-contract:
     runs-on: ubuntu-latest
@@ -135,6 +137,15 @@ jobs:
         uses: actions/checkout@v4
       - name: Combat Turn Flow 21.9.0 contract
         run: node tools/powder-combat-turn-flow-contract-v2190.mjs .
+
+  combat-action-feedback-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Combat Action Feedback 21.9.1 contract
+        run: node tools/powder-combat-action-feedback-contract-v2191.mjs .
 
   domain-clash-contract:
     runs-on: ubuntu-latest
