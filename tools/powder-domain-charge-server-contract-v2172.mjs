@@ -1,0 +1,17 @@
+import fs from 'node:fs';import path from 'node:path';
+const root=path.resolve(process.argv[2]||'.');const read=p=>fs.readFileSync(path.join(root,p),'utf8');const must=(ok,msg)=>{if(!ok)throw new Error(`21.7.2 contract: ${msg}`)};
+const sql=read('supabase/migrations/20260825183000_domain_charge_server_economy_v2172.sql');const js=read('js/pvp-domain-charge-v2172.js');const css=read('css/pvp-domain-charge-v2172.css');const loader=read('js/combat-arcane-polish-v2160.js');
+must(sql.includes('pvp_domain_charge_v2172')&&sql.includes('pvp_domain_round_v2172'),'charge tables missing');
+must(sql.includes('powder_pvp_domain_charge_gain_v2172'),'compatibility gain function missing');
+must(sql.includes("return 20")&&sql.includes("return 14")&&sql.includes("return 8"),'20/14/8 gain tiers missing');
+must(sql.includes('repeatBlocked')&&sql.includes('roundCompleted'),'one-gain-per-round guard missing');
+must(sql.includes("DOMAIN_CHARGE_REQUIRED"),'100% activation gate missing');
+must(sql.includes("set charge=0")||sql.includes('set charge=0'),'charge spend missing');
+must(sql.includes("p_id<>'jackpot_bagua'")&&sql.includes('powder_pvp_domain_activate_legacy_v2171'),'Jackpot recharge path missing');
+must(sql.includes('enable row level security')&&sql.includes('revoke all on table public.pvp_domain_charge_v2172'),'RLS/revoke missing');
+must(js.includes("VERSION='21.7.2'")&&js.includes('powder_pvp_domain_charge_state_v2172'),'client HUD authority missing');
+must(js.includes('oneGainPerPowPerRound:true')&&js.includes('requiresActivePow100:true')&&js.includes('jackpotFailureConsumes100:true'),'client rules snapshot missing');
+must(!js.includes('MutationObserver'),'MutationObserver prohibited');
+must(css.includes('.pvp2172-panel')&&css.includes('.pvp2172-row.ready'),'charge HUD CSS missing');
+must(loader.includes('loadPvpDomainCharge')&&loader.includes('pvp-domain-charge-v2172.js?v=2172'),'loader wiring missing');
+console.log('Powder 21.7.2 Server Domain Charge Economy contract PASS');
