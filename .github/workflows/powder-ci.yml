@@ -24,7 +24,12 @@ jobs:
       - name: Runner Node diagnostics
         run: node --version
       - name: Syntax check Admin Combat
-        run: node --check js/admin-combat-lab-v1882.js
+        run: |
+          node --check js/admin-combat-lab-v1882.js
+          node --check js/admin-combat-real-launcher-v2140.js
+          node --check js/combat-runtime-qa-bridge-v2140.js
+          node --check js/performance-director-v21221.js
+          node --check js/admin-capacity-guard-v21004.js
 
   admin-combat-contract:
     runs-on: ubuntu-latest
@@ -32,8 +37,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Admin Combat 21.3.9 regression contract
-        run: node tools/powder-admin-combat-contract-v2139.mjs .
+      - name: Admin Real Combat 21.4.0 regression contract
+        run: node tools/powder-admin-combat-contract-v2140.mjs .
 
   project-gate:
     runs-on: ubuntu-latest
