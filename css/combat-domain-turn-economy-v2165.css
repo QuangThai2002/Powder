@@ -1,0 +1,12 @@
+/* Powder 21.6.5 — Domain Turn Economy HUD */
+.combat-v7-mount .cfx2165-domain-charge{position:absolute;z-index:34;left:50%;bottom:5px;transform:translateX(-50%);width:min(84%,118px);pointer-events:none;display:grid;grid-template-columns:1fr auto;align-items:center;gap:5px;padding:3px 6px;border:1px solid rgba(170,205,255,.22);border-radius:999px;background:rgba(5,10,20,.78);box-shadow:0 5px 14px rgba(0,0,0,.28);backdrop-filter:blur(3px)}
+.combat-v7-mount .cfx2165-domain-charge i{display:block;height:4px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.1)}
+.combat-v7-mount .cfx2165-domain-charge i b{display:block;height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,#68a8ff,#d6ecff);transition:width .25s ease}
+.combat-v7-mount .cfx2165-domain-charge span{font-size:8px;line-height:1;color:#d9e8ff;font-weight:900;letter-spacing:.06em;white-space:nowrap}
+.combat-v7-mount .cfx2165-domain-charge.high i b{background:linear-gradient(90deg,#ffd66b,#fff1a8)}
+.combat-v7-mount .cfx2165-domain-charge.normal i b{background:linear-gradient(90deg,#7ed6ff,#d8f6ff)}
+.combat-v7-mount .cfx2165-domain-charge.low i b{background:linear-gradient(90deg,#9da7b6,#d5d9df)}
+.combat-v7-mount .cfx2165-domain-charge.ready{border-color:rgba(255,220,100,.72);box-shadow:0 0 0 2px rgba(255,216,90,.08),0 0 16px rgba(255,210,76,.25)}
+.combat-v7-mount .cfx2165-domain-charge.ready span{color:#ffe993}.combat-v7-mount .cfx2165-domain-charge.ready i b{background:linear-gradient(90deg,#ffb82e,#fff3a2)}
+@media(max-width:800px){.combat-v7-mount .cfx2165-domain-charge{bottom:2px;width:min(88%,104px);padding:2px 5px}.combat-v7-mount .cfx2165-domain-charge span{font-size:7px}}
+@media(prefers-reduced-motion:reduce){.combat-v7-mount .cfx2165-domain-charge i b{transition:none}}
