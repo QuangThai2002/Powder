@@ -1,0 +1,12 @@
+import fs from 'node:fs';import path from 'node:path';
+const root=path.resolve(process.argv[2]||'.');const read=p=>fs.readFileSync(path.join(root,p),'utf8');const must=(ok,msg)=>{if(!ok)throw new Error(`21.7.3 contract: ${msg}`)};
+const sql=read('supabase/migrations/20260825184500_domain_round_reserve_hardening_v2173.sql');const js=read('js/pvp-domain-charge-v2172.js');
+must(sql.includes('powder_pvp_domain_round_reconcile_v2173'),'reconcile function missing');
+must(sql.includes("where x=any(active_ids)"),'KO prune logic missing');
+must(sql.includes("active_ids <@ pruned"),'pre-action round completion check missing');
+must(sql.includes('reconciledBeforeAction'),'award reconciliation marker missing');
+must(sql.includes('p_pow=any(rs.seen_pow_ids)'),'repeat action guard missing');
+must(js.includes("roundHardening:'21.7.3'"),'client hardening marker missing');
+must(js.includes('ĐÃ HÀNH ĐỘNG'),'round progress UI missing');
+must(js.includes('koPrunesRoundRequirement:true')&&js.includes('reserveEntryMustAct:true'),'KO/reserve rules missing');
+console.log('Powder 21.7.3 Domain Round / Reserve Hardening contract PASS');
