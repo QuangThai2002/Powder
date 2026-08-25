@@ -10,3 +10,4 @@ function bind(){q('#cap21004Refresh')?.addEventListener('click',refresh);q('#cap
 window.POWDER_ADMIN_CAPACITY_GUARD_V21004={version:VERSION,refresh};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',refresh,{once:true});else refresh();})();
 
 (()=>{'use strict';if(window.POWDER_ADMIN_LEARNING_EVENT_CONTROL_V2127||document.getElementById('powderAdminLearningEventControl2127'))return;const s=document.createElement('script');s.id='powderAdminLearningEventControl2127';s.src='js/admin-learning-event-control-v2127.js?v=2127';s.async=true;document.head.appendChild(s)})();
+(()=>{'use strict';if(window.POWDER_ADMIN_COMBAT_REAL_LAUNCHER_V2140||document.getElementById('powderAdminCombatRealLauncher2140'))return;const s=document.createElement('script');s.id='powderAdminCombatRealLauncher2140';s.src='js/admin-combat-real-launcher-v2140.js?v=2140';s.async=true;document.head.appendChild(s)})();
