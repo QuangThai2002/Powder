@@ -39,10 +39,11 @@ jobs:
           node --check js/combat-fx-budget-v2148.js
           node --check js/combat-magic-circle-v2149.js
           node --check js/combat-grand-magic-v2150.js
+          node --check js/combat-spell-chain-v2151.js
           node --check js/performance-director-v21221.js
           node --check js/admin-capacity-guard-v21004.js
           node --check tools/powder-admin-combat-contract-v2140.mjs
-          node --check tools/powder-combat-grand-magic-contract-v2150.mjs
+          node --check tools/powder-combat-spell-chain-contract-v2151.mjs
 
   admin-combat-contract:
     runs-on: ubuntu-latest
@@ -53,14 +54,14 @@ jobs:
       - name: Admin Real Combat 21.4.0 regression contract
         run: node tools/powder-admin-combat-contract-v2140.mjs .
 
-  combat-grand-magic-contract:
+  combat-spell-chain-contract:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Grand Ultimate Magic 21.5.0 contract
-        run: node tools/powder-combat-grand-magic-contract-v2150.mjs .
+      - name: Elemental Spell Chain 21.5.1 contract
+        run: node tools/powder-combat-spell-chain-contract-v2151.mjs .
 
   project-gate:
     runs-on: ubuntu-latest
