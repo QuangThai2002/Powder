@@ -1,0 +1,199 @@
+/* Powder 21.9.4 — Combat Single-Viewport UX Reset
+   Final priority layer: stops legacy readability passes from stacking vertical size. */
+html.cv2194-combat-focus,html.cv2194-combat-focus body{height:100%;overflow:hidden!important}
+html.cv2194-combat-focus #battleView{top:0!important;height:100dvh!important;max-height:100dvh!important}
+html.cv2194-combat-focus.cv2194-admin-direct #battleView{top:52px!important;height:calc(100dvh - 52px)!important;max-height:calc(100dvh - 52px)!important}
+html.cv2194-combat-focus .combat-v7-mount,
+html.cv2194-combat-focus .cv7-scene{height:100%!important;min-height:0!important;max-height:100%!important;overflow:hidden!important}
+html.cv2194-combat-focus .cv7-scene{display:grid!important;grid-template-rows:64px minmax(0,1fr)!important}
+html.cv2194-combat-focus .cv7-top{height:64px!important;min-height:64px!important;padding:0 14px!important;grid-template-columns:minmax(170px,.8fr) minmax(260px,1.4fr) minmax(150px,.8fr)!important}
+html.cv2194-combat-focus .cv7-rank{gap:8px!important}
+html.cv2194-combat-focus .cv7-rank img{width:44px!important;height:44px!important}
+html.cv2194-combat-focus .cv7-rank small,
+html.cv2194-combat-focus .cv7-stage small{font-size:8px!important}
+html.cv2194-combat-focus .cv7-rank b,
+html.cv2194-combat-focus .cv7-stage b{font-size:15px!important}
+html.cv2194-combat-focus .cv7-rank span,
+html.cv2194-combat-focus .cv7-stage span{font-size:9px!important}
+html.cv2194-combat-focus .cv7-top-actions button{width:34px!important;height:34px!important}
+
+html.cv2194-combat-focus .cv7-field{
+  height:100%!important;min-height:0!important;max-height:none!important;
+  padding:8px 108px 148px!important;
+  grid-template-rows:minmax(0,1fr) 28px minmax(0,1fr)!important;
+  overflow:hidden!important
+}
+html.cv2194-combat-focus .cv7-enemies,
+html.cv2194-combat-focus .cv7-players{min-height:0!important;align-self:center!important;transform:none!important}
+html.cv2194-combat-focus .cv7-enemies>div,
+html.cv2194-combat-focus .cv7-players>div:not(.cv7-reserves){gap:clamp(8px,1.3vw,22px)!important}
+html.cv2194-combat-focus .cv7-enemies h3,
+html.cv2194-combat-focus .cv7-players h3{font-size:8px!important;margin:0 0 2px!important}
+
+html.cv2194-combat-focus .cv7-unit{
+  width:clamp(164px,15.5vw,226px)!important;
+  height:clamp(176px,23vh,214px)!important
+}
+html.cv2194-combat-focus .cv7-unit-top{top:0!important;height:22px!important;font-size:8px!important}
+html.cv2194-combat-focus .cv7-level{padding:3px 6px!important}
+html.cv2194-combat-focus .cv7-element{width:20px!important;height:20px!important}
+html.cv2194-combat-focus .cv7-art-wrap{
+  top:18px!important;width:clamp(126px,12vw,170px)!important;height:clamp(104px,14vh,136px)!important
+}
+html.cv2194-combat-focus .cv7-unit-info{left:4px!important;right:4px!important;bottom:0!important;padding:5px 7px!important;border-radius:10px!important}
+html.cv2194-combat-focus .cv7-unit-info>b{font-size:11px!important}
+html.cv2194-combat-focus .cv7-bars{gap:2px!important;margin-top:3px!important}
+html.cv2194-combat-focus .cv7-bars i{height:5px!important}
+html.cv2194-combat-focus .cv7-values,
+html.cv2194-combat-focus .cv7-presence{font-size:7px!important;line-height:1.15!important;margin-top:2px!important}
+html.cv2194-combat-focus .cv7-statuses{height:17px!important;margin-top:2px!important}
+html.cv2194-combat-focus .cv7-status-chip{width:15px!important;height:15px!important;font-size:8px!important}
+html.cv2194-combat-focus .cv7-center-mark{min-height:28px!important;gap:3px!important}
+html.cv2194-combat-focus .cv7-round{padding:3px 8px!important;font-size:8px!important}
+
+html.cv2194-combat-focus .cv7-turn-order{
+  left:8px!important;top:50%!important;transform:translateY(-50%)!important;
+  width:88px!important;max-height:calc(100% - 80px)!important;padding:6px!important;gap:4px!important;overflow:hidden!important
+}
+html.cv2194-combat-focus .cv7-turn-order>small{font-size:7px!important}
+html.cv2194-combat-focus .cv7-turn-order span{min-height:38px!important;grid-template-columns:12px 28px 1fr!important;grid-template-rows:26px 8px!important;padding:3px!important;gap:2px!important}
+html.cv2194-combat-focus .cv7-turn-order img{width:27px!important;height:27px!important}
+html.cv2194-combat-focus .cv7-turn-order b{font-size:7px!important}
+html.cv2194-combat-focus .cv7-turn-order em,
+html.cv2194-combat-focus .cv7-turn-order span>small{font-size:6px!important}
+
+html.cv2194-combat-focus .cv7-objective{
+  right:8px!important;top:8px!important;width:178px!important;padding:7px 8px!important;gap:1px!important
+}
+html.cv2194-combat-focus .cv7-objective>small{font-size:7px!important}
+html.cv2194-combat-focus .cv7-objective b{font-size:9px!important}
+html.cv2194-combat-focus .cv7-objective span{font-size:7px!important}
+html.cv2194-combat-focus .cv7-log,
+html.cv2194-combat-focus .cv7-tamer-command{
+  transition:opacity .12s ease,transform .12s ease!important
+}
+html.cv2194-combat-focus .cv7-log[data-cv2194-open="0"],
+html.cv2194-combat-focus .cv7-tamer-command[data-cv2194-open="0"]{opacity:0!important;pointer-events:none!important;visibility:hidden!important}
+html.cv2194-combat-focus .cv7-log[data-cv2194-open="1"]{
+  display:block!important;right:8px!important;top:92px!important;transform:none!important;width:260px!important;
+  max-height:min(42vh,310px)!important;min-height:0!important;overflow:auto!important;z-index:65!important
+}
+html.cv2194-combat-focus .cv7-tamer-command[data-cv2194-open="1"]{
+  display:block!important;left:106px!important;top:8px!important;width:250px!important;z-index:65!important
+}
+
+html.cv2194-combat-focus .cv7-command,
+html.cv2194-combat-focus .cv73-command-v2{
+  left:50%!important;right:auto!important;bottom:8px!important;transform:translateX(-50%)!important;
+  width:min(1180px,calc(100% - 210px))!important;height:132px!important;
+  grid-template-columns:150px minmax(0,1fr) 88px!important;gap:7px!important;padding:6px 8px!important;
+  z-index:80!important;overflow:visible!important
+}
+html.cv2194-combat-focus .cv7-active{gap:5px!important;min-width:0!important}
+html.cv2194-combat-focus .cv7-active img{width:44px!important;height:58px!important}
+html.cv2194-combat-focus .cv7-active small{font-size:6px!important}
+html.cv2194-combat-focus .cv7-active b{font-size:11px!important}
+html.cv2194-combat-focus .cv7-active span{font-size:6px!important}
+html.cv2194-combat-focus .cv7-active em{font-size:6px!important;line-height:1.2!important}
+html.cv2194-combat-focus .cv7-skills,
+html.cv2194-combat-focus .cv73-command-v2 .cv7-skills{
+  display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:6px!important;
+  height:100%!important;overflow:visible!important
+}
+html.cv2194-combat-focus .cv7-skill,
+html.cv2194-combat-focus .cv73-command-v2 .cv7-skill{
+  width:auto!important;min-width:0!important;height:118px!important;
+  grid-template-columns:48px minmax(0,1fr)!important;grid-template-rows:18px 1fr auto!important;
+  gap:2px 6px!important;padding:6px!important;overflow:hidden!important
+}
+html.cv2194-combat-focus .cv7-skill-icon{
+  grid-row:1/4!important;width:46px!important;height:46px!important;border-radius:9px!important;overflow:hidden!important;align-self:start!important
+}
+html.cv2194-combat-focus .cv7-skill-icon img{
+  display:block!important;width:100%!important;height:100%!important;object-fit:cover!important;object-position:center!important
+}
+html.cv2194-combat-focus .cv2194-skill-fallback{display:grid;width:100%;height:100%;place-items:center;font-style:normal;font-size:20px;color:#dff8ff}
+html.cv2194-combat-focus .cv73-skill-copy{min-width:0!important}
+html.cv2194-combat-focus .cv73-skill-copy small{font-size:6px!important}
+html.cv2194-combat-focus .cv73-skill-copy b{display:block!important;font-size:9px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+html.cv2194-combat-focus .cv73-skill-copy p{
+  display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;
+  margin:2px 0 0!important;font-size:6px!important;line-height:1.2!important;overflow:hidden!important
+}
+html.cv2194-combat-focus .cv73-skill-meta{display:flex!important;gap:3px!important;grid-column:2!important;align-self:end!important;overflow:hidden!important}
+html.cv2194-combat-focus .cv73-skill-meta em{font-size:5px!important;white-space:nowrap!important}
+html.cv2194-combat-focus .cv69-skill-state{top:3px!important;right:3px!important;font-size:5px!important}
+html.cv2194-combat-focus .cv69-skill-resource{left:58px!important;right:5px!important;bottom:4px!important}
+html.cv2194-combat-focus .cv7-skill.cv2188-selected,
+html.cv2194-combat-focus .cv7-command.is-targeting .cv7-skill.cv2188-selected{
+  border-color:#8ee9ff!important;box-shadow:0 0 0 2px rgba(93,218,255,.22),0 0 18px rgba(63,192,236,.18)!important
+}
+html.cv2194-combat-focus .cv7-unit.targetable{
+  outline:2px solid rgba(255,216,102,.82)!important;outline-offset:3px!important;filter:brightness(1.08)!important;cursor:pointer!important
+}
+
+.cv2194-command-hint{
+  position:absolute;left:50%;top:-29px;transform:translateX(-50%);z-index:95;
+  max-width:min(760px,80vw);padding:5px 10px;border:1px solid rgba(104,205,235,.28);border-radius:999px;
+  background:rgba(5,20,29,.96);color:#dff8ff;font-size:8px;font-weight:900;letter-spacing:.035em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none
+}
+.cv2194-command-hint[data-tone="target"]{border-color:rgba(255,211,95,.52);color:#ffe39a}
+.cv2194-command-hint[data-tone="cast"]{border-color:rgba(95,226,163,.48);color:#9af0c4}
+.cv2194-command-hint[data-tone="error"]{border-color:rgba(245,106,118,.48);color:#ff9aa4}
+
+.cv2194-utility{
+  position:absolute;right:8px;top:54px;z-index:66;display:flex;gap:5px
+}
+.cv2194-utility button{
+  min-height:28px;padding:0 8px;border:1px solid rgba(100,202,231,.2);border-radius:8px;
+  background:rgba(5,24,34,.92);color:#bad8e2;font-size:7px;font-weight:900;cursor:pointer
+}
+.cv2194-utility button:hover,.cv2194-utility button.is-open{border-color:rgba(102,219,249,.55);color:#effcff;background:#0b3443}
+
+html.cv2194-combat-focus .cv7-question,
+html.cv2194-combat-focus .cv7-combo-choice{
+  bottom:8px!important;width:min(1040px,calc(100% - 210px))!important;max-height:46vh!important;overflow:auto!important;z-index:90!important
+}
+html.cv2194-combat-focus .cv7-reserves{transform:scale(.82)!important;transform-origin:left bottom!important}
+
+@media(max-height:820px){
+  html.cv2194-combat-focus .cv7-scene{grid-template-rows:56px minmax(0,1fr)!important}
+  html.cv2194-combat-focus .cv7-top{height:56px!important;min-height:56px!important}
+  html.cv2194-combat-focus .cv7-field{padding-top:4px!important;padding-bottom:128px!important;grid-template-rows:minmax(0,1fr) 22px minmax(0,1fr)!important}
+  html.cv2194-combat-focus .cv7-unit{height:clamp(154px,22vh,184px)!important}
+  html.cv2194-combat-focus .cv7-art-wrap{top:14px!important;height:clamp(90px,12vh,116px)!important}
+  html.cv2194-combat-focus .cv7-command,
+  html.cv2194-combat-focus .cv73-command-v2{height:114px!important}
+  html.cv2194-combat-focus .cv7-skill,
+  html.cv2194-combat-focus .cv73-command-v2 .cv7-skill{height:100px!important}
+  html.cv2194-combat-focus .cv73-skill-copy p{display:none!important}
+}
+@media(max-width:1100px){
+  html.cv2194-combat-focus .cv7-field{padding-left:84px!important;padding-right:18px!important}
+  html.cv2194-combat-focus .cv7-turn-order{width:70px!important}
+  html.cv2194-combat-focus .cv7-objective{display:none!important}
+  html.cv2194-combat-focus .cv2194-utility{right:6px!important;top:6px!important}
+  html.cv2194-combat-focus .cv7-command,
+  html.cv2194-combat-focus .cv73-command-v2{width:calc(100% - 94px)!important;grid-template-columns:minmax(0,1fr) 72px!important}
+  html.cv2194-combat-focus .cv7-active{display:none!important}
+}
+@media(max-width:850px){
+  html.cv2194-combat-focus .cv7-scene{grid-template-rows:52px minmax(0,1fr)!important}
+  html.cv2194-combat-focus .cv7-top{height:52px!important;min-height:52px!important;grid-template-columns:1fr auto!important}
+  html.cv2194-combat-focus .cv7-stage{display:none!important}
+  html.cv2194-combat-focus .cv7-field{height:100%!important;min-height:0!important;padding:4px 4px 128px!important;grid-template-rows:minmax(0,1fr) 20px minmax(0,1fr)!important}
+  html.cv2194-combat-focus .cv7-turn-order{display:none!important}
+  html.cv2194-combat-focus .cv7-unit{width:31.5vw!important;max-width:210px!important;height:160px!important}
+  html.cv2194-combat-focus .cv7-art-wrap{width:110px!important;height:92px!important}
+  html.cv2194-combat-focus .cv7-command,
+  html.cv2194-combat-focus .cv73-command-v2{width:calc(100% - 8px)!important;height:116px!important;grid-template-columns:minmax(0,1fr)!important;padding:4px!important}
+  html.cv2194-combat-focus .cv7-skills,
+  html.cv2194-combat-focus .cv73-command-v2 .cv7-skills{display:flex!important;overflow-x:auto!important;gap:5px!important}
+  html.cv2194-combat-focus .cv7-skill,
+  html.cv2194-combat-focus .cv73-command-v2 .cv7-skill{min-width:142px!important;height:104px!important}
+  html.cv2194-combat-focus .cv73-command-tip,
+  html.cv2194-combat-focus .cv73-target-prompt{display:none!important}
+  .cv2194-command-hint{top:-24px;font-size:7px!important;max-width:94vw!important}
+  .cv2194-utility span{display:none}
+}
