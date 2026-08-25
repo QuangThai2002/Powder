@@ -2,7 +2,7 @@
 if(window.POWDER_COMBAT_SKILL_INSPECTOR_V2187)return;
 const VERSION='21.8.7',PANEL_ID='cv2187SkillInspector',STYLE_ID='powderCombatSkillInspector2187Css',STYLE_HREF='css/combat-skill-inspector-v2187.css?v=2187';
 const state={selectedKey:'basic',renders:0,hovers:0,clicks:0,autoRefreshes:0,lastPowId:'',lastSkill:'',lastAt:0};let raf=0;
-const esc=(v='')=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[m]));
+const esc=(v='')=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const core=()=>{try{return window.POWDER_BATTLE_PLAYER_V177?.getCore?.()||null}catch(_){return null}};
 function ensureStyle(){if(document.getElementById(STYLE_ID))return;const l=document.createElement('link');l.id=STYLE_ID;l.rel='stylesheet';l.href=STYLE_HREF;document.head.appendChild(l)}
 function keyLabel(key){return({basic:'ĐÒN CƠ BẢN',skill1:'KỸ NĂNG 1',skill2:'KỸ NĂNG 2',exclusive:'ĐỘC QUYỀN',ultimate:'TỐI THƯỢNG'})[key]||String(key||'KỸ NĂNG').toUpperCase()}
