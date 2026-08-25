@@ -70,6 +70,7 @@ jobs:
           node --check tools/powder-domain-clash-server-contract-v2170.mjs
           node --check tools/powder-domain-supremacy-server-contract-v2171.mjs
           node --check tools/powder-domain-charge-server-contract-v2172.mjs
+          node --check tools/powder-domain-round-hardening-contract-v2173.mjs
 
   admin-combat-contract:
     runs-on: ubuntu-latest
@@ -142,6 +143,15 @@ jobs:
         uses: actions/checkout@v4
       - name: Domain Charge Server Economy 21.7.2 contract
         run: node tools/powder-domain-charge-server-contract-v2172.mjs .
+
+  domain-round-hardening-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Domain Round / Reserve Hardening 21.7.3 contract
+        run: node tools/powder-domain-round-hardening-contract-v2173.mjs .
 
   project-gate:
     runs-on: ubuntu-latest
