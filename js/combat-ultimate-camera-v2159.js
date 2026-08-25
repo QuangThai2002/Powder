@@ -1,0 +1,9 @@
+(()=>{'use strict';
+if(window.POWDER_COMBAT_ULTIMATE_CAMERA_V2159)return;
+const VERSION='21.5.9',CSS_ID='powderCombatUltimateCamera2159Css',CSS_HREF='css/combat-ultimate-camera-v2159.css?v=2159',state={patches:0,frames:0,targetFocus:0,lastKind:'',lastAt:0};let raf=0;
+function css(){if(document.getElementById(CSS_ID))return;const l=document.createElement('link');l.id=CSS_ID;l.rel='stylesheet';l.href=CSS_HREF;document.head.appendChild(l)}function q(s,r=document){return r.querySelector(s)}
+function patch(){raf=0;const mount=q('.combat-v7-mount');if(!mount)return;state.patches++;const flow=q('.cv7-attack-flow.ultimate,.cv7-attack-flow.exclusive',mount);if(!flow||flow.dataset.cfx2159==='1')return;flow.dataset.cfx2159='1';const kind=flow.classList.contains('exclusive')?'exclusive':'ultimate',frame=document.createElement('div');frame.className=`cfx2159-spell-camera ${kind}`;frame.innerHTML='<i class="focus caster"></i><i class="focus target"></i><i class="vignette"></i>';mount.appendChild(frame);state.frames++;state.lastKind=kind;state.lastAt=Date.now();const delay=Math.max(240,Number.parseInt(flow.style.getPropertyValue('--impact-delay'))||520);setTimeout(()=>{frame.classList.add('release');state.targetFocus++},Math.max(160,delay-110));setTimeout(()=>frame.remove(),delay+720)}
+function schedule(){if(!raf)raf=requestAnimationFrame(patch)}['powder:rendered','powder:combat-state','powder:view-changed'].forEach(e=>window.addEventListener(e,schedule,{passive:true}));window.addEventListener('pagehide',()=>{if(raf)cancelAnimationFrame(raf);raf=0},{once:true});
+function snapshot(){return{version:VERSION,...state,css:CSS_HREF,performance:'overlay focus cues only; no scene transform/zoom; event-driven + one-shot timers',gameplayMutation:false,damageFormulaMutation:false,skillDataMutation:false,serverMutation:false,audioMutation:false,scrollMutation:false}}
+window.POWDER_COMBAT_ULTIMATE_CAMERA_V2159={version:VERSION,snapshot};css();schedule();
+})();
