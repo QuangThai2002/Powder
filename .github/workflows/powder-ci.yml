@@ -32,10 +32,11 @@ jobs:
           node --check js/combat-fx-fidelity-v2141.js
           node --check js/combat-role-rhythm-v2142.js
           node --check js/combat-impact-sequence-v2143.js
+          node --check js/combat-impact-legibility-v2144.js
           node --check js/performance-director-v21221.js
           node --check js/admin-capacity-guard-v21004.js
           node --check tools/powder-admin-combat-contract-v2140.mjs
-          node --check tools/powder-combat-impact-sequence-contract-v2143.mjs
+          node --check tools/powder-combat-impact-legibility-contract-v2144.mjs
 
   admin-combat-contract:
     runs-on: ubuntu-latest
@@ -46,14 +47,14 @@ jobs:
       - name: Admin Real Combat 21.4.0 regression contract
         run: node tools/powder-admin-combat-contract-v2140.mjs .
 
-  combat-impact-sequence-contract:
+  combat-impact-legibility-contract:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Combat impact sequencing, support and Boss telegraph 21.4.3 contract
-        run: node tools/powder-combat-impact-sequence-contract-v2143.mjs .
+      - name: Combat AoE, element and state legibility 21.4.4 contract
+        run: node tools/powder-combat-impact-legibility-contract-v2144.mjs .
 
   project-gate:
     runs-on: ubuntu-latest
