@@ -33,10 +33,11 @@ jobs:
           node --check js/combat-role-rhythm-v2142.js
           node --check js/combat-impact-sequence-v2143.js
           node --check js/combat-impact-legibility-v2144.js
+          node --check js/combat-status-fx-v2145.js
           node --check js/performance-director-v21221.js
           node --check js/admin-capacity-guard-v21004.js
           node --check tools/powder-admin-combat-contract-v2140.mjs
-          node --check tools/powder-combat-impact-legibility-contract-v2144.mjs
+          node --check tools/powder-combat-status-fx-contract-v2145.mjs
 
   admin-combat-contract:
     runs-on: ubuntu-latest
@@ -47,14 +48,14 @@ jobs:
       - name: Admin Real Combat 21.4.0 regression contract
         run: node tools/powder-admin-combat-contract-v2140.mjs .
 
-  combat-impact-legibility-contract:
+  combat-status-fx-contract:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Combat AoE, element and state legibility 21.4.4 contract
-        run: node tools/powder-combat-impact-legibility-contract-v2144.mjs .
+      - name: Combat status FX and control readability 21.4.5 contract
+        run: node tools/powder-combat-status-fx-contract-v2145.mjs .
 
   project-gate:
     runs-on: ubuntu-latest
@@ -64,15 +65,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 2
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-
       - name: Project hygiene and runtime integrity
         run: node tools/powder-project-gate-v21214.mjs .
-
       - name: Verify clean checkout
         run: git diff --exit-code
 
@@ -84,12 +82,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-
       - name: Prepare browser E2E diagnostics
         if: ${{ always() }}
         run: |
@@ -99,10 +95,8 @@ jobs:
           else
             echo "syntax=failed" >> artifacts/e2e-v21007/SYNTAX-CHECK.txt
           fi
-
       - name: Run Powder browser E2E
         run: node tools/powder-browser-e2e-v21007.mjs .
-
       - name: Upload browser E2E diagnostics
         if: ${{ always() }}
         continue-on-error: true
