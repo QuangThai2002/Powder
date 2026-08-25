@@ -1,0 +1,18 @@
+(()=>{'use strict';
+if(window.POWDER_COMBAT_SIGNATURE_ULTIMATE_V2162)return;
+const VERSION='21.6.2',CSS_ID='powderCombatSignatureUltimate2162Css',CSS_HREF='css/combat-signature-ultimate-v2162.css?v=2162';
+const SIG=['pyrion','aquarion','verdantis','terrakor','zephyrion','thunderos','glacior','vilexis','solarion','umbrael','calderion','venomarch','magmorax','tempestrix','frostmaw','luxarion','noxabyss'];
+const state={patches:0,signatureUltimates:0,targetSeals:0,lastSignature:'',lastAt:0};let raf=0;
+const q=(s,r=document)=>r.querySelector(s),qa=(s,r=document)=>[...r.querySelectorAll(s)];
+function css(){if(document.getElementById(CSS_ID))return;const l=document.createElement('link');l.id=CSS_ID;l.rel='stylesheet';l.href=CSS_HREF;document.head.appendChild(l)}
+function core(){try{return window.POWDER_BATTLE_PLAYER_V177?.getCore?.()||null}catch(_){return null}}
+function allUnits(c){return c?.allUnits||[...(c?.state?.team||[]),...(c?.state?.reserves||[]),...(c?.state?.enemies||[]),...(c?.state?.enemyReserves||[])]}
+function token(u){return [u?.id,u?.powId,u?.powKey,u?.speciesId,u?.species,u?.name,u?.title].filter(Boolean).join(' ').toLowerCase().replace(/[^a-z0-9]+/g,'')}
+function signature(m){const src=q('.cv7-unit.motion-release,.cv7-unit.motion-charge',m),id=src?.dataset?.cv7Unit,c=core(),u=allUnits(c).find(x=>String(x?.id)===String(id)),t=token(u);return SIG.find(s=>t.includes(s))||''}
+function addSeal(m,sig,flow){const targets=qa('.cv7-unit.telegraph-target,.cv7-unit.cv69-locked-target',m),delay=Math.max(160,Number.parseInt(flow.style.getPropertyValue('--impact-delay'))||520);targets.slice(0,3).forEach((u,i)=>{const wrap=q('.cv7-art-wrap',u)||u,n=document.createElement('div');n.className=`cfx2162-signature-seal sig-${sig}`;n.innerHTML='<i class="r1"></i><i class="r2"></i><b></b>';wrap.appendChild(n);state.targetSeals++;setTimeout(()=>n.classList.add('release'),Math.max(80,delay-150+i*30));setTimeout(()=>n.remove(),delay+720+i*30)})}
+function patch(){raf=0;const m=q('.combat-v7-mount');if(!m)return;state.patches++;const flow=q('.cv7-attack-flow.ultimate,.cv7-attack-flow.exclusive',m),cine=q('.cv7-cinematic.ultimate,.cv7-cinematic.exclusive',m);if(!flow||flow.dataset.cfx2162==='1')return;flow.dataset.cfx2162='1';const sig=signature(m);if(!sig)return;flow.dataset.cfx2162Signature=sig;flow.classList.add(`sig-${sig}`);if(cine){cine.dataset.cfx2162Signature=sig;cine.classList.add('cfx2162-signature',`sig-${sig}`)}state.signatureUltimates++;state.lastSignature=sig;state.lastAt=Date.now();addSeal(m,sig,flow)}
+function schedule(){if(!raf)raf=requestAnimationFrame(patch)}['powder:rendered','powder:combat-state','powder:view-changed'].forEach(e=>window.addEventListener(e,schedule,{passive:true}));window.addEventListener('pagehide',()=>{if(raf)cancelAnimationFrame(raf);raf=0},{once:true});
+function loadNext(){if(window.POWDER_COMBAT_REACTION_PHYSICS_V2163||document.getElementById('powderCombatReactionPhysics2163'))return;const s=document.createElement('script');s.id='powderCombatReactionPhysics2163';s.src='js/combat-reaction-physics-v2163.js?v=2163';s.async=true;document.head.appendChild(s)}
+function snapshot(){return{version:VERSION,...state,css:CSS_HREF,signaturePow:[...SIG],coverage:'17 mapped signature Pow; all remaining Pow keep role×element Ultimate fallback',performance:'event-driven; max 3 target seals; one-shot; no polling/MutationObserver',gameplayMutation:false,damageFormulaMutation:false,skillDataMutation:false,serverMutation:false,audioMutation:false,scrollMutation:false}}
+window.POWDER_COMBAT_SIGNATURE_ULTIMATE_V2162={version:VERSION,snapshot,refresh:schedule};css();schedule();loadNext();
+})();
