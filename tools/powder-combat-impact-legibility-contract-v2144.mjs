@@ -33,6 +33,7 @@ const checks={
   koFeedback:leg.includes(".cv7-fx.kill")&&leg.includes("kind==='ko'")&&legCss.includes("content:'HẠ GỤC'")&&scene.includes("evt.type==='kill'"),
   replacementFeedback:leg.includes(".cv7-fx.replace")&&leg.includes("kind==='entry'")&&legCss.includes("content:'VÀO SÂN'")&&scene.includes("evt.type==='replacement'"),
   realReviveDetection:leg.includes('const timers=new Set(),life=new Map()')&&leg.includes('prev===true&&!dead')&&leg.includes("playFeedback(u,'revive')")&&legCss.includes("content:'HỒI SINH'"),
+  battleBoundReviveState:leg.includes("else life.clear()")&&leg.includes("battle-bound revive state reset"),
   noFakeReviveEvent:!leg.includes("evt.type==='revive'"),
   transientCleanup:leg.includes('function clearTimers')&&leg.includes('life.clear()')&&leg.includes("window.addEventListener('pagehide'"),
   noPolling:!leg.includes('setInterval(')&&!leg.includes('MutationObserver'),
