@@ -1,0 +1,18 @@
+import fs from 'node:fs';import path from 'node:path';
+const root=path.resolve(process.argv[2]||'.');const read=p=>fs.readFileSync(path.join(root,p),'utf8');const must=(ok,msg)=>{if(!ok)throw new Error(`21.7.5 contract: ${msg}`)};
+const js=read('js/admin-domain-pipeline-v2175.js');const css=read('css/admin-domain-pipeline-v2175.css');const rc=read('js/admin-combat-rc-v1900.js');
+must(js.includes("VERSION='21.7.5'"),'version missing');
+must(js.includes('GAINS={high:20,normal:14,low:8}'),'20/14/8 charge tiers missing');
+must(js.includes('onePerPowPerRound:true'),'one action per round rule missing');
+must(js.includes('questions:10')&&js.includes('seconds:5'),'10x5 Clash rule missing');
+must(js.includes('1:{own:1.25,enemy:1')&&js.includes('2:{own:1.30,enemy:.70')&&js.includes('3:{own:1.50,enemy:.50')&&js.includes('4:{own:1.50,enemy:.30')&&js.includes('5:{own:1.50,enemy:0,cancel:true}'),'Supremacy tiers missing');
+must(js.includes('testKoReserve')&&js.includes('reserveEntryMustAct:true'),'KO/reserve test missing');
+must(js.includes('runPipeline')&&js.includes('runAllMargins'),'pipeline APIs missing');
+must(js.includes('ramOnly:true')&&js.includes('serverRpc:false')&&js.includes('pvpPacket:false'),'RAM-only guards missing');
+must(!/localStorage|sessionStorage/.test(js),'storage access prohibited');
+must(!/fetch\s*\(|\.request\s*\(|XMLHttpRequest/.test(js),'network/RPC prohibited');
+must(!/saveNow|rewardResult|grantReward/.test(js),'save/reward mutation prohibited');
+must(!js.includes('MutationObserver'),'MutationObserver prohibited');
+must(css.includes('.cl2175-card')&&css.includes('.cl2175-margins'),'pipeline UI CSS missing');
+must(rc.includes('powderAdminDomainPipeline2175')&&rc.includes('admin-domain-pipeline-v2175.css?v=2175'),'Admin loader wiring missing');
+console.log('Powder 21.7.5 Admin Domain Full-Pipeline contract PASS');
