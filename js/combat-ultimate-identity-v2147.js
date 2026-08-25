@@ -1,0 +1,22 @@
+(()=>{'use strict';
+if(window.POWDER_COMBAT_ULTIMATE_IDENTITY_V2147)return;
+const VERSION='21.4.7',CSS_ID='powderCombatUltimateIdentity2147Css',CSS_HREF='css/combat-ultimate-identity-v2147.css?v=2147';
+const ROLE_GLYPH={marksman:'◎',knight:'⚔',mage:'✦',tank:'⬡',enchanter:'◇',musician:'♫',healer:'✚',assassin:'◆',fighter:'✹'};
+const ELEMENT_GLYPH={fire:'🔥',water:'◉',leaf:'❧',earth:'⬢',lightning:'ϟ',wind:'✧',ice:'❄',poison:'☣',steel:'◆',lava:'♨',storm:'☈',light:'☀',dark:'◑',neutral:'✦'};
+const state={patches:0,motifs:0,phaseChanges:0,ultimateSeen:0,exclusiveSeen:0,lastRole:'',lastElement:'',lastPhase:'',lastReason:'boot',lastAt:0};let raf=0,settle=0;
+const q=(s,r=document)=>r.querySelector(s),qa=(s,r=document)=>[...r.querySelectorAll(s)];
+function mount(){return q('#battleView:not([hidden]) .combat-v7-mount')||q('.combat-v7-mount')}
+function ensureCss(){if(document.getElementById(CSS_ID))return;const l=document.createElement('link');l.id=CSS_ID;l.rel='stylesheet';l.href=CSS_HREF;document.head.appendChild(l)}
+function tokenClass(el,prefix){return [...(el?.classList||[])].find(c=>c.startsWith(prefix))?.slice(prefix.length)||''}
+function activeFlow(m,key){return q(`.cv7-attack-flow.${key}`,m)||q('.cv7-attack-flow',m)}
+function roleOf(c,m,key){return tokenClass(c,'role-')||tokenClass(activeFlow(m,key),'role-')||'marksman'}
+function elementOf(c,m,key){return tokenClass(c,'el-')||tokenClass(activeFlow(m,key),'el-')||'neutral'}
+function phaseOf(c,m,key){const p=tokenClass(c,'phase-');if(p)return p;return activeFlow(m,key)?'release':'charge'}
+function keyOf(c){return c.classList.contains('exclusive')?'exclusive':'ultimate'}
+function ensureMotif(c,m){const key=keyOf(c),role=roleOf(c,m,key),element=elementOf(c,m,key),phase=phaseOf(c,m,key),sig=`${key}|${role}|${element}|${phase}`,prev=c.dataset.cfx2147Sig||'';c.dataset.cfx2147Role=role;c.dataset.cfx2147Element=element;c.dataset.cfx2147Phase=phase;if(prev&&prev!==sig)state.phaseChanges++;c.dataset.cfx2147Sig=sig;let layer=q(':scope > .cfx2147-identity',c);if(!layer){layer=document.createElement('div');layer.className='cfx2147-identity';layer.innerHTML='<i class="cfx2147-ring a"></i><i class="cfx2147-ring b"></i><i class="cfx2147-axis x"></i><i class="cfx2147-axis y"></i><b class="cfx2147-role-glyph"></b><em class="cfx2147-element-glyph"></em><span class="cfx2147-phase-label"></span>';c.appendChild(layer);state.motifs++;if(key==='ultimate')state.ultimateSeen++;else state.exclusiveSeen++}q('.cfx2147-role-glyph',layer).textContent=ROLE_GLYPH[role]||'✦';q('.cfx2147-element-glyph',layer).textContent=ELEMENT_GLYPH[element]||'✦';q('.cfx2147-phase-label',layer).textContent=phase==='release'?'GIẢI PHÓNG':'TỤ LỰC';state.lastRole=role;state.lastElement=element;state.lastPhase=phase}
+function patch(reason='event'){raf=0;const m=mount();if(!m)return snapshot();ensureCss();qa('.cv7-cinematic.ultimate,.cv7-cinematic.exclusive',m).forEach(c=>ensureMotif(c,m));state.patches++;state.lastReason=reason;state.lastAt=Date.now();return snapshot()}
+function schedule(reason='event'){if(!raf)raf=requestAnimationFrame(()=>patch(reason))}function settlePatch(reason='settle',ms=120){clearTimeout(settle);settle=setTimeout(()=>{settle=0;schedule(reason)},ms)}
+function onView(e){const v=String(e?.detail?.view||document.body?.dataset?.activeView||'');if(/battle|combat|boss/i.test(v)){schedule('view');settlePatch('view-settle',170)}}
+function snapshot(){return{version:VERSION,...state,css:CSS_HREF,visualContract:['9 role Ultimate motifs','13 element glyph/palette identities','charge vs release phase','Ultimate and Exclusive identity layers','no Pow art replacement','21.4.6 camera grammar preserved'],performance:'event-driven + coalesced rAF; one bounded identity layer per cinematic; no polling/MutationObserver/background loops',gameplayMutation:false,damageFormulaMutation:false,skillDataMutation:false,serverMutation:false,audioMutation:false,scrollMutation:false}}
+window.addEventListener('powder:view-changed',onView,{passive:true});window.addEventListener('powder:rendered',()=>schedule('rendered'),{passive:true});window.addEventListener('powder:combat-state',()=>schedule('combat-state'),{passive:true});window.addEventListener('pagehide',()=>{if(raf)cancelAnimationFrame(raf);clearTimeout(settle)},{once:true});window.POWDER_COMBAT_ULTIMATE_IDENTITY_V2147={version:VERSION,snapshot,refresh:()=>patch('manual')};ensureCss();if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>schedule('dom'),{once:true});else schedule('boot');
+})();
