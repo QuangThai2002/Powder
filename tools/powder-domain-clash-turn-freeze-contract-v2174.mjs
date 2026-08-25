@@ -1,0 +1,15 @@
+import fs from 'node:fs';import path from 'node:path';
+const root=path.resolve(process.argv[2]||'.');const read=p=>fs.readFileSync(path.join(root,p),'utf8');const must=(ok,msg)=>{if(!ok)throw new Error(`21.7.4 contract: ${msg}`)};
+const sql=read('supabase/migrations/20260825190000_domain_clash_turn_freeze_v2174.sql');const guard=read('supabase/migrations/20260825190500_domain_clash_repeat_pair_guard_v2174.sql');const js=read('js/combat-domain-server-authority-v2170.js');
+must(sql.includes('powder_pvp_domain_clash_gate_v2174'),'server gate missing');
+must(sql.includes('DOMAIN_CLASH_PENDING')&&sql.includes('DOMAIN_CLASH_REQUIRED'),'normal action lock missing');
+must(sql.includes('domainClashFrozen')&&sql.includes('turn_started_at=now()'),'turn timeout freeze/reset missing');
+must(sql.includes('pvp_action_receipts_v1870'),'normal action idempotency path missing');
+must(sql.includes('pvp_domain_action_receipts_v1880'),'Domain activation idempotency path missing');
+must(sql.includes('drop index if exists public.pvp_domain_clash_single_match_v2170'),'repeat Clash index unlock missing');
+must(guard.includes('DOMAIN_CLASH_ALREADY_RESOLVED_FOR_ACTIVE_PAIR'),'same active pair duplicate guard missing');
+must(js.includes("turnFreezeVersion:'21.7.4'"),'client turn-freeze marker missing');
+must(js.includes('resolvedClashId')&&js.includes('a&&a===b?a'), 'resolved pair identity check missing');
+must(js.includes('turnFrozenServer:true')&&js.includes('repeatClashOnlyAfterRealReactivation:true'),'authority snapshot missing');
+must(js.includes('TURN FROZEN'),'turn-freeze UI missing');
+console.log('Powder 21.7.4 Domain Clash Turn Freeze contract PASS');
