@@ -1,0 +1,7 @@
+/* Powder 21.6.8 — Domain Clash Học Lực */
+.cfx2166-score span small{display:block;margin-top:3px;font-size:9px;font-weight:900;letter-spacing:.08em;color:#ffd978;white-space:nowrap}
+.cfx2166-score span:last-child small{color:#bfc8ff}
+.cfx2166-score em{max-width:260px;line-height:1.45;color:#d7e3ff;font-weight:900}
+.cfx2166-result p{white-space:normal}
+@media(max-width:700px){.cfx2166-score{grid-template-columns:1fr;gap:7px;text-align:center}.cfx2166-score span:last-child{text-align:center}.cfx2166-score span small{white-space:normal}.cfx2166-score em{max-width:none}}
+@media(prefers-reduced-motion:reduce){.cfx2166-score span small{transition:none}}

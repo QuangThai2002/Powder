@@ -13,6 +13,7 @@ function loadMotion(){addScript('powderCombatMotionRealism2161','js/combat-motio
 function loadDomainEconomy(){addScript('powderCombatDomainTurnEconomy2165','js/combat-domain-turn-economy-v2165.js?v=2165','POWDER_COMBAT_DOMAIN_TURN_ECONOMY_V2165')}
 function loadDomainClash(){addScript('powderCombatDomainClash2166','js/combat-domain-clash-v2166.js?v=2166','POWDER_COMBAT_DOMAIN_CLASH_V2166')}
 function loadDomainAuthority(){addScript('powderCombatDomainClashAuthority2167','js/combat-domain-clash-authority-v2167.js?v=2167','POWDER_COMBAT_DOMAIN_CLASH_AUTHORITY_V2167')}
+function loadDomainLearningEdge(){addScript('powderCombatDomainLearningEdge2168','js/combat-domain-learning-edge-v2168.js?v=2168','POWDER_COMBAT_DOMAIN_LEARNING_EDGE_V2168')}
 function snapshot(){return{version:VERSION,...state,css:CSS_HREF,caps:{full:24,balanced:16,lean:10},protectedCritical:['damage/heal/shield/CC/KO feedback','multi-hit final beat','Grand/Ultimate finisher','Guard/Break/Revive','Boss feedback'],performance:'event-driven priority pruning; one-shot afterglow; no polling/MutationObserver',gameplayMutation:false,damageFormulaMutation:false,skillDataMutation:false,serverMutation:false,audioMutation:false,scrollMutation:false}}
-window.POWDER_COMBAT_ARCANE_POLISH_V2160={version:VERSION,snapshot,refresh:schedule};css();schedule();loadMotion();loadDomainEconomy();loadDomainClash();loadDomainAuthority();
+window.POWDER_COMBAT_ARCANE_POLISH_V2160={version:VERSION,snapshot,refresh:schedule};css();schedule();loadMotion();loadDomainEconomy();loadDomainClash();loadDomainAuthority();loadDomainLearningEdge();
 })();
