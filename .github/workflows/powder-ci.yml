@@ -61,6 +61,7 @@ jobs:
           node --check js/combat-domain-supremacy-v2169.js
           node --check js/combat-domain-server-authority-v2170.js
           node --check js/pvp-domain-charge-v2172.js
+          node --check js/combat-skill-inspector-v2187.js
           node --check js/performance-director-v21221.js
           node --check js/admin-capacity-guard-v21004.js
           node --check tools/powder-admin-combat-contract-v2140.mjs
@@ -74,6 +75,7 @@ jobs:
           node --check tools/powder-domain-round-hardening-contract-v2173.mjs
           node --check tools/powder-domain-clash-turn-freeze-contract-v2174.mjs
           node --check tools/powder-admin-domain-pipeline-contract-v2175.mjs
+          node --check tools/powder-combat-skill-inspector-contract-v2187.mjs
 
   admin-combat-contract:
     runs-on: ubuntu-latest
@@ -101,6 +103,15 @@ jobs:
         uses: actions/checkout@v4
       - name: Final Combat Director 21.6.4 contract
         run: node tools/powder-combat-final-contract-v2164.mjs .
+
+  combat-skill-inspector-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Combat Skill Inspector 21.8.7 contract
+        run: node tools/powder-combat-skill-inspector-contract-v2187.mjs .
 
   domain-clash-contract:
     runs-on: ubuntu-latest
