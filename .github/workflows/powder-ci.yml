@@ -57,12 +57,14 @@ jobs:
           node --check js/combat-domain-clash-v2166.js
           node --check js/combat-domain-clash-authority-v2167.js
           node --check js/combat-domain-learning-edge-v2168.js
+          node --check js/combat-domain-supremacy-v2169.js
           node --check js/performance-director-v21221.js
           node --check js/admin-capacity-guard-v21004.js
           node --check tools/powder-admin-combat-contract-v2140.mjs
           node --check tools/powder-combat-final-contract-v2164.mjs
           node --check tools/powder-domain-clash-contract-v2166.mjs
           node --check tools/powder-domain-learning-edge-contract-v2168.mjs
+          node --check tools/powder-domain-supremacy-contract-v2169.mjs
 
   admin-combat-contract:
     runs-on: ubuntu-latest
@@ -99,6 +101,15 @@ jobs:
         uses: actions/checkout@v4
       - name: Domain Learning Edge 21.6.8 contract
         run: node tools/powder-domain-learning-edge-contract-v2168.mjs .
+
+  domain-supremacy-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Domain Supremacy 21.6.9 contract
+        run: node tools/powder-domain-supremacy-contract-v2169.mjs .
 
   project-gate:
     runs-on: ubuntu-latest
