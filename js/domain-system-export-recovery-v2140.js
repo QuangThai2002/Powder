@@ -1,9 +1,14 @@
 (()=>{'use strict';
 if(window.POWDER_DOMAIN_EXPORT_RECOVERY_V2140)return;
-const VERSION='21.4.0',LAUNCH_VERSION='21.8.6',ACK_KEY='powder_admin_real_combat_ack_v2186',DIRECT_CLASS='powder-admin-combat-direct-v2186',DIRECT_STYLE_ID='powderAdminCombatDirectStyle2186';
-const state={recovered:false,alreadyValid:false,simpleCount:0,expansionCount:0,normalCount:0,specialCount:0,lastAt:0,reason:'boot',combatEntryCompat:false,combatLaunchRequests:0,combatLaunchDeferred:0,combatLaunchSuccess:0,combatLaunchRejected:0,combatLaunchTimeouts:0,combatMountTimeouts:0,combatAutoStarts:0,combatRunningAcks:0,knowledgePlanCompact:false,knowledgeAutoAnswers:0,knowledgeAutoCasts:0,adminDirectPlay:false,lastCombatLaunchError:'',lastAckStatus:'',lastAckAt:0};
+const VERSION='21.4.0',LAUNCH_VERSION='21.8.6',SKILL_VERSION='21.8.7',ACK_KEY='powder_admin_real_combat_ack_v2186',DIRECT_CLASS='powder-admin-combat-direct-v2186',DIRECT_STYLE_ID='powderAdminCombatDirectStyle2186';
+const state={recovered:false,alreadyValid:false,simpleCount:0,expansionCount:0,normalCount:0,specialCount:0,lastAt:0,reason:'boot',combatEntryCompat:false,combatLaunchRequests:0,combatLaunchDeferred:0,combatLaunchSuccess:0,combatLaunchRejected:0,combatLaunchTimeouts:0,combatMountTimeouts:0,combatAutoStarts:0,combatRunningAcks:0,knowledgePlanCompact:false,knowledgeAutoAnswers:0,knowledgeAutoCasts:0,adminDirectPlay:false,skillInspectorRequested:false,lastCombatLaunchError:'',lastAckStatus:'',lastAckAt:0};
 let launchTimer=0,launchToken=0,autoStartTimer=0,knowledgeTimer=0,knowledgeToken=0,adminStage=null;
 function valid(api){return api&&Object.keys(api.SIMPLE||{}).length===3&&Object.keys(api.EXPANSIONS||{}).length===9}
+function loadSkillInspector2187(){
+  if(state.skillInspectorRequested)return;state.skillInspectorRequested=true;
+  if(!document.querySelector('link[data-powder-skill-inspector="2187"]')){const l=document.createElement('link');l.rel='stylesheet';l.href='css/combat-skill-inspector-v2187.css?v=2187';l.dataset.powderSkillInspector='2187';document.head?.appendChild(l)}
+  if(!document.querySelector('script[data-powder-skill-inspector="2187"]')){const s=document.createElement('script');s.src='js/combat-skill-inspector-v2187.js?v=2187';s.async=true;s.dataset.powderSkillInspector='2187';document.head?.appendChild(s)}
+}
 function currentCombatEntry(){return window.POWDER_BATTLE_PLAYER_V177||null}
 function combatNonce(stage){const id=String(stage?.id||'');return id.startsWith('admin-real-')?id.slice('admin-real-'.length):''}
 function writeAck(stage,status,error=''){
@@ -134,13 +139,13 @@ function recover(reason='manual'){
   try{window.dispatchEvent(new CustomEvent('powder:domain-api-recovered',{detail:snapshot()}))}catch(_){}
   return api;
 }
-function snapshot(){return{version:VERSION,launchRecoveryVersion:LAUNCH_VERSION,...state,valid:valid(window.POWDER_DOMAIN_SYSTEM_V15),currentCombatApi:Boolean(currentCombatEntry()?.startEncounter),mechanicsMutation:false,policy:'restore canonical Domain API + Admin Combat compatibility + rendered-scene handshake + auto-start + event-bounded learning bypass; no production gameplay formula changes'}}
+function snapshot(){return{version:VERSION,launchRecoveryVersion:LAUNCH_VERSION,...state,valid:valid(window.POWDER_DOMAIN_SYSTEM_V15),currentCombatApi:Boolean(currentCombatEntry()?.startEncounter),mechanicsMutation:false,skillInspectorVersion:SKILL_VERSION,policy:'restore canonical Domain API + Admin Combat compatibility + rendered-scene handshake + auto-start + event-bounded learning bypass + event-driven skill inspector loader; no production gameplay formula changes'}}
 const launchApi={version:LAUNCH_VERSION,snapshot,installCompat:installCombatEntryCompat,armKnowledgeBypass};
 window.POWDER_DOMAIN_EXPORT_RECOVERY_V2140={version:VERSION,recover,installCombatEntryCompat,snapshot};
 window.POWDER_COMBAT_LAB_LAUNCH_RECOVERY_V2184=launchApi;
 window.POWDER_COMBAT_LAB_LAUNCH_RECOVERY_V2185=launchApi;
 window.POWDER_COMBAT_LAB_LAUNCH_RECOVERY_V2186=launchApi;
-recover('boot');
+recover('boot');loadSkillInspector2187();
 document.addEventListener('click',e=>{if(!state.adminDirectPlay)return;const b=e.target?.closest?.('[data-cv7-skill],[data-cv7-unit]');if(b)setTimeout(armKnowledgeBypass,0)},true);
 window.addEventListener('powder:view-changed',e=>{const v=String(e?.detail?.view||document.body?.dataset?.activeView||'');if(state.adminDirectPlay&&v&&v!=='battle')clearDirectPlay()},{passive:true});
 window.addEventListener('pagehide',()=>{clearTimeout(launchTimer);clearTimeout(autoStartTimer);clearTimeout(knowledgeTimer);launchTimer=0;autoStartTimer=0;knowledgeTimer=0;launchToken++;clearDirectPlay()},{once:true});

@@ -11,6 +11,8 @@ const scroll=read('js/page-scroll-recovery-v2137.js');
 const scrollPipeline=read('js/scroll-pipeline-v21220.js');
 const rc=read('js/admin-combat-rc-v1900.js');
 const css=read('css/admin-combat-lab-v1882.css');
+const skillInspector=read('js/combat-skill-inspector-v2187.js');
+const skillInspectorCss=read('css/combat-skill-inspector-v2187.css');
 const simpleIds=['crimson','tide','verdant'];
 const domainIds=['nine_suns','infinite_strike','frozen_silence','diamond_guard','myriad_poison','rebirth_wood','limitless_void','jackpot_bagua','draw_swords'];
 const specialIds=['limitless_void','jackpot_bagua','draw_swords'];
@@ -44,6 +46,12 @@ const checks={
   adventureIsolated:bridge.includes("a.updateAdventure=()=>({adminTest:true,mutated:false})"),
   noServerPvpTicket:!lab.includes('serverCombatSessionId')&&!bridge.includes('SC()?.act')&&!bridge.includes('POWDER_SERVER_COMBAT'),
   compactManualLayout:css.includes('.combat2183')&&css.includes('.cl2183-roster')&&css.includes('.cl2183-versus')&&css.includes('[data-tone="pending"]')&&!css.includes('.cl2139-qa-grid'),
+  skillInspectorLoaded:domainRecovery.includes('combat-skill-inspector-v2187.js?v=2187')&&domainRecovery.includes('combat-skill-inspector-v2187.css?v=2187')&&domainRecovery.includes('loadSkillInspector2187'),
+  skillInspectorRuntime:skillInspector.includes("const VERSION='21.8.7'")&&skillInspector.includes('POWDER_COMBAT_SKILL_INSPECTOR_V2187')&&skillInspector.includes('BattleCore actionInfo is read-only'),
+  skillInspectorDetails:skillInspector.includes('CHI PHÍ')&&skillInspector.includes('MỤC TIÊU')&&skillInspector.includes('KÍCH HOẠT')&&skillInspector.includes('effectTags'),
+  skillInspectorEventDriven:skillInspector.includes("document.addEventListener('pointerover'")&&skillInspector.includes("document.addEventListener('click'")&&!skillInspector.includes('setInterval(')&&!skillInspector.includes('MutationObserver'),
+  skillInspectorNoMutation:!skillInspector.includes('performAction(')&&!skillInspector.includes('grantBattleRewards')&&!skillInspector.includes('grantLearningProgress'),
+  skillInspectorCssCompact:skillInspectorCss.includes('.cv2187-inspector')&&skillInspectorCss.includes('pointer-events:none')&&skillInspectorCss.includes('@media(max-width:760px)'),
   canonical3Simple:simpleIds.every(id=>domain.includes(`${id}:{id:'${id}'`)),
   canonical9Expansion:domainIds.every(id=>domain.includes(`${id}:{id:'${id}'`))&&domain.includes('lockedExpansionCount:9')&&domain.includes('normalExpansionCount:6')&&domain.includes('specialExpansionCount:3'),
   canonicalSpecials:specialIds.every(id=>domain.includes(`${id}:{id:'${id}'`))&&(domain.match(/kind:'special'/g)||[]).length===3,
@@ -53,6 +61,6 @@ const checks={
   scrollNativeNoWheelHijack:!scroll.includes('preventDefault()')&&!scroll.includes('scrollTop+=')&&!scroll.includes('scrollTop -=')
 };
 const failed=Object.entries(checks).filter(([,ok])=>!ok).map(([name])=>name);
-const report={version:'21.8.6',contract:'manual-random-team-vs-tactical-ai-direct-play-auto-start-with-admin-knowledge-bypass',checks,failed,pass:failed.length===0};
+const report={version:'21.8.7',contract:'direct-play-admin-combat-plus-event-driven-skill-inspector',checks,failed,pass:failed.length===0};
 console.log(JSON.stringify(report,null,2));
 if(failed.length)process.exit(1);
