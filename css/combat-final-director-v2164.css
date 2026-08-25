@@ -1,0 +1,10 @@
+/* Powder 21.6.4 — Final Combat Director */
+.combat-v7-mount{isolation:isolate}
+.combat-v7-mount[data-cfx2164-phase='impact'] .cv7-fx.damage,.combat-v7-mount[data-cfx2164-phase='impact'] .cv7-fx.crit,.combat-v7-mount[data-cfx2164-phase='impact'] .cv7-fx.heal,.combat-v7-mount[data-cfx2164-phase='impact'] .cv7-fx.shield,.combat-v7-mount[data-cfx2164-phase='impact'] .cv7-cc-lock,.combat-v7-mount[data-cfx2164-phase='impact'] .cfx2143-finisher,.combat-v7-mount[data-cfx2164-phase='impact'] .cfx2152-magic-finish.finisher{z-index:90!important}
+html[data-cfx2164-mode='focus'] .combat-v7-mount[data-cfx2164-phase='impact'] .cfx2151-echo,html[data-cfx2164-mode='focus'] .combat-v7-mount[data-cfx2164-phase='impact'] .cfx2154-clash-ring,html[data-cfx2164-mode='focus'] .combat-v7-mount[data-cfx2164-phase='impact'] .cfx2158-elemental-field{opacity:.35!important;filter:none!important}
+html[data-cfx2164-mode='minimal'] .combat-v7-mount .cfx2151-echo,html[data-cfx2164-mode='minimal'] .combat-v7-mount .cfx2151-spell-trail,html[data-cfx2164-mode='minimal'] .combat-v7-mount .cfx2154-clash-ring,html[data-cfx2164-mode='minimal'] .combat-v7-mount .cfx2157-release-mark{display:none!important}
+html[data-cfx2164-mode='minimal'] .combat-v7-mount .cfx2158-elemental-field,html[data-cfx2164-mode='minimal'] .combat-v7-mount .cfx2159-spell-camera{opacity:.25!important;filter:none!important;box-shadow:none!important}
+.combat-v7-mount[data-cfx2164-phase='cast'] .cv7-unit.motion-charge .cv7-art-wrap{filter:brightness(1.04)}
+.combat-v7-mount[data-cfx2164-phase='release'] .cv7-unit.motion-release .cv7-art-wrap{z-index:6}
+.combat-v7-mount[data-cfx2164-phase='settle'] .cv7-art-wrap{will-change:auto}
+@media(prefers-reduced-motion:reduce){html[data-cfx2164-mode] .combat-v7-mount .cfx2151-echo,html[data-cfx2164-mode] .combat-v7-mount .cfx2154-clash-ring{display:none!important}}
