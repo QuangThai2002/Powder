@@ -37,10 +37,11 @@ jobs:
           node --check js/combat-camera-hit-v2146.js
           node --check js/combat-ultimate-identity-v2147.js
           node --check js/combat-fx-budget-v2148.js
+          node --check js/combat-magic-circle-v2149.js
           node --check js/performance-director-v21221.js
           node --check js/admin-capacity-guard-v21004.js
           node --check tools/powder-admin-combat-contract-v2140.mjs
-          node --check tools/powder-combat-fx-budget-contract-v2148.mjs
+          node --check tools/powder-combat-magic-circle-contract-v2149.mjs
 
   admin-combat-contract:
     runs-on: ubuntu-latest
@@ -51,14 +52,14 @@ jobs:
       - name: Admin Real Combat 21.4.0 regression contract
         run: node tools/powder-admin-combat-contract-v2140.mjs .
 
-  combat-fx-budget-contract:
+  combat-magic-circle-contract:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Adaptive Combat FX budget 21.4.8 contract
-        run: node tools/powder-combat-fx-budget-contract-v2148.mjs .
+      - name: Anime elemental magic circle 21.4.9 contract
+        run: node tools/powder-combat-magic-circle-contract-v2149.mjs .
 
   project-gate:
     runs-on: ubuntu-latest
