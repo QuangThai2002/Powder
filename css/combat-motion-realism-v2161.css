@@ -1,0 +1,6 @@
+/* Powder 21.6.1 — Combat Motion Realism */
+.combat-v7-mount .cv7-art-wrap{transform-origin:50% 72%;will-change:transform}
+.combat-v7-mount .cv7-unit.motion-charge .cv7-art-wrap{filter:drop-shadow(0 0 8px rgba(255,255,255,.08))}
+html[data-cfx2148-tier='lean'] .combat-v7-mount .cv7-unit:not(.motion-release) .cv7-art-wrap{will-change:auto}
+@media(max-width:680px){.combat-v7-mount .cv7-art-wrap{transform-origin:50% 75%}}
+@media(prefers-reduced-motion:reduce){.combat-v7-mount .cv7-art-wrap{animation-duration:.001ms!important}}
