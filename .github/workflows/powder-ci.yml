@@ -27,6 +27,7 @@ jobs:
         run: |
           node --check js/admin-combat-lab-v1882.js
           node --check js/admin-combat-real-launcher-v2140.js
+          node --check js/admin-domain-pipeline-v2175.js
           node --check js/domain-system-export-recovery-v2140.js
           node --check js/combat-runtime-qa-bridge-v2140.js
           node --check js/combat-fx-fidelity-v2141.js
@@ -72,6 +73,7 @@ jobs:
           node --check tools/powder-domain-charge-server-contract-v2172.mjs
           node --check tools/powder-domain-round-hardening-contract-v2173.mjs
           node --check tools/powder-domain-clash-turn-freeze-contract-v2174.mjs
+          node --check tools/powder-admin-domain-pipeline-contract-v2175.mjs
 
   admin-combat-contract:
     runs-on: ubuntu-latest
@@ -81,6 +83,15 @@ jobs:
         uses: actions/checkout@v4
       - name: Admin Real Combat 21.4.0 regression contract
         run: node tools/powder-admin-combat-contract-v2140.mjs .
+
+  admin-domain-pipeline-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Admin Domain Full-Pipeline 21.7.5 contract
+        run: node tools/powder-admin-domain-pipeline-contract-v2175.mjs .
 
   combat-final-contract:
     runs-on: ubuntu-latest
