@@ -1,0 +1,17 @@
+import fs from 'node:fs';
+const read=p=>fs.readFileSync(p,'utf8');
+const js=read('js/admin-combat-lab-v1882.js');
+const css=read('css/admin-combat-lab-v1882.css');
+const rc=read('js/admin-combat-rc-v1900.js');
+const must=(ok,msg)=>{if(!ok)throw new Error(`21.8.3 manual combat lab: ${msg}`)};
+must(js.includes("const VERSION='21.8.3'"),'version marker missing');
+must(js.includes("scenario:'pve'")&&js.includes('manualCombat:true')&&js.includes('randomTeams:true'),'manual PvE ticket missing');
+must(js.includes('rows.slice(0,5)')&&js.includes('rows.slice(5,10)'),'random 5v5 team split missing');
+must(js.includes('3 chính + 2 dự bị')&&js.includes('BẠN ĐIỀU KHIỂN')&&js.includes('TACTICAL AI'),'manual 3+2 experience UI missing');
+must(js.includes('index.html?combatTest=')&&js.includes('powder_admin_real_combat_ticket_v2140'),'real Combat runtime bridge missing');
+must(!js.includes('Ma trận kiểm thử')&&!js.includes('Ép trực quan')&&!js.includes('Chạy kiểm tra tổng quát'),'legacy QA widgets still present');
+must(!/setInterval\s*\(/.test(js)&&!js.includes('MutationObserver'),'polling/observer forbidden');
+must(!/\bfetch\s*\(/.test(js)&&!js.includes('.rpc('),'network mutation forbidden');
+must(rc.includes('function loadModernCombatQa(){return false}'),'legacy dynamic QA loaders not disabled');
+must(css.includes('.combat2183')&&css.includes('.cl2183-roster')&&css.includes('.cl2183-versus'),'manual Lab layout missing');
+console.log('Powder 21.8.3 Manual vs AI Combat Lab contract PASS');
