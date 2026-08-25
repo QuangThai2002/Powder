@@ -1,12 +1,12 @@
 (()=>{'use strict';
 if(window.POWDER_COMBAT_LAYOUT_V2200)return;
-const VERSION='22.0.0',CSS_ID='powderCombatLayout2200Css',CSS_HREF='css/combat-layout-v2200.css?v=2200';
+const VERSION='22.0.2',CSS_ID='powderCombatLayout2200Css',CSS_HREF='css/combat-layout-v2200.css?v=2202';
 const state={patches:0,artRestores:0,assetMapInstalls:0,panelToggles:0,lastAt:0,logOpen:false,tamerOpen:false};
 let raf=0,observer=null,ownedFullscreen=false;
 const q=(s,r=document)=>r.querySelector(s);
 const data=()=>window.POWDER_DATA||{};
 const core=()=>{try{return window.POWDER_BATTLE_PLAYER_V177?.getCore?.()||null}catch(_){return null}};
-function css(){let l=document.getElementById(CSS_ID);if(!l){l=document.createElement('link');l.id=CSS_ID;l.rel='stylesheet';document.head.appendChild(l)}if(!String(l.href).includes('v=2200'))l.href=CSS_HREF}
+function css(){let l=document.getElementById(CSS_ID);if(!l){l=document.createElement('link');l.id=CSS_ID;l.rel='stylesheet';document.head.appendChild(l)}if(!String(l.href).includes('v=2202'))l.href=CSS_HREF}
 function battleVisible(){return Boolean(q('#battleView:not([hidden]) .combat-v7-mount .cv7-scene'))}
 function adminDirect(){try{const p=new URLSearchParams(location.search);return p.get('adminCombat')==='1'||p.get('combatTest')==='1'}catch(_){return false}}
 function focus(on){const r=document.documentElement;if(on){if(!r.classList.contains('powder-combat-fullscreen')){r.classList.add('powder-combat-fullscreen');ownedFullscreen=true}r.classList.add('powder-combat-layout2200');r.classList.toggle('powder-combat-admin2200',adminDirect())}else{r.classList.remove('powder-combat-layout2200','powder-combat-admin2200');if(ownedFullscreen){r.classList.remove('powder-combat-fullscreen');ownedFullscreen=false}}}
@@ -24,6 +24,6 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&(state.logOpen||sta
 ['powder:rendered','powder:combat-state','powder:view-changed','powder:combat-action','resize'].forEach(evt=>window.addEventListener(evt,schedule,{passive:true}));
 function observe(){const root=q('#battleView');if(!root||observer)return;observer=new MutationObserver(schedule);observer.observe(root,{subtree:true,childList:true})}
 window.addEventListener('pagehide',()=>{if(raf)cancelAnimationFrame(raf);observer?.disconnect();observer=null;focus(false)},{once:true});
-function snapshot(){return{version:VERSION,...state,css:CSS_HREF,layout:'reserved top HUD + enemy row + center + player row + docked command/inspector',observerPolicy:'childList-only',artPolicy:'canonical POWDER_DATA art wins over legacy pow-combat-512',gameplayMutation:false,damageFormulaMutation:false,skillDataMutation:false,serverMutation:false,saveMutation:false}}
+function snapshot(){return{version:VERSION,...state,css:CSS_HREF,layout:'symmetric enemy/player rows + 110px neutral center lane + docked command/inspector',observerPolicy:'childList-only',artPolicy:'canonical POWDER_DATA art wins over legacy pow-combat-512',gameplayMutation:false,damageFormulaMutation:false,skillDataMutation:false,serverMutation:false,saveMutation:false}}
 window.POWDER_COMBAT_LAYOUT_V2200={version:VERSION,refresh:schedule,snapshot};css();installCanonicalMap();observe();schedule();
 })();
