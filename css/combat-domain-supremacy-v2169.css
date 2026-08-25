@@ -1,0 +1,12 @@
+/* Powder 21.6.9 — Domain Clash Supremacy */
+.cfx2169-banner{position:fixed;z-index:2147483250;left:50%;top:76px;transform:translateX(-50%);width:min(680px,calc(100vw - 28px));pointer-events:none;text-align:center;padding:13px 18px 14px;border:1px solid rgba(255,224,130,.48);border-radius:18px;background:linear-gradient(135deg,rgba(11,13,29,.97),rgba(28,16,45,.97));box-shadow:0 18px 55px rgba(0,0,0,.5),0 0 34px rgba(152,118,255,.18);animation:cfx2169Enter .24s ease-out both;color:#f5f7ff;font-family:inherit}
+.cfx2169-banner:before{content:'';position:absolute;inset:3px;border-radius:14px;border:1px solid rgba(255,255,255,.06);pointer-events:none}
+.cfx2169-banner small{display:block;font-size:9px;line-height:1.2;font-weight:1000;letter-spacing:.16em;color:#aebfe7;margin-bottom:5px}
+.cfx2169-banner b{display:block;font-size:clamp(14px,2.2vw,22px);line-height:1.25;color:#ffe38d;text-shadow:0 0 20px rgba(255,215,99,.24)}
+.cfx2169-banner.tier-2,.cfx2169-banner.tier-3,.cfx2169-banner.tier-4{border-color:rgba(191,155,255,.55);box-shadow:0 18px 55px rgba(0,0,0,.5),0 0 40px rgba(139,94,255,.25)}
+.cfx2169-banner.tier-3 b,.cfx2169-banner.tier-4 b{color:#f0d3ff;text-shadow:0 0 22px rgba(195,118,255,.34)}
+.cfx2169-banner.tier-5{border-color:rgba(255,128,113,.7);background:linear-gradient(135deg,rgba(23,8,15,.98),rgba(55,13,35,.98));box-shadow:0 18px 60px rgba(0,0,0,.58),0 0 44px rgba(255,73,111,.28)}
+.cfx2169-banner.tier-5 small{color:#ffc0c7}.cfx2169-banner.tier-5 b{color:#ffe58f;text-shadow:0 0 22px rgba(255,96,96,.36)}
+@keyframes cfx2169Enter{from{opacity:0;transform:translate(-50%,-10px) scale(.98)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+@media(max-width:680px){.cfx2169-banner{top:58px;padding:11px 13px;border-radius:15px}.cfx2169-banner small{font-size:8px}.cfx2169-banner b{font-size:13px}}
+@media(prefers-reduced-motion:reduce){.cfx2169-banner{animation:none}}
