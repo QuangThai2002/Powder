@@ -23,15 +23,17 @@ jobs:
         uses: actions/checkout@v4
       - name: Runner Node diagnostics
         run: node --version
-      - name: Syntax check Admin Combat
+      - name: Syntax check Admin Combat and Combat presentation
         run: |
           node --check js/admin-combat-lab-v1882.js
           node --check js/admin-combat-real-launcher-v2140.js
           node --check js/domain-system-export-recovery-v2140.js
           node --check js/combat-runtime-qa-bridge-v2140.js
+          node --check js/combat-fx-fidelity-v2141.js
           node --check js/performance-director-v21221.js
           node --check js/admin-capacity-guard-v21004.js
           node --check tools/powder-admin-combat-contract-v2140.mjs
+          node --check tools/powder-combat-fx-contract-v2141.mjs
 
   admin-combat-contract:
     runs-on: ubuntu-latest
@@ -41,6 +43,15 @@ jobs:
         uses: actions/checkout@v4
       - name: Admin Real Combat 21.4.0 regression contract
         run: node tools/powder-admin-combat-contract-v2140.mjs .
+
+  combat-fx-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Combat FX Fidelity and Ultimate V2 21.4.1 contract
+        run: node tools/powder-combat-fx-contract-v2141.mjs .
 
   project-gate:
     runs-on: ubuntu-latest
