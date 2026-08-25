@@ -16,23 +16,28 @@ const domainIds=['nine_suns','infinite_strike','frozen_silence','diamond_guard',
 const specialIds=['limitless_void','jackpot_bagua','draw_swords'];
 const ticketKey='powder_admin_real_combat_ticket_v2140';
 const resultKey='powder_admin_real_combat_result_v2140';
-const ackKey='powder_admin_real_combat_ack_v2185';
+const ackKey='powder_admin_real_combat_ack_v2186';
 const checks={
-  manualLab2185:lab.includes("const VERSION='21.8.5'")&&lab.includes('POWDER_ADMIN_COMBAT_MANUAL_V2185')&&lab.includes('POWDER_ADMIN_COMBAT_MANUAL_V2183=window.POWDER_ADMIN_COMBAT_MANUAL_V2185'),
+  manualLab2186:lab.includes("const VERSION='21.8.6'")&&lab.includes('POWDER_ADMIN_COMBAT_MANUAL_V2186')&&lab.includes('POWDER_ADMIN_COMBAT_MANUAL_V2185=window.POWDER_ADMIN_COMBAT_MANUAL_V2186'),
   randomFiveVsFive:lab.includes('rows.slice(0,5)')&&lab.includes('rows.slice(5,10)')&&lab.includes('3 chính + 2 dự bị'),
   manualPlayerVsAi:lab.includes('BẠN ĐIỀU KHIỂN')&&lab.includes('TACTICAL AI')&&lab.includes("scenario:'pve'"),
+  directPlayTicket:lab.includes('directPlay:true')&&lab.includes('autoStart:true')&&lab.includes('skipLearningQuestions:true'),
   legacyQaUiRemoved:['Ma trận kiểm thử','Ép trực quan','Chạy kiểm tra tổng quát','Boss phase','Đo FPS'].every(x=>!lab.includes(x)),
   legacyDynamicLoadersDisabled:rc.includes('function loadModernCombatQa(){return false}')&&!rc.includes('admin-combat-auto-sim-v21610.js')&&!rc.includes('admin-domain-pipeline-v2175.js'),
   oneShotTicket:lab.includes(ticketKey)&&bridge.includes(ticketKey)&&lab.includes('expiresAt:Date.now()+120000')&&bridge.includes('localStorage.removeItem(TICKET_KEY)'),
   resultRoundTrip:lab.includes(resultKey)&&bridge.includes(resultKey),
   actualPlayerCombat:bridge.includes('POWDER_COMBAT_ENTRY_V177')&&bridge.includes('entry.startMap(buildStage(t))')&&bridge.includes('POWDER_BATTLE_PLAYER_V177?.getCore'),
-  currentCombatCompat:domainRecovery.includes("entry.startEncounter(stage,'map')")&&domainRecovery.includes('__powderLaunchRecoveryV2185'),
-  nonceHandshake:lab.includes(ackKey)&&domainRecovery.includes(ackKey)&&lab.includes("a.status==='mounted'")&&domainRecovery.includes("writeAck(stage,'mounted')"),
+  currentCombatCompat:domainRecovery.includes("entry.startEncounter(stage,'map')")&&domainRecovery.includes('__powderLaunchRecoveryV2186'),
+  nonceHandshake:lab.includes(ackKey)&&domainRecovery.includes(ackKey)&&lab.includes("a.status==='running'")&&domainRecovery.includes("writeAck(stage,'running')"),
   renderedSceneHandshake:domainRecovery.includes("#battleView:not([hidden]) .combat-v7-mount .cv7-scene")&&domainRecovery.includes('player.length&&enemy.length&&scene')&&domainRecovery.includes('battleMounted(c)'),
-  failVisible:domainRecovery.includes('powderCombatLabLaunchFailure2185')&&domainRecovery.includes("writeAck(stage,'failed'")&&lab.includes("a.status==='failed'"),
-  boundedHandshake:lab.includes('ACK_TIMEOUT_MS=15000')&&domainRecovery.includes('attempt>=60')&&domainRecovery.includes('attempt<50')&&!lab.includes('setInterval(')&&!bridge.includes('setInterval(')&&!domainRecovery.includes('setInterval('),
+  autoStartRealCombat:domainRecovery.includes('entry?.launch?.()'),
+  autoStartGate:domainRecovery.includes("String(c?.state?.phase||'')==='ready'")&&domainRecovery.includes('waitAdminRunning'),
+  compactAdminKnowledgePlan:domainRecovery.includes('__powderAdminActionInfoV2186')&&domainRecovery.includes('base:1,max:1')&&domainRecovery.includes('__powderAdminRealTestV2140'),
+  eventBoundedKnowledgeBypass:domainRecovery.includes('armKnowledgeBypass')&&domainRecovery.includes('[data-cv7-answer="0"]')&&domainRecovery.includes('[data-cv7-cast]')&&domainRecovery.includes('attempt<48')&&!domainRecovery.includes('setInterval('),
+  hiddenAdminQuestionUi:domainRecovery.includes('powder-admin-combat-direct-v2186')&&domainRecovery.includes('.cv7-question')&&domainRecovery.includes('.cv7-combo-choice'),
+  failVisible:domainRecovery.includes('powderCombatLabLaunchFailure2186')&&domainRecovery.includes("writeAck(stage,'failed'")&&lab.includes("a.status==='failed'"),
+  boundedHandshake:lab.includes('ACK_TIMEOUT_MS=18000')&&domainRecovery.includes('attempt>=60')&&domainRecovery.includes('attempt<50')&&!lab.includes('setInterval(')&&!bridge.includes('setInterval(')&&!domainRecovery.includes('setInterval('),
   duplicateStartGuard:lab.includes('if(state.pending)')&&lab.includes('b.disabled=state.pending'),
-  mountedBeforeSuccess:domainRecovery.includes('currentCombatEntry()?.getCore?.()')&&domainRecovery.includes("writeAck(stage,'mounted')")&&lab.includes('Combat đã khởi động thành công'),
   practiceNoReward:bridge.includes('practiceNoReward:true')&&bridge.includes('rewards:{coins:0,exp:0}'),
   learningIsolated:bridge.includes("a.grantLearningProgress=()=>({adminTest:true,mutated:false})"),
   rewardIsolated:bridge.includes("a.grantBattleRewards=()=>({coins:0,exp:0,adminTest:true})"),
@@ -48,6 +53,6 @@ const checks={
   scrollNativeNoWheelHijack:!scroll.includes('preventDefault()')&&!scroll.includes('scrollTop+=')&&!scroll.includes('scrollTop -=')
 };
 const failed=Object.entries(checks).filter(([,ok])=>!ok).map(([name])=>name);
-const report={version:'21.8.5',contract:'manual-random-team-vs-tactical-ai-real-combat-with-rendered-scene-handshake',checks,failed,pass:failed.length===0};
+const report={version:'21.8.6',contract:'manual-random-team-vs-tactical-ai-direct-play-auto-start-with-admin-knowledge-bypass',checks,failed,pass:failed.length===0};
 console.log(JSON.stringify(report,null,2));
 if(failed.length)process.exit(1);
