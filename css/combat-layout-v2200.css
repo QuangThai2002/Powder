@@ -1,4 +1,4 @@
-/* Powder 22.0.0 — Combat Layout Rebuild
+/* Powder 22.0.2 — Combat Layout Rebuild
    Authoritative final layout. No gameplay formulas are changed. */
 html.powder-combat-layout2200,html.powder-combat-layout2200 body{height:100%;overflow:hidden!important}
 html.powder-combat-layout2200 #battleView{position:fixed!important;inset:0!important;z-index:9999!important;height:100dvh!important;max-height:100dvh!important;overflow:hidden!important;background:#06131c!important}
@@ -15,12 +15,13 @@ html.powder-combat-layout2200 .cv7-rank b,html.powder-combat-layout2200 .cv7-sta
 html.powder-combat-layout2200 .cv7-rank span,html.powder-combat-layout2200 .cv7-stage span{font-size:9px!important}
 html.powder-combat-layout2200 .cv7-top-actions button{width:34px!important;height:34px!important}
 
-/* Reserve real space for top tactical HUD and bottom command dock. */
-html.powder-combat-layout2200 .cv7-field{position:relative!important;height:100%!important;min-height:0!important;max-height:none!important;padding:66px 104px 150px!important;display:grid!important;grid-template-rows:minmax(205px,1fr) 34px minmax(205px,1fr)!important;align-items:center!important;overflow:hidden!important}
-html.powder-combat-layout2200 .cv7-enemies,html.powder-combat-layout2200 .cv7-players{min-height:0!important;height:100%!important;align-self:stretch!important;transform:none!important;display:grid!important;align-content:center!important}
-html.powder-combat-layout2200 .cv7-enemies>div,html.powder-combat-layout2200 .cv7-players>div:not(.cv7-reserves){display:flex!important;align-items:center!important;justify-content:center!important;gap:clamp(12px,1.5vw,26px)!important;min-height:0!important}
-html.powder-combat-layout2200 .cv7-enemies h3,html.powder-combat-layout2200 .cv7-players h3{margin:0 0 3px!important;font-size:8px!important;line-height:1!important}
-html.powder-combat-layout2200 .cv7-center-mark{height:34px!important;min-height:34px!important;display:grid!important;place-items:center!important;gap:2px!important}
+/* 22.0.2: two symmetric team rows with a much wider neutral lane between them. */
+html.powder-combat-layout2200 .cv7-field{position:relative!important;height:100%!important;min-height:0!important;max-height:none!important;padding:58px 104px 150px!important;display:grid!important;grid-template-rows:minmax(190px,1fr) 110px minmax(190px,1fr)!important;align-items:center!important;overflow:hidden!important}
+html.powder-combat-layout2200 .cv7-enemies,html.powder-combat-layout2200 .cv7-players{min-height:0!important;height:100%!important;width:min(980px,100%)!important;margin-inline:auto!important;align-self:stretch!important;justify-self:center!important;transform:none!important;display:grid!important;align-content:center!important}
+html.powder-combat-layout2200 .cv7-enemies>div,html.powder-combat-layout2200 .cv7-players>div:not(.cv7-reserves){display:flex!important;width:100%!important;align-items:center!important;justify-content:space-between!important;gap:clamp(28px,3vw,56px)!important;min-height:0!important}
+html.powder-combat-layout2200 .cv7-enemies h3,html.powder-combat-layout2200 .cv7-players h3{margin:0 0 3px!important;font-size:8px!important;line-height:1!important;text-align:center!important}
+html.powder-combat-layout2200 .cv7-center-mark{height:110px!important;min-height:110px!important;display:grid!important;place-items:center!important;align-self:center!important;gap:2px!important;pointer-events:none!important}
+html.powder-combat-layout2200 .cv7-center-mark button{pointer-events:auto!important}
 html.powder-combat-layout2200 .cv7-round{padding:3px 9px!important;font-size:8px!important}
 
 /* Pow cards: full art above a compact information plate, never hidden behind the plate. */
@@ -53,7 +54,6 @@ html.powder-combat-layout2200 .combat-v7-mount[data-tf217-ready="1"] .tf217-hud{
 html.powder-combat-layout2200 .combat-v7-mount[data-tf217-ready="1"] .tf217-hud small{font-size:7px!important}
 html.powder-combat-layout2200 .combat-v7-mount[data-tf217-ready="1"] .tf217-hud b{font-size:9px!important}
 html.powder-combat-layout2200 .combat-v7-mount[data-tf217-ready="1"] .tf217-action b{font-size:10px!important}
-/* Skill identity only appears while an action is actually being presented, never while waiting for input. */
 html.powder-combat-layout2200 .combat-v7-mount[data-csi218-phase="idle"] .csi218-stage{display:none!important}
 
 /* Right-side secondary information is compact and closed by default. */
@@ -110,7 +110,8 @@ html.powder-combat-layout2200 .cv7-reserves{transform:scale(.78)!important;trans
 @media(max-height:820px) and (min-width:851px){
   html.powder-combat-layout2200 .cv7-scene{grid-template-rows:56px minmax(0,1fr)!important}
   html.powder-combat-layout2200 .cv7-top{height:56px!important;min-height:56px!important}
-  html.powder-combat-layout2200 .cv7-field{padding-top:58px!important;padding-bottom:132px!important;grid-template-rows:minmax(180px,1fr) 28px minmax(180px,1fr)!important}
+  html.powder-combat-layout2200 .cv7-field{padding-top:54px!important;padding-bottom:132px!important;grid-template-rows:minmax(172px,1fr) 82px minmax(172px,1fr)!important}
+  html.powder-combat-layout2200 .cv7-center-mark{height:82px!important;min-height:82px!important}
   html.powder-combat-layout2200 .cv7-unit{height:clamp(166px,21dvh,190px)!important}
   html.powder-combat-layout2200 .cv7-art-wrap{height:calc(100% - 82px)!important}
   html.powder-combat-layout2200 .cv7-command,html.powder-combat-layout2200 .cv73-command-v2{height:118px!important;grid-template-columns:140px minmax(0,1fr) 250px!important}
@@ -121,6 +122,8 @@ html.powder-combat-layout2200 .cv7-reserves{transform:scale(.78)!important;trans
 
 @media(max-width:1200px){
   html.powder-combat-layout2200 .cv7-field{padding-left:82px!important;padding-right:12px!important}
+  html.powder-combat-layout2200 .cv7-enemies,html.powder-combat-layout2200 .cv7-players{width:min(900px,100%)!important}
+  html.powder-combat-layout2200 .cv7-enemies>div,html.powder-combat-layout2200 .cv7-players>div:not(.cv7-reserves){gap:clamp(18px,2vw,34px)!important}
   html.powder-combat-layout2200 .cv7-turn-order{width:68px!important}
   html.powder-combat-layout2200 .cv7-objective{display:none!important}
   html.powder-combat-layout2200 .combat-v7-mount[data-tf217-ready="1"] .tf217-hud{width:min(720px,calc(100% - 170px))!important}
@@ -136,7 +139,10 @@ html.powder-combat-layout2200 .cv7-reserves{transform:scale(.78)!important;trans
   html.powder-combat-layout2200 .cv7-stage{display:none!important}
   html.powder-combat-layout2200 .cv7-rank img{width:36px!important;height:36px!important}
   html.powder-combat-layout2200 .cv7-rank b{font-size:12px!important}
-  html.powder-combat-layout2200 .cv7-field{padding:62px 4px 112px!important;grid-template-rows:minmax(145px,1fr) 20px minmax(145px,1fr)!important}
+  html.powder-combat-layout2200 .cv7-field{padding:62px 4px 112px!important;grid-template-rows:minmax(145px,1fr) 28px minmax(145px,1fr)!important}
+  html.powder-combat-layout2200 .cv7-center-mark{height:28px!important;min-height:28px!important}
+  html.powder-combat-layout2200 .cv7-enemies,html.powder-combat-layout2200 .cv7-players{width:100%!important}
+  html.powder-combat-layout2200 .cv7-enemies>div,html.powder-combat-layout2200 .cv7-players>div:not(.cv7-reserves){justify-content:space-around!important;gap:4px!important}
   html.powder-combat-layout2200 .cv7-turn-order,html.powder-combat-layout2200 .cv7-objective,html.powder-combat-layout2200 #cv2190TurnFlow{display:none!important}
   html.powder-combat-layout2200 .combat-v7-mount[data-tf217-ready="1"] .tf217-hud{top:4px!important;width:calc(100% - 8px)!important;min-height:54px!important;max-height:58px!important;grid-template-columns:66px minmax(0,1fr) 74px!important;grid-template-areas:"phase action next" "target result result"!important;gap:2px 4px!important;padding:4px!important}
   html.powder-combat-layout2200 .combat-v7-mount[data-tf217-ready="1"] .tf217-hud>i{display:none!important}
@@ -163,7 +169,8 @@ html.powder-combat-layout2200 .cv7-reserves{transform:scale(.78)!important;trans
 }
 
 @media(max-width:560px){
-  html.powder-combat-layout2200 .cv7-field{padding-top:66px!important;padding-bottom:106px!important;grid-template-rows:minmax(132px,1fr) 18px minmax(132px,1fr)!important}
+  html.powder-combat-layout2200 .cv7-field{padding-top:66px!important;padding-bottom:106px!important;grid-template-rows:minmax(132px,1fr) 22px minmax(132px,1fr)!important}
+  html.powder-combat-layout2200 .cv7-center-mark{height:22px!important;min-height:22px!important}
   html.powder-combat-layout2200 .cv7-unit{width:32vw!important;height:clamp(132px,19dvh,158px)!important}
   html.powder-combat-layout2200 .cv7-unit-top{height:18px!important;font-size:6px!important}
   html.powder-combat-layout2200 .cv7-element{width:17px!important;height:17px!important}
