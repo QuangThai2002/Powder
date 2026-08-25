@@ -1,0 +1,19 @@
+(()=>{'use strict';
+if(window.POWDER_COMBAT_FINAL_DIRECTOR_V2164)return;
+const VERSION='21.6.4',CSS_ID='powderCombatFinalDirector2164Css',CSS_HREF='css/combat-final-director-v2164.css?v=2164';
+const SECONDARY='.cfx2151-echo,.cfx2151-spell-trail,.cfx2153-spell-projectile,.cfx2154-clash-ring,.cfx2157-cast-pose,.cfx2157-release-mark,.cfx2158-elemental-field,.cfx2159-spell-camera,.cfx2160-afterglow,.cfx2162-signature-seal';
+const CRITICAL='.cv7-fx.damage,.cv7-fx.crit,.cv7-fx.heal,.cv7-fx.shield,.cv7-fx.shield-gain,.cv7-cc-lock,.cfx2143-finisher,.cfx2143-beat.is-final,.cfx2144-guard-intercept,.cfx2144-shield-break,.cfx2144-ko,.cfx2144-revive,.cfx2150-grand-seal,.cfx2152-magic-finish.finisher,.cfx2162-signature-seal.release';
+const state={patches:0,trims:0,phase:'settle',mode:'clean',secondary:0,critical:0,lastAt:0};let raf=0,settle=0;
+const q=(s,r=document)=>r.querySelector(s),qa=(s,r=document)=>[...r.querySelectorAll(s)];
+function css(){if(document.getElementById(CSS_ID))return;const l=document.createElement('link');l.id=CSS_ID;l.rel='stylesheet';l.href=CSS_HREF;document.head.appendChild(l)}
+function tier(){return String(document.documentElement.dataset.cfx2148Tier||'full')}function cap(){const t=tier();return t==='lean'?10:t==='balanced'?16:24}
+function detectPhase(m){if(q('.cv7-fx.damage,.cv7-fx.crit,.cv7-fx.heal,.cv7-fx.shield,.cv7-fx.kill,.cfx2143-finisher,.cfx2152-magic-finish.finisher',m))return'impact';if(q('.cv7-unit.motion-release,.cv7-attack-flow',m))return'release';if(q('.cv7-unit.motion-charge,.cv7-cinematic.ultimate,.cv7-cinematic.exclusive',m))return'cast';return'settle'}
+function modeFor(count){const t=tier(),max=cap();if(t==='lean'||count>max+6)return'minimal';if(t==='balanced'||count>max)return'focus';return'clean'}
+function trim(m,nodes,max){if(nodes.length<=max)return;for(const n of nodes.slice(0,nodes.length-max)){if(n.matches?.(CRITICAL))continue;n.remove();state.trims++}}
+function patch(){raf=0;const m=q('.combat-v7-mount');if(!m)return snapshot();state.patches++;const secondary=qa(SECONDARY,m),critical=qa(CRITICAL,m),max=cap();state.secondary=secondary.length;state.critical=critical.length;state.phase=detectPhase(m);state.mode=modeFor(secondary.length);state.lastAt=Date.now();m.dataset.cfx2164Phase=state.phase;document.documentElement.dataset.cfx2164Mode=state.mode;trim(m,secondary,max);return snapshot()}
+function schedule(){if(!raf)raf=requestAnimationFrame(patch);clearTimeout(settle);settle=setTimeout(()=>{settle=0;if(!raf)raf=requestAnimationFrame(patch)},190)}
+['powder:rendered','powder:combat-state','powder:view-changed','powder:combat-fx-budget'].forEach(e=>window.addEventListener(e,schedule,{passive:true}));window.addEventListener('pagehide',()=>{if(raf)cancelAnimationFrame(raf);clearTimeout(settle);raf=0;settle=0},{once:true});
+function readiness(){return{motion2161:Boolean(window.POWDER_COMBAT_MOTION_REALISM_V2161),signature2162:Boolean(window.POWDER_COMBAT_SIGNATURE_ULTIMATE_V2162),reaction2163:Boolean(window.POWDER_COMBAT_REACTION_PHYSICS_V2163),arcane2160:Boolean(window.POWDER_COMBAT_ARCANE_POLISH_V2160),fxBudget2148:Boolean(window.POWDER_COMBAT_FX_BUDGET_V2148)}}
+function snapshot(){return{version:VERSION,...state,css:CSS_HREF,tier:tier(),cap:cap(),readiness:readiness(),phaseOrder:['cast','release','impact','settle'],protectedCritical:['damage','crit','heal','shield','CC','final multi-hit','Guard/Break/KO/Revive','Grand/Signature finisher'],performance:'event-driven final scene arbitration + hard decorative cap; no polling/MutationObserver/background loop',gameplayMutation:false,damageFormulaMutation:false,skillDataMutation:false,serverMutation:false,audioMutation:false,scrollMutation:false}}
+window.POWDER_COMBAT_FINAL_DIRECTOR_V2164={version:VERSION,snapshot,refresh:schedule};css();schedule();
+})();
