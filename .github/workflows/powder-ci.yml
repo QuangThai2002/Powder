@@ -49,10 +49,14 @@ jobs:
           node --check js/combat-elemental-field-v2158.js
           node --check js/combat-ultimate-camera-v2159.js
           node --check js/combat-arcane-polish-v2160.js
+          node --check js/combat-motion-realism-v2161.js
+          node --check js/combat-signature-ultimate-v2162.js
+          node --check js/combat-reaction-physics-v2163.js
+          node --check js/combat-final-director-v2164.js
           node --check js/performance-director-v21221.js
           node --check js/admin-capacity-guard-v21004.js
           node --check tools/powder-admin-combat-contract-v2140.mjs
-          node --check tools/powder-combat-arcane-polish-contract-v2160.mjs
+          node --check tools/powder-combat-final-contract-v2164.mjs
 
   admin-combat-contract:
     runs-on: ubuntu-latest
@@ -63,14 +67,14 @@ jobs:
       - name: Admin Real Combat 21.4.0 regression contract
         run: node tools/powder-admin-combat-contract-v2140.mjs .
 
-  combat-arcane-polish-contract:
+  combat-final-contract:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Arcane FX final polish 21.6.0 contract
-        run: node tools/powder-combat-arcane-polish-contract-v2160.mjs .
+      - name: Final Combat Director 21.6.4 contract
+        run: node tools/powder-combat-final-contract-v2164.mjs .
 
   project-gate:
     runs-on: ubuntu-latest
