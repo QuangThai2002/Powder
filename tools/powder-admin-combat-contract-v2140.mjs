@@ -28,6 +28,7 @@ const checks={
   actualPlayerCombat:bridge.includes('POWDER_COMBAT_ENTRY_V177')&&bridge.includes('entry.startMap(buildStage(t))')&&bridge.includes('POWDER_BATTLE_PLAYER_V177?.getCore'),
   currentCombatCompat:domainRecovery.includes("entry.startEncounter(stage,'map')")&&domainRecovery.includes('__powderLaunchRecoveryV2185'),
   nonceHandshake:lab.includes(ackKey)&&domainRecovery.includes(ackKey)&&lab.includes("a.status==='mounted'")&&domainRecovery.includes("writeAck(stage,'mounted')"),
+  renderedSceneHandshake:domainRecovery.includes("#battleView:not([hidden]) .combat-v7-mount .cv7-scene")&&domainRecovery.includes('player.length&&enemy.length&&scene')&&domainRecovery.includes('battleMounted(c)'),
   failVisible:domainRecovery.includes('powderCombatLabLaunchFailure2185')&&domainRecovery.includes("writeAck(stage,'failed'")&&lab.includes("a.status==='failed'"),
   boundedHandshake:lab.includes('ACK_TIMEOUT_MS=15000')&&domainRecovery.includes('attempt>=60')&&domainRecovery.includes('attempt<50')&&!lab.includes('setInterval(')&&!bridge.includes('setInterval(')&&!domainRecovery.includes('setInterval('),
   duplicateStartGuard:lab.includes('if(state.pending)')&&lab.includes('b.disabled=state.pending'),
@@ -47,6 +48,6 @@ const checks={
   scrollNativeNoWheelHijack:!scroll.includes('preventDefault()')&&!scroll.includes('scrollTop+=')&&!scroll.includes('scrollTop -=')
 };
 const failed=Object.entries(checks).filter(([,ok])=>!ok).map(([name])=>name);
-const report={version:'21.8.5',contract:'manual-random-team-vs-tactical-ai-real-combat-with-runtime-mount-handshake',checks,failed,pass:failed.length===0};
+const report={version:'21.8.5',contract:'manual-random-team-vs-tactical-ai-real-combat-with-rendered-scene-handshake',checks,failed,pass:failed.length===0};
 console.log(JSON.stringify(report,null,2));
 if(failed.length)process.exit(1);
