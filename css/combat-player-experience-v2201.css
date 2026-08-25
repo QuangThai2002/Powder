@@ -1,0 +1,223 @@
+/* Powder 22.0.1 — Player Combat Experience
+   One battle surface, one command surface, no duplicate debug/readability HUDs. */
+html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount{
+  --px2201-dock-h:134px;
+  --px2201-side:94px;
+}
+
+/* The battle view should read like a game, not an admin dashboard. */
+html.px2201-player-combat .combat-v7-mount .tf217-hud,
+html.px2201-player-combat .combat-v7-mount .cv2191-action-feedback,
+html.px2201-player-combat .combat-v7-mount .cv2190-turn-flow,
+html.px2201-player-combat .combat-v7-mount .csi218-stage,
+html.px2201-player-combat .combat-v7-mount .cv7-env-notice,
+html.px2201-player-combat .combat-v7-mount .cv7-objective,
+html.px2201-player-combat .combat-v7-mount .cv69-tactical-hud,
+html.px2201-player-combat .combat-v7-mount .cv73-target-prompt,
+html.px2201-player-combat .combat-v7-mount .cv73-command-tip{
+  display:none!important;
+}
+
+/* Kill the old stacked decorative chain. Native scene feedback remains. */
+html.px2201-player-combat .combat-v7-mount .cfx2151-echo,
+html.px2201-player-combat .combat-v7-mount .cfx2151-spell-trail,
+html.px2201-player-combat .combat-v7-mount .cfx2153-spell-projectile,
+html.px2201-player-combat .combat-v7-mount .cfx2154-clash-ring,
+html.px2201-player-combat .combat-v7-mount .cfx2155-barrier-magic,
+html.px2201-player-combat .combat-v7-mount .cfx2156-aura,
+html.px2201-player-combat .combat-v7-mount .cfx2157-cast-pose,
+html.px2201-player-combat .combat-v7-mount .cfx2157-release-mark,
+html.px2201-player-combat .combat-v7-mount .cfx2158-elemental-field,
+html.px2201-player-combat .combat-v7-mount .cfx2159-spell-camera,
+html.px2201-player-combat .combat-v7-mount .cfx2160-afterglow,
+html.px2201-player-combat .combat-v7-mount .cfx2162-signature-seal{
+  display:none!important;
+}
+
+/* Reserve all lower space for command; no panel may float above the player row. */
+html.px2201-player-combat .combat-v7-mount .cv7-field{
+  padding-bottom:calc(var(--px2201-dock-h) + 12px)!important;
+}
+html.px2201-player-combat .combat-v7-mount .cv7-command,
+html.px2201-player-combat .combat-v7-mount .cv73-command-v2{
+  left:50%!important;
+  right:auto!important;
+  bottom:8px!important;
+  transform:translateX(-50%)!important;
+  width:min(1380px,calc(100% - 190px))!important;
+  height:var(--px2201-dock-h)!important;
+  display:grid!important;
+  grid-template-columns:150px minmax(0,1fr) 310px!important;
+  gap:8px!important;
+  padding:7px!important;
+  overflow:hidden!important;
+  z-index:120!important;
+  border:1px solid rgba(111,211,238,.34)!important;
+  border-radius:15px!important;
+  background:linear-gradient(180deg,rgba(5,25,34,.985),rgba(3,18,27,.99))!important;
+  box-shadow:0 18px 45px rgba(0,0,0,.42)!important;
+}
+
+html.px2201-player-combat .combat-v7-mount .cv7-active{
+  min-width:0!important;
+  padding:6px!important;
+  border-right:1px solid rgba(133,211,235,.12)!important;
+}
+html.px2201-player-combat .combat-v7-mount .cv7-active img{
+  width:54px!important;
+  height:70px!important;
+  object-fit:contain!important;
+}
+html.px2201-player-combat .combat-v7-mount .cv7-active small{font-size:6px!important}
+html.px2201-player-combat .combat-v7-mount .cv7-active b{font-size:11px!important}
+html.px2201-player-combat .combat-v7-mount .cv7-active span,
+html.px2201-player-combat .combat-v7-mount .cv7-active em{font-size:6px!important;line-height:1.25!important}
+
+/* Skill card = ART + NAME only. Everything else exists once in the inspector. */
+html.px2201-player-combat .combat-v7-mount .cv7-skills,
+html.px2201-player-combat .combat-v7-mount .cv73-command-v2 .cv7-skills{
+  height:100%!important;
+  min-width:0!important;
+  display:grid!important;
+  grid-template-columns:repeat(var(--px2201-skill-count,4),minmax(0,1fr))!important;
+  gap:7px!important;
+  overflow:hidden!important;
+}
+html.px2201-player-combat .combat-v7-mount .cv7-skill,
+html.px2201-player-combat .combat-v7-mount .cv73-command-v2 .cv7-skill{
+  width:auto!important;
+  min-width:0!important;
+  height:100%!important;
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  grid-template-rows:minmax(64px,1fr) auto!important;
+  place-items:center!important;
+  gap:5px!important;
+  padding:7px!important;
+  text-align:center!important;
+  overflow:hidden!important;
+  border-radius:12px!important;
+  background:linear-gradient(180deg,rgba(10,42,55,.96),rgba(6,28,39,.98))!important;
+}
+html.px2201-player-combat .combat-v7-mount .cv7-skill:hover:not(:disabled),
+html.px2201-player-combat .combat-v7-mount .cv7-skill.cv2188-selected{
+  border-color:rgba(111,225,255,.75)!important;
+  background:linear-gradient(180deg,rgba(15,58,73,.98),rgba(7,33,44,.99))!important;
+  box-shadow:inset 0 0 0 1px rgba(126,227,255,.15),0 0 16px rgba(70,191,230,.12)!important;
+}
+html.px2201-player-combat .combat-v7-mount .cv7-skill:disabled{opacity:.36!important;filter:saturate(.55)!important}
+html.px2201-player-combat .combat-v7-mount .cv7-skill-icon{
+  grid-row:1!important;
+  width:58px!important;
+  height:58px!important;
+  align-self:center!important;
+  border-radius:11px!important;
+  overflow:hidden!important;
+  background:rgba(2,14,21,.72)!important;
+  border:1px solid rgba(130,211,235,.18)!important;
+}
+html.px2201-player-combat .combat-v7-mount .cv7-skill-icon img{
+  width:100%!important;
+  height:100%!important;
+  display:block!important;
+  object-fit:cover!important;
+}
+html.px2201-player-combat .combat-v7-mount .cv73-skill-copy{
+  grid-row:2!important;
+  min-width:0!important;
+  width:100%!important;
+}
+html.px2201-player-combat .combat-v7-mount .cv73-skill-copy small,
+html.px2201-player-combat .combat-v7-mount .cv73-skill-copy p,
+html.px2201-player-combat .combat-v7-mount .cv73-skill-meta,
+html.px2201-player-combat .combat-v7-mount .cv69-skill-state,
+html.px2201-player-combat .combat-v7-mount .cv69-skill-resource,
+html.px2201-player-combat .combat-v7-mount .cv7-skill>small,
+html.px2201-player-combat .combat-v7-mount .cv7-skill>span:not(.cv7-skill-icon):not(.cv73-skill-copy){
+  display:none!important;
+}
+html.px2201-player-combat .combat-v7-mount .cv73-skill-copy b{
+  display:block!important;
+  max-width:100%!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+  font-size:9px!important;
+  line-height:1.15!important;
+  color:#eefbff!important;
+}
+
+/* Inspector is the only detailed description surface and lives inside the dock. */
+html.px2201-player-combat .combat-v7-mount .cv2187-inspector{
+  position:relative!important;
+  inset:auto!important;
+  transform:none!important;
+  grid-column:3!important;
+  align-self:stretch!important;
+  width:auto!important;
+  height:100%!important;
+  max-height:none!important;
+  padding:9px 10px!important;
+  overflow:auto!important;
+  border:0!important;
+  border-left:1px solid rgba(122,204,230,.15)!important;
+  border-radius:0 10px 10px 0!important;
+  background:rgba(4,20,29,.72)!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+  pointer-events:none!important;
+}
+html.px2201-player-combat .combat-v7-mount .cv2187-inspector header b{font-size:11px!important}
+html.px2201-player-combat .combat-v7-mount .cv2187-inspector header small,
+html.px2201-player-combat .combat-v7-mount .cv2187-inspector header>span{font-size:6px!important}
+html.px2201-player-combat .combat-v7-mount .cv2187-meta{gap:4px!important;margin-top:6px!important}
+html.px2201-player-combat .combat-v7-mount .cv2187-meta span{padding:5px!important}
+html.px2201-player-combat .combat-v7-mount .cv2187-meta small{font-size:5px!important}
+html.px2201-player-combat .combat-v7-mount .cv2187-meta b{font-size:7px!important}
+html.px2201-player-combat .combat-v7-mount .cv2187-inspector>p{margin:6px 0 0!important;font-size:7px!important;line-height:1.35!important}
+html.px2201-player-combat .combat-v7-mount .cv2187-tags{display:none!important}
+
+/* Keep the turn rail, but make it a quiet peripheral aid. */
+html.px2201-player-combat .combat-v7-mount .cv7-turn-order{
+  opacity:.88!important;
+  width:82px!important;
+}
+
+/* Native, lightweight cast cue: paint-only glow, no extra scene node. */
+html.px2201-player-combat .combat-v7-mount .cv7-unit.motion-charge .cv7-art-wrap,
+html.px2201-player-combat .combat-v7-mount .cv7-unit.telegraph-source .cv7-art-wrap{
+  filter:drop-shadow(0 0 13px rgba(116,219,255,.38)) brightness(1.06)!important;
+}
+html.px2201-player-combat .combat-v7-mount .cv7-unit.telegraph-target .cv7-art-wrap{
+  filter:drop-shadow(0 0 12px rgba(255,207,91,.32))!important;
+}
+
+@media(max-height:820px){
+  html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount{--px2201-dock-h:116px}
+  html.px2201-player-combat .combat-v7-mount .cv7-skill-icon{width:48px!important;height:48px!important}
+  html.px2201-player-combat .combat-v7-mount .cv2187-inspector>p{display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;overflow:hidden!important}
+}
+@media(max-width:1100px){
+  html.px2201-player-combat .combat-v7-mount .cv7-command,
+  html.px2201-player-combat .combat-v7-mount .cv73-command-v2{
+    width:calc(100% - 90px)!important;
+    grid-template-columns:minmax(0,1fr) 270px!important;
+  }
+  html.px2201-player-combat .combat-v7-mount .cv7-active{display:none!important}
+  html.px2201-player-combat .combat-v7-mount .cv2187-inspector{grid-column:2!important}
+}
+@media(max-width:850px){
+  html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount{--px2201-dock-h:112px}
+  html.px2201-player-combat .combat-v7-mount .cv7-command,
+  html.px2201-player-combat .combat-v7-mount .cv73-command-v2{
+    width:calc(100% - 8px)!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    padding:5px!important;
+  }
+  html.px2201-player-combat .combat-v7-mount .cv2187-inspector{display:none!important}
+  html.px2201-player-combat .combat-v7-mount .cv7-skills,
+  html.px2201-player-combat .combat-v7-mount .cv73-command-v2 .cv7-skills{display:flex!important;overflow-x:auto!important;scroll-snap-type:x proximity!important}
+  html.px2201-player-combat .combat-v7-mount .cv7-skill{min-width:108px!important;scroll-snap-align:start!important}
+  html.px2201-player-combat .combat-v7-mount .cv7-skill-icon{width:45px!important;height:45px!important}
+  html.px2201-player-combat .combat-v7-mount .cv73-skill-copy b{font-size:8px!important}
+}
