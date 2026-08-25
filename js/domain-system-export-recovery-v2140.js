@@ -18,12 +18,16 @@ function showLaunchFailure(stage,error){
   el.innerHTML=`<b style="display:block;margin-bottom:4px;color:#ffb6c2">Combat Lab 21.8.5 không thể dựng trận</b><span>${String(error||'runtime-error').replace(/[<>]/g,'')}</span><button type="button" style="display:block;margin-top:9px;padding:7px 10px;border:1px solid rgba(255,255,255,.18);border-radius:9px;background:#35111b;color:#fff;font-weight:800;cursor:pointer">Quay lại Admin</button>`;
   el.querySelector('button').onclick=()=>{try{if(window.opener&&!window.opener.closed){window.opener.focus();window.close();return}}catch(_){}location.href='admin.html#combatlab'};document.body?.appendChild(el)
 }
+function battleMounted(c){
+  if(!c)return false;const s=c.state||{},player=[...(s.team||[]),...(s.reserves||[])],enemy=[...(s.enemies||[]),...(s.enemyReserves||[])];
+  const scene=document.querySelector('#battleView:not([hidden]) .combat-v7-mount .cv7-scene');return Boolean(player.length&&enemy.length&&scene)
+}
 function settleAdminCombat(token,stage,attempt=0){
   if(token!==launchToken)return;
   const c=currentCombatEntry()?.getCore?.();
-  if(c){for(const u of [...(c.state?.team||[]),...(c.state?.reserves||[]),...(c.state?.enemies||[]),...(c.state?.enemyReserves||[])]){u.mana=u.maxMana;u.rage=100}removeLaunchFailure();writeAck(stage,'mounted');return}
+  if(battleMounted(c)){for(const u of [...(c.state?.team||[]),...(c.state?.reserves||[]),...(c.state?.enemies||[]),...(c.state?.enemyReserves||[])]){u.mana=u.maxMana;u.rage=100}removeLaunchFailure();writeAck(stage,'mounted');return}
   if(attempt<50){setTimeout(()=>settleAdminCombat(token,stage,attempt+1),120);return}
-  state.combatMountTimeouts++;state.lastCombatLaunchError='combat-core-mount-timeout';state.lastAt=Date.now();writeAck(stage,'failed',state.lastCombatLaunchError);showLaunchFailure(stage,state.lastCombatLaunchError)
+  state.combatMountTimeouts++;state.lastCombatLaunchError='combat-scene-mount-timeout';state.lastAt=Date.now();writeAck(stage,'failed',state.lastCombatLaunchError);showLaunchFailure(stage,state.lastCombatLaunchError)
 }
 function launchCurrentMap(stage){
   const entry=currentCombatEntry();
@@ -71,7 +75,7 @@ function recover(reason='manual'){
   try{window.dispatchEvent(new CustomEvent('powder:domain-api-recovered',{detail:snapshot()}))}catch(_){}
   return api;
 }
-function snapshot(){return{version:VERSION,launchRecoveryVersion:LAUNCH_VERSION,...state,valid:valid(window.POWDER_DOMAIN_SYSTEM_V15),currentCombatApi:Boolean(currentCombatEntry()?.startEncounter),mechanicsMutation:false,policy:'restore missing canonical Domain API export + Admin Combat startMap compatibility + nonce mount handshake; bounded deferred launch; no gameplay formula changes'}}
+function snapshot(){return{version:VERSION,launchRecoveryVersion:LAUNCH_VERSION,...state,valid:valid(window.POWDER_DOMAIN_SYSTEM_V15),currentCombatApi:Boolean(currentCombatEntry()?.startEncounter),mechanicsMutation:false,policy:'restore missing canonical Domain API export + Admin Combat startMap compatibility + nonce rendered-scene handshake; bounded deferred launch; no gameplay formula changes'}}
 window.POWDER_DOMAIN_EXPORT_RECOVERY_V2140={version:VERSION,recover,installCombatEntryCompat,snapshot};
 window.POWDER_COMBAT_LAB_LAUNCH_RECOVERY_V2184={version:LAUNCH_VERSION,snapshot,installCompat:installCombatEntryCompat};
 window.POWDER_COMBAT_LAB_LAUNCH_RECOVERY_V2185={version:LAUNCH_VERSION,snapshot,installCompat:installCombatEntryCompat};
