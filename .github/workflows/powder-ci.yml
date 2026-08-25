@@ -43,6 +43,7 @@ jobs:
           node --check js/combat-magic-finish-v2152.js
           node --check js/combat-spell-projectile-v2153.js
           node --check js/combat-elemental-clash-v2154.js
+          node --check js/combat-barrier-magic-v2155.js
           node --check js/performance-director-v21221.js
           node --check js/admin-capacity-guard-v21004.js
           node --check tools/powder-admin-combat-contract-v2140.mjs
