@@ -4,6 +4,7 @@ import path from 'node:path';
 const root=path.resolve(process.argv[2]||'.');
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const role=read('js/combat-role-rhythm-v2142.js');
+const roleCss=read('css/combat-role-rhythm-v2142.css');
 const fx=read('js/combat-fx-fidelity-v2141.js');
 const director=read('js/performance-director-v21221.js');
 const governor=read('js/combat-refresh-governor-v21219.js');
@@ -18,14 +19,16 @@ const roleUltimate=roles.map(r=>`.cv7-cinematic.ultimate.role-${r}`);
 const checks={
   version2142:role.includes("const VERSION='21.4.2'"),
   global2142:role.includes('POWDER_COMBAT_ROLE_RHYTHM_V2142'),
+  cssSeparated:role.includes("CSS_HREF='css/combat-role-rhythm-v2142.css?v=2142'")&&roleCss.includes('Powder 21.4.2'),
   allNineRoles:roles.every(r=>role.includes(`'${r}'`))&&roles.length===9,
-  nineAttackLanguages:roleSelectors.every(x=>role.includes(x)),
-  nineSourceMotions:roleMotions.every(x=>role.includes(x)),
-  nineUltimateCompositions:roleUltimate.every(x=>role.includes(x)),
-  multiHitGrouping:role.includes('function groupMultiHit')&&role.includes('cfx2142-combo')&&role.includes('HIT'),
-  ccExactUnit:role.includes("data-cfx2142-cc")||role.includes('cfx2142Cc'),
-  skipConfirmation:role.includes("cfx2142Skip='1'")&&role.includes('HÀNH ĐỘNG BỊ KHÓA'),
-  compositorSafe:role.includes('art-wrap')&&!role.includes('element.animate('),
+  nineAttackLanguages:roleSelectors.every(x=>roleCss.includes(x)),
+  nineSourceMotions:roleMotions.every(x=>roleCss.includes(x)),
+  nineUltimateCompositions:roleUltimate.every(x=>roleCss.includes(x)),
+  impactGeometryLocked:roleCss.includes('@keyframes cfx2142ImpactRing')&&roleCss.includes('transform:translate(50%,-50%) scale(1.26)')&&roleCss.includes('display:block!important'),
+  multiHitGrouping:role.includes('function groupMultiHit')&&role.includes('cfx2142-combo')&&roleCss.includes('.cfx2142-combo'),
+  ccExactUnit:role.includes('cfx2142Cc')&&roleCss.includes("data-cfx2142-cc='freeze'")&&roleCss.includes("data-cfx2142-cc='stun'"),
+  skipConfirmation:role.includes("cfx2142Skip='1'")&&roleCss.includes('HÀNH ĐỘNG BỊ KHÓA'),
+  compositorSafe:roleCss.includes('.cv7-art-wrap')&&!roleCss.includes('.cv7-art{animation:cfx2142'),
   noPolling:!role.includes('setInterval(')&&!role.includes('MutationObserver'),
   noGameplayMutation:role.includes('gameplayMutation:false')&&role.includes('damageFormulaMutation:false')&&role.includes('scrollMutation:false'),
   loaderWired:director.includes('combat-role-rhythm-v2142.js?v=2142')&&director.includes('activateCombatRoleRhythm'),
