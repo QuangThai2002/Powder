@@ -41,10 +41,11 @@ jobs:
           node --check js/combat-grand-magic-v2150.js
           node --check js/combat-spell-chain-v2151.js
           node --check js/combat-magic-finish-v2152.js
+          node --check js/combat-spell-projectile-v2153.js
           node --check js/performance-director-v21221.js
           node --check js/admin-capacity-guard-v21004.js
           node --check tools/powder-admin-combat-contract-v2140.mjs
-          node --check tools/powder-combat-magic-finish-contract-v2152.mjs
+          node --check tools/powder-combat-spell-projectile-contract-v2153.mjs
 
   admin-combat-contract:
     runs-on: ubuntu-latest
@@ -55,14 +56,14 @@ jobs:
       - name: Admin Real Combat 21.4.0 regression contract
         run: node tools/powder-admin-combat-contract-v2140.mjs .
 
-  combat-magic-finish-contract:
+  combat-spell-projectile-contract:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Magic FX polish and elemental finish 21.5.2 contract
-        run: node tools/powder-combat-magic-finish-contract-v2152.mjs .
+      - name: Spell Projectile Routing 21.5.3 contract
+        run: node tools/powder-combat-spell-projectile-contract-v2153.mjs .
 
   project-gate:
     runs-on: ubuntu-latest
