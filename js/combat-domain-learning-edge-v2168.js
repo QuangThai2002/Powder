@@ -1,7 +1,7 @@
 (()=>{'use strict';
 if(window.POWDER_COMBAT_DOMAIN_LEARNING_EDGE_V2168)return;
 const VERSION='21.6.8',CSS_ID='powderDomainLearningEdge2168Css',CSS_HREF='css/combat-domain-learning-edge-v2168.css?v=2168',AUTH_ENDPOINT='/functions/v1/powder-domain-learning-v2168';
-const st={registered:false,registrations:0,practiceRuns:0,remotePrepared:0,remoteBlocked:0,serverCalls:0,serverErrors:0,lastProfiles:null,lastError:'',lastAt:0};
+const st={registered:false,registrations:0,practiceRuns:0,remotePrepared:0,remoteBlocked:0,serverCalls:0,serverErrors:0,authorityQuestionPasses:0,lastProfiles:null,lastError:'',lastAt:0};
 function css(){if(document.getElementById(CSS_ID))return;const l=document.createElement('link');l.id=CSS_ID;l.rel='stylesheet';l.href=CSS_HREF;document.head.appendChild(l)}
 function clash(){return window.POWDER_COMBAT_DOMAIN_CLASH_V2166||null}function lm(){return window.POWDER_LEARNING_MASTER_V2||null}
 function clamp(n,a,b){return Math.max(a,Math.min(b,n))}
@@ -17,10 +17,11 @@ function sideText(active,side){const p=active?.learningProfiles?.[side];if(!p)re
 function label(){return'ĐÚNG > SỐ BÀI ĐÃ HỌC > MASTERY > TỐC ĐỘ'}
 function resultText(active){const p=active?.learningProfiles?.player,e=active?.learningProfiles?.enemy;if(!p||!e)return'';return `Học Lực: bạn ${p.lessons} bài · ${p.mastery}% — đối thủ ${e.lessons} bài · ${e.mastery}%.`}
 function snapshotFor(active){return active?.learningProfiles?{rule:'correct > completed lessons > mastery > response time',profiles:JSON.parse(JSON.stringify(active.learningProfiles))}:null}
+function authorityQuestionProvider(ctx={}){if(!Array.isArray(ctx.questions)||ctx.questions.length<10)return null;st.authorityQuestionPasses++;return ctx.questions}
 const policy=Object.freeze({version:VERSION,prepare,compare,sideText,label,resultText,snapshotFor});
-function register(){const c=clash();if(!c?.registerTieBreakPolicy)return false;const ok=c.registerTieBreakPolicy(policy);if(ok){st.registered=true;st.registrations++;st.lastAt=Date.now()}return ok}
+function register(){const c=clash();if(!c?.registerTieBreakPolicy)return false;c.registerQuestionProvider?.(authorityQuestionProvider);const ok=c.registerTieBreakPolicy(policy);if(ok){st.registered=true;st.registrations++;st.lastAt=Date.now()}return ok}
 function startPractice(opts={}){const c=clash();if(!c?.startPractice)throw new Error('Domain Clash 21.6.6 chưa tải.');register();st.practiceRuns++;return c.startPractice(opts)}
 ['powder:combat-state','powder:view-changed','pageshow'].forEach(n=>window.addEventListener(n,register,{passive:true}));
-function snapshot(){return{version:VERSION,...st,lastProfiles:st.lastProfiles?JSON.parse(JSON.stringify(st.lastProfiles)):null,rules:{primary:'correct answers',tie1:'server-verified unique first-clear lessons',tie2:'average mastery',tie3:'correct-answer response time',replayFarm:false,onlineRequiresVerifiedProfiles:true},authority:{endpoint:AUTH_ENDPOINT,source:'tamer_progress.first_zh + first_en + mastery',clientDeclaredProgress:false},localProfile:localProfile(),gameplayMutation:true,learningDataMutation:false,damageFormulaMutation:false,serverResultMutation:false,performance:'event-driven policy registration + one authority request when clash starts; no polling/MutationObserver'}}
+function snapshot(){return{version:VERSION,...st,lastProfiles:st.lastProfiles?JSON.parse(JSON.stringify(st.lastProfiles)):null,rules:{primary:'correct answers',tie1:'server-verified unique first-clear lessons',tie2:'average mastery',tie3:'correct-answer response time',replayFarm:false,onlineRequiresVerifiedProfiles:true},authority:{endpoint:AUTH_ENDPOINT,source:'tamer_progress.first_zh + first_en + mastery',clientDeclaredProgress:false,questionPassthrough:true},localProfile:localProfile(),gameplayMutation:true,learningDataMutation:false,damageFormulaMutation:false,serverResultMutation:false,performance:'event-driven policy registration + one authority request when clash starts; no polling/MutationObserver'}}
 window.POWDER_COMBAT_DOMAIN_LEARNING_EDGE_V2168={version:VERSION,snapshot,localProfile,serverProfiles,normalizeProfile,compareProfiles:(a,b)=>{const x=normalizeProfile(a),y=normalizeProfile(b);return x.lessons!==y.lessons?(x.lessons>y.lessons?1:-1):x.mastery!==y.mastery?(x.mastery>y.mastery?1:-1):0},register,startPractice,policy};css();register();
 })();
