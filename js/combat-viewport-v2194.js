@@ -1,137 +1,34 @@
 (()=>{'use strict';
 if(window.POWDER_COMBAT_VIEWPORT_V2194)return;
-const VERSION='21.9.4',STYLE_ID='powderCombatViewport2194Css',STYLE_HREF='css/combat-viewport-v2194.css?v=2194';
-const state={patches:0,skillClicks:0,targetClicks:0,panelToggles:0,lastHint:'',lastAt:0,logOpen:false,tamerOpen:false};
-let raf=0,ownedFullscreen=false,hintTimer=0;
+const VERSION='21.9.6',STYLE_ID='powderCombatViewport2194Css',STYLE_HREF='css/combat-viewport-v2194.css?v=2196';
+const state={patches:0,skillClicks:0,targetClicks:0,panelToggles:0,artRestores:0,lastHint:'',lastAt:0,logOpen:false,tamerOpen:false};
+let raf=0,ownedFullscreen=false,hintTimer=0,observer=null;
 const q=(s,r=document)=>r.querySelector(s);
+const data=()=>window.POWDER_DATA||{};
+const core=()=>{try{return window.POWDER_BATTLE_PLAYER_V177?.getCore?.()||null}catch(_){return null}};
 function style(){if(document.getElementById(STYLE_ID))return;const l=document.createElement('link');l.id=STYLE_ID;l.rel='stylesheet';l.href=STYLE_HREF;document.head.appendChild(l)}
 function visible(){return Boolean(q('#battleView:not([hidden]) .combat-v7-mount .cv7-scene'))}
 function adminDirect(){try{const p=new URLSearchParams(location.search);return p.get('adminCombat')==='1'||p.get('combatTest')==='1'}catch(_){return false}}
-function setFocus(on){
-  const root=document.documentElement;
-  if(on){
-    if(!root.classList.contains('powder-combat-fullscreen')){root.classList.add('powder-combat-fullscreen');ownedFullscreen=true}
-    root.classList.add('cv2194-combat-focus');
-    root.classList.toggle('cv2194-admin-direct',adminDirect());
-  }else{
-    root.classList.remove('cv2194-combat-focus','cv2194-admin-direct');
-    if(ownedFullscreen){root.classList.remove('powder-combat-fullscreen');ownedFullscreen=false}
-  }
-}
-function hintNode(dock){
-  if(!dock)return null;
-  let n=q(':scope > .cv2194-command-hint',dock);
-  if(!n){n=document.createElement('div');n.className='cv2194-command-hint';n.setAttribute('role','status');n.setAttribute('aria-live','polite');dock.prepend(n)}
-  return n;
-}
-function setHint(text,tone='info',ttl=0){
-  state.lastHint=String(text||'');clearTimeout(hintTimer);
-  const dock=q('#battleView:not([hidden]) .cv7-command');
-  const n=hintNode(dock);if(!n)return;
-  n.textContent=state.lastHint;n.dataset.tone=tone;n.hidden=!state.lastHint;
-  if(ttl>0)hintTimer=setTimeout(()=>{if(n.textContent===state.lastHint){n.hidden=true}},ttl);
-}
-function ensureUtility(scene){
-  if(!scene)return null;
-  let bar=q(':scope > .cv2194-utility',scene);
-  if(!bar){
-    bar=document.createElement('div');bar.className='cv2194-utility';
-    bar.innerHTML='<button type="button" data-cv2194-panel="tamer" aria-pressed="false">◉ <span>Tamer</span></button><button type="button" data-cv2194-panel="log" aria-pressed="false">≡ <span>Nhật ký</span></button>';
-    scene.appendChild(bar);
-  }
-  for(const b of bar.querySelectorAll('[data-cv2194-panel]')){
-    const key=b.dataset.cv2194Panel,open=key==='log'?state.logOpen:state.tamerOpen;
-    b.classList.toggle('is-open',open);b.setAttribute('aria-pressed',open?'true':'false');
-  }
-  return bar;
-}
-function patchPanels(mount){
-  const log=q('.cv7-log',mount),tamer=q('.cv7-tamer-command',mount);
-  if(log)log.dataset.cv2194Open=state.logOpen?'1':'0';
-  if(tamer)tamer.dataset.cv2194Open=state.tamerOpen?'1':'0';
-}
-function patchSkillArt(mount){
-  for(const b of mount.querySelectorAll('.cv7-skill')){
-    const icon=q('.cv7-skill-icon',b),img=q('.cv7-skill-icon img',b);
-    if(img){
-      img.decoding='async';
-      if(img.complete&&img.naturalWidth===0)skillFallback(b,icon,img);
-    }
-  }
-}
-function skillFallback(btn,icon,img){
-  if(!icon||icon.dataset.cv2194Fallback==='1')return;
-  icon.dataset.cv2194Fallback='1';if(img)img.hidden=true;
-  const key=String(btn?.dataset?.cv7Skill||'');
-  const i=document.createElement('i');i.className='cv2194-skill-fallback';i.textContent=key==='ultimate'?'★':key==='exclusive'?'◉':key==='basic'?'⚔':'✦';icon.appendChild(i);
-}
-function patchCommand(mount){
-  const dock=q('.cv7-command',mount);if(!dock)return;
-  const targeting=dock.classList.contains('is-targeting');
-  dock.dataset.cv2194Mode=targeting?'target':'command';
-  const n=hintNode(dock);
-  if(targeting){
-    n.hidden=false;n.dataset.tone='target';
-    if(!state.lastHint||!state.lastHint.includes('mục tiêu')){n.textContent='ĐÃ CHỌN KỸ NĂNG · Chọn Pow đang phát sáng để tung chiêu';}
-  }else if(!state.lastHint){n.hidden=true}
-}
-function patch(){
-  raf=0;style();
-  if(!visible()){setFocus(false);return false}
-  setFocus(true);
-  const mount=q('#battleView:not([hidden]) .combat-v7-mount'),scene=q('.cv7-scene',mount);
-  if(!mount||!scene)return false;
-  mount.dataset.cv2194='1';ensureUtility(scene);patchPanels(mount);patchSkillArt(mount);patchCommand(mount);
-  state.patches++;state.lastAt=Date.now();return true
-}
+function setFocus(on){const root=document.documentElement;if(on){if(!root.classList.contains('powder-combat-fullscreen')){root.classList.add('powder-combat-fullscreen');ownedFullscreen=true}root.classList.add('cv2194-combat-focus');root.classList.toggle('cv2194-admin-direct',adminDirect())}else{root.classList.remove('cv2194-combat-focus','cv2194-admin-direct');if(ownedFullscreen){root.classList.remove('powder-combat-fullscreen');ownedFullscreen=false}}}
+function hintNode(dock){if(!dock)return null;let n=q(':scope > .cv2194-command-hint',dock);if(!n){n=document.createElement('div');n.className='cv2194-command-hint';n.setAttribute('role','status');n.setAttribute('aria-live','polite');dock.prepend(n)}return n}
+function setHint(text,tone='info',ttl=0){state.lastHint=String(text||'');clearTimeout(hintTimer);const dock=q('#battleView:not([hidden]) .cv7-command'),n=hintNode(dock);if(!n)return;n.textContent=state.lastHint;n.dataset.tone=tone;n.hidden=!state.lastHint;if(ttl>0)hintTimer=setTimeout(()=>{if(n.textContent===state.lastHint)n.hidden=true},ttl)}
+function ensureUtility(scene){if(!scene)return null;let bar=q(':scope > .cv2194-utility',scene);if(!bar){bar=document.createElement('div');bar.className='cv2194-utility';bar.innerHTML='<button type="button" data-cv2194-panel="tamer" aria-pressed="false">◉ <span>Tamer</span></button><button type="button" data-cv2194-panel="log" aria-pressed="false">≡ <span>Nhật ký</span></button>';scene.appendChild(bar)}for(const b of bar.querySelectorAll('[data-cv2194-panel]')){const key=b.dataset.cv2194Panel,open=key==='log'?state.logOpen:state.tamerOpen;b.classList.toggle('is-open',open);b.setAttribute('aria-pressed',open?'true':'false')}return bar}
+function patchPanels(mount){const log=q('.cv7-log',mount),tamer=q('.cv7-tamer-command',mount);if(log)log.dataset.cv2194Open=state.logOpen?'1':'0';if(tamer)tamer.dataset.cv2194Open=state.tamerOpen?'1':'0'}
+function skillFallback(btn,icon,img){if(!icon||icon.dataset.cv2194Fallback==='1')return;icon.dataset.cv2194Fallback='1';if(img)img.hidden=true;const key=String(btn?.dataset?.cv7Skill||''),i=document.createElement('i');i.className='cv2194-skill-fallback';i.textContent=key==='ultimate'?'★':key==='exclusive'?'◉':key==='basic'?'⚔':'✦';icon.appendChild(i)}
+function patchSkillArt(mount){for(const b of mount.querySelectorAll('.cv7-skill')){const icon=q('.cv7-skill-icon',b),img=q('.cv7-skill-icon img',b);if(img){img.decoding='async';if(img.complete&&img.naturalWidth===0)skillFallback(b,icon,img)}}}
+function allUnits(){const c=core(),s=c?.state;if(!s)return[];return [...(s.team||[]),...(s.reserves||[]),...(s.enemies||[]),...(s.enemyReserves||[])]}
+function canonicalPowAsset(u){if(!u)return'';const current=String(u.asset||''),p=(data().pows||[]).find(x=>String(x.id)===String(u.powId));if(current&&!current.includes('/pow-combat-512/'))return current;return String(p?.asset||current||'')}
+function restorePowArt(mount){const units=new Map(allUnits().map(u=>[String(u.id),u]));for(const el of mount.querySelectorAll('.cv7-unit[data-cv7-unit]')){const u=units.get(String(el.dataset.cv7Unit||''));if(!u)continue;const img=q('.cv7-art',el),asset=canonicalPowAsset(u);if(!img||!asset)continue;const raw=String(img.getAttribute('src')||'');if(raw===asset||raw.endsWith('/'+asset))continue;img.src=asset;img.alt=u.name||u.powId||'';img.dataset.cv2196Restored='1';state.artRestores++}}
+function patchCommand(mount){const dock=q('.cv7-command',mount);if(!dock)return;const targeting=dock.classList.contains('is-targeting');dock.dataset.cv2194Mode=targeting?'target':'command';const n=hintNode(dock);if(targeting){n.hidden=false;n.dataset.tone='target';if(!state.lastHint||!state.lastHint.includes('mục tiêu'))n.textContent='ĐÃ CHỌN KỸ NĂNG · Chọn Pow đang phát sáng để tung chiêu'}else if(!state.lastHint)n.hidden=true}
+function patch(){raf=0;style();if(!visible()){setFocus(false);return false}setFocus(true);const mount=q('#battleView:not([hidden]) .combat-v7-mount'),scene=q('.cv7-scene',mount);if(!mount||!scene)return false;mount.dataset.cv2194='1';ensureUtility(scene);patchPanels(mount);patchSkillArt(mount);restorePowArt(mount);patchCommand(mount);state.patches++;state.lastAt=Date.now();return true}
 function schedule(){if(!raf)raf=requestAnimationFrame(patch)}
-function togglePanel(key){
-  if(key==='log')state.logOpen=!state.logOpen;
-  if(key==='tamer')state.tamerOpen=!state.tamerOpen;
-  if(key==='log'&&state.logOpen)state.tamerOpen=false;
-  if(key==='tamer'&&state.tamerOpen)state.logOpen=false;
-  state.panelToggles++;schedule()
-}
-document.addEventListener('click',e=>{
-  const utility=e.target?.closest?.('[data-cv2194-panel]');
-  if(utility){e.preventDefault();e.stopPropagation();togglePanel(utility.dataset.cv2194Panel);return}
-  const skill=e.target?.closest?.('#battleView:not([hidden]) .cv7-skill[data-cv7-skill]');
-  if(skill){
-    state.skillClicks++;
-    const name=q('.cv73-skill-copy b',skill)?.textContent?.trim()||'kỹ năng';
-    if(skill.disabled){setHint(`${name} chưa thể sử dụng`,'error',1800);return}
-    setHint(`Đã chọn ${name} · đang xác định mục tiêu…`,'selected');
-    setTimeout(()=>{
-      const dock=q('#battleView:not([hidden]) .cv7-command');
-      if(dock?.classList.contains('is-targeting'))setHint(`Đã chọn ${name} · CHỌN MỤC TIÊU ĐANG PHÁT SÁNG`,'target');
-      else if(q('#battleView:not([hidden]) .cv7-question'))setHint(`${name} · hoàn thành bước kích hoạt để tung chiêu`,'selected');
-      else setHint(`${name} · đang thi triển…`,'cast',1100);
-      schedule();
-    },0);
-    return
-  }
-  const unit=e.target?.closest?.('#battleView:not([hidden]) .cv7-unit.targetable[data-cv7-unit]');
-  if(unit){
-    state.targetClicks++;
-    const name=q('.cv7-unit-info>b',unit)?.textContent?.trim()||'mục tiêu';
-    setHint(`Mục tiêu: ${name} · đang tung chiêu…`,'cast',1400);
-    setTimeout(schedule,0);
-  }
-},true);
-document.addEventListener('error',e=>{
-  const img=e.target;if(!(img instanceof HTMLImageElement))return;
-  const btn=img.closest?.('.cv7-skill');if(!btn)return;skillFallback(btn,img.closest('.cv7-skill-icon'),img)
-},true);
-document.addEventListener('keydown',e=>{
-  if(!visible()||e.defaultPrevented)return;
-  if(e.key==='Escape'){
-    if(state.logOpen||state.tamerOpen){state.logOpen=false;state.tamerOpen=false;schedule()}
-  }
-},true);
-['powder:rendered','powder:combat-state','powder:view-changed','resize'].forEach(evt=>window.addEventListener(evt,schedule,{passive:true}));
-const mo=new MutationObserver(schedule);
-function observe(){const app=q('#app')||document.body;if(app)mo.observe(app,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden','class']})}
-window.addEventListener('pagehide',()=>{if(raf)cancelAnimationFrame(raf);clearTimeout(hintTimer);mo.disconnect();setFocus(false)},{once:true});
-function snapshot(){return{version:VERSION,...state,styleLoaded:Boolean(document.getElementById(STYLE_ID)),policy:'single-viewport Combat UX; command dock always reachable; journal/Tamer secondary panels collapsed; explicit skill/target feedback; no damage formula, skill data, Save, Reward, Learning or PvP authority mutation'}}
-window.POWDER_COMBAT_VIEWPORT_V2194={version:VERSION,refresh:schedule,snapshot};style();observe();schedule();
+function togglePanel(key){if(key==='log')state.logOpen=!state.logOpen;if(key==='tamer')state.tamerOpen=!state.tamerOpen;if(key==='log'&&state.logOpen)state.tamerOpen=false;if(key==='tamer'&&state.tamerOpen)state.logOpen=false;state.panelToggles++;schedule()}
+document.addEventListener('click',e=>{const utility=e.target?.closest?.('[data-cv2194-panel]');if(utility){e.preventDefault();e.stopPropagation();togglePanel(utility.dataset.cv2194Panel);return}const skill=e.target?.closest?.('#battleView:not([hidden]) .cv7-skill[data-cv7-skill]');if(skill){state.skillClicks++;const name=q('.cv73-skill-copy b',skill)?.textContent?.trim()||'kỹ năng';if(skill.disabled){setHint(`${name} chưa thể sử dụng`,'error',1800);return}setHint(`Đã chọn ${name} · đang xác định mục tiêu…`,'selected');setTimeout(()=>{const dock=q('#battleView:not([hidden]) .cv7-command');if(dock?.classList.contains('is-targeting'))setHint(`Đã chọn ${name} · CHỌN MỤC TIÊU ĐANG PHÁT SÁNG`,'target');else if(q('#battleView:not([hidden]) .cv7-question'))setHint(`${name} · hoàn thành bước kích hoạt để tung chiêu`,'selected');else setHint(`${name} · đang thi triển…`,'cast',1100);schedule()},0);return}const unit=e.target?.closest?.('#battleView:not([hidden]) .cv7-unit.targetable[data-cv7-unit]');if(unit){state.targetClicks++;const name=q('.cv7-unit-info>b',unit)?.textContent?.trim()||'mục tiêu';setHint(`Mục tiêu: ${name} · đang tung chiêu…`,'cast',1400);setTimeout(schedule,0)}},true);
+document.addEventListener('error',e=>{const img=e.target;if(!(img instanceof HTMLImageElement))return;const btn=img.closest?.('.cv7-skill');if(btn)skillFallback(btn,img.closest('.cv7-skill-icon'),img)},true);
+document.addEventListener('keydown',e=>{if(!visible()||e.defaultPrevented)return;if(e.key==='Escape'&&(state.logOpen||state.tamerOpen)){state.logOpen=false;state.tamerOpen=false;schedule()}},true);
+['powder:rendered','powder:combat-state','powder:view-changed','powder:combat-action','resize'].forEach(evt=>window.addEventListener(evt,schedule,{passive:true}));
+function observeBattle(){const root=q('#battleView');if(!root||observer)return;observer=new MutationObserver(schedule);observer.observe(root,{subtree:true,childList:true})}
+window.addEventListener('pagehide',()=>{if(raf)cancelAnimationFrame(raf);clearTimeout(hintTimer);observer?.disconnect();observer=null;setFocus(false)},{once:true});
+function snapshot(){return{version:VERSION,...state,styleLoaded:Boolean(document.getElementById(STYLE_ID)),observerPolicy:'childList-only; never observes class/hidden/src attributes',powArtPolicy:'restore canonical POWDER_DATA art whenever legacy combat-512 presentation appears',policy:'single-viewport Combat UX; no continuous DOM mutation loop; no damage formula, skill data, Save, Reward, Learning or PvP authority mutation'}}
+window.POWDER_COMBAT_VIEWPORT_V2194={version:VERSION,refresh:schedule,snapshot};style();observeBattle();schedule();
 })();
