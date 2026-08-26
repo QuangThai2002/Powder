@@ -1,6 +1,7 @@
 import type {
   CombatAbility,
   CombatAbilitySet,
+  CombatPassive,
   CombatPow,
   PowDisplayProfile
 } from './CombatPow';
@@ -23,10 +24,17 @@ interface CatalogAbility {
   status?: string;
 }
 
+interface CatalogPassive {
+  id?: string;
+  name?: string;
+  element?: string;
+}
+
 interface CatalogAbilities {
   basic?: CatalogAbility;
   skills?: CatalogAbility[];
   ultimate?: CatalogAbility;
+  passive?: CatalogPassive;
 }
 
 interface CatalogPow {
@@ -120,9 +128,6 @@ function normalizeAbilityStatus(
 
   const status = raw.toLowerCase();
 
-  // Elemental/ultimate attacks still target the enemy. A beneficial secondary
-  // effect is routed back to the caster by prefixing it as an explicit self
-  // effect instead of changing the whole skill into a self-target action.
   if (normalizedType !== 'support' && BENEFICIAL_STATUSES.has(status)) {
     return `self:${raw}`;
   }
@@ -144,6 +149,19 @@ function normalizeAbility(
     power: finitePositive(ability?.power, fallbackPower),
     type,
     ...(status ? { status } : {})
+  };
+}
+
+function normalizePassive(passive: CatalogPassive | undefined): CombatPassive | undefined {
+  const id = String(passive?.id || '').trim();
+  if (!id) {
+    return undefined;
+  }
+
+  return {
+    id,
+    name: String(passive?.name || id),
+    ...(passive?.element ? { element: String(passive.element) } : {})
   };
 }
 
@@ -199,6 +217,7 @@ function toCombatPow(pow: CatalogPow): CombatPow {
   const elementName = String(
     window.POWDER_DATA?.elements?.[elementKey]?.name || elementKey
   );
+  const passive = normalizePassive(pow.abilities?.passive);
 
   return {
     id,
@@ -219,6 +238,7 @@ function toCombatPow(pow: CatalogPow): CombatPow {
     rage: 0,
     maxRage: 100,
     abilities: normalizeAbilities(pow),
+    ...(passive ? { passive } : {}),
     display: { ...DEFAULT_DISPLAY }
   };
 }
