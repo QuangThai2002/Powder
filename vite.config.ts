@@ -1,4 +1,4 @@
-﻿import { defineConfig } from "vite";
+import { defineConfig } from 'vite';
 
 export default defineConfig({
   server: {
@@ -6,6 +6,12 @@ export default defineConfig({
     port: 5173
   },
   build: {
-    target: "es2022"
+    target: 'es2022',
+    rollupOptions: {
+      input: {
+        main: 'index.html',
+        combat2: 'combat2.html'
+      }
+    }
   }
 });
