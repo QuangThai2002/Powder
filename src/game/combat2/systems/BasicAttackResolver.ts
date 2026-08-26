@@ -11,8 +11,12 @@ export interface BasicAttackResult {
 
 export class BasicAttackResolver {
   resolve(attacker: CombatUnitState, target: CombatUnitState): BasicAttackResult {
-    const attack = this.safeStat(attacker.pow.attack, 1);
-    const defense = this.safeStat(target.pow.defense, 0);
+    const attack =
+      this.safeStat(attacker.pow.attack, 1) *
+      this.safeMultiplier(attacker.attackMultiplier);
+    const defense =
+      this.safeStat(target.pow.defense, 0) *
+      this.safeMultiplier(target.defenseMultiplier);
     const targetHpBefore = this.safeHp(target.hp, target.pow.maxHp);
 
     const damage = Math.max(1, Math.round(attack - defense * 0.45));
@@ -36,6 +40,10 @@ export class BasicAttackResolver {
       targetHpAfter,
       defeated: !target.alive
     };
+  }
+
+  private safeMultiplier(value: number): number {
+    return Number.isFinite(value) ? Math.min(10, Math.max(0.1, value)) : 1;
   }
 
   private safeStat(value: number, fallback: number): number {
