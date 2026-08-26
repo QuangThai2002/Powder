@@ -71,7 +71,7 @@ function normalizeAbilityType(
   fallbackType: string
 ): string {
   const type = String(rawType || fallbackType).trim().toLowerCase();
-  const normalizedStatus = String(status || '').trim().toLowerCase();
+  const normalizedStatus = String(status || '').replace(/^self:/i, '').trim().toLowerCase();
   if (type === 'support' && HOSTILE_SUPPORT_STATUSES.has(normalizedStatus)) return 'debuff';
   return type;
 }
@@ -79,20 +79,20 @@ function normalizeAbilityType(
 function migrateLegacyStatus(rawStatus: string | undefined): string | undefined {
   const raw = String(rawStatus || '').trim();
   if (!raw) return undefined;
-  const selfPrefix = raw.toLowerCase().startsWith('self:');
-  const core = selfPrefix ? raw.slice(5).trim() : raw;
-  if (core.toLowerCase() === 'ap up') {
-    return selfPrefix ? 'self:rage gain' : 'rage gain';
-  }
+  // AP = Ability Power in the canonical Powder catalog. It is an offensive
+  // stat buff and must never be converted into the four-point Rage resource.
+  // Only genuine Mana/resource-restoration effects are migrated to Rage.
   return raw;
 }
 
 function normalizeAbilityStatus(rawStatus: string | undefined, normalizedType: string): string | undefined {
   const migrated = migrateLegacyStatus(rawStatus);
   if (!migrated) return undefined;
-  const status = migrated.toLowerCase();
-  if (normalizedType !== 'support' && BENEFICIAL_STATUSES.has(status)) {
-    return `self:${migrated}`;
+  const selfDirected = migrated.toLowerCase().startsWith('self:');
+  const core = selfDirected ? migrated.slice(5).trim() : migrated;
+  const status = core.toLowerCase();
+  if (normalizedType !== 'support' && BENEFICIAL_STATUSES.has(status) && !selfDirected) {
+    return `self:${core}`;
   }
   return migrated;
 }
