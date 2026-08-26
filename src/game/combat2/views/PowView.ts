@@ -53,7 +53,7 @@ export class PowView {
     this.setBarWidth(this.rageBar, this.ratio(unit.rage, unit.pow.maxRage));
 
     if (!unit.alive) {
-      this.container.setAlpha(0.38);
+      this.container.setAlpha(0.28);
       this.statusText.setText('HẠ GỤC').setVisible(true);
       this.setActiveTurn(false);
       this.setTargetable(false);
@@ -61,7 +61,7 @@ export class PowView {
       return;
     }
 
-    this.container.setAlpha(1);
+    this.container.setAlpha(unit.fieldSlot === null ? 0.78 : 1);
     const runtimeStatus = this.getRuntimeStatus(unit);
     this.statusText.setText(runtimeStatus).setVisible(Boolean(runtimeStatus));
   }
@@ -90,6 +90,38 @@ export class PowView {
 
   onTargetSelected(handler: () => void): void {
     this.targetSelectedHandler = handler;
+  }
+
+  setBenchScale(scale: number): void {
+    const safe = Number.isFinite(scale) ? Phaser.Math.Clamp(scale, 0.35, 1) : 0.55;
+    this.container.setScale(safe);
+  }
+
+  async enterField(x: number, y: number): Promise<void> {
+    this.container.setAlpha(1);
+    await this.tweenPromise({
+      targets: this.container,
+      x,
+      y,
+      scaleX: 1,
+      scaleY: 1,
+      duration: 320,
+      ease: 'Back.easeOut'
+    });
+    this.container.setPosition(x, y).setScale(1);
+  }
+
+  async retireFromField(x: number, y: number): Promise<void> {
+    await this.tweenPromise({
+      targets: this.container,
+      x,
+      y,
+      scaleX: 0.42,
+      scaleY: 0.42,
+      alpha: 0.18,
+      duration: 220,
+      ease: 'Quad.easeIn'
+    });
   }
 
   async playAttackLunge(targetX: number, targetY: number): Promise<void> {
@@ -158,8 +190,6 @@ export class PowView {
     const card = this.scene.add.rectangle(0, 0, w, h, 0x071723, 0.94);
     card.setStrokeStyle(2, borderColor, 0.92);
 
-    // Combat-focused card: almost all vertical room belongs to the canonical
-    // Pow art. Metadata and resource bars are compressed into the footer.
     const footerHeight = 78;
     const artHeight = h - footerHeight - 14;
     const artWidth = w - 20;
@@ -300,6 +330,10 @@ export class PowView {
   }
 
   private getRuntimeStatus(unit: CombatUnitState): string {
+    if (unit.fieldSlot === null && unit.alive) {
+      return 'DỰ BỊ';
+    }
+
     if (unit.controlActionsRemaining > 0) {
       return unit.controlStatus === 'freeze' ? 'ĐÓNG BĂNG' : 'CHOÁNG';
     }
