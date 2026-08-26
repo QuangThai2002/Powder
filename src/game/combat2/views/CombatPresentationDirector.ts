@@ -25,7 +25,10 @@ export class CombatPresentationDirector {
     }
 
     const actor = actorView.getWorldPosition();
-    const target = targetView?.getWorldPosition() ?? actor;
+    const targetVisible = Boolean(targetView?.container.visible);
+    const target = targetVisible && targetView
+      ? targetView.getWorldPosition()
+      : actor;
     const element = this.elementColor(elementKey);
     const slotAccent = slot === 0 ? 0x70dced : 0xb69cff;
     const fx = this.scene.add.container(actor.x, actor.y).setDepth(45);
@@ -54,7 +57,7 @@ export class CombatPresentationDirector {
     }
 
     const path = this.scene.add.graphics().setDepth(43);
-    if (!selfTargeted) {
+    if (!selfTargeted && targetVisible) {
       path.lineStyle(slot === 0 ? 2 : 3, slotAccent, slot === 0 ? 0.26 : 0.31);
       path.lineBetween(actor.x, actor.y, target.x, target.y);
     }
