@@ -1,10 +1,10 @@
 (()=>{'use strict';
 if(window.POWDER_COMBAT_PLAYER_EXPERIENCE_V2201)return;
-const VERSION='22.0.3-hotfix',CSS_ID='powderCombatPlayerExperience2201Css',CSS_HREF='css/combat-player-experience-v2201.css?v=22013';
+const VERSION='22.0.4-safe-ui',CSS_ID='powderCombatPlayerExperience2201Css',CSS_HREF='css/combat-player-experience-v2201.css?v=22014';
 const state={patches:0,skillLayouts:0,lastAt:0,active:false,timerGovernor:false,audioOverride:false,legacyPruning:false};
 let raf=0;
 const q=(s,r=document)=>r.querySelector(s),qa=(s,r=document)=>[...r.querySelectorAll(s)];
-function style(){let l=document.getElementById(CSS_ID);if(!l){l=document.createElement('link');l.id=CSS_ID;l.rel='stylesheet';document.head.appendChild(l)}if(!String(l.href).includes('v=22013'))l.href=CSS_HREF}
+function style(){let l=document.getElementById(CSS_ID);if(!l){l=document.createElement('link');l.id=CSS_ID;l.rel='stylesheet';document.head.appendChild(l)}if(!String(l.href).includes('v=22014'))l.href=CSS_HREF}
 function mount(){return q('#battleView:not([hidden]) .combat-v7-mount .cv7-scene')?.closest('.combat-v7-mount')||null}
 function skillLayout(m){for(const dock of qa('.cv7-command',m)){const skills=qa('.cv7-skill[data-cv7-skill]',dock);if(!skills.length)continue;const count=Math.max(1,skills.length);if(dock.style.getPropertyValue('--px2201-skill-count')!==String(count)){dock.style.setProperty('--px2201-skill-count',String(count));state.skillLayouts++}}}
 function patch(){raf=0;style();const m=mount();state.active=Boolean(m);document.documentElement.classList.toggle('px2201-player-combat',Boolean(m));if(!m)return false;m.dataset.px2201='safe';skillLayout(m);state.patches++;state.lastAt=Date.now();return true}
