@@ -122,6 +122,23 @@ export class TurnManager {
     this.state.phase = 'ready';
   }
 
+  /**
+   * Recompute one waiting unit after a speed debuff/buff is applied by another
+   * actor. This prevents the old schedule from ignoring the new finite speed.
+   */
+  rescheduleUnit(unitId: string): void {
+    const unit = this.state.getUnit(unitId);
+
+    if (!unit?.alive || this.state.currentUnitId === unitId) {
+      return;
+    }
+
+    this.nextReadyAt.set(
+      unit.instanceId,
+      this.timelineNow + this.intervalFor(unit)
+    );
+  }
+
   recoverActionLock(): void {
     const current = this.state.currentUnitId
       ? this.state.getUnit(this.state.currentUnitId)
