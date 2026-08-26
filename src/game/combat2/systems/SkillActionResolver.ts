@@ -20,6 +20,8 @@ export interface SkillActionResult {
   shieldGranted: number;
   statusLabel: string | null;
   targetSpeedChanged: boolean;
+  cleansed: boolean;
+  revived: boolean;
   identityMultiplier: number;
   elementOutcome: ElementOutcome;
   defeated: boolean;
@@ -200,7 +202,12 @@ export class SkillActionResolver {
     rawStatus: string | undefined
   ): Pick<
     SkillActionResult,
-    'healed' | 'shieldGranted' | 'statusLabel' | 'targetSpeedChanged'
+    | 'healed'
+    | 'shieldGranted'
+    | 'statusLabel'
+    | 'targetSpeedChanged'
+    | 'cleansed'
+    | 'revived'
   > {
     const parsed = this.parseStatus(rawStatus);
     const status = parsed.status;
@@ -210,6 +217,8 @@ export class SkillActionResolver {
     let shieldGranted = 0;
     let statusLabel = parsed.label;
     let targetSpeedChanged = false;
+    let cleansed = false;
+    let revived = false;
 
     switch (status) {
       case 'shield': {
@@ -250,6 +259,50 @@ export class SkillActionResolver {
           actor.pow.maxMana,
           actor.mana + Math.round(15 * supportMultiplier)
         );
+        break;
+      }
+      case 'cleanse':
+      case 'purify': {
+        const wasSlowed = target.speedDebuffActionsRemaining > 0;
+        target.controlStatus = null;
+        target.controlActionsRemaining = 0;
+        target.dotStatus = null;
+        target.dotDamage = 0;
+        target.dotActionsRemaining = 0;
+        target.speedDebuffActionsRemaining = 0;
+        if (wasSlowed && target.speedBuffActionsRemaining <= 0) {
+          target.speed = Math.max(1, this.safeStat(target.pow.speed, 1));
+          targetSpeedChanged = true;
+        }
+        cleansed = true;
+        statusLabel = 'cleanse';
+        break;
+      }
+      case 'revive':
+      case 'resurrection': {
+        if (!target.alive || target.hp <= 0) {
+          target.hp = Math.max(1, Math.round(target.pow.maxHp * 0.35));
+          target.mana = Math.min(target.pow.maxMana, Math.max(target.mana, 25));
+          target.rage = Math.min(target.pow.maxRage, Math.max(0, target.rage));
+          target.shield = 0;
+          target.speed = Math.max(1, this.safeStat(target.pow.speed, 1));
+          target.speedBuffActionsRemaining = 0;
+          target.speedDebuffActionsRemaining = 0;
+          target.attackMultiplier = 1;
+          target.defenseMultiplier = 1;
+          target.attackBuffActionsRemaining = 0;
+          target.defenseBuffActionsRemaining = 0;
+          target.controlStatus = null;
+          target.controlActionsRemaining = 0;
+          target.dotStatus = null;
+          target.dotDamage = 0;
+          target.dotActionsRemaining = 0;
+          target.reviveMarkerActionsRemaining = 1;
+          target.actionLocked = false;
+          target.alive = true;
+          revived = true;
+        }
+        statusLabel = 'revive';
         break;
       }
       case 'stun':
@@ -300,7 +353,9 @@ export class SkillActionResolver {
       healed,
       shieldGranted,
       statusLabel,
-      targetSpeedChanged
+      targetSpeedChanged,
+      cleansed,
+      revived
     };
   }
 
