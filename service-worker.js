@@ -1,5 +1,5 @@
-const V='22.1.0-combat-identity-breakthrough';
-const BUILD='2210';
+const V='22.1.1-combat-identity-hotfix';
+const BUILD='2211';
 const SHELL=`powder-shell-${V}`;
 const RUNTIME=`powder-runtime-${V}`;
 const PRELOAD=`powder-assets-v21004`;
