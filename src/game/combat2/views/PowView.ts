@@ -19,14 +19,17 @@ export class PowView {
   private readonly fieldScale: number;
   private readonly reducedMotion: boolean;
 
+  private portrait!: Phaser.GameObjects.Image;
   private hpBar!: Phaser.GameObjects.Rectangle;
   private manaBar!: Phaser.GameObjects.Rectangle;
   private rageBar!: Phaser.GameObjects.Rectangle;
   private turnGlow!: Phaser.GameObjects.Rectangle;
   private targetGlow!: Phaser.GameObjects.Rectangle;
+  private statusFrame!: Phaser.GameObjects.Rectangle;
   private targetHitArea!: Phaser.GameObjects.Rectangle;
   private statusText!: Phaser.GameObjects.Text;
   private readonly barWidth: number;
+  private runtimeVisualStatus = '';
   private targetable = false;
   private selectedTarget = false;
   private targetSelectedHandler: (() => void) | null = null;
@@ -60,8 +63,13 @@ export class PowView {
     this.setBarWidth(this.rageBar, this.ratio(unit.rage, unit.pow.maxRage));
 
     if (!unit.alive) {
+      this.runtimeVisualStatus = 'HẠ GỤC';
       this.container.setAlpha(0.28);
-      this.statusText.setText('HẠ GỤC').setVisible(true);
+      this.statusText
+        .setText('HẠ GỤC')
+        .setBackgroundColor('#4f2029')
+        .setVisible(true);
+      this.refreshStatusFrame(this.runtimeVisualStatus);
       this.setActiveTurn(false);
       this.setTargetable(false);
       this.setSelectedTarget(false);
@@ -70,7 +78,12 @@ export class PowView {
 
     this.container.setAlpha(unit.fieldSlot === null ? 0.78 : 1);
     const runtimeStatus = this.getRuntimeStatus(unit);
-    this.statusText.setText(runtimeStatus).setVisible(Boolean(runtimeStatus));
+    this.runtimeVisualStatus = runtimeStatus;
+    this.statusText
+      .setText(runtimeStatus)
+      .setBackgroundColor(this.statusBackground(runtimeStatus))
+      .setVisible(Boolean(runtimeStatus));
+    this.refreshStatusFrame(runtimeStatus);
   }
 
   setActiveTurn(active: boolean): void {
@@ -142,7 +155,7 @@ export class PowView {
     const dx = targetX - startX;
     const dy = targetY - startY;
     const distance = Math.max(1, Math.hypot(dx, dy));
-    const travel = this.scene.scale.height > this.scene.scale.width ? 22 : 28;
+    const travel = this.scene.scale.height > this.scene.scale.width ? 22 : 32;
     const attackX = startX + (dx / distance) * travel;
     const attackY = startY + (dy / distance) * travel;
 
@@ -153,7 +166,7 @@ export class PowView {
       targets: this.container,
       x: attackX,
       y: attackY,
-      duration: this.reducedMotion ? 55 : 90,
+      duration: this.reducedMotion ? 55 : 92,
       ease: 'Quad.easeOut',
       yoyo: true
     });
@@ -163,10 +176,16 @@ export class PowView {
   }
 
   async playHit(): Promise<void> {
+    this.playHitFlash();
+
+    if (!this.reducedMotion) {
+      this.scene.cameras.main.shake(70, 0.00115);
+    }
+
     await this.tweenPromise({
       targets: this.container,
-      x: this.container.x + (this.side === 'player' ? -8 : 8),
-      duration: this.reducedMotion ? 38 : 55,
+      x: this.container.x + (this.side === 'player' ? -9 : 9),
+      duration: this.reducedMotion ? 38 : 52,
       yoyo: true,
       repeat: this.reducedMotion ? 0 : 1,
       ease: 'Sine.easeInOut'
@@ -174,6 +193,14 @@ export class PowView {
   }
 
   async playStatusPulse(): Promise<void> {
+    if (
+      this.runtimeVisualStatus === 'ĐÓNG BĂNG' ||
+      this.runtimeVisualStatus === 'CHOÁNG'
+    ) {
+      await this.playControlLock(this.runtimeVisualStatus);
+      return;
+    }
+
     await this.playCastSignature(true);
     await Promise.all([
       this.playSupportAura(),
@@ -202,6 +229,9 @@ export class PowView {
     const borderColor = this.side === 'player' ? 0x54d8f2 : 0xf49b6a;
     const elementColor = this.elementColor();
 
+    this.statusFrame = this.scene.add.rectangle(0, 0, w + 20, h + 20, 0x000000, 0);
+    this.statusFrame.setVisible(false);
+
     this.targetGlow = this.scene.add.rectangle(0, 0, w + 16, h + 16, 0x000000, 0);
     this.targetGlow.setVisible(false);
 
@@ -226,14 +256,14 @@ export class PowView {
     );
     artBack.setStrokeStyle(2, elementColor, 0.58);
 
-    const portrait = this.scene.add.image(
+    this.portrait = this.scene.add.image(
       this.pow.display.offsetX ?? 0,
       artY + (this.pow.display.offsetY ?? 0),
       this.pow.assetKey
     );
-    portrait.setOrigin(0.5, 0.5);
+    this.portrait.setOrigin(0.5, 0.5);
 
-    const source = portrait.texture.getSourceImage() as HTMLImageElement | HTMLCanvasElement;
+    const source = this.portrait.texture.getSourceImage() as HTMLImageElement | HTMLCanvasElement;
     const sourceWidth = Math.max(1, source.width);
     const sourceHeight = Math.max(1, source.height);
     const desiredHeight = artHeight * this.pow.display.heightRatio;
@@ -241,7 +271,7 @@ export class PowView {
       desiredHeight / sourceHeight,
       (artWidth * 0.96) / sourceWidth
     );
-    portrait.setScale(baseScale * (this.pow.display.scaleAdjust ?? 1));
+    this.portrait.setScale(baseScale * (this.pow.display.scaleAdjust ?? 1));
 
     const infoY = top + artHeight + 16;
 
@@ -314,11 +344,12 @@ export class PowView {
     });
 
     this.container.add([
+      this.statusFrame,
       this.targetGlow,
       this.turnGlow,
       card,
       artBack,
-      portrait,
+      this.portrait,
       name,
       meta,
       hpBack,
@@ -332,11 +363,89 @@ export class PowView {
     ]);
   }
 
+  private playHitFlash(): void {
+    const position = this.getWorldPosition();
+    const color = this.elementColor();
+    const flash = this.scene.add
+      .circle(position.x, position.y - 4, 44, 0xffffff, 0.16)
+      .setStrokeStyle(3, color, 0.78)
+      .setDepth(38)
+      .setScale(0.82);
+
+    this.portrait.setTintFill(0xffffff);
+    this.scene.time.delayedCall(this.reducedMotion ? 35 : 55, () => {
+      if (this.portrait.active) {
+        this.portrait.clearTint();
+      }
+    });
+
+    this.scene.tweens.add({
+      targets: flash,
+      scaleX: 1.34,
+      scaleY: 1.34,
+      alpha: 0,
+      duration: this.reducedMotion ? 70 : 115,
+      ease: 'Quad.easeOut',
+      onComplete: () => flash.destroy()
+    });
+  }
+
+  private async playControlLock(status: string): Promise<void> {
+    const freeze = status === 'ĐÓNG BĂNG';
+    const color = freeze ? 0x8adfff : 0xf5dd62;
+    const position = this.getWorldPosition();
+    const fx = this.scene.add.container(position.x, position.y).setDepth(39).setScale(0.78);
+
+    const outer = this.scene.add.circle(0, 0, 55, 0x000000, 0);
+    outer.setStrokeStyle(4, color, 0.9);
+    const inner = this.scene.add.circle(0, 0, 38, color, 0.07);
+    inner.setStrokeStyle(2, color, 0.55);
+
+    const bars = freeze
+      ? [
+          this.scene.add.rectangle(-28, 0, 8, 82, color, 0.64).setRotation(-0.18),
+          this.scene.add.rectangle(0, 0, 8, 92, color, 0.72),
+          this.scene.add.rectangle(28, 0, 8, 82, color, 0.64).setRotation(0.18)
+        ]
+      : [
+          this.scene.add.rectangle(-15, -8, 9, 58, color, 0.82).setRotation(0.58),
+          this.scene.add.rectangle(12, 4, 9, 58, color, 0.72).setRotation(-0.56),
+          this.scene.add.rectangle(0, 0, 50, 7, color, 0.5).setRotation(-0.14)
+        ];
+
+    fx.add([inner, outer, ...bars]);
+
+    const startX = this.container.x;
+    const shake = this.tweenPromise({
+      targets: this.container,
+      x: startX + (this.side === 'player' ? -6 : 6),
+      duration: this.reducedMotion ? 42 : 52,
+      yoyo: true,
+      repeat: this.reducedMotion ? 0 : 2,
+      ease: 'Sine.easeInOut'
+    });
+
+    const lock = this.tweenPromise({
+      targets: fx,
+      scaleX: 1.12,
+      scaleY: 1.12,
+      alpha: 0,
+      duration: this.reducedMotion ? 110 : 230,
+      ease: 'Quad.easeOut'
+    });
+
+    await Promise.all([shake, lock]);
+    this.container.setX(startX);
+    fx.destroy(true);
+  }
+
   private async playCastSignature(support: boolean): Promise<void> {
     const color = this.elementColor();
     const position = this.getWorldPosition();
     const ring = this.scene.add.circle(position.x, position.y, support ? 54 : 42, 0x000000, 0);
     ring.setStrokeStyle(support ? 4 : 3, color, 0.86).setDepth(34).setScale(0.62);
+    const innerRing = this.scene.add.circle(position.x, position.y, support ? 34 : 28, color, 0.05);
+    innerRing.setStrokeStyle(2, color, 0.46).setDepth(34).setScale(0.72);
     const roleCue = this.createRoleCue(position.x, position.y, color);
 
     await Promise.all([
@@ -346,6 +455,14 @@ export class PowView {
         scaleY: support ? 1.42 : 1.24,
         alpha: 0,
         duration: this.reducedMotion ? 90 : 150,
+        ease: 'Quad.easeOut'
+      }),
+      this.tweenPromise({
+        targets: innerRing,
+        scaleX: support ? 1.24 : 1.12,
+        scaleY: support ? 1.24 : 1.12,
+        alpha: 0,
+        duration: this.reducedMotion ? 90 : 145,
         ease: 'Quad.easeOut'
       }),
       this.tweenPromise({
@@ -359,43 +476,62 @@ export class PowView {
     ]);
 
     ring.destroy();
+    innerRing.destroy();
     roleCue.destroy(true);
   }
 
   private async playElementTravel(targetX: number, targetY: number): Promise<void> {
     const color = this.elementColor();
     const start = this.getWorldPosition();
-    const projectile = this.scene.add.container(start.x, start.y).setDepth(36);
-    const core = this.scene.add.circle(0, 0, this.reducedMotion ? 6 : 8, color, 0.96);
+    const angle = Math.atan2(targetY - start.y, targetX - start.x);
+
+    const beam = this.scene.add.graphics().setDepth(34);
+    beam.lineStyle(this.reducedMotion ? 2 : 3, color, this.reducedMotion ? 0.2 : 0.34);
+    beam.lineBetween(start.x, start.y, targetX, targetY);
+
+    const projectile = this.scene.add.container(start.x, start.y).setDepth(36).setRotation(angle);
+    const core = this.scene.add.circle(0, 0, this.reducedMotion ? 6 : 8, color, 0.98);
     const halo = this.scene.add.circle(0, 0, this.reducedMotion ? 10 : 14, 0x000000, 0);
-    halo.setStrokeStyle(2, color, 0.55);
+    halo.setStrokeStyle(2, color, 0.62);
     projectile.add([halo, core]);
 
     if (!this.reducedMotion) {
-      const tail = this.scene.add.rectangle(-13, 0, 20, 4, color, 0.42);
-      projectile.add(tail);
+      const tail = this.scene.add.rectangle(-15, 0, 24, 5, color, 0.46);
+      const moteA = this.scene.add.circle(-24, -5, 3, color, 0.48);
+      const moteB = this.scene.add.circle(-30, 5, 2, color, 0.36);
+      projectile.add([tail, moteA, moteB]);
     }
 
-    await this.tweenPromise({
-      targets: projectile,
-      x: targetX,
-      y: targetY,
-      duration: this.reducedMotion ? 85 : 135,
-      ease: 'Quad.easeIn'
-    });
+    await Promise.all([
+      this.tweenPromise({
+        targets: projectile,
+        x: targetX,
+        y: targetY,
+        duration: this.reducedMotion ? 85 : 138,
+        ease: 'Quad.easeIn'
+      }),
+      this.tweenPromise({
+        targets: beam,
+        alpha: 0,
+        duration: this.reducedMotion ? 90 : 150,
+        ease: 'Quad.easeOut'
+      })
+    ]);
 
     projectile.destroy(true);
+    beam.destroy();
     await this.playElementImpact(targetX, targetY, color);
   }
 
   private async playElementImpact(x: number, y: number, color: number): Promise<void> {
     const burst = this.scene.add.container(x, y).setDepth(37);
+    const core = this.scene.add.circle(0, 0, 14, color, 0.2);
     const ring = this.scene.add.circle(0, 0, 18, 0x000000, 0);
-    ring.setStrokeStyle(3, color, 0.9);
-    burst.add(ring);
+    ring.setStrokeStyle(3, color, 0.92);
+    burst.add([core, ring]);
 
     if (!this.reducedMotion) {
-      const shardCount = this.scene.scale.height > this.scene.scale.width ? 3 : 4;
+      const shardCount = this.scene.scale.height > this.scene.scale.width ? 3 : 5;
       for (let index = 0; index < shardCount; index += 1) {
         const angle = (Math.PI * 2 * index) / shardCount;
         const shard = this.scene.add.rectangle(
@@ -404,7 +540,7 @@ export class PowView {
           18,
           4,
           color,
-          0.78
+          0.8
         );
         shard.setRotation(angle);
         burst.add(shard);
@@ -413,10 +549,10 @@ export class PowView {
 
     await this.tweenPromise({
       targets: burst,
-      scaleX: 1.7,
-      scaleY: 1.7,
+      scaleX: this.reducedMotion ? 1.48 : 1.82,
+      scaleY: this.reducedMotion ? 1.48 : 1.82,
       alpha: 0,
-      duration: this.reducedMotion ? 80 : 140,
+      duration: this.reducedMotion ? 80 : 145,
       ease: 'Quad.easeOut'
     });
     burst.destroy(true);
@@ -425,18 +561,29 @@ export class PowView {
   private async playSupportAura(): Promise<void> {
     const color = this.elementColor();
     const position = this.getWorldPosition();
-    const aura = this.scene.add.circle(position.x, position.y, 44, color, 0.08);
-    aura.setStrokeStyle(4, color, 0.62).setDepth(33).setScale(0.72);
+    const aura = this.scene.add.container(position.x, position.y).setDepth(33).setScale(0.72);
+    const ring = this.scene.add.circle(0, 0, 44, color, 0.08);
+    ring.setStrokeStyle(4, color, 0.64);
+    aura.add(ring);
+
+    if (!this.reducedMotion) {
+      aura.add([
+        this.scene.add.circle(-28, 12, 5, color, 0.5),
+        this.scene.add.circle(25, -8, 4, color, 0.42),
+        this.scene.add.circle(8, -31, 3, color, 0.38)
+      ]);
+    }
 
     await this.tweenPromise({
       targets: aura,
+      y: position.y - (this.reducedMotion ? 4 : 10),
       scaleX: 1.55,
       scaleY: 1.55,
       alpha: 0,
-      duration: this.reducedMotion ? 95 : 170,
+      duration: this.reducedMotion ? 95 : 180,
       ease: 'Sine.easeOut'
     });
-    aura.destroy();
+    aura.destroy(true);
   }
 
   private createRoleCue(
@@ -546,6 +693,46 @@ export class PowView {
     this.targetGlow
       .setStrokeStyle(1, 0x78e8ff, 0.52)
       .setVisible(true);
+  }
+
+  private refreshStatusFrame(status: string): void {
+    const color = this.statusColor(status);
+    if (!color) {
+      this.statusFrame.setVisible(false);
+      return;
+    }
+
+    const strong = status === 'ĐÓNG BĂNG' || status === 'CHOÁNG';
+    this.statusFrame
+      .setStrokeStyle(strong ? 5 : 3, color, strong ? 0.92 : 0.64)
+      .setVisible(true);
+  }
+
+  private statusColor(status: string): number | null {
+    if (status === 'ĐÓNG BĂNG') return 0x8adfff;
+    if (status === 'CHOÁNG') return 0xf5dd62;
+    if (status === 'NHIỄM ĐỘC') return 0xa5df66;
+    if (status === 'THIÊU ĐỐT') return 0xff7043;
+    if (status === 'CHẬM') return 0x78a9ff;
+    if (status === 'TĂNG CÔNG') return 0xffc46b;
+    if (status === 'TĂNG THỦ') return 0x7ed4ff;
+    if (status === 'TĂNG TỐC') return 0x76e4d2;
+    if (status.startsWith('KHIÊN')) return 0x8edfff;
+    if (status === 'DỰ BỊ') return 0x617f8d;
+    if (status === 'HẠ GỤC') return 0xff6478;
+    return null;
+  }
+
+  private statusBackground(status: string): string {
+    if (status === 'ĐÓNG BĂNG') return '#1d4658';
+    if (status === 'CHOÁNG') return '#554a1d';
+    if (status === 'NHIỄM ĐỘC') return '#31491f';
+    if (status === 'THIÊU ĐỐT') return '#552c20';
+    if (status === 'CHẬM') return '#283b63';
+    if (status.startsWith('KHIÊN')) return '#21475a';
+    if (status === 'DỰ BỊ') return '#263944';
+    if (!status) return '#4a2535';
+    return '#3d3152';
   }
 
   private getRuntimeStatus(unit: CombatUnitState): string {
