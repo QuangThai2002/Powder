@@ -51,9 +51,20 @@ declare global {
   }
 }
 
-const TEAM_SIZE = 3;
-const PLAYER_PREFERRED_IDS = ['frostmaw', 'tidewarden', 'sparkit'] as const;
-const ENEMY_PREFERRED_IDS = ['stormeon', 'joltail', 'terrapup'] as const;
+export const ACTIVE_TEAM_SIZE = 3;
+export const RESERVE_TEAM_SIZE = 2;
+export const TOTAL_TEAM_SIZE = ACTIVE_TEAM_SIZE + RESERVE_TEAM_SIZE;
+
+const PLAYER_PREFERRED_IDS = [
+  'frostmaw',
+  'tidewarden',
+  'sparkit'
+] as const;
+const ENEMY_PREFERRED_IDS = [
+  'stormeon',
+  'joltail',
+  'terrapup'
+] as const;
 const CANONICAL_PREFIX = 'assets/pow-beta12/';
 
 const DEFAULT_DISPLAY: PowDisplayProfile = {
@@ -193,7 +204,7 @@ function selectTeam(
     );
 
   for (const pow of orderedFallback) {
-    if (selected.length >= TEAM_SIZE) {
+    if (selected.length >= TOTAL_TEAM_SIZE) {
       break;
     }
 
@@ -206,9 +217,9 @@ function selectTeam(
     globallyUsed.add(id);
   }
 
-  if (selected.length < TEAM_SIZE) {
+  if (selected.length < TOTAL_TEAM_SIZE) {
     for (const pow of orderedFallback) {
-      if (selected.length >= TEAM_SIZE) {
+      if (selected.length >= TOTAL_TEAM_SIZE) {
         break;
       }
 
@@ -222,9 +233,9 @@ function selectTeam(
     }
   }
 
-  if (selected.length !== TEAM_SIZE) {
+  if (selected.length !== TOTAL_TEAM_SIZE) {
     throw new Error(
-      `[Combat2] Canonical catalog cannot provide ${TEAM_SIZE} unique Pow for a team.`
+      `[Combat2] Canonical catalog cannot provide ${TOTAL_TEAM_SIZE} unique Pow for a team.`
     );
   }
 
@@ -234,9 +245,9 @@ function selectTeam(
 const catalog = window.POWDER_DATA;
 const catalogPows = Array.isArray(catalog?.pows) ? catalog.pows : [];
 
-if (catalogPows.length < TEAM_SIZE * 2) {
+if (catalogPows.length < TOTAL_TEAM_SIZE * 2) {
   throw new Error(
-    '[Combat2] POWDER_DATA is missing or incomplete. Load /js/data.js before Combat 2.0.'
+    '[Combat2] POWDER_DATA is missing or incomplete. Load the canonical catalog before Combat 2.0.'
   );
 }
 
