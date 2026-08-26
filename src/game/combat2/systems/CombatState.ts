@@ -1,4 +1,5 @@
 import type { CombatPow, CombatSide } from '../data/CombatPow';
+import { ACTIVE_TEAM_SIZE } from '../data/PowderDataAdapter';
 
 export type CombatPhase = 'ready' | 'selecting' | 'resolving' | 'finished';
 export type ControlStatus = 'stun' | 'freeze' | null;
@@ -8,7 +9,10 @@ export interface CombatUnitState {
   instanceId: string;
   pow: CombatPow;
   side: CombatSide;
+  /** Stable roster index (0..4). */
   slot: number;
+  /** Battlefield slot (0..2). Null means reserve/bench/defeated. */
+  fieldSlot: number | null;
   hp: number;
   mana: number;
   rage: number;
@@ -27,6 +31,13 @@ export interface CombatUnitState {
   dotActionsRemaining: number;
   alive: boolean;
   actionLocked: boolean;
+}
+
+export interface ReservePromotion {
+  side: CombatSide;
+  fieldSlot: number;
+  defeatedUnitId: string;
+  promotedUnitId: string;
 }
 
 export class CombatState {
@@ -53,8 +64,71 @@ export class CombatState {
     );
   }
 
+  activeLiving(side?: CombatSide): CombatUnitState[] {
+    return this.units.filter(
+      (unit) =>
+        unit.alive &&
+        unit.fieldSlot !== null &&
+        (side === undefined || unit.side === side)
+    );
+  }
+
+  reserveLiving(side: CombatSide): CombatUnitState[] {
+    return this.units
+      .filter(
+        (unit) => unit.alive && unit.side === side && unit.fieldSlot === null
+      )
+      .sort((a, b) => a.slot - b.slot);
+  }
+
   isBattleOver(): boolean {
     return this.living('player').length === 0 || this.living('enemy').length === 0;
+  }
+
+  /**
+   * Move the next living reserve into every vacated active slot. Dead active
+   * units are retired from the field before a reserve is promoted, so a slot
+   * can never contain two active units at once.
+   */
+  promoteReserves(): ReservePromotion[] {
+    const promotions: ReservePromotion[] = [];
+
+    for (const side of ['player', 'enemy'] as const) {
+      const defeatedActive = this.units
+        .filter(
+          (unit) =>
+            unit.side === side &&
+            !unit.alive &&
+            unit.fieldSlot !== null
+        )
+        .sort((a, b) => (a.fieldSlot ?? 99) - (b.fieldSlot ?? 99));
+
+      for (const defeated of defeatedActive) {
+        const fieldSlot = defeated.fieldSlot;
+        defeated.fieldSlot = null;
+
+        if (fieldSlot === null) {
+          continue;
+        }
+
+        const reserve = this.reserveLiving(side)[0];
+        if (!reserve) {
+          continue;
+        }
+
+        reserve.fieldSlot = fieldSlot;
+        reserve.actionLocked = false;
+
+        promotions.push({
+          side,
+          fieldSlot,
+          defeatedUnitId: defeated.instanceId,
+          promotedUnitId: reserve.instanceId
+        });
+      }
+    }
+
+    return promotions;
   }
 
   sanitizeRuntimeNumbers(): void {
@@ -93,6 +167,7 @@ export class CombatState {
       pow,
       side,
       slot,
+      fieldSlot: slot < ACTIVE_TEAM_SIZE ? slot : null,
       hp: pow.hp,
       mana: pow.mana,
       rage: pow.rage,
