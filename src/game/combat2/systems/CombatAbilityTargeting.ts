@@ -66,7 +66,11 @@ export function abilityHasLegalTarget(
 
   if (mode === 'ally') {
     return units.some(
-      (unit) => unit.side === actor.side && unit.alive && hasNegativeStatus(unit)
+      (unit) =>
+        unit.side === actor.side &&
+        unit.alive &&
+        unit.fieldSlot !== null &&
+        hasNegativeStatus(unit)
     );
   }
 
