@@ -2,27 +2,26 @@ import type { CombatUnitState } from './CombatState';
 
 export interface BasicAttackResult {
   damage: number;
+  shieldDamage: number;
+  hpDamage: number;
   targetHpBefore: number;
   targetHpAfter: number;
   defeated: boolean;
 }
 
-/**
- * Pure gameplay resolver for the first Combat 2.0 action.
- * Presentation is intentionally kept outside this class so an animation can
- * never decide whether gameplay completes or the turn advances.
- */
 export class BasicAttackResolver {
   resolve(attacker: CombatUnitState, target: CombatUnitState): BasicAttackResult {
     const attack = this.safeStat(attacker.pow.attack, 1);
     const defense = this.safeStat(target.pow.defense, 0);
     const targetHpBefore = this.safeHp(target.hp, target.pow.maxHp);
 
-    // Simple deterministic baseline. This is deliberately easy to regression
-    // test before importing the complete legacy skill coefficients.
     const damage = Math.max(1, Math.round(attack - defense * 0.45));
-    const targetHpAfter = Math.max(0, targetHpBefore - damage);
+    const shieldBefore = this.safeStat(target.shield, 0);
+    const shieldDamage = Math.min(shieldBefore, damage);
+    const hpDamage = Math.max(0, damage - shieldDamage);
+    const targetHpAfter = Math.max(0, targetHpBefore - hpDamage);
 
+    target.shield = Math.max(0, shieldBefore - shieldDamage);
     target.hp = targetHpAfter;
     target.alive = targetHpAfter > 0;
 
@@ -31,6 +30,8 @@ export class BasicAttackResolver {
 
     return {
       damage,
+      shieldDamage,
+      hpDamage,
       targetHpBefore,
       targetHpAfter,
       defeated: !target.alive
