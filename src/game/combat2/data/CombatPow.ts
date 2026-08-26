@@ -18,6 +18,9 @@ export interface CombatPow {
   element: string;
   role: string;
   level: number;
+  attack: number;
+  defense: number;
+  speed: number;
   hp: number;
   maxHp: number;
   mana: number;
