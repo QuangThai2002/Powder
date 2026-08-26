@@ -25,6 +25,8 @@ interface ActionMenuItem {
   detail: string;
   resource: string;
   glyph: string;
+  tag: string;
+  iconKey?: string;
   color: number;
   enabled: boolean;
   run: () => void;
@@ -53,6 +55,26 @@ export class BattleScene extends Phaser.Scene {
     for (const pow of ALL_COMBAT2_STARTER_POWS) {
       if (!this.textures.exists(pow.assetKey)) {
         this.load.image(pow.assetKey, pow.assetUrl);
+      }
+    }
+
+    // Only the player's five-Pow roster needs command-dock icons. Avoid
+    // preloading the complete 390-skill library so Combat 2 stays lightweight.
+    for (const pow of COMBAT2_STARTER_ROSTER.player) {
+      const abilities = [
+        pow.abilities.basic,
+        ...pow.abilities.skills,
+        pow.abilities.ultimate
+      ];
+
+      for (const ability of abilities) {
+        if (
+          ability.iconKey &&
+          ability.iconUrl &&
+          !this.textures.exists(ability.iconKey)
+        ) {
+          this.load.image(ability.iconKey, ability.iconUrl);
+        }
       }
     }
   }
@@ -106,7 +128,7 @@ export class BattleScene extends Phaser.Scene {
     plate.setStrokeStyle(2, 0x58d8ef, 0.72);
 
     const title = this.add
-      .text(width / 2, height / 2 - 34, 'POWDER COMBAT 2.1.5', {
+      .text(width / 2, height / 2 - 34, 'POWDER COMBAT 2.1.7', {
         fontFamily: 'Arial',
         fontSize: '29px',
         color: '#ffffff',
@@ -268,6 +290,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private createActionMenu(actor: CombatUnitState): void {
+    const basic = actor.pow.abilities.basic;
     const skill1 = actor.pow.abilities.skills[0];
     const skill2 = actor.pow.abilities.skills[1];
     const ultimate = actor.pow.abilities.ultimate;
@@ -278,36 +301,44 @@ export class BattleScene extends Phaser.Scene {
     const actions: ActionMenuItem[] = [
       {
         label: 'ĐÒN CƠ BẢN',
-        detail: this.shortName(actor.pow.abilities.basic.name, 22),
+        detail: this.shortName(basic.name, 20),
         resource: '+8 MANA · +12 NỘ',
         glyph: '◆',
+        tag: 'ATK',
+        iconKey: basic.iconKey,
         color: 0x0b5268,
         enabled: true,
         run: () => this.runPlayerTargetAction(actor, 'basic')
       },
       {
         label: 'KỸ NĂNG 1',
-        detail: `${this.shortName(skill1.name, 20)}${this.abilityTargetsSelf(skill1) ? ' · Bản thân' : ''}`,
+        detail: `${this.shortName(skill1.name, 18)}${this.abilityTargetsSelf(skill1) ? ' · Bản thân' : ''}`,
         resource: `${skill1Cost} MANA`,
         glyph: 'I',
+        tag: this.abilityTag(skill1),
+        iconKey: skill1.iconKey,
         color: 0x315d78,
         enabled: this.skillActions.canUse(actor, 0),
         run: () => this.runPlayerTargetAction(actor, 0)
       },
       {
         label: 'KỸ NĂNG 2',
-        detail: `${this.shortName(skill2.name, 20)}${this.abilityTargetsSelf(skill2) ? ' · Bản thân' : ''}`,
+        detail: `${this.shortName(skill2.name, 18)}${this.abilityTargetsSelf(skill2) ? ' · Bản thân' : ''}`,
         resource: `${skill2Cost} MANA`,
         glyph: 'II',
+        tag: this.abilityTag(skill2),
+        iconKey: skill2.iconKey,
         color: 0x493b78,
         enabled: this.skillActions.canUse(actor, 1),
         run: () => this.runPlayerTargetAction(actor, 1)
       },
       {
         label: 'ULTIMATE',
-        detail: `${this.shortName(ultimate.name, 20)}${this.abilityTargetsSelf(ultimate) ? ' · Bản thân' : ''}`,
+        detail: `${this.shortName(ultimate.name, 18)}${this.abilityTargetsSelf(ultimate) ? ' · Bản thân' : ''}`,
         resource: `${rageCost} NỘ`,
         glyph: '★',
+        tag: 'ULT',
+        iconKey: ultimate.iconKey,
         color: 0x70472b,
         enabled: this.skillActions.canUseUltimate(actor),
         run: () => this.runPlayerTargetAction(actor, 'ultimate')
@@ -323,12 +354,12 @@ export class BattleScene extends Phaser.Scene {
     const horizontalPadding = portrait ? 28 : 48;
     const availableWidth = Math.max(320, this.scale.width - horizontalPadding * 2);
     const buttonWidth = fourColumns
-      ? Math.min(174, (availableWidth - gapX * 3) / 4)
-      : Math.min(236, (availableWidth - gapX) / 2);
-    const buttonHeight = 64;
+      ? Math.min(182, (availableWidth - gapX * 3) / 4)
+      : Math.min(242, (availableWidth - gapX) / 2);
+    const buttonHeight = 72;
     const totalWidth = columns * buttonWidth + (columns - 1) * gapX;
     const totalHeight = rows * buttonHeight + (rows - 1) * gapY;
-    const desiredY = this.scale.height / 2 + (portrait ? 108 : 90);
+    const desiredY = this.scale.height / 2 + (portrait ? 112 : 92);
     const menuY = Math.min(
       this.scale.height - totalHeight / 2 - 18,
       desiredY
@@ -342,7 +373,6 @@ export class BattleScene extends Phaser.Scene {
       const x = -totalWidth / 2 + buttonWidth / 2 + column * (buttonWidth + gapX);
       const y = -totalHeight / 2 + buttonHeight / 2 + row * (buttonHeight + gapY);
       const left = x - buttonWidth / 2;
-      const right = x + buttonWidth / 2;
       const background = this.add.rectangle(
         x,
         y,
@@ -357,46 +387,69 @@ export class BattleScene extends Phaser.Scene {
         action.enabled ? 0.72 : 0.42
       );
 
-      const glyph = this.add
-        .text(left + 22, y, action.glyph, {
-          fontFamily: 'Arial',
-          fontSize: action.glyph.length > 1 ? '12px' : '18px',
-          color: action.enabled ? '#eafcff' : '#75858d',
-          fontStyle: 'bold'
-        })
-        .setOrigin(0.5);
+      const iconX = left + (fourColumns ? 28 : 30);
+      const iconSize = fourColumns ? 42 : 46;
+      const iconPlate = this.add
+        .rectangle(iconX, y, iconSize + 4, iconSize + 4, 0x05121c, 0.62)
+        .setStrokeStyle(1, action.enabled ? 0x6ccfe3 : 0x4d5c64, 0.55);
 
-      const label = this.add
-        .text(left + 42, y - 14, action.label, {
+      let visual: Phaser.GameObjects.Image | Phaser.GameObjects.Text;
+      if (action.iconKey && this.textures.exists(action.iconKey)) {
+        visual = this.add
+          .image(iconX, y, action.iconKey)
+          .setDisplaySize(iconSize, iconSize)
+          .setAlpha(action.enabled ? 1 : 0.48);
+
+        if (!action.enabled) {
+          visual.setTint(0x718087);
+        }
+      } else {
+        visual = this.add
+          .text(iconX, y, action.glyph, {
+            fontFamily: 'Arial',
+            fontSize: action.glyph.length > 1 ? '12px' : '18px',
+            color: action.enabled ? '#eafcff' : '#75858d',
+            fontStyle: 'bold'
+          })
+          .setOrigin(0.5);
+      }
+
+      const textLeft = left + (fourColumns ? 55 : 60);
+      const textWidth = Math.max(72, buttonWidth - (textLeft - left) - 9);
+      const header = this.add
+        .text(textLeft, y - 21, `${action.label} · ${action.tag}`, {
           fontFamily: 'Arial',
-          fontSize: fourColumns ? '10px' : '11px',
+          fontSize: fourColumns ? '9px' : '10px',
           color: action.enabled ? '#ffffff' : '#85959d',
-          fontStyle: 'bold'
+          fontStyle: 'bold',
+          fixedWidth: textWidth
         })
         .setOrigin(0, 0.5);
 
       const detail = this.add
-        .text(left + 42, y + 8, action.detail, {
+        .text(textLeft, y - 1, action.detail, {
           fontFamily: 'Arial',
           fontSize: fourColumns ? '8px' : '9px',
-          color: action.enabled ? '#b4d4df' : '#71818a'
+          color: action.enabled ? '#c6e0e8' : '#71818a',
+          fixedWidth: textWidth
         })
         .setOrigin(0, 0.5);
 
       const resource = this.add
-        .text(right - 10, y - 14, action.resource, {
+        .text(textLeft, y + 20, action.resource, {
           fontFamily: 'Arial',
-          fontSize: fourColumns ? '7px' : '8px',
+          fontSize: fourColumns ? '8px' : '9px',
           color: action.enabled ? '#8eeaff' : '#66767e',
-          fontStyle: 'bold'
+          fontStyle: 'bold',
+          fixedWidth: textWidth
         })
-        .setOrigin(1, 0.5);
+        .setOrigin(0, 0.5);
 
       const hitArea = this.add.rectangle(x, y, buttonWidth, buttonHeight, 0xffffff, 0.001);
 
       if (action.enabled) {
         hitArea.setInteractive({ useHandCursor: true });
-        hitArea.on('pointerover', () => background.setAlpha(1).setScale(1.02));
+        hitArea.on('pointerover', () => background.setAlpha(1).setScale(1.015));
         hitArea.on('pointerout', () => background.setAlpha(0.95).setScale(1));
         hitArea.once('pointerup', () => {
           this.destroyActionMenu();
@@ -404,7 +457,7 @@ export class BattleScene extends Phaser.Scene {
         });
       }
 
-      menu.add([background, glyph, label, detail, resource, hitArea]);
+      menu.add([background, iconPlate, visual, header, detail, resource, hitArea]);
     });
 
     this.actionMenu = menu;
@@ -497,7 +550,6 @@ export class BattleScene extends Phaser.Scene {
       ? actor.pow.abilities.ultimate
       : actor.pow.abilities.skills[slot];
     const selfTargeted = target.instanceId === actor.instanceId;
-
     const completed = await this.actionPipeline.execute(actor.instanceId, async () => {
       actorView?.setActiveTurn(false);
       this.showActionBanner(
@@ -929,6 +981,17 @@ export class BattleScene extends Phaser.Scene {
     return new Promise((resolve) => {
       this.time.delayedCall(ms, resolve);
     });
+  }
+
+  private abilityTag(ability: CombatAbility): string {
+    const type = String(ability.type || '').trim().toLowerCase();
+    if (type === 'support') {
+      return 'SUP';
+    }
+    if (type === 'debuff') {
+      return 'CTRL';
+    }
+    return 'ATK';
   }
 
   private abilityTargetsSelf(ability: CombatAbility): boolean {
