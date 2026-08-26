@@ -69,30 +69,32 @@ export class BattleScene extends Phaser.Scene {
     this.createTeam('enemy', COMBAT2_STARTER_ROSTER.enemy);
     this.createTeam('player', COMBAT2_STARTER_ROSTER.player);
 
-    this.roundText = this.add.text(width / 2, height / 2 - 62, 'VÒNG 1', {
-      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '17px', color: COMBAT_COLORS.text, fontStyle: 'bold', backgroundColor: '#0a2433', padding: { x: 15, y: 7 }
-    }).setOrigin(0.5).setAlpha(0.9);
+    this.roundText = this.add.text(width / 2, height / 2 - 66, 'VÒNG 1', {
+      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '20px', color: COMBAT_COLORS.text, fontStyle: 'bold', backgroundColor: '#0a2433', padding: { x: 17, y: 8 }
+    }).setOrigin(0.5).setAlpha(0.92);
     this.turnText = this.add.text(width / 2, height / 2 - 27, '', {
-      fontFamily: COMBAT_BODY_FONT, fontSize: '14px', color: COMBAT_COLORS.muted, fontStyle: 'bold'
+      fontFamily: COMBAT_BODY_FONT, fontSize: '17px', color: COMBAT_COLORS.muted, fontStyle: 'bold'
     }).setOrigin(0.5);
     this.showPreBattleIntro();
   }
 
   private showPreBattleIntro(): void {
     const { width, height } = this.scale;
-    const shade = this.add.rectangle(width / 2, height / 2, width, height, 0x02080e, 0.5);
-    const plate = this.add.rectangle(width / 2, height / 2, 700, 166, 0x081d2a, 0.97).setStrokeStyle(2, 0xd7b86c, 0.72);
-    const title = this.add.text(width / 2, height / 2 - 44, 'POWDER COMBAT 2.3.0', {
-      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '32px', color: '#fff6df', fontStyle: 'bold'
+    const portrait = height > width;
+    const shade = this.add.rectangle(width / 2, height / 2, width, height, 0x02080e, 0.54);
+    const plateWidth = Math.min(portrait ? 760 : 820, width * 0.86);
+    const plate = this.add.rectangle(width / 2, height / 2, plateWidth, 210, 0x081d2a, 0.98).setStrokeStyle(2, 0xd7b86c, 0.76);
+    const title = this.add.text(width / 2, height / 2 - 66, 'POWDER COMBAT 2.3.1', {
+      fontFamily: COMBAT_DISPLAY_FONT, fontSize: portrait ? '34px' : '36px', color: '#fff6df', fontStyle: 'bold'
     }).setOrigin(0.5);
-    const subtitle = this.add.text(width / 2, height / 2 + 2, '3 POW CHÍNH · 2 DỰ BỊ · 4 ĐIỂM NỘ', {
-      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '15px', color: '#7de6ff', fontStyle: 'bold'
+    const subtitle = this.add.text(width / 2, height / 2 - 14, '4 CHẤM NỘ · XANH = 1 · ĐỎ = 2', {
+      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '18px', color: '#7de6ff', fontStyle: 'bold'
     }).setOrigin(0.5);
-    const hint = this.add.text(width / 2, height / 2 + 45, 'Đánh thường / Skill +2 Nộ · đủ 4 dùng Tuyệt Kỹ · Nộ dư tích trữ tối đa 8', {
-      fontFamily: COMBAT_BODY_FONT, fontSize: '13px', color: '#b8ced5'
+    const hint = this.add.text(width / 2, height / 2 + 42, 'Đòn thường / Skill +2 Nộ · đủ 4 dùng Tuyệt Kỹ\nPhần Nộ vượt 4 nhận 50% và làm tròn xuống', {
+      fontFamily: COMBAT_BODY_FONT, fontSize: '16px', color: '#c4d9df', align: 'center', lineSpacing: 8
     }).setOrigin(0.5);
     const intro = this.add.container(0, 0, [shade, plate, title, subtitle, hint]).setDepth(100);
-    this.tweens.add({ targets: intro, alpha: 0, delay: 1450, duration: 320, ease: 'Quad.easeOut', onComplete: () => { intro.destroy(true); this.startCombatFlow(); } });
+    this.tweens.add({ targets: intro, alpha: 0, delay: 2250, duration: 420, ease: 'Quad.easeOut', onComplete: () => { intro.destroy(true); this.startCombatFlow(); } });
   }
 
   private startCombatFlow(): void {
@@ -132,14 +134,14 @@ export class BattleScene extends Phaser.Scene {
       const completed = await this.actionPipeline.execute(actor.instanceId, async () => {
         this.powViews.get(actor.instanceId)?.setActiveTurn(false);
         await this.powViews.get(actor.instanceId)?.playStatusPulse();
-        await this.wait(280);
+        await this.wait(420);
         return true;
       });
       if (completed === null) this.recoverTurnFlow(); else this.afterAction();
       return;
     }
     if (actor.side === 'enemy') {
-      this.time.delayedCall(420, () => void this.performEnemyAction(actor));
+      this.time.delayedCall(620, () => void this.performEnemyAction(actor));
       return;
     }
     this.createActionMenu(actor);
@@ -173,38 +175,51 @@ export class BattleScene extends Phaser.Scene {
     const skill2 = actor.pow.abilities.skills[1];
     const ultimate = actor.pow.abilities.ultimate;
     const actions: ActionMenuItem[] = [
-      { label: 'ĐÒN CƠ BẢN', detail: this.shortName(basic.name, 24), resource: `+${ACTION_BASE_RAW_GAIN} NỘ`, glyph: '◆', tag: 'ATK', iconKey: basic.iconKey, color: 0x0b5268, enabled: this.combatState.activeLiving('enemy').length > 0, run: () => this.beginPlayerActionSelection(actor, 'basic') },
-      { label: 'KỸ NĂNG I', detail: this.shortName(skill1.name, 24), resource: `+${this.skillActions.previewRawRageGain(skill1, 0)} NỘ · ${this.actionTargetLabel(skill1)}`, glyph: 'I', tag: this.abilityTag(skill1), iconKey: skill1.iconKey, color: 0x315d78, enabled: this.skillActions.canUse(actor, 0) && abilityHasLegalTarget(skill1, actor, this.combatState.units), run: () => this.beginPlayerActionSelection(actor, 0) },
-      { label: 'KỸ NĂNG II', detail: this.shortName(skill2.name, 24), resource: `+${this.skillActions.previewRawRageGain(skill2, 1)} NỘ · ${this.actionTargetLabel(skill2)}`, glyph: 'II', tag: this.abilityTag(skill2), iconKey: skill2.iconKey, color: 0x493b78, enabled: this.skillActions.canUse(actor, 1) && abilityHasLegalTarget(skill2, actor, this.combatState.units), run: () => this.beginPlayerActionSelection(actor, 1) },
-      { label: 'TUYỆT KỸ', detail: this.shortName(ultimate.name, 24), resource: `TỐN ${ULTIMATE_RAGE_COST} NỘ · ${this.actionTargetLabel(ultimate)}`, glyph: '✦', tag: 'ULT', iconKey: ultimate.iconKey, color: 0x70472b, enabled: this.skillActions.canUseUltimate(actor) && abilityHasLegalTarget(ultimate, actor, this.combatState.units), run: () => this.beginPlayerActionSelection(actor, 'ultimate') }
+      { label: 'ĐÒN CƠ BẢN', detail: this.shortName(basic.name, 26), resource: `+${ACTION_BASE_RAW_GAIN} NỘ`, glyph: '◆', tag: 'ATK', iconKey: basic.iconKey, color: 0x0b5268, enabled: this.combatState.activeLiving('enemy').length > 0, run: () => this.beginPlayerActionSelection(actor, 'basic') },
+      { label: 'KỸ NĂNG I', detail: this.shortName(skill1.name, 26), resource: `+${this.skillActions.previewRawRageGain(skill1, 0)} NỘ · ${this.actionTargetLabel(skill1)}`, glyph: 'I', tag: this.abilityTag(skill1), iconKey: skill1.iconKey, color: 0x315d78, enabled: this.skillActions.canUse(actor, 0) && abilityHasLegalTarget(skill1, actor, this.combatState.units), run: () => this.beginPlayerActionSelection(actor, 0) },
+      { label: 'KỸ NĂNG II', detail: this.shortName(skill2.name, 26), resource: `+${this.skillActions.previewRawRageGain(skill2, 1)} NỘ · ${this.actionTargetLabel(skill2)}`, glyph: 'II', tag: this.abilityTag(skill2), iconKey: skill2.iconKey, color: 0x493b78, enabled: this.skillActions.canUse(actor, 1) && abilityHasLegalTarget(skill2, actor, this.combatState.units), run: () => this.beginPlayerActionSelection(actor, 1) },
+      { label: 'TUYỆT KỸ', detail: this.shortName(ultimate.name, 26), resource: `TỐN ${ULTIMATE_RAGE_COST} NỘ · ${this.actionTargetLabel(ultimate)}`, glyph: '✦', tag: 'ULT', iconKey: ultimate.iconKey, color: 0x70472b, enabled: this.skillActions.canUseUltimate(actor) && abilityHasLegalTarget(ultimate, actor, this.combatState.units), run: () => this.beginPlayerActionSelection(actor, 'ultimate') }
     ];
 
-    const buttonWidth = 246;
-    const buttonHeight = 104;
-    const gap = 12;
-    const totalWidth = buttonWidth * 4 + gap * 3;
-    const menuY = Math.round(this.scale.height * 0.575);
+    const portrait = this.scale.height > this.scale.width;
+    const compact = portrait || this.scale.width < 1180;
+    const columns = compact ? 2 : 4;
+    const gap = compact ? 16 : 14;
+    const horizontalPadding = compact ? 72 : 88;
+    const availableWidth = Math.max(520, this.scale.width - horizontalPadding);
+    const buttonWidth = compact
+      ? Math.min(340, (availableWidth - gap) / 2)
+      : Math.min(252, (availableWidth - gap * 3) / 4);
+    const buttonHeight = compact ? 116 : 112;
+    const rows = Math.ceil(actions.length / columns);
+    const totalHeight = rows * buttonHeight + (rows - 1) * gap;
+    const menuY = Math.round(this.scale.height * (portrait ? 0.575 : 0.575));
     const menu = this.add.container(this.scale.width / 2, menuY).setDepth(30);
 
     actions.forEach((action, index) => {
-      const x = -totalWidth / 2 + buttonWidth / 2 + index * (buttonWidth + gap);
+      const row = Math.floor(index / columns);
+      const col = index % columns;
+      const rowCount = Math.min(columns, actions.length - row * columns);
+      const rowWidth = rowCount * buttonWidth + (rowCount - 1) * gap;
+      const x = -rowWidth / 2 + buttonWidth / 2 + col * (buttonWidth + gap);
+      const y = -totalHeight / 2 + buttonHeight / 2 + row * (buttonHeight + gap);
       const left = x - buttonWidth / 2;
-      const bg = this.add.rectangle(x, 0, buttonWidth, buttonHeight, action.enabled ? action.color : 0x26333b, action.enabled ? 0.97 : 0.66).setStrokeStyle(2, action.enabled ? 0xd7b86c : 0x56636b, action.enabled ? 0.72 : 0.4);
-      const iconX = left + 42;
-      const plate = this.add.rectangle(iconX, 0, 70, 70, 0x05121c, 0.72).setStrokeStyle(2, action.enabled ? 0x77d9eb : 0x4d5c64, 0.6);
+      const bg = this.add.rectangle(x, y, buttonWidth, buttonHeight, action.enabled ? action.color : 0x26333b, action.enabled ? 0.97 : 0.66).setStrokeStyle(2, action.enabled ? 0xd7b86c : 0x56636b, action.enabled ? 0.72 : 0.4);
+      const iconX = left + 46;
+      const plate = this.add.rectangle(iconX, y, 76, 76, 0x05121c, 0.72).setStrokeStyle(2, action.enabled ? 0x77d9eb : 0x4d5c64, 0.6);
       let visual: Phaser.GameObjects.Image | Phaser.GameObjects.Text;
       if (action.iconKey && this.textures.exists(action.iconKey)) {
-        visual = this.add.image(iconX, 0, action.iconKey).setDisplaySize(62, 62).setAlpha(action.enabled ? 1 : 0.45);
+        visual = this.add.image(iconX, y, action.iconKey).setDisplaySize(68, 68).setAlpha(action.enabled ? 1 : 0.45);
         if (!action.enabled && visual instanceof Phaser.GameObjects.Image) visual.setTint(0x718087);
       } else {
-        visual = this.add.text(iconX, 0, action.glyph, { fontFamily: COMBAT_DISPLAY_FONT, fontSize: '27px', color: action.enabled ? '#fff8e7' : '#75858d', fontStyle: 'bold' }).setOrigin(0.5);
+        visual = this.add.text(iconX, y, action.glyph, { fontFamily: COMBAT_DISPLAY_FONT, fontSize: '30px', color: action.enabled ? '#fff8e7' : '#75858d', fontStyle: 'bold' }).setOrigin(0.5);
       }
-      const textLeft = left + 84;
-      const textWidth = buttonWidth - 94;
-      const header = this.add.text(textLeft, -34, `${action.label} · ${action.tag}`, { fontFamily: COMBAT_DISPLAY_FONT, fontSize: '13px', color: action.enabled ? '#fff8e7' : '#89979d', fontStyle: 'bold', fixedWidth: textWidth }).setOrigin(0, 0.5);
-      const detail = this.add.text(textLeft, -5, action.detail, { fontFamily: COMBAT_BODY_FONT, fontSize: '12px', color: action.enabled ? '#d6e7e9' : '#71818a', fontStyle: 'bold', fixedWidth: textWidth, wordWrap: { width: textWidth } }).setOrigin(0, 0.5);
-      const resource = this.add.text(textLeft, 31, action.resource, { fontFamily: COMBAT_DISPLAY_FONT, fontSize: '10px', color: action.enabled ? '#7de6ff' : '#66767e', fontStyle: 'bold', fixedWidth: textWidth, wordWrap: { width: textWidth } }).setOrigin(0, 0.5);
-      const hit = this.add.rectangle(x, 0, buttonWidth, buttonHeight, 0xffffff, 0.001);
+      const textLeft = left + 94;
+      const textWidth = buttonWidth - 104;
+      const header = this.add.text(textLeft, y - 37, `${action.label} · ${action.tag}`, { fontFamily: COMBAT_DISPLAY_FONT, fontSize: '14px', color: action.enabled ? '#fff8e7' : '#89979d', fontStyle: 'bold', fixedWidth: textWidth }).setOrigin(0, 0.5);
+      const detail = this.add.text(textLeft, y - 5, action.detail, { fontFamily: COMBAT_BODY_FONT, fontSize: '13px', color: action.enabled ? '#d6e7e9' : '#71818a', fontStyle: 'bold', fixedWidth: textWidth, wordWrap: { width: textWidth } }).setOrigin(0, 0.5);
+      const resource = this.add.text(textLeft, y + 35, action.resource, { fontFamily: COMBAT_DISPLAY_FONT, fontSize: '12px', color: action.enabled ? '#7de6ff' : '#66767e', fontStyle: 'bold', fixedWidth: textWidth, wordWrap: { width: textWidth } }).setOrigin(0, 0.5);
+      const hit = this.add.rectangle(x, y, buttonWidth, buttonHeight, 0xffffff, 0.001);
       if (action.enabled) {
         hit.setInteractive({ useHandCursor: true });
         hit.on('pointerover', () => bg.setAlpha(1).setScale(1.012));
@@ -249,11 +264,11 @@ export class BattleScene extends Phaser.Scene {
 
   private createUndoMenu(actor: CombatUnitState): void {
     this.destroyUndoMenu();
-    const x = this.scale.width - 105;
+    const x = this.scale.width - 112;
     const y = this.scale.height / 2;
-    const bg = this.add.rectangle(x, y, 150, 46, 0x172d3b, 0.97).setStrokeStyle(2, 0xd7b86c, 0.65);
-    const label = this.add.text(x, y, '↩ HOÀN TÁC', { fontFamily: COMBAT_DISPLAY_FONT, fontSize: '13px', color: '#fff8e7', fontStyle: 'bold' }).setOrigin(0.5);
-    const hit = this.add.rectangle(x, y, 150, 46, 0xffffff, 0.001).setInteractive({ useHandCursor: true });
+    const bg = this.add.rectangle(x, y, 168, 52, 0x172d3b, 0.97).setStrokeStyle(2, 0xd7b86c, 0.65);
+    const label = this.add.text(x, y, '↩ HOÀN TÁC', { fontFamily: COMBAT_DISPLAY_FONT, fontSize: '15px', color: '#fff8e7', fontStyle: 'bold' }).setOrigin(0.5);
+    const hit = this.add.rectangle(x, y, 168, 52, 0xffffff, 0.001).setInteractive({ useHandCursor: true });
     hit.once('pointerup', () => { this.pendingPlayerAction = null; this.destroyUndoMenu(); this.clearTargeting(); this.turnText.setText(`LƯỢT · ${actor.pow.name}`).setColor(COMBAT_COLORS.player); this.createActionMenu(actor); });
     this.undoMenu = this.add.container(0, 0, [bg, label, hit]).setDepth(48);
   }
@@ -288,6 +303,7 @@ export class BattleScene extends Phaser.Scene {
       this.refreshViews();
       if (targetView) { await targetView.playHit(); this.showDamageNumber(targetView, result.hpDamage, result.shieldDamage, result.defeated); }
       this.showRageGain(actorView, result.rageGained, result.rawRageGain);
+      await this.wait(300);
       return true;
     });
     if (completed === null) this.recoverTurnFlow(); else this.afterAction();
@@ -324,8 +340,9 @@ export class BattleScene extends Phaser.Scene {
       if (result.shieldGranted > 0) this.showFloatingLabel(actorView, `KHIÊN +${result.shieldGranted}`, '#8edfff');
       if (result.cleansed) this.showFloatingLabel(targetView, 'THANH TẨY', '#a8ffd8');
       if (result.statusLabel && !result.cleansed && !result.revived) this.showFloatingLabel(this.isSelfStatus(result.statusLabel) ? actorView : targetView, this.statusDisplayName(result.statusLabel), '#c9b0ff');
-      this.showRageGain(actorView, result.rageGained, result.rawRageGain);
-      await this.wait(slot === 'ultimate' ? 420 : 220);
+      if (result.rageSpent > 0) this.showFloatingLabel(actorView, `NỘ -${result.rageSpent} · CÒN ${result.rageAfter}`, '#ffcc8a');
+      else this.showRageGain(actorView, result.rageGained, result.rawRageGain);
+      await this.wait(slot === 'ultimate' ? 760 : 360);
       return true;
     });
     if (completed === null) this.recoverTurnFlow(); else this.afterAction();
@@ -341,7 +358,7 @@ export class BattleScene extends Phaser.Scene {
     this.combatState.sanitizeRuntimeNumbers(); this.refreshViews();
     const view = this.powViews.get(actor.instanceId);
     if (view) { await view.playHit(); this.showFloatingLabel(view, `${status === 'poison' ? 'ĐỘC' : 'THIÊU ĐỐT'} -${damage}`, status === 'poison' ? '#a6e66f' : '#ff9b68'); }
-    await this.wait(220);
+    await this.wait(360);
   }
 
   private afterAction(): void { void this.settleAfterAction(); }
@@ -356,7 +373,7 @@ export class BattleScene extends Phaser.Scene {
       this.refreshViews();
       if (this.combatState.isBattleOver()) { this.finishBattle(); return; }
     } finally { this.lineupSettling = false; }
-    this.time.delayedCall(260, () => this.beginNextTurn());
+    this.time.delayedCall(420, () => this.beginNextTurn());
   }
 
   private async handleReservePromotions(): Promise<void> {
@@ -405,31 +422,31 @@ export class BattleScene extends Phaser.Scene {
     const p = view.getWorldPosition();
     const top = p.y < this.scale.height / 2;
     const y = top ? Math.min(this.scale.height / 2 - 115, p.y + 160) : Math.max(this.scale.height / 2 + 115, p.y - 160);
-    const text = this.add.text(p.x, y, this.shortName(name, 30).toUpperCase(), { fontFamily: COMBAT_DISPLAY_FONT, fontSize: '17px', color, fontStyle: 'bold', backgroundColor: '#07131ddd', padding: { x: 11, y: 6 }, stroke: '#06111c', strokeThickness: 2 }).setOrigin(0.5).setDepth(46);
-    this.tweens.add({ targets: text, y: y + (top ? 12 : -12), alpha: 0, delay: 240, duration: 720, ease: 'Quad.easeOut', onComplete: () => text.destroy() });
+    const text = this.add.text(p.x, y, this.shortName(name, 32).toUpperCase(), { fontFamily: COMBAT_DISPLAY_FONT, fontSize: '21px', color, fontStyle: 'bold', backgroundColor: '#07131ddd', padding: { x: 13, y: 8 }, stroke: '#06111c', strokeThickness: 3 }).setOrigin(0.5).setDepth(46);
+    this.tweens.add({ targets: text, y: y + (top ? 12 : -12), alpha: 0, delay: 480, duration: 1000, ease: 'Quad.easeOut', onComplete: () => text.destroy() });
   }
 
   private showDamageNumber(view: PowView, hpDamage: number, shieldDamage: number, defeated: boolean): void {
     const p = view.getWorldPosition();
     const label = shieldDamage > 0 && hpDamage <= 0 ? `KHIÊN -${shieldDamage}` : shieldDamage > 0 ? `-${hpDamage}  ·  KHIÊN -${shieldDamage}` : `-${hpDamage}`;
-    const text = this.add.text(p.x, p.y - 92, label, { fontFamily: COMBAT_DISPLAY_FONT, fontSize: defeated ? '30px' : '26px', color: defeated ? '#ff6478' : shieldDamage > 0 ? '#8edfff' : '#ffd36a', fontStyle: 'bold', stroke: '#06111c', strokeThickness: 5 }).setOrigin(0.5).setDepth(50);
-    this.floatAndDestroy(text, 900);
+    const text = this.add.text(p.x, p.y - 96, label, { fontFamily: COMBAT_DISPLAY_FONT, fontSize: defeated ? '38px' : '34px', color: defeated ? '#ff6478' : shieldDamage > 0 ? '#8edfff' : '#ffd36a', fontStyle: 'bold', stroke: '#06111c', strokeThickness: 6 }).setOrigin(0.5).setDepth(50);
+    this.floatAndDestroy(text, 1250);
   }
 
   private showFloatingLabel(view: PowView | undefined, label: string, color: string): void {
     if (!view) return;
     const p = view.getWorldPosition();
-    const text = this.add.text(p.x, p.y - 94, label, { fontFamily: COMBAT_DISPLAY_FONT, fontSize: '20px', color, fontStyle: 'bold', stroke: '#06111c', strokeThickness: 4 }).setOrigin(0.5).setDepth(49);
-    this.floatAndDestroy(text, 950);
+    const text = this.add.text(p.x, p.y - 98, label, { fontFamily: COMBAT_DISPLAY_FONT, fontSize: '24px', color, fontStyle: 'bold', stroke: '#06111c', strokeThickness: 5 }).setOrigin(0.5).setDepth(49);
+    this.floatAndDestroy(text, 1250);
   }
 
   private showRageGain(view: PowView | undefined, gained: number, raw: number): void {
     if (!view || gained <= 0) return;
-    this.showFloatingLabel(view, gained < raw ? `NỘ +${gained} · DƯ NỘ GIẢM 50%` : `NỘ +${gained}`, '#6ed9ff');
+    this.showFloatingLabel(view, gained < raw ? `NỘ +${gained} · DƯ ×50%` : `NỘ +${gained}`, '#6ed9ff');
   }
 
   private floatAndDestroy(text: Phaser.GameObjects.Text, duration: number): void {
-    this.tweens.add({ targets: text, y: text.y - 38, alpha: 0, delay: 180, duration, ease: 'Quad.easeOut', onComplete: () => text.destroy() });
+    this.tweens.add({ targets: text, y: text.y - 42, alpha: 0, delay: 300, duration, ease: 'Quad.easeOut', onComplete: () => text.destroy() });
   }
 
   private pickTarget(side: CombatSide): CombatUnitState | null { return this.combatState.activeLiving(side).sort((a, b) => (a.fieldSlot ?? 99) - (b.fieldSlot ?? 99))[0] ?? null; }
@@ -438,7 +455,7 @@ export class BattleScene extends Phaser.Scene {
     this.destroyActionMenu(); this.destroyUndoMenu(); this.clearTargeting(); this.clearTurnHighlights(); this.refreshViews();
     const win = this.combatState.living('player').length > 0 && this.combatState.living('enemy').length === 0;
     this.turnText.setText('');
-    this.roundText.setText(win ? 'CHIẾN THẮNG' : 'THẤT BẠI').setFontSize(30).setColor(win ? '#73f0aa' : '#ff7282');
+    this.roundText.setText(win ? 'CHIẾN THẮNG' : 'THẤT BẠI').setFontSize(34).setColor(win ? '#73f0aa' : '#ff7282');
   }
 
   private refreshViews(): void { for (const unit of this.combatState.units) this.powViews.get(unit.instanceId)?.updateRuntime(unit); }
@@ -452,7 +469,7 @@ export class BattleScene extends Phaser.Scene {
     const type = String(ability.type || '').trim().toLowerCase();
     if (status === 'cleanse' || status === 'purify') return 'CLEAN';
     if (status === 'revive' || status === 'resurrection') return 'REVIVE';
-    if (status === 'rage gain' || status === 'ap up') return 'NỘ';
+    if (status === 'rage gain') return 'NỘ';
     if (type === 'support') return 'SUP';
     if (type === 'debuff') return 'CTRL';
     return 'ATK';
@@ -467,12 +484,12 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private isSelfStatus(status: string): boolean {
-    return ['shield', 'regeneration', 'attack up', 'defense up', 'rage gain', 'ap up'].includes(status.replace(/^self:/i, '').trim().toLowerCase());
+    return ['shield', 'regeneration', 'attack up', 'defense up', 'rage gain'].includes(status.replace(/^self:/i, '').trim().toLowerCase());
   }
 
   private statusDisplayName(status: string): string {
     const normalized = status.replace(/^self:/i, '').trim().toLowerCase();
-    const names: Record<string, string> = { shield: 'KHIÊN', regeneration: 'HỒI PHỤC', 'attack up': 'TĂNG CÔNG', 'defense up': 'TĂNG THỦ', 'rage gain': 'HỒI NỘ', 'ap up': 'HỒI NỘ', stun: 'CHOÁNG', freeze: 'ĐÓNG BĂNG', slow: 'CHẬM', burn: 'THIÊU ĐỐT', poison: 'NHIỄM ĐỘC' };
+    const names: Record<string, string> = { shield: 'KHIÊN', regeneration: 'HỒI PHỤC', 'attack up': 'TĂNG CÔNG', 'defense up': 'TĂNG THỦ', 'rage gain': 'HỒI NỘ', stun: 'CHOÁNG', freeze: 'ĐÓNG BĂNG', slow: 'CHẬM', burn: 'THIÊU ĐỐT', poison: 'NHIỄM ĐỘC' };
     return names[normalized] ?? status.toUpperCase();
   }
 
@@ -491,7 +508,7 @@ export class BattleScene extends Phaser.Scene {
       const instanceId = `${side}-${index}-${pow.id}`;
       const unit = this.combatState.getUnit(instanceId); if (!unit) return;
       const p = unit.fieldSlot !== null ? this.activePosition(side, unit.fieldSlot) : this.reservePosition(side, index - ACTIVE_TEAM_SIZE);
-      const view = new PowView(this, p.x, p.y, pow, { side, width: 276, height: 300 });
+      const view = new PowView(this, p.x, p.y, pow, { side, width: 276, height: 312 });
       if (unit.fieldSlot === null) view.setBenchScale(0.5);
       view.onTargetSelected(() => this.selectTarget(instanceId));
       this.powViews.set(instanceId, view);
@@ -501,10 +518,14 @@ export class BattleScene extends Phaser.Scene {
 
   private activePosition(side: CombatSide, fieldSlot: number): Phaser.Math.Vector2 {
     const spacing = Math.min(350, this.scale.width * 0.23);
-    return new Phaser.Math.Vector2(this.scale.width / 2 + (fieldSlot - 1) * spacing, side === 'enemy' ? 164 : this.scale.height - 164);
+    const portrait = this.scale.height > this.scale.width;
+    const edgeY = portrait ? 210 : 170;
+    return new Phaser.Math.Vector2(this.scale.width / 2 + (fieldSlot - 1) * spacing, side === 'enemy' ? edgeY : this.scale.height - edgeY);
   }
   private reservePosition(side: CombatSide, reserveIndex: number): Phaser.Math.Vector2 {
     const inset = Math.max(86, this.scale.width * 0.075);
-    return new Phaser.Math.Vector2(reserveIndex <= 0 ? inset : this.scale.width - inset, side === 'enemy' ? 92 : this.scale.height - 92);
+    const portrait = this.scale.height > this.scale.width;
+    const edgeY = portrait ? 118 : 96;
+    return new Phaser.Math.Vector2(reserveIndex <= 0 ? inset : this.scale.width - inset, side === 'enemy' ? edgeY : this.scale.height - edgeY);
   }
 }
