@@ -66,6 +66,13 @@ const ENEMY_PREFERRED_IDS = [
   'terrapup'
 ] as const;
 const CANONICAL_PREFIX = 'assets/pow-beta12/';
+const HOSTILE_SUPPORT_STATUSES = new Set([
+  'stun',
+  'freeze',
+  'slow',
+  'burn',
+  'poison'
+]);
 
 const DEFAULT_DISPLAY: PowDisplayProfile = {
   heightRatio: 0.94,
@@ -80,6 +87,21 @@ function finitePositive(value: number | undefined, fallback: number): number {
     : fallback;
 }
 
+function normalizeAbilityType(
+  rawType: string | undefined,
+  status: string | undefined,
+  fallbackType: string
+): string {
+  const type = String(rawType || fallbackType).trim().toLowerCase();
+  const normalizedStatus = String(status || '').trim().toLowerCase();
+
+  if (type === 'support' && HOSTILE_SUPPORT_STATUSES.has(normalizedStatus)) {
+    return 'debuff';
+  }
+
+  return type;
+}
+
 function normalizeAbility(
   ability: CatalogAbility | undefined,
   fallbackName: string,
@@ -89,7 +111,7 @@ function normalizeAbility(
   return {
     name: String(ability?.name || fallbackName),
     power: finitePositive(ability?.power, fallbackPower),
-    type: String(ability?.type || fallbackType),
+    type: normalizeAbilityType(ability?.type, ability?.status, fallbackType),
     ...(ability?.status ? { status: String(ability.status) } : {})
   };
 }
