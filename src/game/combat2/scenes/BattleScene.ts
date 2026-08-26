@@ -1,5 +1,9 @@
 import Phaser from 'phaser';
-import type { CombatPow, CombatSide } from '../data/CombatPow';
+import type {
+  CombatAbility,
+  CombatPow,
+  CombatSide
+} from '../data/CombatPow';
 import {
   ACTIVE_TEAM_SIZE,
   ALL_COMBAT2_STARTER_POWS,
@@ -95,11 +99,12 @@ export class BattleScene extends Phaser.Scene {
 
   private showPreBattleIntro(width: number, height: number): void {
     const shade = this.add.rectangle(width / 2, height / 2, width, height, 0x02080e, 0.48);
-    const plate = this.add.rectangle(width / 2, height / 2, 600, 142, 0x081d2a, 0.96);
+    const plateWidth = Math.min(600, width - 70);
+    const plate = this.add.rectangle(width / 2, height / 2, plateWidth, 142, 0x081d2a, 0.96);
     plate.setStrokeStyle(2, 0x58d8ef, 0.72);
 
     const title = this.add
-      .text(width / 2, height / 2 - 34, 'POWDER COMBAT 2.0.8', {
+      .text(width / 2, height / 2 - 34, 'POWDER COMBAT 2.0.9', {
         fontFamily: 'Arial',
         fontSize: '29px',
         color: '#ffffff',
@@ -124,7 +129,7 @@ export class BattleScene extends Phaser.Scene {
       .text(
         width / 2,
         height / 2 + 35,
-        'Dự bị không nhận lượt khi ngoài sân · tự vào đúng slot khi tuyến chính gục',
+        'Dự bị chỉ vào sân khi slot trống · support tự chọn đúng mục tiêu',
         {
           fontFamily: 'Arial',
           fontSize: '11px',
@@ -231,24 +236,33 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private async performEnemyAction(actor: CombatUnitState): Promise<void> {
-    const target = this.pickTarget('player');
-    if (!target) {
-      this.afterAction();
-      return;
-    }
+    const enemyTarget = this.pickTarget('player');
 
     if (this.skillActions.canUseUltimate(actor)) {
-      await this.performAbility(actor, target, 'ultimate');
-      return;
+      const ability = actor.pow.abilities.ultimate;
+      const target = this.abilityTargetsSelf(ability) ? actor : enemyTarget;
+      if (target) {
+        await this.performAbility(actor, target, 'ultimate');
+        return;
+      }
     }
 
     const preferredSkill: CombatSkillSlot = actor.slot % 2 === 0 ? 0 : 1;
     if (this.skillActions.canUse(actor, preferredSkill)) {
-      await this.performAbility(actor, target, preferredSkill);
+      const ability = actor.pow.abilities.skills[preferredSkill];
+      const target = this.abilityTargetsSelf(ability) ? actor : enemyTarget;
+      if (target) {
+        await this.performAbility(actor, target, preferredSkill);
+        return;
+      }
+    }
+
+    if (enemyTarget) {
+      await this.performBasicAttack(actor, enemyTarget);
       return;
     }
 
-    await this.performBasicAttack(actor, target);
+    this.afterAction();
   }
 
   private createActionMenu(actor: CombatUnitState): void {
@@ -269,31 +283,33 @@ export class BattleScene extends Phaser.Scene {
       },
       {
         label: 'KỸ NĂNG 1',
-        detail: `${this.shortName(skill1.name)} · ${skill1Cost} Mana`,
+        detail: `${this.shortName(skill1.name)} · ${skill1Cost} Mana${this.abilityTargetsSelf(skill1) ? ' · Bản thân' : ''}`,
         color: 0x315d78,
         enabled: this.skillActions.canUse(actor, 0),
         run: () => this.runPlayerTargetAction(actor, 0)
       },
       {
         label: 'KỸ NĂNG 2',
-        detail: `${this.shortName(skill2.name)} · ${skill2Cost} Mana`,
+        detail: `${this.shortName(skill2.name)} · ${skill2Cost} Mana${this.abilityTargetsSelf(skill2) ? ' · Bản thân' : ''}`,
         color: 0x493b78,
         enabled: this.skillActions.canUse(actor, 1),
         run: () => this.runPlayerTargetAction(actor, 1)
       },
       {
         label: 'ULTIMATE',
-        detail: `${this.shortName(ultimate.name)} · ${rageCost} Nộ`,
+        detail: `${this.shortName(ultimate.name)} · ${rageCost} Nộ${this.abilityTargetsSelf(ultimate) ? ' · Bản thân' : ''}`,
         color: 0x70472b,
         enabled: this.skillActions.canUseUltimate(actor),
         run: () => this.runPlayerTargetAction(actor, 'ultimate')
       }
     ];
 
-    const buttonWidth = 208;
-    const gap = 10;
+    const portrait = this.isPortrait();
+    const buttonWidth = portrait ? 196 : 208;
+    const gap = portrait ? 8 : 10;
     const totalWidth = actions.length * buttonWidth + (actions.length - 1) * gap;
-    const menu = this.add.container(this.scale.width / 2, this.scale.height / 2 + 88);
+    const menuY = this.scale.height / 2 + (portrait ? 108 : 88);
+    const menu = this.add.container(this.scale.width / 2, menuY);
     menu.setDepth(30);
 
     actions.forEach((action, index) => {
@@ -315,7 +331,7 @@ export class BattleScene extends Phaser.Scene {
       const label = this.add
         .text(x, -9, action.label, {
           fontFamily: 'Arial',
-          fontSize: '13px',
+          fontSize: portrait ? '12px' : '13px',
           color: action.enabled ? '#ffffff' : '#85959d',
           fontStyle: 'bold'
         })
@@ -324,7 +340,7 @@ export class BattleScene extends Phaser.Scene {
       const detail = this.add
         .text(x, 13, action.detail, {
           fontFamily: 'Arial',
-          fontSize: '9px',
+          fontSize: portrait ? '8px' : '9px',
           color: action.enabled ? '#b4d4df' : '#71818a'
         })
         .setOrigin(0.5);
@@ -351,7 +367,25 @@ export class BattleScene extends Phaser.Scene {
     actor: CombatUnitState,
     action: 'basic' | CombatAbilitySlot
   ): void {
-    const target = this.getSelectedEnemyTarget();
+    if (action === 'basic') {
+      const target = this.getSelectedEnemyTarget();
+      if (!target) {
+        this.preparePlayerTargeting();
+        this.createActionMenu(actor);
+        return;
+      }
+
+      this.clearTargeting();
+      void this.performBasicAttack(actor, target);
+      return;
+    }
+
+    const ability = action === 'ultimate'
+      ? actor.pow.abilities.ultimate
+      : actor.pow.abilities.skills[action];
+    const target = this.abilityTargetsSelf(ability)
+      ? actor
+      : this.getSelectedEnemyTarget();
 
     if (!target) {
       this.preparePlayerTargeting();
@@ -360,12 +394,6 @@ export class BattleScene extends Phaser.Scene {
     }
 
     this.clearTargeting();
-
-    if (action === 'basic') {
-      void this.performBasicAttack(actor, target);
-      return;
-    }
-
     void this.performAbility(actor, target, action);
   }
 
@@ -419,11 +447,12 @@ export class BattleScene extends Phaser.Scene {
     const ability = slot === 'ultimate'
       ? actor.pow.abilities.ultimate
       : actor.pow.abilities.skills[slot];
+    const selfTargeted = target.instanceId === actor.instanceId;
 
     const completed = await this.actionPipeline.execute(actor.instanceId, async () => {
       actorView?.setActiveTurn(false);
 
-      if (ability.type.toLowerCase() !== 'support' && actorView && targetView) {
+      if (!selfTargeted && ability.type.toLowerCase() !== 'support' && actorView && targetView) {
         const targetPosition = targetView.getWorldPosition();
         await actorView.playAttackLunge(targetPosition.x, targetPosition.y);
       } else {
@@ -434,14 +463,14 @@ export class BattleScene extends Phaser.Scene {
         ? this.skillActions.resolveUltimate(actor, target, ability)
         : this.skillActions.resolve(actor, target, ability, slot);
 
-      if (result.targetSpeedChanged) {
+      if (result.targetSpeedChanged && target.instanceId !== actor.instanceId) {
         this.turnManager.rescheduleUnit(target.instanceId);
       }
 
       this.combatState.sanitizeRuntimeNumbers();
       this.refreshViews();
 
-      if (result.damage > 0 && targetView) {
+      if (result.damage > 0 && targetView && !selfTargeted) {
         await targetView.playHit();
         this.showDamageNumber(
           targetView,
@@ -571,10 +600,10 @@ export class BattleScene extends Phaser.Scene {
       }
 
       if (promotedView && promotedUnit) {
-        this.showFloatingLabel(promotedView, 'DỰ BỊ VÀO SÂN', '#7ce8ff');
         await promotedView.enterField(fieldPosition.x, fieldPosition.y);
         promotedView.updateRuntime(promotedUnit);
         this.turnManager.registerPromoted(promotedUnit.instanceId);
+        this.showFloatingLabel(promotedView, 'DỰ BỊ VÀO SÂN', '#7ce8ff');
       }
     }
   }
@@ -583,7 +612,7 @@ export class BattleScene extends Phaser.Scene {
     this.destroyActionMenu();
     this.clearTargeting();
     this.turnManager.recoverActionLock();
-    this.time.delayedCall(80, () => this.beginNextTurn());
+    this.afterAction();
   }
 
   private preparePlayerTargeting(): void {
@@ -785,6 +814,18 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
+  private abilityTargetsSelf(ability: CombatAbility): boolean {
+    const type = String(ability.type || '').trim().toLowerCase();
+    const status = String(ability.status || '').trim().toLowerCase();
+    return type === 'support' || [
+      'shield',
+      'regeneration',
+      'attack up',
+      'defense up',
+      'ap up'
+    ].includes(status);
+  }
+
   private isSelfStatus(status: string): boolean {
     const normalized = status.trim().toLowerCase();
     return [
@@ -821,19 +862,27 @@ export class BattleScene extends Phaser.Scene {
 
   private createBattlefield(width: number, height: number): void {
     const graphics = this.add.graphics();
+    const portrait = this.isPortrait();
+    const arenaWidth = portrait ? width * 0.88 : Math.min(1220, width * 0.86);
+    const arenaHeight = portrait ? height * 0.42 : Math.min(430, height * 0.5);
 
     graphics.fillStyle(0x071827, 1);
     graphics.fillRect(0, 0, width, height);
 
     graphics.fillStyle(0x0a2031, 0.74);
-    graphics.fillEllipse(width / 2, height / 2, 1220, 430);
+    graphics.fillEllipse(width / 2, height / 2, arenaWidth, arenaHeight);
 
     graphics.lineStyle(1, 0x21475c, 0.45);
-    graphics.strokeEllipse(width / 2, height / 2, 1220, 430);
-    graphics.strokeEllipse(width / 2, height / 2, 900, 305);
+    graphics.strokeEllipse(width / 2, height / 2, arenaWidth, arenaHeight);
+    graphics.strokeEllipse(
+      width / 2,
+      height / 2,
+      arenaWidth * 0.74,
+      arenaHeight * 0.71
+    );
 
     graphics.lineStyle(1, 0x15394e, 0.55);
-    graphics.lineBetween(105, height / 2, width - 105, height / 2);
+    graphics.lineBetween(width * 0.07, height / 2, width * 0.93, height / 2);
   }
 
   private createTeam(side: CombatSide, team: CombatPow[]): void {
@@ -864,9 +913,14 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private activePosition(side: CombatSide, fieldSlot: number): Phaser.Math.Vector2 {
-    const spacing = Math.min(350, this.scale.width * 0.23);
+    const portrait = this.isPortrait();
+    const spacing = portrait
+      ? this.scale.width * 0.23
+      : Math.min(350, this.scale.width * 0.23);
     const x = this.scale.width / 2 + (fieldSlot - 1) * spacing;
-    const y = side === 'enemy' ? 164 : this.scale.height - 164;
+    const y = portrait
+      ? (side === 'enemy' ? 164 : this.scale.height - 164)
+      : (side === 'enemy' ? 164 : this.scale.height - 164);
     return new Phaser.Math.Vector2(x, y);
   }
 
@@ -875,5 +929,9 @@ export class BattleScene extends Phaser.Scene {
     const x = reserveIndex <= 0 ? inset : this.scale.width - inset;
     const y = side === 'enemy' ? 92 : this.scale.height - 92;
     return new Phaser.Math.Vector2(x, y);
+  }
+
+  private isPortrait(): boolean {
+    return this.scale.height > this.scale.width;
   }
 }
