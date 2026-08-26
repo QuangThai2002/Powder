@@ -17,9 +17,14 @@ export class BasicAttackResolver {
     const defense =
       this.safeStat(target.pow.defense, 0) *
       this.safeMultiplier(target.defenseMultiplier);
+    const basicPower = this.safeStat(attacker.pow.abilities.basic.power, 100);
+    const coefficient = Math.min(3, Math.max(0.1, basicPower / 100));
     const targetHpBefore = this.safeHp(target.hp, target.pow.maxHp);
 
-    const damage = Math.max(1, Math.round(attack - defense * 0.45));
+    const damage = Math.max(
+      1,
+      Math.round(attack * coefficient - defense * 0.45)
+    );
     const shieldBefore = this.safeStat(target.shield, 0);
     const shieldDamage = Math.min(shieldBefore, damage);
     const hpDamage = Math.max(0, damage - shieldDamage);
