@@ -64,20 +64,22 @@ export const RESERVE_TEAM_SIZE = 2;
 export const TOTAL_TEAM_SIZE = ACTIVE_TEAM_SIZE + RESERVE_TEAM_SIZE;
 
 // Combat test roster intentionally spans different roles/elements so one match
-// can exercise support, control, tanking, direct damage, DOT and reserve flow.
+// can exercise support, control, direct damage, DOT, revive and reserve flow.
+// Keep revive_ally_once off the player's team so Mosshorn's active Revive can
+// be tested as soon as the first ally is genuinely defeated.
 const PLAYER_PREFERRED_IDS = [
   'mosshorn',
-  'gearbit',
   'voltkit',
   'pyroon',
-  'frostmaw'
+  'frostmaw',
+  'tidewarden'
 ] as const;
 const ENEMY_PREFERRED_IDS = [
   'terrapup',
   'aquabub',
   'zephyroo',
-  'stormeon',
-  'joltail'
+  'gearbit',
+  'stormeon'
 ] as const;
 const CANONICAL_PREFIX = 'assets/pow-beta12/';
 const CANONICAL_SKILL_ART_PREFIX = '/assets/skills/v81/';
