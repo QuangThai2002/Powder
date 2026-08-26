@@ -25,6 +25,8 @@ interface ElementEvaluation {
 interface DamageEvaluation extends ElementEvaluation {
   roleOutgoing: number;
   roleIncoming: number;
+  passiveOutgoing: number;
+  passiveIncoming: number;
   totalMultiplier: number;
 }
 
@@ -39,8 +41,9 @@ const DEFAULT_ELEMENT_MULTIPLIERS = {
 /**
  * Pure deterministic combat identity rules.
  *
- * No RNG, no timers and no renderer access are allowed here. This keeps the
- * same element/role outcome reproducible in manual play and regression tests.
+ * No RNG, timers or renderer access are allowed here. Element, role and the
+ * passives implemented in this layer stay reproducible in manual play and
+ * regression tests.
  */
 export class CombatIdentityRules {
   evaluateDamage(
@@ -55,8 +58,14 @@ export class CombatIdentityRules {
       : { multiplier: 1, outcome: 'neutral' as const };
     const roleOutgoing = this.outgoingRoleMultiplier(actor, target, kind);
     const roleIncoming = this.incomingRoleMultiplier(target);
+    const passiveOutgoing = this.outgoingPassiveMultiplier(actor);
+    const passiveIncoming = this.incomingPassiveMultiplier(target);
     const totalMultiplier = this.clampMultiplier(
-      element.multiplier * roleOutgoing * roleIncoming,
+      element.multiplier *
+        roleOutgoing *
+        roleIncoming *
+        passiveOutgoing *
+        passiveIncoming,
       element.multiplier === 0 ? 0 : 0.1,
       4
     );
@@ -65,6 +74,8 @@ export class CombatIdentityRules {
       ...element,
       roleOutgoing,
       roleIncoming,
+      passiveOutgoing,
+      passiveIncoming,
       totalMultiplier
     };
   }
@@ -195,6 +206,36 @@ export class CombatIdentityRules {
     }
 
     return 1;
+  }
+
+  private outgoingPassiveMultiplier(actor: CombatUnitState): number {
+    const passiveId = String(actor.pow.passive?.id || '').trim().toLowerCase();
+
+    if (passiveId === 'missing_hp_atk') {
+      const missingRatio = this.missingHpRatio(actor);
+      return 1 + missingRatio * 0.25;
+    }
+
+    return 1;
+  }
+
+  private incomingPassiveMultiplier(target: CombatUnitState): number {
+    const passiveId = String(target.pow.passive?.id || '').trim().toLowerCase();
+
+    if (passiveId === 'missing_hp_def') {
+      const missingRatio = this.missingHpRatio(target);
+      return Math.max(0.8, 1 - missingRatio * 0.2);
+    }
+
+    return 1;
+  }
+
+  private missingHpRatio(unit: CombatUnitState): number {
+    const maxHp = Number.isFinite(unit.pow.maxHp) && unit.pow.maxHp > 0
+      ? unit.pow.maxHp
+      : 1;
+    const hp = Number.isFinite(unit.hp) ? unit.hp : maxHp;
+    return Math.min(1, Math.max(0, 1 - hp / maxHp));
   }
 
   private elementRule(key: string): ElementCatalogRule | undefined {
