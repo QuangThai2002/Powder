@@ -74,6 +74,8 @@ const ENEMY_PREFERRED_IDS = [
   'terrapup'
 ] as const;
 const CANONICAL_PREFIX = 'assets/pow-beta12/';
+const CANONICAL_SKILL_ART_PREFIX = '/assets/skills/v81/';
+const STANDARD_POW_SKILL_COUNT = 384;
 const HOSTILE_SUPPORT_STATUSES = new Set([
   'stun',
   'freeze',
@@ -135,11 +137,37 @@ function normalizeAbilityStatus(
   return raw;
 }
 
+function canonicalSkillVisual(skillIndex: number | undefined): Pick<CombatAbility, 'iconKey' | 'iconUrl'> {
+  if (
+    !Number.isInteger(skillIndex) ||
+    (skillIndex as number) < 1 ||
+    (skillIndex as number) > STANDARD_POW_SKILL_COUNT
+  ) {
+    return {};
+  }
+
+  const padded = String(skillIndex).padStart(3, '0');
+  return {
+    iconKey: `combat2-skill-${padded}`,
+    iconUrl: `${CANONICAL_SKILL_ART_PREFIX}skill-${padded}.webp`
+  };
+}
+
+function standardSkillIndex(rosterOrder: number | undefined, offset: 0 | 1 | 2 | 3): number | undefined {
+  if (!Number.isInteger(rosterOrder) || (rosterOrder as number) < 1) {
+    return undefined;
+  }
+
+  const index = ((rosterOrder as number) - 1) * 4 + offset + 1;
+  return index <= STANDARD_POW_SKILL_COUNT ? index : undefined;
+}
+
 function normalizeAbility(
   ability: CatalogAbility | undefined,
   fallbackName: string,
   fallbackPower: number,
-  fallbackType: string
+  fallbackType: string,
+  skillIndex?: number
 ): CombatAbility {
   const type = normalizeAbilityType(ability?.type, ability?.status, fallbackType);
   const status = normalizeAbilityStatus(ability?.status, type);
@@ -148,7 +176,8 @@ function normalizeAbility(
     name: String(ability?.name || fallbackName),
     power: finitePositive(ability?.power, fallbackPower),
     type,
-    ...(status ? { status } : {})
+    ...(status ? { status } : {}),
+    ...canonicalSkillVisual(skillIndex)
   };
 }
 
@@ -176,17 +205,31 @@ function normalizeAbilities(pow: CatalogPow): CombatAbilitySet {
       pow.abilities?.basic,
       `${name} Strike`,
       80,
-      'physical'
+      'physical',
+      standardSkillIndex(pow.rosterOrder, 0)
     ),
     skills: [
-      normalizeAbility(skills[0], `${name} Skill 1`, 110, 'elemental'),
-      normalizeAbility(skills[1], `${name} Skill 2`, 95, 'support')
+      normalizeAbility(
+        skills[0],
+        `${name} Skill 1`,
+        110,
+        'elemental',
+        standardSkillIndex(pow.rosterOrder, 1)
+      ),
+      normalizeAbility(
+        skills[1],
+        `${name} Skill 2`,
+        95,
+        'support',
+        standardSkillIndex(pow.rosterOrder, 2)
+      )
     ],
     ultimate: normalizeAbility(
       pow.abilities?.ultimate,
       `${name} Ultimate`,
       175,
-      'ultimate'
+      'ultimate',
+      standardSkillIndex(pow.rosterOrder, 3)
     )
   };
 }
