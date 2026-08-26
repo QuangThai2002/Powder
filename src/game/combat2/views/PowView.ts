@@ -44,10 +44,10 @@ export class PowView {
     this.scene = scene;
     this.pow = pow;
     this.side = options.side;
-    this.cardWidth = options.width ?? 282;
-    this.cardHeight = options.height ?? 294;
+    this.cardWidth = options.width ?? 286;
+    this.cardHeight = options.height ?? 312;
     this.barWidth = this.cardWidth - 24;
-    this.fieldScale = scene.scale.height > scene.scale.width ? 0.72 : 1;
+    this.fieldScale = scene.scale.height > scene.scale.width ? 0.74 : 1;
     this.reducedMotion = typeof window !== 'undefined' && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
     this.container = scene.add.container(x, y);
     this.build();
@@ -64,13 +64,17 @@ export class PowView {
     markerStates.forEach((state, index) => {
       const marker = this.rageMarkers[index];
       const color = state === 'red' ? COMBAT_COLORS.rageRed : state === 'blue' ? COMBAT_COLORS.rageBlue : COMBAT_COLORS.rageEmpty;
-      marker.setFillStyle(color, state === 'empty' ? 0.45 : 1);
-      marker.setStrokeStyle(state === 'empty' ? 2 : 3, state === 'red' ? 0xffa0a6 : state === 'blue' ? 0xa4eaff : 0x496675, state === 'empty' ? 0.42 : 0.94);
+      marker.setFillStyle(color, state === 'empty' ? 0.38 : 1);
+      marker.setStrokeStyle(
+        state === 'empty' ? 2 : 3,
+        state === 'red' ? 0xffa0a6 : state === 'blue' ? 0xa4eaff : 0x496675,
+        state === 'empty' ? 0.4 : 0.96
+      );
     });
 
     const ready = canUseUltimate(unit.ragePoints);
     this.rageLabel
-      .setText(ready ? `NỘ ${unit.ragePoints}/8 · ULT SẴN SÀNG` : `NỘ ${unit.ragePoints}/8`)
+      .setText(ready ? `NỘ ${unit.ragePoints} · ULT` : `NỘ ${unit.ragePoints}`)
       .setColor(ready ? '#ffe28a' : '#d7edf5');
 
     if (this.hasRuntimeSnapshot && unit.alive) {
@@ -128,14 +132,14 @@ export class PowView {
 
   async enterField(x: number, y: number): Promise<void> {
     this.container.setAlpha(1).setVisible(true);
-    await this.tweenPromise({ targets: this.container, x, y, scaleX: this.fieldScale, scaleY: this.fieldScale, duration: 340, ease: 'Back.easeOut' });
+    await this.tweenPromise({ targets: this.container, x, y, scaleX: this.fieldScale, scaleY: this.fieldScale, duration: 380, ease: 'Back.easeOut' });
     this.container.setPosition(x, y).setScale(this.fieldScale);
     await this.playCastSignature(false);
   }
 
   async retireFromField(x: number, y: number): Promise<void> {
     await this.playDefeatBurst();
-    await this.tweenPromise({ targets: this.container, x, y, scaleX: 0.42, scaleY: 0.42, alpha: 0.18, duration: 250, ease: 'Quad.easeIn' });
+    await this.tweenPromise({ targets: this.container, x, y, scaleX: 0.42, scaleY: 0.42, alpha: 0.18, duration: 290, ease: 'Quad.easeIn' });
   }
 
   async playAttackLunge(targetX: number, targetY: number): Promise<void> {
@@ -149,16 +153,16 @@ export class PowView {
     await this.playCastSignature(false);
     await Promise.all([
       this.playElementTravel(targetX, targetY),
-      this.tweenPromise({ targets: this.container, x: attackX, y: attackY, duration: this.reducedMotion ? 70 : 115, ease: 'Quad.easeOut', yoyo: true })
+      this.tweenPromise({ targets: this.container, x: attackX, y: attackY, duration: this.reducedMotion ? 80 : 140, ease: 'Quad.easeOut', yoyo: true })
     ]);
     this.container.setPosition(startX, startY);
   }
 
   async playHit(): Promise<void> {
     this.playHitFlash();
-    if (!this.reducedMotion) this.scene.cameras.main.shake(90, 0.0012);
+    if (!this.reducedMotion) this.scene.cameras.main.shake(100, 0.0012);
     const startX = this.container.x;
-    await this.tweenPromise({ targets: this.container, x: startX + (this.side === 'player' ? -10 : 10), duration: this.reducedMotion ? 48 : 68, yoyo: true, repeat: this.reducedMotion ? 0 : 1, ease: 'Sine.easeInOut' });
+    await this.tweenPromise({ targets: this.container, x: startX + (this.side === 'player' ? -10 : 10), duration: this.reducedMotion ? 58 : 82, yoyo: true, repeat: this.reducedMotion ? 0 : 1, ease: 'Sine.easeInOut' });
     this.container.setX(startX);
   }
 
@@ -186,7 +190,7 @@ export class PowView {
     this.turnGlow = this.scene.add.rectangle(0, 0, w + 10, h + 10, 0x000000, 0).setStrokeStyle(3, 0xffdc6d, 0.95).setVisible(false);
     const card = this.scene.add.rectangle(0, 0, w, h, 0x071723, 0.96).setStrokeStyle(2, borderColor, 0.92);
 
-    const footerHeight = 92;
+    const footerHeight = 108;
     const artHeight = h - footerHeight - 14;
     const artWidth = w - 20;
     const artY = top + 9 + artHeight / 2;
@@ -199,31 +203,31 @@ export class PowView {
 
     const infoY = top + artHeight + 15;
     const name = this.scene.add.text(left + 12, infoY, this.pow.name, {
-      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '19px', color: COMBAT_COLORS.text, fontStyle: 'bold'
+      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '20px', color: COMBAT_COLORS.text, fontStyle: 'bold'
     });
-    const meta = this.scene.add.text(left + 12, infoY + 23, `Lv.${this.pow.level} · ${this.pow.element} · ${this.pow.role}`, {
-      fontFamily: COMBAT_BODY_FONT, fontSize: '12px', color: '#a9cbd6'
+    const meta = this.scene.add.text(left + 12, infoY + 25, `Lv.${this.pow.level} · ${this.pow.element} · ${this.pow.role}`, {
+      fontFamily: COMBAT_BODY_FONT, fontSize: '13px', color: '#b7d4dd', fontStyle: 'bold'
     });
 
-    const hpY = infoY + 47;
-    const hpBack = this.scene.add.rectangle(left + 12, hpY, this.barWidth, 13, 0x163342, 1).setOrigin(0, 0.5);
-    this.hpBar = this.scene.add.rectangle(left + 12, hpY, this.barWidth, 13, 0x47dc90, 1).setOrigin(0, 0.5);
+    const hpY = infoY + 53;
+    const hpBack = this.scene.add.rectangle(left + 12, hpY, this.barWidth, 17, 0x163342, 1).setOrigin(0, 0.5);
+    this.hpBar = this.scene.add.rectangle(left + 12, hpY, this.barWidth, 17, 0x47dc90, 1).setOrigin(0, 0.5);
     this.hpText = this.scene.add.text(0, hpY, '', {
-      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '12px', color: '#ffffff', fontStyle: 'bold', stroke: '#041018', strokeThickness: 3
+      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '15px', color: '#ffffff', fontStyle: 'bold', stroke: '#041018', strokeThickness: 4
     }).setOrigin(0.5);
 
-    const rageY = hpY + 25;
-    this.rageLabel = this.scene.add.text(left + 12, rageY, 'NỘ 0/8', {
-      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '11px', color: '#d7edf5', fontStyle: 'bold'
+    const rageY = hpY + 31;
+    this.rageLabel = this.scene.add.text(left + 12, rageY, 'NỘ 0', {
+      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '14px', color: '#d7edf5', fontStyle: 'bold'
     }).setOrigin(0, 0.5);
-    const markerStartX = left + 126;
+    const markerStartX = left + 151;
     for (let index = 0; index < 4; index += 1) {
-      const marker = this.scene.add.circle(markerStartX + index * 31, rageY, 10, COMBAT_COLORS.rageEmpty, 0.45).setStrokeStyle(2, 0x496675, 0.42);
+      const marker = this.scene.add.circle(markerStartX + index * 34, rageY, 12, COMBAT_COLORS.rageEmpty, 0.38).setStrokeStyle(2, 0x496675, 0.4);
       this.rageMarkers.push(marker);
     }
 
     this.statusText = this.scene.add.text(0, artY, '', {
-      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '16px', color: '#ffffff', fontStyle: 'bold', backgroundColor: '#4a2535', padding: { x: 10, y: 6 }
+      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '20px', color: '#ffffff', fontStyle: 'bold', backgroundColor: '#4a2535', padding: { x: 12, y: 8 }, stroke: '#041018', strokeThickness: 2
     }).setOrigin(0.5).setVisible(false);
 
     this.targetHitArea = this.scene.add.rectangle(0, 0, w, h, 0xffffff, 0.001);
@@ -239,8 +243,8 @@ export class PowView {
 
   private playResourcePulse(color: number): void {
     const p = this.getWorldPosition();
-    const ring = this.scene.add.circle(p.x, p.y, 46, color, 0.055).setStrokeStyle(3, color, 0.68).setDepth(40).setScale(0.78);
-    this.scene.tweens.add({ targets: ring, scaleX: 1.45, scaleY: 1.45, alpha: 0, duration: this.reducedMotion ? 110 : 190, ease: 'Quad.easeOut', onComplete: () => ring.destroy() });
+    const ring = this.scene.add.circle(p.x, p.y, 48, color, 0.055).setStrokeStyle(3, color, 0.68).setDepth(40).setScale(0.78);
+    this.scene.tweens.add({ targets: ring, scaleX: 1.5, scaleY: 1.5, alpha: 0, duration: this.reducedMotion ? 140 : 240, ease: 'Quad.easeOut', onComplete: () => ring.destroy() });
   }
 
   private playShieldBreak(): void {
@@ -253,7 +257,7 @@ export class PowView {
       const a = Math.PI * 2 * i / count;
       burst.add(this.scene.add.rectangle(Math.cos(a) * 48, Math.sin(a) * 48, 18, 4, 0x8edfff, 0.72).setRotation(a + 0.45));
     }
-    this.scene.tweens.add({ targets: burst, scaleX: 1.5, scaleY: 1.5, alpha: 0, duration: this.reducedMotion ? 120 : 190, ease: 'Quad.easeOut', onComplete: () => burst.destroy(true) });
+    this.scene.tweens.add({ targets: burst, scaleX: 1.5, scaleY: 1.5, alpha: 0, duration: this.reducedMotion ? 140 : 230, ease: 'Quad.easeOut', onComplete: () => burst.destroy(true) });
   }
 
   private async playDefeatBurst(): Promise<void> {
@@ -266,7 +270,7 @@ export class PowView {
       this.scene.add.rectangle(0, 0, 92, 5, color, 0.62).setRotation(-0.72)
     ]);
     if (!this.reducedMotion) this.scene.cameras.main.shake(90, 0.0013);
-    await this.tweenPromise({ targets: burst, scaleX: 1.42, scaleY: 1.42, alpha: 0, duration: this.reducedMotion ? 120 : 190, ease: 'Quad.easeOut' });
+    await this.tweenPromise({ targets: burst, scaleX: 1.42, scaleY: 1.42, alpha: 0, duration: this.reducedMotion ? 140 : 230, ease: 'Quad.easeOut' });
     burst.destroy(true);
   }
 
@@ -275,8 +279,8 @@ export class PowView {
     const color = this.elementColor();
     const flash = this.scene.add.circle(p.x, p.y - 4, 46, 0xffffff, 0.16).setStrokeStyle(3, color, 0.8).setDepth(38).setScale(0.82);
     this.portrait.setTintFill(0xffffff);
-    this.scene.time.delayedCall(this.reducedMotion ? 45 : 70, () => { if (this.portrait.active) this.portrait.clearTint(); });
-    this.scene.tweens.add({ targets: flash, scaleX: 1.38, scaleY: 1.38, alpha: 0, duration: this.reducedMotion ? 90 : 150, ease: 'Quad.easeOut', onComplete: () => flash.destroy() });
+    this.scene.time.delayedCall(this.reducedMotion ? 55 : 85, () => { if (this.portrait.active) this.portrait.clearTint(); });
+    this.scene.tweens.add({ targets: flash, scaleX: 1.38, scaleY: 1.38, alpha: 0, duration: this.reducedMotion ? 110 : 180, ease: 'Quad.easeOut', onComplete: () => flash.destroy() });
   }
 
   private async playControlLock(status: string): Promise<void> {
@@ -292,8 +296,8 @@ export class PowView {
     ]);
     const startX = this.container.x;
     await Promise.all([
-      this.tweenPromise({ targets: this.container, x: startX + 6, duration: 60, yoyo: true, repeat: this.reducedMotion ? 0 : 2 }),
-      this.tweenPromise({ targets: fx, scaleX: 1.15, scaleY: 1.15, alpha: 0, duration: this.reducedMotion ? 150 : 280, ease: 'Quad.easeOut' })
+      this.tweenPromise({ targets: this.container, x: startX + 6, duration: 70, yoyo: true, repeat: this.reducedMotion ? 0 : 2 }),
+      this.tweenPromise({ targets: fx, scaleX: 1.15, scaleY: 1.15, alpha: 0, duration: this.reducedMotion ? 190 : 340, ease: 'Quad.easeOut' })
     ]);
     this.container.setX(startX);
     fx.destroy(true);
@@ -303,7 +307,7 @@ export class PowView {
     const p = this.getWorldPosition();
     const color = this.elementColor();
     const ring = this.scene.add.circle(p.x, p.y, support ? 54 : 43, 0x000000, 0).setStrokeStyle(support ? 4 : 3, color, 0.86).setDepth(34).setScale(0.62);
-    await this.tweenPromise({ targets: ring, scaleX: support ? 1.45 : 1.28, scaleY: support ? 1.45 : 1.28, alpha: 0, duration: this.reducedMotion ? 110 : 190, ease: 'Quad.easeOut' });
+    await this.tweenPromise({ targets: ring, scaleX: support ? 1.45 : 1.28, scaleY: support ? 1.45 : 1.28, alpha: 0, duration: this.reducedMotion ? 140 : 230, ease: 'Quad.easeOut' });
     ring.destroy();
   }
 
@@ -319,8 +323,8 @@ export class PowView {
     ]);
     if (!this.reducedMotion) projectile.add(this.scene.add.rectangle(-16, 0, 26, 5, color, 0.48));
     await Promise.all([
-      this.tweenPromise({ targets: projectile, x: targetX, y: targetY, duration: this.reducedMotion ? 110 : 175, ease: 'Quad.easeIn' }),
-      this.tweenPromise({ targets: beam, alpha: 0, duration: this.reducedMotion ? 120 : 190 })
+      this.tweenPromise({ targets: projectile, x: targetX, y: targetY, duration: this.reducedMotion ? 140 : 220, ease: 'Quad.easeIn' }),
+      this.tweenPromise({ targets: beam, alpha: 0, duration: this.reducedMotion ? 150 : 230 })
     ]);
     projectile.destroy(true);
     beam.destroy();
@@ -339,7 +343,7 @@ export class PowView {
         burst.add(this.scene.add.rectangle(Math.cos(a) * 19, Math.sin(a) * 19, 20, 4, color, 0.8).setRotation(a));
       }
     }
-    await this.tweenPromise({ targets: burst, scaleX: 1.9, scaleY: 1.9, alpha: 0, duration: this.reducedMotion ? 110 : 180, ease: 'Quad.easeOut' });
+    await this.tweenPromise({ targets: burst, scaleX: 1.9, scaleY: 1.9, alpha: 0, duration: this.reducedMotion ? 140 : 220, ease: 'Quad.easeOut' });
     burst.destroy(true);
   }
 
@@ -348,7 +352,7 @@ export class PowView {
     const color = this.elementColor();
     const aura = this.scene.add.container(p.x, p.y).setDepth(33).setScale(0.72);
     aura.add(this.scene.add.circle(0, 0, 45, color, 0.08).setStrokeStyle(4, color, 0.66));
-    await this.tweenPromise({ targets: aura, y: p.y - 10, scaleX: 1.58, scaleY: 1.58, alpha: 0, duration: this.reducedMotion ? 130 : 220, ease: 'Sine.easeOut' });
+    await this.tweenPromise({ targets: aura, y: p.y - 10, scaleX: 1.58, scaleY: 1.58, alpha: 0, duration: this.reducedMotion ? 170 : 270, ease: 'Sine.easeOut' });
     aura.destroy(true);
   }
 
@@ -436,7 +440,7 @@ export class PowView {
   private tweenPromise(config: Phaser.Types.Tweens.TweenBuilderConfig): Promise<void> {
     return new Promise((resolve) => {
       let settled = false;
-      const duration = typeof config.duration === 'number' ? config.duration : 140;
+      const duration = typeof config.duration === 'number' ? config.duration : 160;
       const delay = typeof config.delay === 'number' ? config.delay : 0;
       const repeat = typeof config.repeat === 'number' && config.repeat > 0 ? config.repeat : 0;
       const cycles = (repeat + 1) * (config.yoyo ? 2 : 1);
@@ -446,7 +450,7 @@ export class PowView {
         window.clearTimeout(timer);
         resolve();
       };
-      const timer = window.setTimeout(finish, Math.max(220, delay + duration * cycles + 220));
+      const timer = window.setTimeout(finish, Math.max(240, delay + duration * cycles + 240));
       try { this.scene.tweens.add({ ...config, onComplete: finish }); }
       catch (error) { console.warn('[Combat2 Presentation]', error); finish(); }
     });
