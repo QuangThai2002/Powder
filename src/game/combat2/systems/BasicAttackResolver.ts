@@ -1,4 +1,5 @@
 import type { CombatUnitState } from './CombatState';
+import { CombatIdentityRules } from './CombatIdentityRules';
 
 export interface BasicAttackResult {
   damage: number;
@@ -6,10 +7,13 @@ export interface BasicAttackResult {
   hpDamage: number;
   targetHpBefore: number;
   targetHpAfter: number;
+  identityMultiplier: number;
   defeated: boolean;
 }
 
 export class BasicAttackResolver {
+  private readonly identity = new CombatIdentityRules();
+
   resolve(attacker: CombatUnitState, target: CombatUnitState): BasicAttackResult {
     const attack =
       this.safeStat(attacker.pow.attack, 1) *
@@ -20,11 +24,10 @@ export class BasicAttackResolver {
     const basicPower = this.safeStat(attacker.pow.abilities.basic.power, 100);
     const coefficient = Math.min(3, Math.max(0.1, basicPower / 100));
     const targetHpBefore = this.safeHp(target.hp, target.pow.maxHp);
+    const identity = this.identity.evaluateDamage(attacker, target, 'basic', 'physical');
 
-    const damage = Math.max(
-      1,
-      Math.round(attack * coefficient - defense * 0.45)
-    );
+    const rawDamage = Math.max(1, attack * coefficient - defense * 0.45);
+    const damage = Math.max(1, Math.round(rawDamage * identity.totalMultiplier));
     const shieldBefore = this.safeStat(target.shield, 0);
     const shieldDamage = Math.min(shieldBefore, damage);
     const hpDamage = Math.max(0, damage - shieldDamage);
@@ -43,6 +46,7 @@ export class BasicAttackResolver {
       hpDamage,
       targetHpBefore,
       targetHpAfter,
+      identityMultiplier: identity.totalMultiplier,
       defeated: !target.alive
     };
   }
