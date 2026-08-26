@@ -23,6 +23,12 @@ export interface CombatAbilitySet {
   ultimate: CombatAbility;
 }
 
+export interface CombatPassive {
+  id: string;
+  name: string;
+  element?: string;
+}
+
 export interface CombatPow {
   id: string;
   name: string;
@@ -42,5 +48,6 @@ export interface CombatPow {
   rage: number;
   maxRage: number;
   abilities: CombatAbilitySet;
+  passive?: CombatPassive;
   display: PowDisplayProfile;
 }
