@@ -1,12 +1,19 @@
 import type { CombatPow } from './CombatPow';
 
-const asset = (fileName: string): string =>
-  new URL(`../../../../assets/pow-beta12/${fileName}`, import.meta.url).href;
+const CANONICAL_ASSETS = {
+  stormeon: new URL('../../../../assets/pow-beta12/stormeon.webp', import.meta.url).href,
+  joltail: new URL('../../../../assets/pow-beta12/joltail.webp', import.meta.url).href,
+  terrapup: new URL('../../../../assets/pow-beta12/terrapup.webp', import.meta.url).href,
+  frostmaw: new URL('../../../../assets/pow-beta12/frostmaw.webp', import.meta.url).href,
+  tidewarden: new URL('../../../../assets/pow-beta12/tidewarden.webp', import.meta.url).href,
+  sparkit: new URL('../../../../assets/pow-beta12/sparkit.webp', import.meta.url).href
+} as const;
+
+type StarterPowId = keyof typeof CANONICAL_ASSETS;
 
 function makePow(
-  id: string,
+  id: StarterPowId,
   name: string,
-  fileName: string,
   element: string,
   role: string,
   display: CombatPow['display']
@@ -15,7 +22,7 @@ function makePow(
     id,
     name,
     assetKey: `pow2-${id}`,
-    assetUrl: asset(fileName),
+    assetUrl: CANONICAL_ASSETS[id],
     element,
     role,
     level: 60,
@@ -38,34 +45,34 @@ function makePow(
  */
 export const COMBAT2_STARTER_ROSTER = {
   enemy: [
-    makePow('stormeon', 'Stormeon', 'stormeon.webp', 'Bão', 'Nhạc công', {
+    makePow('stormeon', 'Stormeon', 'Bão', 'Nhạc công', {
       heightRatio: 0.94,
       scaleAdjust: 1.03,
       offsetY: 2
     }),
-    makePow('joltail', 'Joltail', 'joltail.webp', 'Sét', 'Xạ thủ', {
+    makePow('joltail', 'Joltail', 'Sét', 'Xạ thủ', {
       heightRatio: 0.94,
       scaleAdjust: 1.04,
       offsetY: 3
     }),
-    makePow('terrapup', 'Terrapup', 'terrapup.webp', 'Đất', 'Đỡ đòn', {
+    makePow('terrapup', 'Terrapup', 'Đất', 'Đỡ đòn', {
       heightRatio: 0.94,
       scaleAdjust: 1.05,
       offsetY: 4
     })
   ],
   player: [
-    makePow('frostmaw', 'Frostmaw', 'frostmaw.webp', 'Băng', 'Đỡ đòn', {
+    makePow('frostmaw', 'Frostmaw', 'Băng', 'Đỡ đòn', {
       heightRatio: 0.96,
       scaleAdjust: 1.03,
       offsetY: 4
     }),
-    makePow('tidewarden', 'Tidewarden', 'tidewarden.webp', 'Nước', 'Đỡ đòn', {
+    makePow('tidewarden', 'Tidewarden', 'Nước', 'Đỡ đòn', {
       heightRatio: 0.95,
       scaleAdjust: 1.02,
       offsetY: 2
     }),
-    makePow('sparkit', 'Sparkit', 'sparkit.webp', 'Sét', 'Đấu sĩ', {
+    makePow('sparkit', 'Sparkit', 'Sét', 'Đấu sĩ', {
       heightRatio: 0.94,
       scaleAdjust: 1.04,
       offsetY: 3
