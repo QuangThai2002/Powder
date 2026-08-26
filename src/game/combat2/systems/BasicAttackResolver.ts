@@ -1,5 +1,6 @@
 import type { CombatUnitState } from './CombatState';
 import { CombatIdentityRules } from './CombatIdentityRules';
+import { ACTION_BASE_RAW_GAIN, applyRawRageGain } from './CombatRageEngine';
 
 export interface BasicAttackResult {
   damage: number;
@@ -8,6 +9,9 @@ export interface BasicAttackResult {
   targetHpBefore: number;
   targetHpAfter: number;
   identityMultiplier: number;
+  rawRageGain: number;
+  rageGained: number;
+  rageAfter: number;
   defeated: boolean;
 }
 
@@ -15,12 +19,8 @@ export class BasicAttackResolver {
   private readonly identity = new CombatIdentityRules();
 
   resolve(attacker: CombatUnitState, target: CombatUnitState): BasicAttackResult {
-    const attack =
-      this.safeStat(attacker.pow.attack, 1) *
-      this.safeMultiplier(attacker.attackMultiplier);
-    const defense =
-      this.safeStat(target.pow.defense, 0) *
-      this.safeMultiplier(target.defenseMultiplier);
+    const attack = this.safeStat(attacker.pow.attack, 1) * this.safeMultiplier(attacker.attackMultiplier);
+    const defense = this.safeStat(target.pow.defense, 0) * this.safeMultiplier(target.defenseMultiplier);
     const basicPower = this.safeStat(attacker.pow.abilities.basic.power, 100);
     const coefficient = Math.min(3, Math.max(0.1, basicPower / 100));
     const targetHpBefore = this.safeHp(target.hp, target.pow.maxHp);
@@ -37,8 +37,8 @@ export class BasicAttackResolver {
     target.hp = targetHpAfter;
     target.alive = targetHpAfter > 0;
 
-    attacker.mana = Math.min(attacker.pow.maxMana, attacker.mana + 8);
-    attacker.rage = Math.min(attacker.pow.maxRage, attacker.rage + 12);
+    const rage = applyRawRageGain(attacker.ragePoints, ACTION_BASE_RAW_GAIN);
+    attacker.ragePoints = rage.next;
 
     return {
       damage,
@@ -47,6 +47,9 @@ export class BasicAttackResolver {
       targetHpBefore,
       targetHpAfter,
       identityMultiplier: identity.totalMultiplier,
+      rawRageGain: rage.rawGain,
+      rageGained: rage.effectiveGain,
+      rageAfter: rage.next,
       defeated: !target.alive
     };
   }
