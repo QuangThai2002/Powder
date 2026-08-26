@@ -1,5 +1,5 @@
-const V='22.0.7-speed-buff-layout-tamer';
-const BUILD='2207';
+const V='22.1.0-combat-identity-breakthrough';
+const BUILD='2210';
 const SHELL=`powder-shell-${V}`;
 const RUNTIME=`powder-runtime-${V}`;
 const PRELOAD=`powder-assets-v21004`;
@@ -25,6 +25,9 @@ const SHELL_FILES=[
   `./css/live-ops-diagnostics-v2020.css?v=${BUILD}`,
   `./js/live-ops-diagnostics-v2020.js?v=${BUILD}`,
   `./js/observability-v2020.js?v=${BUILD}`,
+  `./js/combat-turn-safety-v2207.js?v=${BUILD}`,
+  `./js/combat-identity-breakthrough-v2210.js?v=${BUILD}`,
+  `./css/combat-identity-breakthrough-v2210.css?v=${BUILD}`,
   './assets/backgrounds/bg-loading-splash-1777.webp','./assets/ui/powder-logo-project.webp'
 ];
 const BUILD_SENSITIVE=/\.(?:html?|js|mjs|css|json|webmanifest)$/i;
