@@ -1,6 +1,6 @@
 (()=>{'use strict';
 if(window.POWDER_COMBAT_REFRESH_GOVERNOR_V21219)return;
-const VERSION='21.2.19',root=document.documentElement,STYLE_ID='powderCombatRefreshStyle21219';
+const VERSION='21.2.19+2212',root=document.documentElement,STYLE_ID='powderCombatRefreshStyle21219';
 const state={cap:'high',displayHz:60,currentFps:60,ratio:1,pressure:'calm',updates:0,lastAt:0};let timer=0,followTimer=0;
 function high(){try{return window.POWDER_HIGH_REFRESH_V21217?.snapshot?.()||{}}catch(_){return{}}}
 function pressure(){return String(window.POWDER_ADAPTIVE_PRESSURE_V21011?.level?.()||root.dataset.resourcePressure||'calm')}
@@ -14,8 +14,8 @@ function apply(reason='event'){const h=high(),hz=Math.max(60,Number(h.displayHz)
 function clearTimers(){clearTimeout(timer);clearTimeout(followTimer);timer=followTimer=0}
 function schedule(reason='battle-settle',delay=420){clearTimeout(timer);timer=setTimeout(()=>{timer=0;if(!document.hidden)apply(reason)},delay)}
 function onView(e){clearTimers();apply('view');const v=String(e?.detail?.view||document.body?.dataset?.activeView||'');if(/battle|boss|combat/i.test(v)){schedule('battle-settle',500);followTimer=setTimeout(()=>{followTimer=0;if(!document.hidden)apply('battle-followup')},1800)}}
-function snapshot(){return{version:VERSION,...state,preservedFeedback:['damage','heal','shield','stun','freeze','skip-turn','core hit reaction','22.1 element-role-skill identity'],policy:'degrade decorative combat FX only when native refresh headroom is insufficient'}}
-function activateNext(){if(window.POWDER_SCROLL_PIPELINE_V21220||document.getElementById('powderScrollPipeline21220'))return;const s=document.createElement('script');s.id='powderScrollPipeline21220';s.src='js/scroll-pipeline-v21220.js?v=2211';s.async=true;document.head.appendChild(s)}
+function snapshot(){return{version:VERSION,...state,preservedFeedback:['damage','heal','shield','stun','freeze','skip-turn','core hit reaction','22.1 element-role-skill identity','22.1.2 locked-skill reason'],policy:'degrade decorative combat FX only when native refresh headroom is insufficient'}}
+function activateNext(){if(window.POWDER_SCROLL_PIPELINE_V21220||document.getElementById('powderScrollPipeline21220'))return;const s=document.createElement('script');s.id='powderScrollPipeline21220';s.src='js/scroll-pipeline-v21220.js?v=2212';s.async=true;document.head.appendChild(s)}
 function boot(){style();apply('boot');activateNext()}
 window.addEventListener('powder:high-refresh-profile',()=>apply('high-refresh'),{passive:true});window.addEventListener('powder:frame-budget',()=>apply('frame-budget'),{passive:true});window.addEventListener('powder:resource-pressure',()=>apply('pressure'),{passive:true});window.addEventListener('powder:view-changed',onView,{passive:true});document.addEventListener('visibilitychange',()=>{if(document.hidden)clearTimers();else apply('visibility')},{passive:true});window.addEventListener('pagehide',clearTimers,{once:true});
 window.POWDER_COMBAT_REFRESH_GOVERNOR_V21219={version:VERSION,snapshot,refresh:()=>apply('manual')};
