@@ -1,0 +1,28 @@
+export type CombatSide = 'player' | 'enemy';
+
+export interface PowDisplayProfile {
+  /** Desired texture height relative to the art viewport. */
+  heightRatio: number;
+  /** Fine-tune the texture after the base fit. */
+  scaleAdjust?: number;
+  /** Display offsets inside the portrait viewport. */
+  offsetX?: number;
+  offsetY?: number;
+}
+
+export interface CombatPow {
+  id: string;
+  name: string;
+  assetKey: string;
+  assetUrl: string;
+  element: string;
+  role: string;
+  level: number;
+  hp: number;
+  maxHp: number;
+  mana: number;
+  maxMana: number;
+  rage: number;
+  maxRage: number;
+  display: PowDisplayProfile;
+}
