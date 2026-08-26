@@ -81,6 +81,40 @@ function validateIdentityRules(): void {
     assert(result.damage === 0, 'pure debuff must not create direct damage');
     assert(debuffTarget.hp === hpBefore, 'pure debuff changed HP directly');
   }
+
+  const selfEffectFixture = state.units
+    .flatMap((unit) =>
+      unit.pow.abilities.skills.map((ability, slot) => ({
+        unit,
+        ability,
+        slot: slot as 0 | 1
+      }))
+    )
+    .find(({ ability }) =>
+      String(ability.status || '').toLowerCase().startsWith('self:')
+    );
+
+  if (selfEffectFixture) {
+    const attackTarget = state
+      .activeLiving(selfEffectFixture.unit.side === 'player' ? 'enemy' : 'player')[0];
+    assert(attackTarget, 'self-effect attack fixture requires an active opposing target');
+
+    selfEffectFixture.unit.mana = selfEffectFixture.unit.pow.maxMana;
+    const hpBefore = attackTarget.hp;
+    const result = skills.resolve(
+      selfEffectFixture.unit,
+      attackTarget,
+      selfEffectFixture.ability,
+      selfEffectFixture.slot
+    );
+
+    assert(result.damage > 0, 'attack with caster side-effect lost its direct damage');
+    assert(attackTarget.hp < hpBefore, 'attack with caster side-effect did not damage enemy');
+    assert(
+      !String(result.statusLabel || '').toLowerCase().startsWith('self:'),
+      'presentation label leaked internal self-effect prefix'
+    );
+  }
 }
 
 /**
