@@ -15,6 +15,9 @@ export interface CombatAbility {
   power: number;
   type: string;
   status?: string;
+  /** Optional canonical skill artwork used by the combat command dock. */
+  iconKey?: string;
+  iconUrl?: string;
 }
 
 export interface CombatAbilitySet {
