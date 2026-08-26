@@ -97,6 +97,7 @@ export class TurnManager {
 
     if (unit) {
       unit.actionLocked = false;
+      this.tickActorDurations(unit);
 
       if (unit.alive) {
         this.nextReadyAt.set(
@@ -121,11 +122,6 @@ export class TurnManager {
     this.state.phase = 'ready';
   }
 
-  /**
-   * Last-resort state recovery for unexpected presentation errors. This does
-   * not advance damage/effects; it only ensures the state machine cannot stay
-   * permanently locked in resolving.
-   */
   recoverActionLock(): void {
     const current = this.state.currentUnitId
       ? this.state.getUnit(this.state.currentUnitId)
@@ -138,6 +134,18 @@ export class TurnManager {
     this.state.currentUnitId = null;
     this.state.sanitizeRuntimeNumbers();
     this.state.phase = this.state.isBattleOver() ? 'finished' : 'ready';
+  }
+
+  private tickActorDurations(unit: CombatUnitState): void {
+    if (unit.speedBuffActionsRemaining <= 0) {
+      return;
+    }
+
+    unit.speedBuffActionsRemaining -= 1;
+
+    if (unit.speedBuffActionsRemaining <= 0) {
+      unit.speed = this.safeBaseSpeed(unit);
+    }
   }
 
   private findNextUnit(): CombatUnitState | null {
@@ -168,6 +176,12 @@ export class TurnManager {
   private intervalFor(unit: CombatUnitState): number {
     const speed = Number.isFinite(unit.speed) && unit.speed > 0 ? unit.speed : 1;
     return TURN_DISTANCE / Math.min(9999, Math.max(1, speed));
+  }
+
+  private safeBaseSpeed(unit: CombatUnitState): number {
+    return Number.isFinite(unit.pow.speed) && unit.pow.speed > 0
+      ? unit.pow.speed
+      : 1;
   }
 
   private safeTimelineValue(value: number | undefined, fallback: number): number {
