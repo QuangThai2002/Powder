@@ -29,6 +29,8 @@ export interface CombatUnitState {
   dotStatus: DotStatus;
   dotDamage: number;
   dotActionsRemaining: number;
+  passiveUsed: boolean;
+  reviveMarkerActionsRemaining: number;
   alive: boolean;
   actionLocked: boolean;
 }
@@ -86,14 +88,15 @@ export class CombatState {
   }
 
   /**
-   * Move the next living reserve into every vacated active slot. Dead active
-   * units are retired from the field before a reserve is promoted, so a slot
-   * can never contain two active units at once.
+   * Resolve one-time revive passives before consuming a reserve slot, then move
+   * the next living reserve into any field slot that remains vacant.
    */
   promoteReserves(): ReservePromotion[] {
     const promotions: ReservePromotion[] = [];
 
     for (const side of ['player', 'enemy'] as const) {
+      this.resolveRevivePassives(side);
+
       const defeatedActive = this.units
         .filter(
           (unit) =>
@@ -147,6 +150,9 @@ export class CombatState {
       unit.controlActionsRemaining = this.safeDuration(unit.controlActionsRemaining);
       unit.dotDamage = Math.floor(this.finiteClamp(unit.dotDamage, 0, unit.pow.maxHp, 0));
       unit.dotActionsRemaining = this.safeDuration(unit.dotActionsRemaining);
+      unit.reviveMarkerActionsRemaining = this.safeDuration(
+        unit.reviveMarkerActionsRemaining
+      );
 
       if (unit.controlActionsRemaining <= 0) {
         unit.controlStatus = null;
@@ -158,6 +164,45 @@ export class CombatState {
       }
 
       unit.alive = unit.hp > 0;
+    }
+  }
+
+  private resolveRevivePassives(side: CombatSide): void {
+    const defeated = this.units
+      .filter(
+        (unit) =>
+          unit.side === side &&
+          !unit.alive &&
+          unit.fieldSlot !== null
+      )
+      .sort((a, b) => (a.fieldSlot ?? 99) - (b.fieldSlot ?? 99));
+
+    for (const fallen of defeated) {
+      const reviver = this.units.find(
+        (unit) =>
+          unit.side === side &&
+          unit.alive &&
+          !unit.passiveUsed &&
+          String(unit.pow.passive?.id || '').toLowerCase() === 'revive_ally_once'
+      );
+
+      if (!reviver) {
+        break;
+      }
+
+      reviver.passiveUsed = true;
+      fallen.hp = Math.max(1, Math.round(fallen.pow.maxHp * 0.3));
+      fallen.mana = Math.min(fallen.pow.maxMana, Math.max(fallen.mana, 20));
+      fallen.rage = Math.min(fallen.pow.maxRage, Math.max(0, fallen.rage));
+      fallen.shield = 0;
+      fallen.controlStatus = null;
+      fallen.controlActionsRemaining = 0;
+      fallen.dotStatus = null;
+      fallen.dotDamage = 0;
+      fallen.dotActionsRemaining = 0;
+      fallen.reviveMarkerActionsRemaining = 1;
+      fallen.actionLocked = false;
+      fallen.alive = true;
     }
   }
 
@@ -184,6 +229,8 @@ export class CombatState {
       dotStatus: null,
       dotDamage: 0,
       dotActionsRemaining: 0,
+      passiveUsed: false,
+      reviveMarkerActionsRemaining: 0,
       alive: pow.hp > 0,
       actionLocked: false
     }));
