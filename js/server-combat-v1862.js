@@ -3,6 +3,7 @@ const online=()=>window.POWDER_ONLINE_V150;
 const runtime=()=>window.POWDER_COMBAT_RUNTIME_V21;
 const RAGE_READY=4,RAGE_MAX=8;
 const st={sessions:new Map(),lastError:'',actions:0,syncs:0,domainClashBegins:0,domainClashAnswers:0};
+const pvpCompat={installed:false,me:'',opponent:'',points:new Map(),observer:null,patchQueued:false,responses:0};
 const hasAccount=()=>!!online()?.hasSession?.();
 const isOnline=()=>hasAccount()&&navigator.onLine!==false&&!['offline','error'].includes(online()?.state?.().status||'');
 const ragePointsOf=u=>Math.min(RAGE_MAX,Math.max(0,Math.floor(Number(u?.ragePoints??u?.energy)||0)));
@@ -49,5 +50,51 @@ function canUse(state,powId,key){
  if(ragePoints<cost)return{ok:false,reason:`Cần ${cost} Nộ`,ragePoints,cooldown:0,cost,resourceSystem:'rage-points-v1'};
  return{ok:true,ragePoints,cooldown:0,cost,resourceSystem:'rage-points-v1'};
 }
-window.POWDER_SERVER_COMBAT_V1862=Object.freeze({version:'24.0-server-combat-rage-points',resourceSystem:'rage-points-v1',rageReady:RAGE_READY,rageMax:RAGE_MAX,hasAccount,isOnline,syncTeam,startEvent,startBoss,state,act,forfeit,domainClashBegin,domainClashAnswer,domainClashState,latestSessionId,cached,syncCore,rewardOf,skillSlot,eventId,maxEventId,eventsSince,canUse,bossPlayerReady:()=>false,bossAuthorityStatus:()=>({sessionFoundation:true,mechanicParity:false,qualificationAuthority:false,playerBridge:false,rewardFailClosed:true}),domainClashAuthorityStatus:()=>({clientProtocol:true,serverRequired:true,questionCount:10,questionMs:5000,clientSelfResolution:false}),diagnostics:()=>({sessions:st.sessions.size,actions:st.actions,syncs:st.syncs,domainClashBegins:st.domainClashBegins,domainClashAnswers:st.domainClashAnswers,lastError:st.lastError,bossPlayerReady:false,resourceSystem:'rage-points-v1'})});
+
+function pvpPointKey(userId,powId){return `${String(userId||'')}::${String(powId||'')}`}
+function rememberPvpRow(row){if(!row)return;const points=ragePointsOf(row);row.ragePoints=points;pvpCompat.points.set(pvpPointKey(row.user_id,row.pow_id),points);row.energy=points>=RAGE_READY?100:99;}
+function transformPvpPayload(payload){
+ const match=payload?.state?.match;if(match){pvpCompat.me=String(match.me||'');pvpCompat.opponent=String((match.players||[]).find(p=>String(p?.id)!==pvpCompat.me)?.id||'');for(const row of match.pows||[])rememberPvpRow(row);}
+ const replay=payload?.replay;if(replay){for(const row of replay.pows||[])rememberPvpRow(row);}
+ pvpCompat.responses++;schedulePvpPatch();return payload;
+}
+function installPvpRequestBridge(){
+ const o=online();if(!o?.request||o.__powderRagePointsV240)return false;
+ const original=o.request.bind(o);
+ o.request=async(path,opt={})=>{const result=await original(path,opt);return String(path||'').includes('/functions/v1/powder-pvp')?transformPvpPayload(result):result;};
+ try{Object.defineProperty(o,'__powderRagePointsV240',{value:true,configurable:false,enumerable:false});}catch(_){o.__powderRagePointsV240=true;}
+ pvpCompat.installed=true;return true;
+}
+function pvpMarkerStates(points){const fn=runtime()?.rageMarkerStates;if(typeof fn==='function')return fn(points);const p=ragePointsOf({ragePoints:points}),red=Math.max(0,p-RAGE_READY),blue=Math.max(0,p-red*2),empty=Math.max(0,4-blue-red);return[...Array(blue).fill('blue'),...Array(red).fill('red'),...Array(empty).fill('empty')].slice(0,4);}
+function ensurePvpRageStyle(){
+ if(typeof document==='undefined'||document.getElementById('powder-pvp-rage-v240-style'))return;
+ const style=document.createElement('style');style.id='powder-pvp-rage-v240-style';style.textContent=`
+ #pvpOnline1870 .pvp240-rage{display:flex;gap:4px;align-items:center;margin-top:4px;min-height:9px}
+ #pvpOnline1870 .pvp240-rage i{display:block;width:8px;height:8px;border-radius:50%;border:1px solid rgba(225,237,244,.35);background:rgba(58,72,84,.5);box-sizing:border-box}
+ #pvpOnline1870 .pvp240-rage i.blue{background:#52c8ff;border-color:#a6e8ff;box-shadow:0 0 6px rgba(82,200,255,.5)}
+ #pvpOnline1870 .pvp240-rage i.red{background:#ff5f67;border-color:#ffc0c3;box-shadow:0 0 7px rgba(255,95,103,.56)}
+ #pvpOnline1870 .pvp1870-skills [data-pvp-skill] span{font-weight:800;letter-spacing:.02em}
+ `;document.head?.appendChild(style);
+}
+function pvpPointsForButton(button){const powId=button?.dataset?.pvpActor||button?.dataset?.pvpTarget||'';const userId=button?.dataset?.pvpActor?pvpCompat.me:pvpCompat.opponent;return pvpCompat.points.get(pvpPointKey(userId,powId));}
+function patchPvpUnit(button){
+ const points=pvpPointsForButton(button);if(!Number.isFinite(Number(points)))return;
+ const copy=button.querySelector('.pvp1870-unit-copy');if(!copy)return;
+ for(const small of copy.querySelectorAll('small')){if(/HP\s*·\s*⚡/i.test(small.textContent||''))small.textContent=String(small.textContent||'').replace(/⚡\s*\d+/i,`NỘ ${points}`);}
+ const hp=copy.querySelector('.pvp1870-hp');if(!hp)return;let markers=copy.querySelector('.pvp240-rage');if(!markers){markers=document.createElement('span');markers.className='pvp240-rage';hp.insertAdjacentElement('afterend',markers);}
+ const states=pvpMarkerStates(points),sig=states.join('|');if(markers.dataset.sig!==sig){markers.dataset.sig=sig;markers.title=`Nộ ${points}`;markers.innerHTML=states.map(state=>`<i class="${state}"></i>`).join('');}
+}
+function patchPvpSkills(root){
+ for(const button of root.querySelectorAll('[data-pvp-skill]')){const key=button.dataset.pvpSkill||'basic',span=button.querySelector('span');if(!span||/^CD\s/i.test(span.textContent||''))continue;span.textContent=key==='ult'?`TỐN ${RAGE_READY} NỘ`:'+2 NỘ';}
+ const head=root.querySelector('.pvp1870-battle-head .eyebrow');if(head&&/PVP ONLINE 2\.0/i.test(head.textContent||''))head.textContent=String(head.textContent).replace('PVP ONLINE 2.0','PVP ONLINE 2.4 · NỘ 4 ĐIỂM');
+}
+function patchPvpUi(){pvpCompat.patchQueued=false;if(typeof document==='undefined')return;const root=document.querySelector('#pvpOnline1870');if(!root)return;ensurePvpRageStyle();for(const button of root.querySelectorAll('[data-pvp-actor],[data-pvp-target]'))patchPvpUnit(button);patchPvpSkills(root);}
+function schedulePvpPatch(){if(pvpCompat.patchQueued||typeof document==='undefined')return;pvpCompat.patchQueued=true;(typeof requestAnimationFrame==='function'?requestAnimationFrame:setTimeout)(patchPvpUi);}
+function startPvpUiBridge(){
+ if(typeof document==='undefined')return;ensurePvpRageStyle();const start=()=>{installPvpRequestBridge();try{pvpCompat.observer=new MutationObserver(schedulePvpPatch);pvpCompat.observer.observe(document.documentElement,{childList:true,subtree:true});}catch(_){/* observer unavailable */}schedulePvpPatch();};
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+}
+
+startPvpUiBridge();
+window.POWDER_SERVER_COMBAT_V1862=Object.freeze({version:'24.0-server-combat-rage-points',resourceSystem:'rage-points-v1',rageReady:RAGE_READY,rageMax:RAGE_MAX,hasAccount,isOnline,syncTeam,startEvent,startBoss,state,act,forfeit,domainClashBegin,domainClashAnswer,domainClashState,latestSessionId,cached,syncCore,rewardOf,skillSlot,eventId,maxEventId,eventsSince,canUse,bossPlayerReady:()=>false,bossAuthorityStatus:()=>({sessionFoundation:true,mechanicParity:false,qualificationAuthority:false,playerBridge:false,rewardFailClosed:true}),domainClashAuthorityStatus:()=>({clientProtocol:true,serverRequired:true,questionCount:10,questionMs:5000,clientSelfResolution:false}),diagnostics:()=>({sessions:st.sessions.size,actions:st.actions,syncs:st.syncs,domainClashBegins:st.domainClashBegins,domainClashAnswers:st.domainClashAnswers,lastError:st.lastError,bossPlayerReady:false,resourceSystem:'rage-points-v1',pvpCompatInstalled:pvpCompat.installed,pvpCompatResponses:pvpCompat.responses})});
 })();
