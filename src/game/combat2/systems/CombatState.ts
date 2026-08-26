@@ -1,5 +1,6 @@
 import type { CombatPow, CombatSide } from '../data/CombatPow';
 import { ACTIVE_TEAM_SIZE } from '../data/PowderDataAdapter';
+import { sanitizeRagePoints } from './CombatRageEngine';
 
 export type CombatPhase = 'ready' | 'selecting' | 'resolving' | 'finished';
 export type ControlStatus = 'stun' | 'freeze' | null;
@@ -9,13 +10,11 @@ export interface CombatUnitState {
   instanceId: string;
   pow: CombatPow;
   side: CombatSide;
-  /** Stable roster index (0..4). */
   slot: number;
-  /** Battlefield slot (0..2). Null means reserve/bench/defeated. */
   fieldSlot: number | null;
   hp: number;
-  mana: number;
-  rage: number;
+  /** Unified Combat 2.3 resource: 0..8 effective Rage points. */
+  ragePoints: number;
   shield: number;
   speed: number;
   speedBuffActionsRemaining: number;
@@ -44,7 +43,6 @@ export interface ReservePromotion {
 
 export class CombatState {
   readonly units: CombatUnitState[];
-
   round = 1;
   phase: CombatPhase = 'ready';
   currentUnitId: string | null = null;
@@ -61,25 +59,18 @@ export class CombatState {
   }
 
   living(side?: CombatSide): CombatUnitState[] {
-    return this.units.filter(
-      (unit) => unit.alive && (side === undefined || unit.side === side)
-    );
+    return this.units.filter((unit) => unit.alive && (side === undefined || unit.side === side));
   }
 
   activeLiving(side?: CombatSide): CombatUnitState[] {
-    return this.units.filter(
-      (unit) =>
-        unit.alive &&
-        unit.fieldSlot !== null &&
-        (side === undefined || unit.side === side)
+    return this.units.filter((unit) =>
+      unit.alive && unit.fieldSlot !== null && (side === undefined || unit.side === side)
     );
   }
 
   reserveLiving(side: CombatSide): CombatUnitState[] {
     return this.units
-      .filter(
-        (unit) => unit.alive && unit.side === side && unit.fieldSlot === null
-      )
+      .filter((unit) => unit.alive && unit.side === side && unit.fieldSlot === null)
       .sort((a, b) => a.slot - b.slot);
   }
 
@@ -87,41 +78,24 @@ export class CombatState {
     return this.living('player').length === 0 || this.living('enemy').length === 0;
   }
 
-  /**
-   * Resolve one-time revive passives before consuming a reserve slot, then move
-   * the next living reserve into any field slot that remains vacant.
-   */
   promoteReserves(): ReservePromotion[] {
     const promotions: ReservePromotion[] = [];
 
     for (const side of ['player', 'enemy'] as const) {
       this.resolveRevivePassives(side);
-
       const defeatedActive = this.units
-        .filter(
-          (unit) =>
-            unit.side === side &&
-            !unit.alive &&
-            unit.fieldSlot !== null
-        )
+        .filter((unit) => unit.side === side && !unit.alive && unit.fieldSlot !== null)
         .sort((a, b) => (a.fieldSlot ?? 99) - (b.fieldSlot ?? 99));
 
       for (const defeated of defeatedActive) {
         const fieldSlot = defeated.fieldSlot;
         defeated.fieldSlot = null;
-
-        if (fieldSlot === null) {
-          continue;
-        }
+        if (fieldSlot === null) continue;
 
         const reserve = this.reserveLiving(side)[0];
-        if (!reserve) {
-          continue;
-        }
-
+        if (!reserve) continue;
         reserve.fieldSlot = fieldSlot;
         reserve.actionLocked = false;
-
         promotions.push({
           side,
           fieldSlot,
@@ -137,8 +111,7 @@ export class CombatState {
   sanitizeRuntimeNumbers(): void {
     for (const unit of this.units) {
       unit.hp = this.finiteClamp(unit.hp, 0, unit.pow.maxHp, 0);
-      unit.mana = this.finiteClamp(unit.mana, 0, unit.pow.maxMana, 0);
-      unit.rage = this.finiteClamp(unit.rage, 0, unit.pow.maxRage, 0);
+      unit.ragePoints = sanitizeRagePoints(unit.ragePoints);
       unit.shield = this.finiteClamp(unit.shield, 0, unit.pow.maxHp * 3, 0);
       unit.speed = this.finiteClamp(unit.speed, 1, 9999, unit.pow.speed);
       unit.speedBuffActionsRemaining = this.safeDuration(unit.speedBuffActionsRemaining);
@@ -150,56 +123,41 @@ export class CombatState {
       unit.controlActionsRemaining = this.safeDuration(unit.controlActionsRemaining);
       unit.dotDamage = Math.floor(this.finiteClamp(unit.dotDamage, 0, unit.pow.maxHp, 0));
       unit.dotActionsRemaining = this.safeDuration(unit.dotActionsRemaining);
-      unit.reviveMarkerActionsRemaining = this.safeDuration(
-        unit.reviveMarkerActionsRemaining
-      );
+      unit.reviveMarkerActionsRemaining = this.safeDuration(unit.reviveMarkerActionsRemaining);
 
-      if (unit.controlActionsRemaining <= 0) {
-        unit.controlStatus = null;
-      }
+      if (unit.controlActionsRemaining <= 0) unit.controlStatus = null;
       if (unit.dotActionsRemaining <= 0 || unit.dotDamage <= 0) {
         unit.dotStatus = null;
         unit.dotDamage = 0;
         unit.dotActionsRemaining = 0;
       }
-
       unit.alive = unit.hp > 0;
     }
   }
 
   private resolveRevivePassives(side: CombatSide): void {
     const defeated = this.units
-      .filter(
-        (unit) =>
-          unit.side === side &&
-          !unit.alive &&
-          unit.fieldSlot !== null
-      )
+      .filter((unit) => unit.side === side && !unit.alive && unit.fieldSlot !== null)
       .sort((a, b) => (a.fieldSlot ?? 99) - (b.fieldSlot ?? 99));
 
     for (const fallen of defeated) {
-      const reviver = this.units.find(
-        (unit) =>
-          unit.side === side &&
-          unit.alive &&
-          !unit.passiveUsed &&
-          String(unit.pow.passive?.id || '').toLowerCase() === 'revive_ally_once'
+      const reviver = this.units.find((unit) =>
+        unit.side === side && unit.alive && !unit.passiveUsed &&
+        String(unit.pow.passive?.id || '').toLowerCase() === 'revive_ally_once'
       );
-
-      if (!reviver) {
-        break;
-      }
+      if (!reviver) break;
 
       reviver.passiveUsed = true;
       fallen.hp = Math.max(1, Math.round(fallen.pow.maxHp * 0.3));
-      fallen.mana = Math.min(fallen.pow.maxMana, Math.max(fallen.mana, 20));
-      fallen.rage = Math.min(fallen.pow.maxRage, Math.max(0, fallen.rage));
+      fallen.ragePoints = sanitizeRagePoints(fallen.ragePoints);
       fallen.shield = 0;
       fallen.controlStatus = null;
       fallen.controlActionsRemaining = 0;
       fallen.dotStatus = null;
       fallen.dotDamage = 0;
       fallen.dotActionsRemaining = 0;
+      fallen.speedDebuffActionsRemaining = 0;
+      fallen.speed = Math.max(1, fallen.pow.speed);
       fallen.reviveMarkerActionsRemaining = 1;
       fallen.actionLocked = false;
       fallen.alive = true;
@@ -214,8 +172,7 @@ export class CombatState {
       slot,
       fieldSlot: slot < ACTIVE_TEAM_SIZE ? slot : null,
       hp: pow.hp,
-      mana: pow.mana,
-      rage: pow.rage,
+      ragePoints: 0,
       shield: 0,
       speed: this.finiteClamp(pow.speed, 1, 9999, 100),
       speedBuffActionsRemaining: 0,
@@ -240,12 +197,7 @@ export class CombatState {
     return Math.floor(this.finiteClamp(value, 0, 20, 0));
   }
 
-  private finiteClamp(
-    value: number,
-    min: number,
-    max: number,
-    fallback: number
-  ): number {
+  private finiteClamp(value: number, min: number, max: number, fallback: number): number {
     const safe = Number.isFinite(value) ? value : fallback;
     return Math.min(max, Math.max(min, safe));
   }
