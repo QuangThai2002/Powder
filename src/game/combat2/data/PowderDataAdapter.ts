@@ -73,6 +73,13 @@ const HOSTILE_SUPPORT_STATUSES = new Set([
   'burn',
   'poison'
 ]);
+const BENEFICIAL_STATUSES = new Set([
+  'shield',
+  'regeneration',
+  'attack up',
+  'defense up',
+  'ap up'
+]);
 
 const DEFAULT_DISPLAY: PowDisplayProfile = {
   heightRatio: 0.94,
@@ -102,17 +109,41 @@ function normalizeAbilityType(
   return type;
 }
 
+function normalizeAbilityStatus(
+  rawStatus: string | undefined,
+  normalizedType: string
+): string | undefined {
+  const raw = String(rawStatus || '').trim();
+  if (!raw) {
+    return undefined;
+  }
+
+  const status = raw.toLowerCase();
+
+  // Elemental/ultimate attacks still target the enemy. A beneficial secondary
+  // effect is routed back to the caster by prefixing it as an explicit self
+  // effect instead of changing the whole skill into a self-target action.
+  if (normalizedType !== 'support' && BENEFICIAL_STATUSES.has(status)) {
+    return `self:${raw}`;
+  }
+
+  return raw;
+}
+
 function normalizeAbility(
   ability: CatalogAbility | undefined,
   fallbackName: string,
   fallbackPower: number,
   fallbackType: string
 ): CombatAbility {
+  const type = normalizeAbilityType(ability?.type, ability?.status, fallbackType);
+  const status = normalizeAbilityStatus(ability?.status, type);
+
   return {
     name: String(ability?.name || fallbackName),
     power: finitePositive(ability?.power, fallbackPower),
-    type: normalizeAbilityType(ability?.type, ability?.status, fallbackType),
-    ...(ability?.status ? { status: String(ability.status) } : {})
+    type,
+    ...(status ? { status } : {})
   };
 }
 
