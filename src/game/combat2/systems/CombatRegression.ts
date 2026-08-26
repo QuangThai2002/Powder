@@ -1,5 +1,7 @@
 import { COMBAT2_STARTER_ROSTER } from '../data/PowderDataAdapter';
+import { CombatIdentityRules } from './CombatIdentityRules';
 import { CombatState } from './CombatState';
+import { SkillActionResolver } from './SkillActionResolver';
 import { TurnManager } from './TurnManager';
 
 export interface CombatRegressionReport {
@@ -7,6 +9,7 @@ export interface CombatRegressionReport {
   promotedReserveSeen: boolean;
   playerActive: number;
   playerReserve: number;
+  identityRulesChecked: boolean;
 }
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -15,12 +18,79 @@ function assert(condition: unknown, message: string): asserts condition {
   }
 }
 
+const HOSTILE_STATUSES = new Set([
+  'stun',
+  'freeze',
+  'slow',
+  'burn',
+  'poison'
+]);
+
+function validateIdentityRules(): void {
+  const state = new CombatState(
+    COMBAT2_STARTER_ROSTER.player,
+    COMBAT2_STARTER_ROSTER.enemy
+  );
+  const identity = new CombatIdentityRules();
+  const skills = new SkillActionResolver();
+
+  for (const unit of state.units) {
+    for (const ability of unit.pow.abilities.skills) {
+      const status = String(ability.status || '').trim().toLowerCase();
+      assert(
+        !(ability.type === 'support' && HOSTILE_STATUSES.has(status)),
+        `${unit.pow.name} still exposes hostile ${status} as self-support`
+      );
+    }
+  }
+
+  const actor = state.activeLiving('player')[0];
+  const target = state.activeLiving('enemy')[0];
+  assert(actor && target, 'identity fixture requires active player and enemy units');
+
+  const evaluation = identity.evaluateDamage(actor, target, 'skill', 'elemental');
+  assert(
+    Number.isFinite(evaluation.totalMultiplier) && evaluation.totalMultiplier >= 0,
+    'element/role multiplier must stay finite and non-negative'
+  );
+
+  const debuffFixture = state.units
+    .flatMap((unit) =>
+      unit.pow.abilities.skills.map((ability, slot) => ({
+        unit,
+        ability,
+        slot: slot as 0 | 1
+      }))
+    )
+    .find(({ ability }) => ability.type === 'debuff');
+
+  if (debuffFixture) {
+    const debuffTarget = state
+      .activeLiving(debuffFixture.unit.side === 'player' ? 'enemy' : 'player')[0];
+    assert(debuffTarget, 'debuff fixture requires an active opposing target');
+
+    debuffFixture.unit.mana = debuffFixture.unit.pow.maxMana;
+    const hpBefore = debuffTarget.hp;
+    const result = skills.resolve(
+      debuffFixture.unit,
+      debuffTarget,
+      debuffFixture.ability,
+      debuffFixture.slot
+    );
+
+    assert(result.damage === 0, 'pure debuff must not create direct damage');
+    assert(debuffTarget.hp === hpBefore, 'pure debuff changed HP directly');
+  }
+}
+
 /**
  * Lightweight deterministic smoke regression. It never renders and never
  * mutates the real battle scene. DEV bootstrap can run it before Phaser starts
- * so reserve/timeline regressions surface immediately in the console.
+ * so reserve/timeline/identity regressions surface immediately in the console.
  */
 export function runCombat2SmokeRegression(): CombatRegressionReport {
+  validateIdentityRules();
+
   const state = new CombatState(
     COMBAT2_STARTER_ROSTER.player,
     COMBAT2_STARTER_ROSTER.enemy
@@ -117,6 +187,7 @@ export function runCombat2SmokeRegression(): CombatRegressionReport {
     turnsSimulated,
     promotedReserveSeen,
     playerActive: state.activeLiving('player').length,
-    playerReserve: state.reserveLiving('player').length
+    playerReserve: state.reserveLiving('player').length,
+    identityRulesChecked: true
   };
 }
