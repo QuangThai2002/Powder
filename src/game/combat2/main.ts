@@ -2,9 +2,11 @@ import Phaser from 'phaser';
 import { BattleScene } from './scenes/BattleScene';
 import { runCombat2SmokeRegression } from './systems/CombatRegression';
 
-const portrait = window.innerHeight > window.innerWidth;
-const logicalWidth = portrait ? 900 : 1600;
-const logicalHeight = portrait ? 1600 : 900;
+// Combat 2 is designed as a landscape battle surface on every device.
+// Keeping one logical resolution prevents a phone opened in portrait from
+// staying stuck with a portrait battlefield after the player rotates it.
+const logicalWidth = 1600;
+const logicalHeight = 900;
 const isLocalDev = ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
 const config: Phaser.Types.Core.GameConfig = {
@@ -19,9 +21,15 @@ const config: Phaser.Types.Core.GameConfig = {
     width: logicalWidth,
     height: logicalHeight
   },
+  fps: {
+    target: 60,
+    min: 30,
+    smoothStep: true
+  },
   render: {
     antialias: true,
-    pixelArt: false
+    pixelArt: false,
+    roundPixels: false
   },
   scene: [BattleScene]
 };
@@ -30,7 +38,17 @@ const config: Phaser.Types.Core.GameConfig = {
 // Start Phaser first so a regression failure cannot leave combat2.html as a
 // blank background. The regression still runs locally and reports failures in
 // DevTools without interrupting the playable scene.
-new Phaser.Game(config);
+const game = new Phaser.Game(config);
+
+const refreshScale = (): void => {
+  // FIT mode normally handles resize itself. The explicit refresh covers
+  // mobile browsers that delay viewport updates during orientation changes.
+  window.setTimeout(() => game.scale.refresh(), 80);
+  window.setTimeout(() => game.scale.refresh(), 260);
+};
+
+window.addEventListener('orientationchange', refreshScale, { passive: true });
+window.addEventListener('resize', refreshScale, { passive: true });
 
 if (isLocalDev) {
   queueMicrotask(() => {
