@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { BattleScene } from './scenes/BattleScene';
 import { runCombat2SmokeRegression } from './systems/CombatRegression';
+import { runCombatSpecialSupportRegression } from './systems/CombatSpecialSupportRegression';
 
 // Combat 2 is designed as a landscape battle surface on every device.
 // Keeping one logical resolution prevents a phone opened in portrait from
@@ -54,7 +55,8 @@ if (isLocalDev) {
   queueMicrotask(() => {
     try {
       const report = runCombat2SmokeRegression();
-      console.info('[Combat2 Regression PASS]', report);
+      const specialSupport = runCombatSpecialSupportRegression();
+      console.info('[Combat2 Regression PASS]', { ...report, specialSupport });
     } catch (error) {
       console.error('[Combat2 Regression FAIL - NON BLOCKING]', error);
     }
