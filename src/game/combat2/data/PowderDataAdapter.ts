@@ -63,15 +63,21 @@ export const ACTIVE_TEAM_SIZE = 3;
 export const RESERVE_TEAM_SIZE = 2;
 export const TOTAL_TEAM_SIZE = ACTIVE_TEAM_SIZE + RESERVE_TEAM_SIZE;
 
+// Combat test roster intentionally spans different roles/elements so one match
+// can exercise support, control, tanking, direct damage, DOT and reserve flow.
 const PLAYER_PREFERRED_IDS = [
-  'frostmaw',
-  'tidewarden',
-  'sparkit'
+  'mosshorn',
+  'gearbit',
+  'voltkit',
+  'pyroon',
+  'frostmaw'
 ] as const;
 const ENEMY_PREFERRED_IDS = [
+  'terrapup',
+  'aquabub',
+  'zephyroo',
   'stormeon',
-  'joltail',
-  'terrapup'
+  'joltail'
 ] as const;
 const CANONICAL_PREFIX = 'assets/pow-beta12/';
 const CANONICAL_SKILL_ART_PREFIX = '/assets/skills/v81/';
@@ -200,7 +206,7 @@ function normalizeAbilities(pow: CatalogPow): CombatAbilitySet {
     ? pow.abilities.skills.slice(0, 2)
     : [];
 
-  return {
+  const normalized: CombatAbilitySet = {
     basic: normalizeAbility(
       pow.abilities?.basic,
       `${name} Strike`,
@@ -232,6 +238,29 @@ function normalizeAbilities(pow: CatalogPow): CombatAbilitySet {
       standardSkillIndex(pow.rosterOrder, 3)
     )
   };
+
+  // Combat-only test override. Preserve canonical icon binding while exposing
+  // real active Cleanse/Revive mechanics for regression and player testing.
+  if (String(pow.id || '').trim().toLowerCase() === 'mosshorn') {
+    normalized.skills = [
+      {
+        ...normalized.skills[0],
+        name: 'Thanh Tẩy Sinh Mệnh',
+        power: 1,
+        type: 'support',
+        status: 'cleanse'
+      },
+      {
+        ...normalized.skills[1],
+        name: 'Hồi Sinh Mầm Sống',
+        power: 1,
+        type: 'support',
+        status: 'revive'
+      }
+    ];
+  }
+
+  return normalized;
 }
 
 function canonicalAssetUrl(asset: string | undefined, powId: string): string {
@@ -301,6 +330,10 @@ function selectTeam(
   const selected: CatalogPow[] = [];
 
   for (const id of preferredIds) {
+    if (selected.length >= TOTAL_TEAM_SIZE) {
+      break;
+    }
+
     const pow = byId.get(id);
     if (!pow || globallyUsed.has(id)) {
       continue;
