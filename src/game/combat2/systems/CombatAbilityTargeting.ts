@@ -4,7 +4,7 @@ import type { CombatUnitState } from './CombatState';
 export type CombatAbilityTargetMode = 'enemy' | 'self' | 'ally' | 'deadAlly';
 
 const SELF_STATUSES = new Set([
-  'shield', 'regeneration', 'attack up', 'defense up', 'rage gain', 'ap up'
+  'shield', 'regeneration', 'attack up', 'defense up', 'rage gain'
 ]);
 
 function normalizedStatus(ability: CombatAbility): string {
