@@ -1,9 +1,10 @@
 (()=>{'use strict';
 if(window.POWDER_COMBAT_EXCLUSIVE_ALTAR_V2206)return;
-const VERSION='22.0.6';
+const VERSION='22.0.6',CSS_ID='powderCombatExclusiveAltar2206Css',CSS_HREF='css/combat-exclusive-altar-v2206.css?v=2206';
 const state={renders:0,shown:0,ready:0,locked:0,casts:0,lastPowId:'',lastSkill:'',lastAt:0};
 let raf=0,observer=null;
 const q=(s,r=document)=>r.querySelector(s);
+function css(){let l=document.getElementById(CSS_ID);if(!l){l=document.createElement('link');l.id=CSS_ID;l.rel='stylesheet';document.head.appendChild(l)}if(!String(l.href).includes('v=2206'))l.href=CSS_HREF}
 function core(){try{return window.POWDER_BATTLE_PLAYER_V177?.getCore?.()||null}catch(_){return null}}
 function mount(){return q('#battleView:not([hidden]) .combat-v7-mount')}
 function current(){return core()?.state?.current||null}
@@ -12,7 +13,7 @@ function text(el,sel,fallback=''){return String(q(sel,el)?.textContent||fallback
 function iconMarkup(source){const icon=q('.cv7-skill-icon',source);return icon?.innerHTML||'◉'}
 function removeAltar(m){m?.removeAttribute('data-exclusive-altar');q('.layout2206-exclusive-altar',m)?.remove()}
 function ensure(){
-  raf=0;const m=mount();if(!m)return false;const c=core(),u=current(),source=originalExclusive(m);
+  raf=0;css();const m=mount();if(!m)return false;const c=core(),u=current(),source=originalExclusive(m);
   if(!c||!u||u.side!=='player'||c.state?.phase!=='running'||u.rarity!=='ancient'||!source){removeAltar(m);return false}
   const center=q('.cv7-center-mark',m);if(!center){removeAltar(m);return false}
   m.dataset.exclusiveAltar='1';
@@ -34,6 +35,6 @@ document.addEventListener('click',e=>{const b=e.target?.closest?.('[data-layout2
 ['powder:rendered','powder:combat-state','powder:view-changed','powder:combat-action','resize'].forEach(evt=>window.addEventListener(evt,schedule,{passive:true}));
 function observe(){const root=q('#battleView');if(!root||observer)return;observer=new MutationObserver(schedule);observer.observe(root,{subtree:true,childList:true})}
 window.addEventListener('pagehide',()=>{if(raf)cancelAnimationFrame(raf);observer?.disconnect();observer=null},{once:true});
-function snapshot(){return{version:VERSION,...state,policy:'Ancient exclusive is presented in the neutral center lane and proxies the canonical exclusive button; no Combat Core, cost, targeting or formula mutation.',gameplayMutation:false}}
-window.POWDER_COMBAT_EXCLUSIVE_ALTAR_V2206={version:VERSION,refresh:schedule,snapshot};observe();schedule();
+function snapshot(){return{version:VERSION,...state,css:CSS_HREF,policy:'Ancient exclusive is presented in the neutral center lane and proxies the canonical exclusive button; no Combat Core, cost, targeting or formula mutation.',gameplayMutation:false}}
+window.POWDER_COMBAT_EXCLUSIVE_ALTAR_V2206={version:VERSION,refresh:schedule,snapshot};css();observe();schedule();
 })();
