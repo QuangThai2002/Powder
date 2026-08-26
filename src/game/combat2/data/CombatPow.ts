@@ -10,12 +10,26 @@ export interface PowDisplayProfile {
   offsetY?: number;
 }
 
+export interface CombatAbility {
+  name: string;
+  power: number;
+  type: string;
+  status?: string;
+}
+
+export interface CombatAbilitySet {
+  basic: CombatAbility;
+  skills: CombatAbility[];
+  ultimate: CombatAbility;
+}
+
 export interface CombatPow {
   id: string;
   name: string;
   assetKey: string;
   assetUrl: string;
   element: string;
+  elementKey: string;
   role: string;
   level: number;
   attack: number;
@@ -27,5 +41,6 @@ export interface CombatPow {
   maxMana: number;
   rage: number;
   maxRage: number;
+  abilities: CombatAbilitySet;
   display: PowDisplayProfile;
 }
