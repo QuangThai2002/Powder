@@ -2,33 +2,156 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="powder-combat-version" content="2.1.7" />
-  <title>Powder Combat 2.1.7</title>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+  />
+  <meta name="powder-combat-version" content="2.1.8" />
+  <meta name="theme-color" content="#050c15" />
+  <title>Powder Combat 2.1.8</title>
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     html,
     body {
       width: 100%;
       height: 100%;
       margin: 0;
       overflow: hidden;
+      overscroll-behavior: none;
       background: #050c15;
+      touch-action: none;
+    }
+
+    body {
+      min-width: 100vw;
+      min-height: 100vh;
+      min-height: 100dvh;
+      padding:
+        env(safe-area-inset-top)
+        env(safe-area-inset-right)
+        env(safe-area-inset-bottom)
+        env(safe-area-inset-left);
     }
 
     #powder-combat2 {
       width: 100%;
       height: 100%;
-      touch-action: manipulation;
+      min-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+      touch-action: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
     }
 
     #powder-combat2 canvas {
       display: block;
       margin: 0 auto;
+      max-width: 100%;
+      max-height: 100%;
+      touch-action: none;
+    }
+
+    #rotate-device {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 28px;
+      padding-top: max(28px, env(safe-area-inset-top));
+      padding-right: max(28px, env(safe-area-inset-right));
+      padding-bottom: max(28px, env(safe-area-inset-bottom));
+      padding-left: max(28px, env(safe-area-inset-left));
+      background:
+        radial-gradient(circle at 50% 42%, rgba(20, 74, 99, 0.34), transparent 42%),
+        #050c15;
+      color: #eefbff;
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+
+    .rotate-card {
+      width: min(420px, 92vw);
+      padding: 26px 24px 24px;
+      border: 1px solid rgba(112, 220, 237, 0.58);
+      border-radius: 18px;
+      background: rgba(7, 24, 35, 0.96);
+      box-shadow: 0 18px 54px rgba(0, 0, 0, 0.34);
+    }
+
+    .phone-icon {
+      position: relative;
+      width: 76px;
+      height: 126px;
+      margin: 0 auto 22px;
+      border: 5px solid #70dced;
+      border-radius: 16px;
+      transform: rotate(-90deg);
+      animation: phone-pulse 1.8s ease-in-out infinite;
+    }
+
+    .phone-icon::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      bottom: 6px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #70dced;
+      transform: translateX(-50%);
+    }
+
+    .rotate-title {
+      margin: 0 0 8px;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+
+    .rotate-copy {
+      margin: 0;
+      color: #9fc7d7;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    @keyframes phone-pulse {
+      0%, 100% { transform: rotate(-90deg) scale(1); opacity: 0.9; }
+      50% { transform: rotate(-90deg) scale(1.045); opacity: 1; }
+    }
+
+    @media (orientation: portrait) and (max-width: 900px) {
+      #rotate-device {
+        display: flex;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .phone-icon {
+        animation: none;
+      }
     }
   </style>
 </head>
 <body>
   <div id="powder-combat2"></div>
+
+  <div id="rotate-device" aria-live="polite">
+    <div class="rotate-card">
+      <div class="phone-icon" aria-hidden="true"></div>
+      <h1 class="rotate-title">Xoay ngang điện thoại để chiến đấu</h1>
+      <p class="rotate-copy">
+        Combat được tối ưu cho khung ngang 16:9 để Pow, thanh trạng thái và 4 kỹ năng luôn có đủ khoảng trống, không chồng lên nhau.
+      </p>
+    </div>
+  </div>
+
   <script type="module" src="/src/game/combat2/bootstrap.ts"></script>
 </body>
 </html>
