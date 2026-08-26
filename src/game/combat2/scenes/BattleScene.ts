@@ -18,6 +18,7 @@ import {
   type CombatSkillSlot
 } from '../systems/SkillActionResolver';
 import { TurnManager } from '../systems/TurnManager';
+import { CombatPresentationDirector } from '../views/CombatPresentationDirector';
 import { PowView } from '../views/PowView';
 
 interface ActionMenuItem {
@@ -38,6 +39,7 @@ export class BattleScene extends Phaser.Scene {
   private actionPipeline!: ActionPipeline;
   private basicAttack!: BasicAttackResolver;
   private skillActions!: SkillActionResolver;
+  private presentation!: CombatPresentationDirector;
 
   private readonly powViews = new Map<string, PowView>();
   private roundText!: Phaser.GameObjects.Text;
@@ -58,9 +60,10 @@ export class BattleScene extends Phaser.Scene {
       }
     }
 
-    // Only the player's five-Pow roster needs command-dock icons. Avoid
-    // preloading the complete 390-skill library so Combat 2 stays lightweight.
-    for (const pow of COMBAT2_STARTER_ROSTER.player) {
+    // Load only the abilities used by the ten-Pow test roster. This keeps
+    // enemy skill/Ultimate cinematics visually complete without loading the
+    // entire 390-skill library into every battle.
+    for (const pow of ALL_COMBAT2_STARTER_POWS) {
       const abilities = [
         pow.abilities.basic,
         ...pow.abilities.skills,
@@ -91,6 +94,7 @@ export class BattleScene extends Phaser.Scene {
     this.actionPipeline = new ActionPipeline(this.turnManager);
     this.basicAttack = new BasicAttackResolver();
     this.skillActions = new SkillActionResolver();
+    this.presentation = new CombatPresentationDirector(this);
 
     this.cameras.main.setBackgroundColor('#06111c');
     this.createBattlefield(width, height);
@@ -128,7 +132,7 @@ export class BattleScene extends Phaser.Scene {
     plate.setStrokeStyle(2, 0x58d8ef, 0.72);
 
     const title = this.add
-      .text(width / 2, height / 2 - 34, 'POWDER COMBAT 2.1.8', {
+      .text(width / 2, height / 2 - 34, 'POWDER COMBAT 2.1.9', {
         fontFamily: 'Arial',
         fontSize: '29px',
         color: '#ffffff',
@@ -140,7 +144,7 @@ export class BattleScene extends Phaser.Scene {
       .text(
         width / 2,
         height / 2 + 4,
-        '3 POW CHÍNH · 2 DỰ BỊ · TARGET · SKILL · ULTIMATE',
+        '3 POW CHÍNH · 2 DỰ BỊ · SKILL IDENTITY · ULTIMATE',
         {
           fontFamily: 'Arial',
           fontSize: '13px',
@@ -153,7 +157,7 @@ export class BattleScene extends Phaser.Scene {
       .text(
         width / 2,
         height / 2 + 35,
-        'Chọn mục tiêu · bấm chiêu · phản hồi hiển thị trực tiếp trên sân',
+        'Chọn mục tiêu · kỹ năng có nhịp riêng · Ultimate có cinematic ngắn',
         {
           fontFamily: 'Arial',
           fontSize: '11px',
@@ -552,14 +556,40 @@ export class BattleScene extends Phaser.Scene {
     const selfTargeted = target.instanceId === actor.instanceId;
     const completed = await this.actionPipeline.execute(actor.instanceId, async () => {
       actorView?.setActiveTurn(false);
+
+      if (slot === 'ultimate') {
+        this.roundText.setVisible(false);
+        this.turnText.setVisible(false);
+        try {
+          await this.presentation.playUltimateIntro(
+            actorView,
+            ability,
+            actor.side,
+            actor.pow.elementKey
+          );
+        } finally {
+          this.roundText.setVisible(true);
+          this.turnText.setVisible(true);
+        }
+      } else {
+        await this.presentation.playSkillIntro(
+          actorView,
+          targetView,
+          ability,
+          slot,
+          actor.pow.elementKey,
+          selfTargeted
+        );
+      }
+
       this.showActionBanner(
         actorView,
         ability.name,
-        slot === 'ultimate' ? '#ffd36a' : '#c8f5ff'
+        slot === 'ultimate' ? '#ffd36a' : slot === 0 ? '#8eeaff' : '#c9b0ff'
       );
       this.showTargetCue(
         targetView,
-        selfTargeted ? 0x73f0aa : slot === 'ultimate' ? 0xffc95f : 0x9edfff
+        selfTargeted ? 0x73f0aa : slot === 'ultimate' ? 0xffc95f : slot === 0 ? 0x70dced : 0xb69cff
       );
 
       if (!selfTargeted && ability.type.toLowerCase() !== 'support' && actorView && targetView) {
@@ -579,6 +609,15 @@ export class BattleScene extends Phaser.Scene {
 
       this.combatState.sanitizeRuntimeNumbers();
       this.refreshViews();
+      this.presentation.showElementOutcome(targetView, result.elementOutcome);
+
+      if (slot === 'ultimate') {
+        await this.presentation.playUltimateImpact(
+          targetView,
+          actor.pow.elementKey,
+          selfTargeted
+        );
+      }
 
       if (result.damage > 0 && targetView && !selfTargeted) {
         await targetView.playHit();
@@ -611,7 +650,7 @@ export class BattleScene extends Phaser.Scene {
         );
       }
 
-      await this.wait(slot === 'ultimate' ? 260 : 150);
+      await this.wait(slot === 'ultimate' ? 220 : 135);
       return true;
     });
 
@@ -818,8 +857,12 @@ export class BattleScene extends Phaser.Scene {
     }
 
     const position = view.getWorldPosition();
+    const topTeam = position.y < this.scale.height / 2;
+    const bannerY = topTeam
+      ? Math.min(this.scale.height / 2 - 118, position.y + 160)
+      : Math.max(this.scale.height / 2 + 118, position.y - 160);
     const text = this.add
-      .text(position.x, position.y - 116, this.shortName(abilityName, 28).toUpperCase(), {
+      .text(position.x, bannerY, this.shortName(abilityName, 28).toUpperCase(), {
         fontFamily: 'Arial',
         fontSize: '13px',
         color,
@@ -835,7 +878,7 @@ export class BattleScene extends Phaser.Scene {
 
     this.tweens.add({
       targets: text,
-      y: text.y - 12,
+      y: bannerY + (topTeam ? 10 : -10),
       scaleX: 1,
       scaleY: 1,
       alpha: 0,
