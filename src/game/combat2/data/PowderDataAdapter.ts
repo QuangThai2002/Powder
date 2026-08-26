@@ -16,6 +16,7 @@ function makePow(
   name: string,
   element: string,
   role: string,
+  speed: number,
   display: CombatPow['display']
 ): CombatPow {
   return {
@@ -26,6 +27,9 @@ function makePow(
     element,
     role,
     level: 60,
+    attack: 100,
+    defense: 100,
+    speed,
     hp: 1000,
     maxHp: 1000,
     mana: 30,
@@ -37,42 +41,43 @@ function makePow(
 }
 
 /**
- * Combat 2.0.1 starter bridge.
+ * Combat 2.0 starter bridge.
  *
- * Uses the canonical portrait art from assets/pow-beta12 directly. It does
- * NOT use the legacy pow-combat-512 replacement path. In 2.0.2 this adapter
- * will be expanded to read the complete Powder roster/stat data.
+ * Uses canonical portrait art from assets/pow-beta12 directly and never the
+ * legacy pow-combat-512 replacement path. Numeric test values are isolated
+ * here so 2.0.2 can replace them with the complete Powder roster data without
+ * touching the Phaser renderer or turn state machine.
  */
 export const COMBAT2_STARTER_ROSTER = {
   enemy: [
-    makePow('stormeon', 'Stormeon', 'Bão', 'Nhạc công', {
+    makePow('stormeon', 'Stormeon', 'Bão', 'Nhạc công', 116, {
       heightRatio: 0.94,
       scaleAdjust: 1.03,
       offsetY: 2
     }),
-    makePow('joltail', 'Joltail', 'Sét', 'Xạ thủ', {
+    makePow('joltail', 'Joltail', 'Sét', 'Xạ thủ', 124, {
       heightRatio: 0.94,
       scaleAdjust: 1.04,
       offsetY: 3
     }),
-    makePow('terrapup', 'Terrapup', 'Đất', 'Đỡ đòn', {
+    makePow('terrapup', 'Terrapup', 'Đất', 'Đỡ đòn', 82, {
       heightRatio: 0.94,
       scaleAdjust: 1.05,
       offsetY: 4
     })
   ],
   player: [
-    makePow('frostmaw', 'Frostmaw', 'Băng', 'Đỡ đòn', {
+    makePow('frostmaw', 'Frostmaw', 'Băng', 'Đỡ đòn', 76, {
       heightRatio: 0.96,
       scaleAdjust: 1.03,
       offsetY: 4
     }),
-    makePow('tidewarden', 'Tidewarden', 'Nước', 'Đỡ đòn', {
+    makePow('tidewarden', 'Tidewarden', 'Nước', 'Đỡ đòn', 88, {
       heightRatio: 0.95,
       scaleAdjust: 1.02,
       offsetY: 2
     }),
-    makePow('sparkit', 'Sparkit', 'Sét', 'Đấu sĩ', {
+    makePow('sparkit', 'Sparkit', 'Sét', 'Đấu sĩ', 112, {
       heightRatio: 0.94,
       scaleAdjust: 1.04,
       offsetY: 3
