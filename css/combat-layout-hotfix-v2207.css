@@ -1,0 +1,82 @@
+/* Powder 22.0.7 — Combat layout hotfix
+   Presentation only: larger Pow art, higher enemy row, private Tamer UI. */
+html.powder-combat-layout2200 .cv7-field{
+  padding:8px 104px 150px!important;
+  grid-template-rows:minmax(235px,.92fr) 120px minmax(235px,1.08fr)!important;
+}
+html.powder-combat-layout2200 .cv7-enemies{
+  align-self:start!important;
+  align-content:start!important;
+  padding-top:0!important;
+}
+html.powder-combat-layout2200 .cv7-players{
+  align-self:end!important;
+  align-content:end!important;
+}
+html.powder-combat-layout2200 .cv7-enemies>h3{margin-top:0!important}
+html.powder-combat-layout2200 .cv7-unit{
+  width:clamp(205px,16.8vw,285px)!important;
+  height:clamp(238px,27.5dvh,295px)!important;
+}
+html.powder-combat-layout2200 .cv7-unit-top{height:20px!important}
+html.powder-combat-layout2200 .cv7-art-wrap{
+  top:20px!important;
+  width:100%!important;
+  height:calc(100% - 68px)!important;
+  overflow:hidden!important;
+}
+html.powder-combat-layout2200 .cv7-art{
+  width:100%!important;
+  height:100%!important;
+  object-fit:contain!important;
+  object-position:center center!important;
+}
+html.powder-combat-layout2200 .cv7-unit-info{
+  min-height:48px!important;
+  max-height:52px!important;
+  padding:4px 7px!important;
+}
+html.powder-combat-layout2200 .cv7-unit-info>b{font-size:11px!important}
+html.powder-combat-layout2200 .cv7-bars{margin-top:2px!important;gap:1px!important}
+html.powder-combat-layout2200 .cv7-bars i{height:4px!important}
+html.powder-combat-layout2200 .cv7-values,
+html.powder-combat-layout2200 .cv7-presence{font-size:7px!important;margin-top:1px!important}
+html.powder-combat-layout2200 .cv7-statuses{height:12px!important;margin-top:0!important}
+
+/* The wide tactical/debug header is not part of a normal player's battle view. */
+html.powder-combat-layout2200 .combat-v7-mount .tf217-hud{display:none!important}
+
+/* Tamer is private by default. Only the compact Tamer button is visible until opened. */
+html.powder-combat-layout2200 .combat-v7-mount[data-layout2200-tamer-open="0"] .cv7-tamer-command,
+html.powder-combat-layout2200 .combat-v7-mount[data-layout2200-tamer-open="0"] .cv7-tamer-pop,
+html.powder-combat-layout2200 .combat-v7-mount[data-layout2200-tamer-open="0"] .cv7-domain-hud,
+html.powder-combat-layout2200 .combat-v7-mount[data-layout2200-tamer-open="0"] .cv7-domain-cinematic,
+html.powder-combat-layout2200 .combat-v7-mount[data-layout2200-tamer-open="0"] .cv66-domain-ground{
+  display:none!important;
+  opacity:0!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+html.powder-combat-layout2200 .combat-v7-mount[data-layout2200-tamer-open="1"] .cv7-tamer-command{
+  display:block!important;
+  opacity:1!important;
+  visibility:visible!important;
+  pointer-events:auto!important;
+}
+
+@media(max-height:760px) and (min-width:851px){
+  html.powder-combat-layout2200 .cv7-field{
+    padding:4px 100px 138px!important;
+    grid-template-rows:minmax(190px,.92fr) 82px minmax(190px,1.08fr)!important;
+  }
+  html.powder-combat-layout2200 .cv7-unit{
+    width:clamp(175px,16vw,225px)!important;
+    height:clamp(190px,25dvh,220px)!important;
+  }
+  html.powder-combat-layout2200 .cv7-art-wrap{height:calc(100% - 58px)!important}
+  html.powder-combat-layout2200 .cv7-unit-info{min-height:43px!important;max-height:47px!important}
+}
+@media(max-width:850px){
+  html.powder-combat-layout2200 .cv7-art-wrap{height:calc(100% - 58px)!important}
+  html.powder-combat-layout2200 .cv7-unit-info{min-height:42px!important;max-height:46px!important}
+}
