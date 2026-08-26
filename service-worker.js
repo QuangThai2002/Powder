@@ -1,5 +1,5 @@
-const V='21.3.6-learning-scroll-domain-recovery';
-const BUILD='2136';
+const V='22.0.5-stable-combat-root-fix';
+const BUILD='2205';
 const SHELL=`powder-shell-${V}`;
 const RUNTIME=`powder-runtime-${V}`;
 const PRELOAD=`powder-assets-v21004`;
