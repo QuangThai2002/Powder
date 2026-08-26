@@ -2,11 +2,13 @@ import type { CombatAbility } from '../data/CombatPow';
 import type { CombatUnitState, ControlStatus, DotStatus } from './CombatState';
 
 export type CombatSkillSlot = 0 | 1;
+export type CombatAbilitySlot = CombatSkillSlot | 'ultimate';
 
 export interface SkillActionResult {
-  skillSlot: CombatSkillSlot;
+  abilitySlot: CombatAbilitySlot;
   abilityName: string;
   manaCost: number;
+  rageCost: number;
   damage: number;
   shieldDamage: number;
   hpDamage: number;
@@ -21,14 +23,23 @@ const SKILL_COSTS: Record<CombatSkillSlot, number> = {
   0: 18,
   1: 24
 };
+const ULTIMATE_RAGE_COST = 100;
 
 export class SkillActionResolver {
   costFor(slot: CombatSkillSlot): number {
     return SKILL_COSTS[slot];
   }
 
+  ultimateRageCost(): number {
+    return ULTIMATE_RAGE_COST;
+  }
+
   canUse(actor: CombatUnitState, slot: CombatSkillSlot): boolean {
     return actor.alive && actor.mana >= this.costFor(slot);
+  }
+
+  canUseUltimate(actor: CombatUnitState): boolean {
+    return actor.alive && actor.rage >= ULTIMATE_RAGE_COST;
   }
 
   resolve(
@@ -51,6 +62,39 @@ export class SkillActionResolver {
       actor.rage + (slot === 0 ? 18 : 22)
     );
 
+    return this.resolveAbility(actor, target, ability, slot, manaCost, 0);
+  }
+
+  resolveUltimate(
+    actor: CombatUnitState,
+    target: CombatUnitState,
+    ability: CombatAbility
+  ): SkillActionResult {
+    if (!this.canUseUltimate(actor)) {
+      throw new Error(
+        `[Combat2] ${actor.pow.name} does not have enough Rage for ${ability.name}.`
+      );
+    }
+
+    actor.rage = Math.max(0, actor.rage - ULTIMATE_RAGE_COST);
+    return this.resolveAbility(
+      actor,
+      target,
+      ability,
+      'ultimate',
+      0,
+      ULTIMATE_RAGE_COST
+    );
+  }
+
+  private resolveAbility(
+    actor: CombatUnitState,
+    target: CombatUnitState,
+    ability: CombatAbility,
+    abilitySlot: CombatAbilitySlot,
+    manaCost: number,
+    rageCost: number
+  ): SkillActionResult {
     const isPureSupport = ability.type.toLowerCase() === 'support';
     const damageResult = isPureSupport
       ? { damage: 0, shieldDamage: 0, hpDamage: 0 }
@@ -60,9 +104,10 @@ export class SkillActionResolver {
     target.alive = target.hp > 0;
 
     return {
-      skillSlot: slot,
+      abilitySlot,
       abilityName: ability.name,
       manaCost,
+      rageCost,
       ...damageResult,
       ...statusResult,
       defeated: !target.alive
