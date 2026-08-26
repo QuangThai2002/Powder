@@ -40,7 +40,7 @@ interface ParsedStatus {
 }
 
 const SELF_STATUSES = new Set([
-  'shield', 'regeneration', 'attack up', 'defense up', 'rage gain'
+  'shield', 'regeneration', 'attack up', 'ap up', 'defense up', 'rage gain'
 ]);
 
 export class SkillActionResolver {
@@ -62,6 +62,7 @@ export class SkillActionResolver {
   /**
    * Basic Skill I/II action gain is +2 raw Rage. A skill carrying `rage gain`
    * adds +1 raw Rage to the same event, so +2 + 1 is processed as raw +3.
+   * AP Up is an Ability Power buff and never contributes resource gain.
    * Ultimate has no automatic action gain; only an explicit rage-gain effect
    * can refund Rage after the 4-point spend.
    */
@@ -195,7 +196,11 @@ export class SkillActionResolver {
         actor.hp += healed;
         break;
       }
-      case 'attack up': {
+      case 'attack up':
+      case 'ap up': {
+        // Combat2 currently has one offensive multiplier channel. AP Up uses
+        // that channel without becoming a resource effect; this preserves the
+        // canonical meaning until ATK/AP channels are split in the full model.
         actor.attackMultiplier = Math.max(actor.attackMultiplier, 1.2);
         actor.attackBuffActionsRemaining = Math.max(actor.attackBuffActionsRemaining, 3 + durationBonus);
         break;
