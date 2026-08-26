@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "assets:audit": "node tools/audit-pow-assets.mjs",
+    "check": "npm run typecheck && npm run build && npm run assets:audit"
   },
   "dependencies": {
     "phaser": "^4.2.1"
