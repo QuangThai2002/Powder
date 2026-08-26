@@ -21,8 +21,13 @@ export class PowView {
   private manaBar!: Phaser.GameObjects.Rectangle;
   private rageBar!: Phaser.GameObjects.Rectangle;
   private turnGlow!: Phaser.GameObjects.Rectangle;
+  private targetGlow!: Phaser.GameObjects.Rectangle;
+  private targetHitArea!: Phaser.GameObjects.Rectangle;
   private statusText!: Phaser.GameObjects.Text;
   private readonly barWidth: number;
+  private targetable = false;
+  private selectedTarget = false;
+  private targetSelectedHandler: (() => void) | null = null;
 
   constructor(
     scene: Phaser.Scene,
@@ -51,15 +56,40 @@ export class PowView {
       this.container.setAlpha(0.38);
       this.statusText.setText('HẠ GỤC').setVisible(true);
       this.setActiveTurn(false);
+      this.setTargetable(false);
+      this.setSelectedTarget(false);
       return;
     }
 
     this.container.setAlpha(1);
-    this.statusText.setVisible(false);
+    const runtimeStatus = this.getRuntimeStatus(unit);
+    this.statusText.setText(runtimeStatus).setVisible(Boolean(runtimeStatus));
   }
 
   setActiveTurn(active: boolean): void {
     this.turnGlow.setVisible(active);
+  }
+
+  setTargetable(active: boolean): void {
+    this.targetable = active;
+
+    if (active) {
+      this.targetHitArea.setInteractive({ useHandCursor: true });
+    } else {
+      this.targetHitArea.disableInteractive();
+      this.selectedTarget = false;
+    }
+
+    this.refreshTargetGlow();
+  }
+
+  setSelectedTarget(selected: boolean): void {
+    this.selectedTarget = selected && this.targetable;
+    this.refreshTargetGlow();
+  }
+
+  onTargetSelected(handler: () => void): void {
+    this.targetSelectedHandler = handler;
   }
 
   async playAttackLunge(targetX: number, targetY: number): Promise<void> {
@@ -95,6 +125,18 @@ export class PowView {
     });
   }
 
+  async playStatusPulse(): Promise<void> {
+    await this.tweenPromise({
+      targets: this.container,
+      scaleX: 1.025,
+      scaleY: 1.025,
+      duration: 90,
+      yoyo: true,
+      ease: 'Sine.easeInOut'
+    });
+    this.container.setScale(1);
+  }
+
   getWorldPosition(): Phaser.Math.Vector2 {
     return new Phaser.Math.Vector2(this.container.x, this.container.y);
   }
@@ -106,6 +148,9 @@ export class PowView {
     const left = -w / 2;
 
     const borderColor = this.side === 'player' ? 0x54d8f2 : 0xf49b6a;
+
+    this.targetGlow = this.scene.add.rectangle(0, 0, w + 16, h + 16, 0x000000, 0);
+    this.targetGlow.setVisible(false);
 
     this.turnGlow = this.scene.add.rectangle(0, 0, w + 10, h + 10, 0x000000, 0);
     this.turnGlow.setStrokeStyle(3, 0xffdc6d, 0.95).setVisible(false);
@@ -191,18 +236,34 @@ export class PowView {
     );
 
     this.statusText = this.scene.add
-      .text(0, artY, 'HẠ GỤC', {
+      .text(0, artY, '', {
         fontFamily: 'Arial',
-        fontSize: '19px',
+        fontSize: '15px',
         color: '#ffffff',
         fontStyle: 'bold',
-        backgroundColor: '#721f2a',
-        padding: { x: 10, y: 6 }
+        backgroundColor: '#4a2535',
+        padding: { x: 9, y: 5 }
       })
       .setOrigin(0.5)
       .setVisible(false);
 
+    this.targetHitArea = this.scene.add.rectangle(0, 0, w, h, 0xffffff, 0.001);
+    this.targetHitArea.on('pointerover', () => {
+      if (this.targetable && !this.selectedTarget) {
+        this.targetGlow
+          .setStrokeStyle(2, 0x78e8ff, 0.82)
+          .setVisible(true);
+      }
+    });
+    this.targetHitArea.on('pointerout', () => this.refreshTargetGlow());
+    this.targetHitArea.on('pointerup', () => {
+      if (this.targetable) {
+        this.targetSelectedHandler?.();
+      }
+    });
+
     this.container.add([
+      this.targetGlow,
       this.turnGlow,
       card,
       artBack,
@@ -215,8 +276,59 @@ export class PowView {
       this.manaBar,
       rageBack,
       this.rageBar,
-      this.statusText
+      this.statusText,
+      this.targetHitArea
     ]);
+  }
+
+  private refreshTargetGlow(): void {
+    if (!this.targetable) {
+      this.targetGlow.setVisible(false);
+      return;
+    }
+
+    if (this.selectedTarget) {
+      this.targetGlow
+        .setStrokeStyle(4, 0xffdc6d, 1)
+        .setVisible(true);
+      return;
+    }
+
+    this.targetGlow
+      .setStrokeStyle(1, 0x78e8ff, 0.52)
+      .setVisible(true);
+  }
+
+  private getRuntimeStatus(unit: CombatUnitState): string {
+    if (unit.controlActionsRemaining > 0) {
+      return unit.controlStatus === 'freeze' ? 'ĐÓNG BĂNG' : 'CHOÁNG';
+    }
+
+    if (unit.dotActionsRemaining > 0) {
+      return unit.dotStatus === 'poison' ? 'NHIỄM ĐỘC' : 'THIÊU ĐỐT';
+    }
+
+    if (unit.speedDebuffActionsRemaining > 0) {
+      return 'CHẬM';
+    }
+
+    if (unit.attackBuffActionsRemaining > 0) {
+      return 'TĂNG CÔNG';
+    }
+
+    if (unit.defenseBuffActionsRemaining > 0) {
+      return 'TĂNG THỦ';
+    }
+
+    if (unit.speedBuffActionsRemaining > 0) {
+      return 'TĂNG TỐC';
+    }
+
+    if (unit.shield > 0) {
+      return `KHIÊN ${Math.round(unit.shield)}`;
+    }
+
+    return '';
   }
 
   private makeBarBack(
