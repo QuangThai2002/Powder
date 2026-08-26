@@ -1,1 +1,7 @@
 *.zip
+
+# Node / Phaser / Vite
+node_modules/
+dist/
+.vite/
+.vite-temp/
