@@ -23,6 +23,8 @@ import { PowView } from '../views/PowView';
 interface ActionMenuItem {
   label: string;
   detail: string;
+  resource: string;
+  glyph: string;
   color: number;
   enabled: boolean;
   run: () => void;
@@ -104,7 +106,7 @@ export class BattleScene extends Phaser.Scene {
     plate.setStrokeStyle(2, 0x58d8ef, 0.72);
 
     const title = this.add
-      .text(width / 2, height / 2 - 34, 'POWDER COMBAT 2.0.9', {
+      .text(width / 2, height / 2 - 34, 'POWDER COMBAT 2.1.5', {
         fontFamily: 'Arial',
         fontSize: '29px',
         color: '#ffffff',
@@ -129,7 +131,7 @@ export class BattleScene extends Phaser.Scene {
       .text(
         width / 2,
         height / 2 + 35,
-        'Dự bị chỉ vào sân khi slot trống · support tự chọn đúng mục tiêu',
+        'Chọn mục tiêu · bấm chiêu · phản hồi hiển thị trực tiếp trên sân',
         {
           fontFamily: 'Arial',
           fontSize: '11px',
@@ -276,28 +278,36 @@ export class BattleScene extends Phaser.Scene {
     const actions: ActionMenuItem[] = [
       {
         label: 'ĐÒN CƠ BẢN',
-        detail: `${this.shortName(actor.pow.abilities.basic.name)} · +8 Mana · +12 Nộ`,
+        detail: this.shortName(actor.pow.abilities.basic.name, 22),
+        resource: '+8 MANA · +12 NỘ',
+        glyph: '◆',
         color: 0x0b5268,
         enabled: true,
         run: () => this.runPlayerTargetAction(actor, 'basic')
       },
       {
         label: 'KỸ NĂNG 1',
-        detail: `${this.shortName(skill1.name)} · ${skill1Cost} Mana${this.abilityTargetsSelf(skill1) ? ' · Bản thân' : ''}`,
+        detail: `${this.shortName(skill1.name, 20)}${this.abilityTargetsSelf(skill1) ? ' · Bản thân' : ''}`,
+        resource: `${skill1Cost} MANA`,
+        glyph: 'I',
         color: 0x315d78,
         enabled: this.skillActions.canUse(actor, 0),
         run: () => this.runPlayerTargetAction(actor, 0)
       },
       {
         label: 'KỸ NĂNG 2',
-        detail: `${this.shortName(skill2.name)} · ${skill2Cost} Mana${this.abilityTargetsSelf(skill2) ? ' · Bản thân' : ''}`,
+        detail: `${this.shortName(skill2.name, 20)}${this.abilityTargetsSelf(skill2) ? ' · Bản thân' : ''}`,
+        resource: `${skill2Cost} MANA`,
+        glyph: 'II',
         color: 0x493b78,
         enabled: this.skillActions.canUse(actor, 1),
         run: () => this.runPlayerTargetAction(actor, 1)
       },
       {
         label: 'ULTIMATE',
-        detail: `${this.shortName(ultimate.name)} · ${rageCost} Nộ${this.abilityTargetsSelf(ultimate) ? ' · Bản thân' : ''}`,
+        detail: `${this.shortName(ultimate.name, 20)}${this.abilityTargetsSelf(ultimate) ? ' · Bản thân' : ''}`,
+        resource: `${rageCost} NỘ`,
+        glyph: '★',
         color: 0x70472b,
         enabled: this.skillActions.canUseUltimate(actor),
         run: () => this.runPlayerTargetAction(actor, 'ultimate')
@@ -305,59 +315,96 @@ export class BattleScene extends Phaser.Scene {
     ];
 
     const portrait = this.isPortrait();
-    const buttonWidth = portrait ? 196 : 208;
-    const gap = portrait ? 8 : 10;
-    const totalWidth = actions.length * buttonWidth + (actions.length - 1) * gap;
-    const menuY = this.scale.height / 2 + (portrait ? 108 : 88);
+    const fourColumns = !portrait && this.scale.width >= 760;
+    const columns = fourColumns ? 4 : 2;
+    const rows = Math.ceil(actions.length / columns);
+    const gapX = fourColumns ? 8 : 10;
+    const gapY = 8;
+    const horizontalPadding = portrait ? 28 : 48;
+    const availableWidth = Math.max(320, this.scale.width - horizontalPadding * 2);
+    const buttonWidth = fourColumns
+      ? Math.min(174, (availableWidth - gapX * 3) / 4)
+      : Math.min(236, (availableWidth - gapX) / 2);
+    const buttonHeight = 64;
+    const totalWidth = columns * buttonWidth + (columns - 1) * gapX;
+    const totalHeight = rows * buttonHeight + (rows - 1) * gapY;
+    const desiredY = this.scale.height / 2 + (portrait ? 108 : 90);
+    const menuY = Math.min(
+      this.scale.height - totalHeight / 2 - 18,
+      desiredY
+    );
     const menu = this.add.container(this.scale.width / 2, menuY);
     menu.setDepth(30);
 
     actions.forEach((action, index) => {
-      const x = -totalWidth / 2 + buttonWidth / 2 + index * (buttonWidth + gap);
+      const column = index % columns;
+      const row = Math.floor(index / columns);
+      const x = -totalWidth / 2 + buttonWidth / 2 + column * (buttonWidth + gapX);
+      const y = -totalHeight / 2 + buttonHeight / 2 + row * (buttonHeight + gapY);
+      const left = x - buttonWidth / 2;
+      const right = x + buttonWidth / 2;
       const background = this.add.rectangle(
         x,
-        0,
+        y,
         buttonWidth,
-        58,
+        buttonHeight,
         action.enabled ? action.color : 0x26333b,
-        action.enabled ? 0.96 : 0.68
+        action.enabled ? 0.95 : 0.64
       );
       background.setStrokeStyle(
         1,
         action.enabled ? 0x70dced : 0x56636b,
-        action.enabled ? 0.72 : 0.45
+        action.enabled ? 0.72 : 0.42
       );
 
-      const label = this.add
-        .text(x, -9, action.label, {
+      const glyph = this.add
+        .text(left + 22, y, action.glyph, {
           fontFamily: 'Arial',
-          fontSize: portrait ? '12px' : '13px',
-          color: action.enabled ? '#ffffff' : '#85959d',
+          fontSize: action.glyph.length > 1 ? '12px' : '18px',
+          color: action.enabled ? '#eafcff' : '#75858d',
           fontStyle: 'bold'
         })
         .setOrigin(0.5);
 
-      const detail = this.add
-        .text(x, 13, action.detail, {
+      const label = this.add
+        .text(left + 42, y - 14, action.label, {
           fontFamily: 'Arial',
-          fontSize: portrait ? '8px' : '9px',
+          fontSize: fourColumns ? '10px' : '11px',
+          color: action.enabled ? '#ffffff' : '#85959d',
+          fontStyle: 'bold'
+        })
+        .setOrigin(0, 0.5);
+
+      const detail = this.add
+        .text(left + 42, y + 8, action.detail, {
+          fontFamily: 'Arial',
+          fontSize: fourColumns ? '8px' : '9px',
           color: action.enabled ? '#b4d4df' : '#71818a'
         })
-        .setOrigin(0.5);
+        .setOrigin(0, 0.5);
 
-      const hitArea = this.add.rectangle(x, 0, buttonWidth, 58, 0xffffff, 0.001);
+      const resource = this.add
+        .text(right - 10, y - 14, action.resource, {
+          fontFamily: 'Arial',
+          fontSize: fourColumns ? '7px' : '8px',
+          color: action.enabled ? '#8eeaff' : '#66767e',
+          fontStyle: 'bold'
+        })
+        .setOrigin(1, 0.5);
+
+      const hitArea = this.add.rectangle(x, y, buttonWidth, buttonHeight, 0xffffff, 0.001);
 
       if (action.enabled) {
         hitArea.setInteractive({ useHandCursor: true });
-        hitArea.on('pointerover', () => background.setAlpha(1).setScale(1.025));
-        hitArea.on('pointerout', () => background.setAlpha(0.96).setScale(1));
+        hitArea.on('pointerover', () => background.setAlpha(1).setScale(1.02));
+        hitArea.on('pointerout', () => background.setAlpha(0.95).setScale(1));
         hitArea.once('pointerup', () => {
           this.destroyActionMenu();
           action.run();
         });
       }
 
-      menu.add([background, label, detail, hitArea]);
+      menu.add([background, glyph, label, detail, resource, hitArea]);
     });
 
     this.actionMenu = menu;
@@ -406,6 +453,8 @@ export class BattleScene extends Phaser.Scene {
 
     const completed = await this.actionPipeline.execute(actor.instanceId, async () => {
       actorView?.setActiveTurn(false);
+      this.showActionBanner(actorView, actor.pow.abilities.basic.name, '#8eeaff');
+      this.showTargetCue(targetView, 0x70dced);
 
       if (actorView && targetView) {
         const targetPosition = targetView.getWorldPosition();
@@ -451,6 +500,15 @@ export class BattleScene extends Phaser.Scene {
 
     const completed = await this.actionPipeline.execute(actor.instanceId, async () => {
       actorView?.setActiveTurn(false);
+      this.showActionBanner(
+        actorView,
+        ability.name,
+        slot === 'ultimate' ? '#ffd36a' : '#c8f5ff'
+      );
+      this.showTargetCue(
+        targetView,
+        selfTargeted ? 0x73f0aa : slot === 'ultimate' ? 0xffc95f : 0x9edfff
+      );
 
       if (!selfTargeted && ability.type.toLowerCase() !== 'support' && actorView && targetView) {
         const targetPosition = targetView.getWorldPosition();
@@ -698,6 +756,65 @@ export class BattleScene extends Phaser.Scene {
     this.selectedTargetId = null;
   }
 
+  private showActionBanner(
+    view: PowView | undefined,
+    abilityName: string,
+    color: string
+  ): void {
+    if (!view) {
+      return;
+    }
+
+    const position = view.getWorldPosition();
+    const text = this.add
+      .text(position.x, position.y - 116, this.shortName(abilityName, 28).toUpperCase(), {
+        fontFamily: 'Arial',
+        fontSize: '13px',
+        color,
+        fontStyle: 'bold',
+        backgroundColor: '#07131dcc',
+        padding: { x: 9, y: 4 },
+        stroke: '#06111c',
+        strokeThickness: 2
+      })
+      .setOrigin(0.5)
+      .setDepth(46)
+      .setScale(0.94);
+
+    this.tweens.add({
+      targets: text,
+      y: text.y - 12,
+      scaleX: 1,
+      scaleY: 1,
+      alpha: 0,
+      duration: 560,
+      ease: 'Quad.easeOut',
+      onComplete: () => text.destroy()
+    });
+  }
+
+  private showTargetCue(view: PowView | undefined, color: number): void {
+    if (!view) {
+      return;
+    }
+
+    const position = view.getWorldPosition();
+    const cue = this.add
+      .circle(position.x, position.y - 2, 38, color, 0.08)
+      .setStrokeStyle(2, color, 0.72)
+      .setDepth(35);
+
+    this.tweens.add({
+      targets: cue,
+      scaleX: 1.34,
+      scaleY: 1.34,
+      alpha: 0,
+      duration: 250,
+      ease: 'Quad.easeOut',
+      onComplete: () => cue.destroy()
+    });
+  }
+
   private showDamageNumber(
     view: PowView,
     hpDamage: number,
@@ -855,9 +972,9 @@ export class BattleScene extends Phaser.Scene {
     return names[normalized] ?? status.toUpperCase();
   }
 
-  private shortName(name: string): string {
+  private shortName(name: string, maxLength = 18): string {
     const clean = String(name || '').trim();
-    return clean.length > 18 ? `${clean.slice(0, 17)}…` : clean;
+    return clean.length > maxLength ? `${clean.slice(0, maxLength - 1)}…` : clean;
   }
 
   private createBattlefield(width: number, height: number): void {
