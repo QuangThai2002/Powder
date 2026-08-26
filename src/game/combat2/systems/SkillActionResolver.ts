@@ -25,6 +25,12 @@ export interface SkillActionResult {
   defeated: boolean;
 }
 
+interface ParsedStatus {
+  status: string;
+  selfDirected: boolean;
+  label: string | null;
+}
+
 const SKILL_COSTS: Record<CombatSkillSlot, number> = {
   0: 18,
   1: 24
@@ -111,11 +117,14 @@ export class SkillActionResolver {
     rageCost: number
   ): SkillActionResult {
     const abilityType = String(ability.type || '').trim().toLowerCase();
-    const status = String(ability.status || '').trim().toLowerCase();
+    const parsedStatus = this.parseStatus(ability.status);
     const noDirectDamage =
       abilityType === 'support' ||
       abilityType === 'debuff' ||
-      (actor.instanceId === target.instanceId && SELF_STATUSES.has(status));
+      (
+        actor.instanceId === target.instanceId &&
+        SELF_STATUSES.has(parsedStatus.status)
+      );
     const damageKind = abilitySlot === 'ultimate' ? 'ultimate' : 'skill';
     const damageResult = noDirectDamage
       ? {
@@ -193,12 +202,13 @@ export class SkillActionResolver {
     SkillActionResult,
     'healed' | 'shieldGranted' | 'statusLabel' | 'targetSpeedChanged'
   > {
-    const status = String(rawStatus || '').trim().toLowerCase();
+    const parsed = this.parseStatus(rawStatus);
+    const status = parsed.status;
     const supportMultiplier = this.identity.supportMultiplier(actor);
     const durationBonus = this.identity.statusDurationBonus(actor, status);
     let healed = 0;
     let shieldGranted = 0;
-    let statusLabel: string | null = rawStatus ? String(rawStatus) : null;
+    let statusLabel = parsed.label;
     let targetSpeedChanged = false;
 
     switch (status) {
@@ -291,6 +301,22 @@ export class SkillActionResolver {
       shieldGranted,
       statusLabel,
       targetSpeedChanged
+    };
+  }
+
+  private parseStatus(rawStatus: string | undefined): ParsedStatus {
+    const raw = String(rawStatus || '').trim();
+    if (!raw) {
+      return { status: '', selfDirected: false, label: null };
+    }
+
+    const selfDirected = raw.toLowerCase().startsWith('self:');
+    const label = selfDirected ? raw.slice(5).trim() : raw;
+
+    return {
+      status: label.toLowerCase(),
+      selfDirected,
+      label: label || null
     };
   }
 
