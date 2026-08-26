@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import type { CombatPow, CombatSide } from '../data/CombatPow';
 import {
+  ACTIVE_TEAM_SIZE,
   ALL_COMBAT2_STARTER_POWS,
   COMBAT2_STARTER_ROSTER
 } from '../data/PowderDataAdapter';
@@ -36,6 +37,7 @@ export class BattleScene extends Phaser.Scene {
   private actionMenu: Phaser.GameObjects.Container | null = null;
   private selectedTargetId: string | null = null;
   private flowStarted = false;
+  private lineupSettling = false;
 
   constructor() {
     super('BattleScene');
@@ -65,8 +67,8 @@ export class BattleScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#06111c');
     this.createBattlefield(width, height);
 
-    this.createTeam(width, 166, 'enemy', COMBAT2_STARTER_ROSTER.enemy);
-    this.createTeam(width, 734, 'player', COMBAT2_STARTER_ROSTER.player);
+    this.createTeam('enemy', COMBAT2_STARTER_ROSTER.enemy);
+    this.createTeam('player', COMBAT2_STARTER_ROSTER.player);
 
     this.roundText = this.add
       .text(width / 2, height / 2 - 18, 'ROUND 1', {
@@ -93,11 +95,11 @@ export class BattleScene extends Phaser.Scene {
 
   private showPreBattleIntro(width: number, height: number): void {
     const shade = this.add.rectangle(width / 2, height / 2, width, height, 0x02080e, 0.48);
-    const plate = this.add.rectangle(width / 2, height / 2, 590, 142, 0x081d2a, 0.96);
+    const plate = this.add.rectangle(width / 2, height / 2, 600, 142, 0x081d2a, 0.96);
     plate.setStrokeStyle(2, 0x58d8ef, 0.72);
 
     const title = this.add
-      .text(width / 2, height / 2 - 34, 'POWDER COMBAT 2.0.7', {
+      .text(width / 2, height / 2 - 34, 'POWDER COMBAT 2.0.8', {
         fontFamily: 'Arial',
         fontSize: '29px',
         color: '#ffffff',
@@ -109,7 +111,7 @@ export class BattleScene extends Phaser.Scene {
       .text(
         width / 2,
         height / 2 + 4,
-        'CANONICAL DATA · TARGET · SKILL 1 · SKILL 2 · ULTIMATE',
+        '3 POW CHÍNH · 2 DỰ BỊ · TARGET · SKILL · ULTIMATE',
         {
           fontFamily: 'Arial',
           fontSize: '13px',
@@ -122,7 +124,7 @@ export class BattleScene extends Phaser.Scene {
       .text(
         width / 2,
         height / 2 + 35,
-        'Nhấn Pow đối thủ để đổi mục tiêu · mọi action đều kết thúc hữu hạn',
+        'Dự bị không nhận lượt khi ngoài sân · tự vào đúng slot khi tuyến chính gục',
         {
           fontFamily: 'Arial',
           fontSize: '11px',
@@ -157,6 +159,10 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private beginNextTurn(): void {
+    if (this.lineupSettling) {
+      return;
+    }
+
     this.destroyActionMenu();
     this.clearTargeting();
     this.clearTurnHighlights();
@@ -514,16 +520,63 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private afterAction(): void {
+    void this.settleAfterAction();
+  }
+
+  private async settleAfterAction(): Promise<void> {
+    if (this.lineupSettling) {
+      return;
+    }
+
+    this.lineupSettling = true;
     this.destroyActionMenu();
     this.clearTargeting();
     this.refreshViews();
 
-    if (this.combatState.isBattleOver()) {
-      this.finishBattle();
-      return;
+    try {
+      await this.handleReservePromotions();
+      this.refreshViews();
+
+      if (this.combatState.isBattleOver()) {
+        this.finishBattle();
+        return;
+      }
+    } finally {
+      this.lineupSettling = false;
     }
 
     this.time.delayedCall(170, () => this.beginNextTurn());
+  }
+
+  private async handleReservePromotions(): Promise<void> {
+    for (const dead of this.combatState.units.filter((unit) => !unit.alive)) {
+      this.turnManager.retireUnit(dead.instanceId);
+    }
+
+    const promotions = this.combatState.promoteReserves();
+
+    for (const promotion of promotions) {
+      const defeatedView = this.powViews.get(promotion.defeatedUnitId);
+      const promotedView = this.powViews.get(promotion.promotedUnitId);
+      const promotedUnit = this.combatState.getUnit(promotion.promotedUnitId);
+      const fieldPosition = this.activePosition(promotion.side, promotion.fieldSlot);
+      const exitY = promotion.side === 'enemy' ? -120 : this.scale.height + 120;
+
+      if (defeatedView) {
+        await defeatedView.retireFromField(
+          defeatedView.getWorldPosition().x,
+          exitY
+        );
+        defeatedView.container.setVisible(false);
+      }
+
+      if (promotedView && promotedUnit) {
+        this.showFloatingLabel(promotedView, 'DỰ BỊ VÀO SÂN', '#7ce8ff');
+        await promotedView.enterField(fieldPosition.x, fieldPosition.y);
+        promotedView.updateRuntime(promotedUnit);
+        this.turnManager.registerPromoted(promotedUnit.instanceId);
+      }
+    }
   }
 
   private recoverTurnFlow(): void {
@@ -535,8 +588,8 @@ export class BattleScene extends Phaser.Scene {
 
   private preparePlayerTargeting(): void {
     const enemies = this.combatState
-      .living('enemy')
-      .sort((a, b) => a.slot - b.slot);
+      .activeLiving('enemy')
+      .sort((a, b) => (a.fieldSlot ?? 99) - (b.fieldSlot ?? 99));
 
     const selectedStillAlive = enemies.some(
       (unit) => unit.instanceId === this.selectedTargetId
@@ -573,6 +626,7 @@ export class BattleScene extends Phaser.Scene {
       this.combatState.phase !== 'selecting' ||
       currentActor?.side !== 'player' ||
       !target?.alive ||
+      target.fieldSlot === null ||
       target.side !== 'enemy'
     ) {
       return;
@@ -580,7 +634,7 @@ export class BattleScene extends Phaser.Scene {
 
     this.selectedTargetId = instanceId;
 
-    for (const enemy of this.combatState.living('enemy')) {
+    for (const enemy of this.combatState.activeLiving('enemy')) {
       this.powViews
         .get(enemy.instanceId)
         ?.setSelectedTarget(enemy.instanceId === instanceId);
@@ -596,7 +650,11 @@ export class BattleScene extends Phaser.Scene {
       ? this.combatState.getUnit(this.selectedTargetId)
       : undefined;
 
-    if (selected?.alive && selected.side === 'enemy') {
+    if (
+      selected?.alive &&
+      selected.side === 'enemy' &&
+      selected.fieldSlot !== null
+    ) {
       return selected;
     }
 
@@ -677,8 +735,8 @@ export class BattleScene extends Phaser.Scene {
 
   private pickTarget(side: CombatSide): CombatUnitState | null {
     const candidates = this.combatState
-      .living(side)
-      .sort((a, b) => a.slot - b.slot);
+      .activeLiving(side)
+      .sort((a, b) => (a.fieldSlot ?? 99) - (b.fieldSlot ?? 99));
 
     return candidates[0] ?? null;
   }
@@ -778,28 +836,44 @@ export class BattleScene extends Phaser.Scene {
     graphics.lineBetween(105, height / 2, width - 105, height / 2);
   }
 
-  private createTeam(
-    width: number,
-    y: number,
-    side: CombatSide,
-    team: CombatPow[]
-  ): void {
-    const spacing = 365;
-    const center = width / 2;
-
+  private createTeam(side: CombatSide, team: CombatPow[]): void {
     team.forEach((pow, index) => {
-      const x = center + (index - 1) * spacing;
       const instanceId = `${side}-${index}-${pow.id}`;
-      const view = new PowView(this, x, y, pow, {
+      const unit = this.combatState.getUnit(instanceId);
+      if (!unit) {
+        return;
+      }
+
+      const position = unit.fieldSlot !== null
+        ? this.activePosition(side, unit.fieldSlot)
+        : this.reservePosition(side, index - ACTIVE_TEAM_SIZE);
+      const view = new PowView(this, position.x, position.y, pow, {
         side,
-        width: 286,
-        height: 300
+        width: 276,
+        height: 290
       });
+
+      if (unit.fieldSlot === null) {
+        view.setBenchScale(0.5);
+      }
 
       view.onTargetSelected(() => this.selectTarget(instanceId));
       this.powViews.set(instanceId, view);
+      view.updateRuntime(unit);
     });
+  }
 
-    this.refreshViews();
+  private activePosition(side: CombatSide, fieldSlot: number): Phaser.Math.Vector2 {
+    const spacing = Math.min(350, this.scale.width * 0.23);
+    const x = this.scale.width / 2 + (fieldSlot - 1) * spacing;
+    const y = side === 'enemy' ? 164 : this.scale.height - 164;
+    return new Phaser.Math.Vector2(x, y);
+  }
+
+  private reservePosition(side: CombatSide, reserveIndex: number): Phaser.Math.Vector2 {
+    const inset = Math.max(86, this.scale.width * 0.075);
+    const x = reserveIndex <= 0 ? inset : this.scale.width - inset;
+    const y = side === 'enemy' ? 92 : this.scale.height - 92;
+    return new Phaser.Math.Vector2(x, y);
   }
 }
