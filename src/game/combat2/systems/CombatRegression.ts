@@ -7,6 +7,7 @@ import { TurnManager } from './TurnManager';
 export interface CombatRegressionReport {
   turnsSimulated: number;
   promotedReserveSeen: boolean;
+  revivePassiveChecked: boolean;
   playerActive: number;
   playerReserve: number;
   identityRulesChecked: boolean;
@@ -117,19 +118,78 @@ function validateIdentityRules(): void {
   }
 }
 
+function validateRevivePassive(): void {
+  const state = new CombatState(
+    COMBAT2_STARTER_ROSTER.player,
+    COMBAT2_STARTER_ROSTER.enemy
+  );
+  const reviver = state.units.find(
+    (unit) =>
+      unit.alive &&
+      String(unit.pow.passive?.id || '').toLowerCase() === 'revive_ally_once'
+  );
+
+  if (!reviver) {
+    return;
+  }
+
+  const fallen = state
+    .activeLiving(reviver.side)
+    .find((unit) => unit.instanceId !== reviver.instanceId);
+  assert(fallen, 'revive fixture requires another active ally');
+
+  const reserveBefore = state.reserveLiving(reviver.side).length;
+  const fieldSlotBefore = fallen.fieldSlot;
+  fallen.hp = 0;
+  fallen.alive = false;
+
+  const promotions = state.promoteReserves();
+
+  assert(promotions.length === 0, 'revive passive incorrectly consumed a reserve slot');
+  assert(fallen.alive, 'revive passive did not restore fallen ally');
+  assert(fallen.fieldSlot === fieldSlotBefore, 'revived ally lost its original field slot');
+  assert(
+    fallen.hp === Math.max(1, Math.round(fallen.pow.maxHp * 0.3)),
+    'revive passive restored an unexpected HP amount'
+  );
+  assert(fallen.reviveMarkerActionsRemaining === 1, 'revive marker was not applied');
+  assert(reviver.passiveUsed, 'reviver did not consume its one-time passive');
+  assert(
+    state.reserveLiving(reviver.side).length === reserveBefore,
+    'revive passive changed reserve count'
+  );
+
+  fallen.hp = 0;
+  fallen.alive = false;
+  const secondPromotions = state.promoteReserves();
+  assert(
+    secondPromotions.length >= 1,
+    'used revive passive triggered again instead of allowing reserve promotion'
+  );
+}
+
 /**
  * Lightweight deterministic smoke regression. It never renders and never
  * mutates the real battle scene. DEV bootstrap can run it before Phaser starts
- * so reserve/timeline/identity regressions surface immediately in the console.
+ * so reserve/timeline/identity/passive regressions surface immediately.
  */
 export function runCombat2SmokeRegression(): CombatRegressionReport {
   validateIdentityRules();
+  validateRevivePassive();
 
   const state = new CombatState(
     COMBAT2_STARTER_ROSTER.player,
     COMBAT2_STARTER_ROSTER.enemy
   );
   const turns = new TurnManager(state);
+
+  // Promotion-only fixture: consume revive passives so this test checks the
+  // reserve system independently from the revive-before-reserve rule.
+  for (const unit of state.units) {
+    if (String(unit.pow.passive?.id || '').toLowerCase() === 'revive_ally_once') {
+      unit.passiveUsed = true;
+    }
+  }
 
   assert(
     state.activeLiving('player').length === 3,
@@ -220,6 +280,7 @@ export function runCombat2SmokeRegression(): CombatRegressionReport {
   return {
     turnsSimulated,
     promotedReserveSeen,
+    revivePassiveChecked: true,
     playerActive: state.activeLiving('player').length,
     playerReserve: state.reserveLiving('player').length,
     identityRulesChecked: true
