@@ -121,7 +121,7 @@ export class TurnManager {
     this.state.phase = 'ready';
   }
 
-  /** Register a reserve only after it has actually entered an active field slot. */
+  /** Register a reserve or revived active unit after it is field-ready. */
   registerPromoted(unitId: string): void {
     const unit = this.state.getUnit(unitId);
 
@@ -212,6 +212,10 @@ export class TurnManager {
       if (unit.controlActionsRemaining <= 0) {
         unit.controlStatus = null;
       }
+    }
+
+    if (unit.reviveMarkerActionsRemaining > 0) {
+      unit.reviveMarkerActionsRemaining -= 1;
     }
   }
 
