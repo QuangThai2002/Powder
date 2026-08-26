@@ -4,9 +4,14 @@ import {
   ALL_COMBAT2_STARTER_POWS,
   COMBAT2_STARTER_ROSTER
 } from '../data/PowderDataAdapter';
+import { CombatState } from '../systems/CombatState';
+import { TurnManager } from '../systems/TurnManager';
 import { PowView } from '../views/PowView';
 
 export class BattleScene extends Phaser.Scene {
+  private combatState!: CombatState;
+  private turnManager!: TurnManager;
+
   constructor() {
     super('BattleScene');
   }
@@ -23,20 +28,27 @@ export class BattleScene extends Phaser.Scene {
     const width = this.scale.width;
     const height = this.scale.height;
 
+    this.combatState = new CombatState(
+      COMBAT2_STARTER_ROSTER.player,
+      COMBAT2_STARTER_ROSTER.enemy
+    );
+    this.turnManager = new TurnManager(this.combatState);
+    const firstActor = this.turnManager.beginNextTurn();
+
     this.cameras.main.setBackgroundColor('#06111c');
     this.createBattlefield(width, height);
 
     this.add
-      .text(width / 2, 34, 'POWDER COMBAT 2.0.1', {
+      .text(width / 2, 32, 'POWDER COMBAT 2.0.3', {
         fontFamily: 'Arial',
-        fontSize: '28px',
+        fontSize: '27px',
         color: '#ffffff',
         fontStyle: 'bold'
       })
       .setOrigin(0.5);
 
     this.add
-      .text(width / 2, 64, 'REAL POW RENDERER · CANONICAL PORTRAIT ART', {
+      .text(width / 2, 61, 'REAL POW RENDERER · SAFE TURN STATE', {
         fontFamily: 'Arial',
         fontSize: '13px',
         color: '#72d8ed'
@@ -44,7 +56,7 @@ export class BattleScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(width / 2, 92, 'POW ĐỊCH', {
+      .text(width / 2, 88, 'POW ĐỊCH', {
         fontFamily: 'Arial',
         fontSize: '13px',
         color: '#9bb8c7',
@@ -55,7 +67,7 @@ export class BattleScene extends Phaser.Scene {
     this.createTeam(width, 240, 'enemy', COMBAT2_STARTER_ROSTER.enemy);
 
     this.add
-      .text(width / 2, height / 2, 'ROUND 1', {
+      .text(width / 2, height / 2 - 18, `ROUND ${this.combatState.round}`, {
         fontFamily: 'Arial',
         fontSize: '17px',
         color: '#ffffff',
@@ -63,6 +75,19 @@ export class BattleScene extends Phaser.Scene {
         backgroundColor: '#0a2433',
         padding: { x: 14, y: 7 }
       })
+      .setOrigin(0.5);
+
+    this.add
+      .text(
+        width / 2,
+        height / 2 + 22,
+        firstActor ? `LƯỢT ĐẦU: ${firstActor.pow.name}` : 'KHÔNG CÓ LƯỢT HỢP LỆ',
+        {
+          fontFamily: 'Arial',
+          fontSize: '12px',
+          color: firstActor?.side === 'player' ? '#6fe5ff' : '#ffb18d'
+        }
+      )
       .setOrigin(0.5);
 
     this.add
@@ -109,7 +134,7 @@ export class BattleScene extends Phaser.Scene {
       new PowView(this, x, y, pow, {
         side,
         width: 286,
-        height: 300
+        height: 318
       });
     });
   }
