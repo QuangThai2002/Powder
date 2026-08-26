@@ -128,7 +128,7 @@ export class BattleScene extends Phaser.Scene {
     plate.setStrokeStyle(2, 0x58d8ef, 0.72);
 
     const title = this.add
-      .text(width / 2, height / 2 - 34, 'POWDER COMBAT 2.1.7', {
+      .text(width / 2, height / 2 - 34, 'POWDER COMBAT 2.1.8', {
         fontFamily: 'Arial',
         fontSize: '29px',
         color: '#ffffff',
