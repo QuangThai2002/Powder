@@ -1,6 +1,6 @@
 (()=>{'use strict';
 if(window.POWDER_COMBAT_TURN_SAFETY_V2207)return;
-const VERSION='22.0.7';
+const VERSION='22.1.2';
 const state={installed:false,effectiveRepairs:0,meterRepairs:0,schedulerRepairs:0,identityBootstraps:0,lastAt:0,lastReason:'boot'};
 const Core=window.POWDER_COMBAT_CORE_V7,P=Core?.BattleCore?.prototype;
 const finite=(v,fallback)=>Number.isFinite(Number(v))?Number(v):fallback;
@@ -62,11 +62,8 @@ function install(){
   };
   state.installed=true;state.lastAt=Date.now();state.lastReason='installed';return true;
 }
-function activateIdentity(){
-  if(window.POWDER_COMBAT_IDENTITY_BREAKTHROUGH_V2210||document.getElementById('powderCombatIdentityBreakthrough2210'))return false;
-  const s=document.createElement('script');s.id='powderCombatIdentityBreakthrough2210';s.src='js/combat-identity-breakthrough-v2210.js?v=2210';s.async=true;document.head.appendChild(s);state.identityBootstraps++;return true;
-}
-function snapshot(){return{version:VERSION,...state,identity:window.POWDER_COMBAT_IDENTITY_BREAKTHROUGH_V2210?.snapshot?.()||null,policy:'Finite SPEED and turn-meter hardening only; formulas, skill effects and timers are unchanged. 22.1.0 visual identity runtime is bootstrapped separately.'}}
+function activateIdentity(){state.lastAt=Date.now();state.lastReason='identity-owned-by-performance-director';return false}
+function snapshot(){return{version:VERSION,...state,identity:window.POWDER_COMBAT_IDENTITY_BREAKTHROUGH_V2210?.snapshot?.()||null,identityOwner:'performance-director-v21221',policy:'Finite SPEED and turn-meter hardening only; formulas, skill effects and timers are unchanged. Identity boot ownership is centralized to prevent stale-version races.'}}
 window.POWDER_COMBAT_TURN_SAFETY_V2207={version:VERSION,install,activateIdentity,snapshot};
-install();activateIdentity();
+install();
 })();
