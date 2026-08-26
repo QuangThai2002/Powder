@@ -16,6 +16,7 @@ export class PowView {
   private readonly cardWidth: number;
   private readonly cardHeight: number;
   private readonly side: CombatSide;
+  private readonly fieldScale: number;
 
   private hpBar!: Phaser.GameObjects.Rectangle;
   private manaBar!: Phaser.GameObjects.Rectangle;
@@ -42,9 +43,11 @@ export class PowView {
     this.cardWidth = options.width ?? 282;
     this.cardHeight = options.height ?? 294;
     this.barWidth = this.cardWidth - 24;
+    this.fieldScale = scene.scale.height > scene.scale.width ? 0.72 : 1;
     this.container = scene.add.container(x, y);
 
     this.build();
+    this.container.setScale(this.fieldScale);
   }
 
   updateRuntime(unit: CombatUnitState): void {
@@ -93,7 +96,10 @@ export class PowView {
   }
 
   setBenchScale(scale: number): void {
-    const safe = Number.isFinite(scale) ? Phaser.Math.Clamp(scale, 0.35, 1) : 0.55;
+    let safe = Number.isFinite(scale) ? Phaser.Math.Clamp(scale, 0.35, 1) : 0.55;
+    if (this.scene.scale.height > this.scene.scale.width) {
+      safe = Math.min(safe, 0.42);
+    }
     this.container.setScale(safe);
   }
 
@@ -103,21 +109,22 @@ export class PowView {
       targets: this.container,
       x,
       y,
-      scaleX: 1,
-      scaleY: 1,
+      scaleX: this.fieldScale,
+      scaleY: this.fieldScale,
       duration: 320,
       ease: 'Back.easeOut'
     });
-    this.container.setPosition(x, y).setScale(1);
+    this.container.setPosition(x, y).setScale(this.fieldScale);
   }
 
   async retireFromField(x: number, y: number): Promise<void> {
+    const exitScale = this.scene.scale.height > this.scene.scale.width ? 0.3 : 0.42;
     await this.tweenPromise({
       targets: this.container,
       x,
       y,
-      scaleX: 0.42,
-      scaleY: 0.42,
+      scaleX: exitScale,
+      scaleY: exitScale,
       alpha: 0.18,
       duration: 220,
       ease: 'Quad.easeIn'
@@ -130,7 +137,7 @@ export class PowView {
     const dx = targetX - startX;
     const dy = targetY - startY;
     const distance = Math.max(1, Math.hypot(dx, dy));
-    const travel = 28;
+    const travel = this.scene.scale.height > this.scene.scale.width ? 22 : 28;
     const attackX = startX + (dx / distance) * travel;
     const attackY = startY + (dy / distance) * travel;
 
@@ -160,13 +167,13 @@ export class PowView {
   async playStatusPulse(): Promise<void> {
     await this.tweenPromise({
       targets: this.container,
-      scaleX: 1.025,
-      scaleY: 1.025,
+      scaleX: this.fieldScale * 1.025,
+      scaleY: this.fieldScale * 1.025,
       duration: 90,
       yoyo: true,
       ease: 'Sine.easeInOut'
     });
-    this.container.setScale(1);
+    this.container.setScale(this.fieldScale);
   }
 
   getWorldPosition(): Phaser.Math.Vector2 {
