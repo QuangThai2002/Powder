@@ -1,0 +1,237 @@
+/* Powder 22.0.5 — Stable Player Combat Surface
+   Stable 21.4 Combat Scene + one presentation layer. No gameplay/timing mutation. */
+html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount{
+  --px2205-dock-h:126px;
+  --px2205-team-w:1180px;
+  --px2205-bench-w:78px;
+}
+
+/* Player-facing combat: secondary/debug surfaces do not compete with the arena. */
+html.px2201-player-combat .combat-v7-mount .tf217-hud,
+html.px2201-player-combat .combat-v7-mount .cv2191-action-feedback,
+html.px2201-player-combat .combat-v7-mount .cv2190-turn-flow,
+html.px2201-player-combat .combat-v7-mount .csi218-stage,
+html.px2201-player-combat .combat-v7-mount .cv7-env-notice,
+html.px2201-player-combat .combat-v7-mount .cv7-objective,
+html.px2201-player-combat .combat-v7-mount .cv69-tactical-hud,
+html.px2201-player-combat .combat-v7-mount .cv73-target-prompt,
+html.px2201-player-combat .combat-v7-mount .cv73-command-tip{display:none!important}
+
+/* Arena geometry: two equal team zones and a clean neutral lane. */
+html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-field{
+  padding:34px 96px calc(var(--px2205-dock-h) + 12px)!important;
+  grid-template-rows:minmax(218px,1fr) 108px minmax(218px,1fr)!important;
+  overflow:hidden!important;
+}
+html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-enemies,
+html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-players{
+  position:relative!important;
+  width:min(var(--px2205-team-w),100%)!important;
+  height:100%!important;
+  margin-inline:auto!important;
+  align-content:center!important;
+  overflow:visible!important;
+}
+html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-enemies>div,
+html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-players>div:last-child{
+  width:100%!important;
+  display:flex!important;
+  justify-content:space-between!important;
+  align-items:center!important;
+  gap:clamp(34px,3.5vw,66px)!important;
+}
+html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-center-mark{
+  height:108px!important;min-height:108px!important;place-items:center!important
+}
+html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-round{font-size:10px!important;padding:5px 12px!important}
+html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-enemies h3,
+html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-players h3{font-size:9px!important;letter-spacing:.18em!important;opacity:.72!important}
+
+/* Pow art gets the visual priority. Full composition is retained with contain. */
+html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-unit{
+  width:clamp(226px,18vw,296px)!important;
+  height:clamp(226px,26dvh,270px)!important;
+  min-height:0!important;
+  overflow:visible!important;
+}
+html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-unit-top{
+  top:0!important;height:24px!important;font-size:9px!important;z-index:8!important
+}
+html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-level{padding:4px 7px!important}
+html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-element{width:23px!important;height:23px!important}
+html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-art-wrap{
+  position:absolute!important;
+  top:23px!important;bottom:53px!important;left:50%!important;
+  transform:translateX(-50%)!important;
+  width:calc(100% - 4px)!important;height:auto!important;
+  overflow:hidden!important;background:transparent!important
+}
+html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-art{
+  width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important;
+  object-fit:contain!important;object-position:center center!important;
+  filter:contrast(1.055) saturate(1.045) brightness(1.015) drop-shadow(0 7px 9px rgba(0,0,0,.26))!important;
+  image-rendering:auto!important
+}
+html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-unit-info{
+  left:2px!important;right:2px!important;bottom:0!important;
+  min-height:51px!important;max-height:54px!important;
+  padding:5px 7px!important;border-radius:10px!important;overflow:hidden!important;z-index:10!important
+}
+html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-unit-info>b{font-size:12px!important;line-height:1!important}
+html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-bars{gap:2px!important;margin-top:4px!important}
+html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-bars i{height:6px!important}
+html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-values{font-size:8px!important;line-height:1.1!important;margin-top:2px!important}
+html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-presence{font-size:7px!important;line-height:1.05!important;margin-top:1px!important}
+html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-statuses{height:15px!important;margin-top:1px!important}
+
+/* Dedicated reserve bench. It is outside the active trio, never on top of slot 1. */
+html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-players>.cv7-reserves{
+  position:absolute!important;
+  left:calc(-1 * (var(--px2205-bench-w) + 16px))!important;
+  top:50%!important;bottom:auto!important;
+  transform:translateY(-50%)!important;
+  transform-origin:center!important;
+  width:var(--px2205-bench-w)!important;height:auto!important;
+  display:grid!important;grid-template-columns:1fr!important;gap:6px!important;
+  padding:6px!important;margin:0!important;
+  border:1px solid rgba(105,205,232,.18)!important;border-radius:12px!important;
+  background:rgba(4,20,29,.76)!important;z-index:15!important;overflow:visible!important
+}
+html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-reserves>small{
+  display:block!important;text-align:center!important;font-size:7px!important;letter-spacing:.12em!important;color:#9fc7d5!important
+}
+html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-reserves>span{
+  width:100%!important;min-height:58px!important;display:grid!important;place-items:center!important;gap:2px!important;
+  padding:3px!important;border-radius:9px!important;background:rgba(8,35,46,.72)!important;overflow:hidden!important
+}
+html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-reserves img{
+  width:48px!important;height:42px!important;object-fit:contain!important;display:block!important
+}
+html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-reserves b{
+  display:block!important;max-width:100%!important;font-size:6.5px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important
+}
+
+/* Turn order remains peripheral and readable. */
+html.px2201-player-combat .combat-v7-mount .cv7-turn-order{width:86px!important;opacity:.9!important}
+html.px2201-player-combat .combat-v7-mount .cv7-turn-order>small{font-size:8px!important}
+html.px2201-player-combat .combat-v7-mount .cv7-turn-order b{font-size:8px!important}
+html.px2201-player-combat .combat-v7-mount .cv7-turn-order em,
+html.px2201-player-combat .combat-v7-mount .cv7-turn-order span>small{font-size:7px!important}
+
+/* Command dock: current Pow | icon+name skills | one detail inspector. */
+html.px2201-player-combat .combat-v7-mount .cv7-command,
+html.px2201-player-combat .combat-v7-mount .cv73-command-v2{
+  left:50%!important;right:auto!important;bottom:8px!important;transform:translateX(-50%)!important;
+  width:min(1420px,calc(100% - 196px))!important;height:var(--px2205-dock-h)!important;
+  display:grid!important;grid-template-columns:150px minmax(0,1fr) 300px!important;gap:8px!important;
+  padding:7px!important;overflow:hidden!important;z-index:120!important;
+  border:1px solid rgba(111,211,238,.34)!important;border-radius:15px!important;
+  background:linear-gradient(180deg,rgba(5,25,34,.985),rgba(3,18,27,.99))!important
+}
+html.px2201-player-combat .combat-v7-mount .cv7-active{min-width:0!important;padding:5px!important;overflow:hidden!important}
+html.px2201-player-combat .combat-v7-mount .cv7-active img{width:56px!important;height:72px!important;object-fit:contain!important}
+html.px2201-player-combat .combat-v7-mount .cv7-active b{font-size:11px!important}
+html.px2201-player-combat .combat-v7-mount .cv7-active small,
+html.px2201-player-combat .combat-v7-mount .cv7-active span,
+html.px2201-player-combat .combat-v7-mount .cv7-active em{font-size:7px!important;line-height:1.2!important}
+html.px2201-player-combat .combat-v7-mount .cv7-skills,
+html.px2201-player-combat .combat-v7-mount .cv73-command-v2 .cv7-skills{
+  height:100%!important;display:grid!important;
+  grid-template-columns:repeat(var(--px2201-skill-count,4),minmax(0,1fr))!important;gap:7px!important;overflow:hidden!important
+}
+html.px2201-player-combat .combat-v7-mount .cv7-skill,
+html.px2201-player-combat .combat-v7-mount .cv73-command-v2 .cv7-skill{
+  min-width:0!important;width:auto!important;height:100%!important;
+  display:grid!important;grid-template-columns:1fr!important;grid-template-rows:minmax(58px,1fr) auto!important;
+  place-items:center!important;gap:4px!important;padding:6px!important;text-align:center!important;overflow:hidden!important
+}
+html.px2201-player-combat .combat-v7-mount .cv7-skill-icon{
+  grid-row:1!important;width:58px!important;height:58px!important;align-self:center!important;border-radius:10px!important;overflow:hidden!important
+}
+html.px2201-player-combat .combat-v7-mount .cv7-skill-icon img{width:100%!important;height:100%!important;display:block!important;object-fit:cover!important}
+html.px2201-player-combat .combat-v7-mount .cv73-skill-copy{grid-row:2!important;width:100%!important;min-width:0!important}
+html.px2201-player-combat .combat-v7-mount .cv73-skill-copy small,
+html.px2201-player-combat .combat-v7-mount .cv73-skill-copy p,
+html.px2201-player-combat .combat-v7-mount .cv73-skill-meta,
+html.px2201-player-combat .combat-v7-mount .cv69-skill-state,
+html.px2201-player-combat .combat-v7-mount .cv69-skill-resource,
+html.px2201-player-combat .combat-v7-mount .cv7-skill>small,
+html.px2201-player-combat .combat-v7-mount .cv7-skill>span:not(.cv7-skill-icon):not(.cv73-skill-copy){display:none!important}
+html.px2201-player-combat .combat-v7-mount .cv73-skill-copy b{
+  display:block!important;max-width:100%!important;font-size:10px!important;line-height:1.15!important;
+  white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;color:#f1fbff!important
+}
+html.px2201-player-combat .combat-v7-mount .cv2187-inspector{
+  position:relative!important;inset:auto!important;transform:none!important;grid-column:3!important;
+  align-self:stretch!important;width:auto!important;height:100%!important;max-height:none!important;
+  padding:8px 9px!important;overflow:auto!important;border:0!important;border-left:1px solid rgba(122,204,230,.15)!important;
+  border-radius:0 10px 10px 0!important;background:rgba(4,20,29,.72)!important;box-shadow:none!important;backdrop-filter:none!important;pointer-events:none!important
+}
+html.px2201-player-combat .combat-v7-mount .cv2187-inspector header b{font-size:12px!important}
+html.px2201-player-combat .combat-v7-mount .cv2187-inspector header small,
+html.px2201-player-combat .combat-v7-mount .cv2187-inspector header>span{font-size:7px!important}
+html.px2201-player-combat .combat-v7-mount .cv2187-meta small{font-size:6px!important}
+html.px2201-player-combat .combat-v7-mount .cv2187-meta b{font-size:8px!important}
+html.px2201-player-combat .combat-v7-mount .cv2187-inspector>p{font-size:8px!important;line-height:1.32!important;margin:5px 0 0!important}
+html.px2201-player-combat .combat-v7-mount .cv2187-tags{display:none!important}
+
+/* Short laptops: preserve full art and command accessibility. */
+@media(max-height:820px) and (min-width:851px){
+  html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount{--px2205-dock-h:112px;--px2205-team-w:1060px}
+  html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-field{
+    padding:30px 88px calc(var(--px2205-dock-h) + 9px)!important;
+    grid-template-rows:minmax(184px,1fr) 76px minmax(184px,1fr)!important
+  }
+  html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-center-mark{height:76px!important;min-height:76px!important}
+  html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-unit{width:clamp(194px,16.5vw,244px)!important;height:clamp(188px,23dvh,216px)!important}
+  html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-art-wrap{top:21px!important;bottom:48px!important}
+  html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-unit-info{min-height:46px!important;max-height:49px!important;padding:4px 6px!important}
+  html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-unit-info>b{font-size:10px!important}
+  html.px2201-player-combat .combat-v7-mount .cv7-skill-icon{width:48px!important;height:48px!important}
+  html.px2201-player-combat .combat-v7-mount .cv2187-inspector>p{display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;overflow:hidden!important}
+}
+
+@media(max-width:1200px){
+  html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount{--px2205-team-w:900px;--px2205-bench-w:62px}
+  html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-field{padding-left:78px!important;padding-right:10px!important}
+  html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-players>.cv7-reserves{left:-68px!important;padding:4px!important}
+  html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-reserves img{width:38px!important;height:36px!important}
+  html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-reserves b{display:none!important}
+  html.px2201-player-combat .combat-v7-mount .cv7-command,
+  html.px2201-player-combat .combat-v7-mount .cv73-command-v2{width:calc(100% - 88px)!important;grid-template-columns:minmax(0,1fr) 260px!important}
+  html.px2201-player-combat .combat-v7-mount .cv7-active{display:none!important}
+  html.px2201-player-combat .combat-v7-mount .cv2187-inspector{grid-column:2!important}
+}
+
+/* Phone/tablet: reserve bench becomes a compact strip above the active trio. */
+@media(max-width:850px){
+  html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount{--px2205-dock-h:102px}
+  html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-field{
+    padding:56px 4px calc(var(--px2205-dock-h) + 5px)!important;
+    grid-template-rows:minmax(142px,1fr) 26px minmax(142px,1fr)!important
+  }
+  html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-center-mark{height:26px!important;min-height:26px!important}
+  html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-unit{width:31.5vw!important;max-width:202px!important;height:clamp(145px,20dvh,176px)!important}
+  html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-art-wrap{top:18px!important;bottom:44px!important;width:calc(100% - 2px)!important}
+  html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-unit-info{min-height:42px!important;max-height:45px!important;padding:3px 4px!important}
+  html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-unit-info>b{font-size:9px!important}
+  html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-values{font-size:6px!important}
+  html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-presence,
+  html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-statuses{display:none!important}
+  html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-players>.cv7-reserves{
+    left:50%!important;top:-21px!important;transform:translateX(-50%)!important;width:auto!important;
+    display:flex!important;gap:4px!important;padding:3px 5px!important;border-radius:999px!important
+  }
+  html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-reserves>small{font-size:6px!important;align-self:center!important}
+  html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-reserves>span{width:34px!important;min-height:32px!important;padding:1px!important;background:transparent!important}
+  html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-reserves img{width:30px!important;height:30px!important}
+  html.powder-combat-layout2200.px2201-player-combat .combat-v7-mount .cv7-reserves b{display:none!important}
+  html.px2201-player-combat .combat-v7-mount .cv7-command,
+  html.px2201-player-combat .combat-v7-mount .cv73-command-v2{width:calc(100% - 8px)!important;height:var(--px2205-dock-h)!important;grid-template-columns:minmax(0,1fr)!important;padding:4px!important}
+  html.px2201-player-combat .combat-v7-mount .cv2187-inspector{display:none!important}
+  html.px2201-player-combat .combat-v7-mount .cv7-skills,
+  html.px2201-player-combat .combat-v7-mount .cv73-command-v2 .cv7-skills{display:flex!important;gap:4px!important;overflow-x:auto!important;scroll-snap-type:x proximity!important}
+  html.px2201-player-combat .combat-v7-mount .cv7-skill{flex:0 0 106px!important;height:92px!important;scroll-snap-align:start!important}
+  html.px2201-player-combat .combat-v7-mount .cv7-skill-icon{width:45px!important;height:45px!important}
+  html.px2201-player-combat .combat-v7-mount .cv73-skill-copy b{font-size:8px!important}
+}
