@@ -23,6 +23,9 @@ export class PowView {
   private hpBar!: Phaser.GameObjects.Rectangle;
   private manaBar!: Phaser.GameObjects.Rectangle;
   private rageBar!: Phaser.GameObjects.Rectangle;
+  private hpText!: Phaser.GameObjects.Text;
+  private manaText!: Phaser.GameObjects.Text;
+  private rageText!: Phaser.GameObjects.Text;
   private turnGlow!: Phaser.GameObjects.Rectangle;
   private targetGlow!: Phaser.GameObjects.Rectangle;
   private statusFrame!: Phaser.GameObjects.Rectangle;
@@ -33,6 +36,9 @@ export class PowView {
   private targetable = false;
   private selectedTarget = false;
   private targetSelectedHandler: (() => void) | null = null;
+  private hasRuntimeSnapshot = false;
+  private previousHp = 0;
+  private previousShield = 0;
 
   constructor(
     scene: Phaser.Scene,
@@ -58,9 +64,42 @@ export class PowView {
   }
 
   updateRuntime(unit: CombatUnitState): void {
-    this.setBarWidth(this.hpBar, this.ratio(unit.hp, unit.pow.maxHp));
-    this.setBarWidth(this.manaBar, this.ratio(unit.mana, unit.pow.maxMana));
-    this.setBarWidth(this.rageBar, this.ratio(unit.rage, unit.pow.maxRage));
+    const hpRatio = this.ratio(unit.hp, unit.pow.maxHp);
+    const manaRatio = this.ratio(unit.mana, unit.pow.maxMana);
+    const rageRatio = this.ratio(unit.rage, unit.pow.maxRage);
+    const rageReady = unit.pow.maxRage > 0 && unit.rage >= unit.pow.maxRage - 0.5;
+
+    this.setBarWidth(this.hpBar, hpRatio);
+    this.setBarWidth(this.manaBar, manaRatio);
+    this.setBarWidth(this.rageBar, rageRatio);
+
+    this.hpBar.setFillStyle(
+      hpRatio <= 0.25 ? 0xff6678 : hpRatio <= 0.5 ? 0xffb55f : 0x47dc90,
+      1
+    );
+    this.manaBar.setFillStyle(0x4dc7f2, 1);
+    this.rageBar.setFillStyle(rageReady ? 0xffc95f : 0xb771f5, 1);
+
+    this.hpText.setText(`${Math.round(unit.hp)}/${Math.round(unit.pow.maxHp)}`);
+    this.manaText.setText(`${Math.round(unit.mana)}/${Math.round(unit.pow.maxMana)}`);
+    this.rageText
+      .setText(rageReady ? 'ULT READY' : `${Math.round(unit.rage)}/${Math.round(unit.pow.maxRage)}`)
+      .setColor(rageReady ? '#ffe27a' : '#f3ecff');
+
+    if (this.hasRuntimeSnapshot && unit.alive) {
+      if (unit.hp > this.previousHp + 0.5) {
+        this.playResourcePulse(0x73f0aa);
+      }
+      if (unit.shield > this.previousShield + 0.5) {
+        this.playResourcePulse(0x8edfff);
+      } else if (this.previousShield > 0 && unit.shield <= 0) {
+        this.playShieldBreak();
+      }
+    }
+
+    this.previousHp = unit.hp;
+    this.previousShield = unit.shield;
+    this.hasRuntimeSnapshot = true;
 
     if (!unit.alive) {
       this.runtimeVisualStatus = 'HẠ GỤC';
@@ -136,6 +175,7 @@ export class PowView {
   }
 
   async retireFromField(x: number, y: number): Promise<void> {
+    await this.playDefeatBurst();
     const exitScale = this.scene.scale.height > this.scene.scale.width ? 0.3 : 0.42;
     await this.tweenPromise({
       targets: this.container,
@@ -299,6 +339,7 @@ export class PowView {
 
     const hpBack = this.makeBarBack(left + 12, hpY, this.barWidth);
     this.hpBar = this.makeBar(left + 12, hpY, this.barWidth, 0x47dc90);
+    this.hpText = this.makeBarText(hpY, '#effff6');
 
     const manaBack = this.makeBarBack(left + 12, manaY, this.barWidth);
     this.manaBar = this.makeBar(
@@ -307,6 +348,7 @@ export class PowView {
       this.barWidth * this.ratio(this.pow.mana, this.pow.maxMana),
       0x4dc7f2
     );
+    this.manaText = this.makeBarText(manaY, '#eafaff');
 
     const rageBack = this.makeBarBack(left + 12, rageY, this.barWidth);
     this.rageBar = this.makeBar(
@@ -315,6 +357,7 @@ export class PowView {
       this.barWidth * this.ratio(this.pow.rage, this.pow.maxRage),
       0xb771f5
     );
+    this.rageText = this.makeBarText(rageY, '#f3ecff');
 
     this.statusText = this.scene.add
       .text(0, artY, '', {
@@ -354,13 +397,94 @@ export class PowView {
       meta,
       hpBack,
       this.hpBar,
+      this.hpText,
       manaBack,
       this.manaBar,
+      this.manaText,
       rageBack,
       this.rageBar,
+      this.rageText,
       this.statusText,
       this.targetHitArea
     ]);
+  }
+
+  private playResourcePulse(color: number): void {
+    const position = this.getWorldPosition();
+    const ring = this.scene.add
+      .circle(position.x, position.y, 45, color, 0.055)
+      .setStrokeStyle(3, color, 0.66)
+      .setDepth(40)
+      .setScale(0.78);
+
+    this.scene.tweens.add({
+      targets: ring,
+      scaleX: this.reducedMotion ? 1.18 : 1.42,
+      scaleY: this.reducedMotion ? 1.18 : 1.42,
+      alpha: 0,
+      duration: this.reducedMotion ? 90 : 155,
+      ease: 'Quad.easeOut',
+      onComplete: () => ring.destroy()
+    });
+  }
+
+  private playShieldBreak(): void {
+    const position = this.getWorldPosition();
+    const color = 0x8edfff;
+    const burst = this.scene.add.container(position.x, position.y).setDepth(41).setScale(0.76);
+    const ring = this.scene.add.circle(0, 0, 48, 0x000000, 0);
+    ring.setStrokeStyle(4, color, 0.8);
+    burst.add(ring);
+
+    const shardCount = this.reducedMotion ? 4 : 7;
+    for (let index = 0; index < shardCount; index += 1) {
+      const angle = (Math.PI * 2 * index) / shardCount;
+      const shard = this.scene.add.rectangle(
+        Math.cos(angle) * 48,
+        Math.sin(angle) * 48,
+        18,
+        4,
+        color,
+        0.72
+      );
+      shard.setRotation(angle + 0.45);
+      burst.add(shard);
+    }
+
+    this.scene.tweens.add({
+      targets: burst,
+      scaleX: this.reducedMotion ? 1.18 : 1.48,
+      scaleY: this.reducedMotion ? 1.18 : 1.48,
+      alpha: 0,
+      duration: this.reducedMotion ? 100 : 165,
+      ease: 'Quad.easeOut',
+      onComplete: () => burst.destroy(true)
+    });
+  }
+
+  private async playDefeatBurst(): Promise<void> {
+    const position = this.getWorldPosition();
+    const color = this.side === 'player' ? 0x70dced : 0xff9b68;
+    const burst = this.scene.add.container(position.x, position.y).setDepth(44).setScale(0.72);
+    const ring = this.scene.add.circle(0, 0, 54, 0x000000, 0);
+    ring.setStrokeStyle(4, color, 0.72);
+    const slashA = this.scene.add.rectangle(0, 0, 88, 5, color, 0.58).setRotation(0.72);
+    const slashB = this.scene.add.rectangle(0, 0, 88, 5, color, 0.58).setRotation(-0.72);
+    burst.add([ring, slashA, slashB]);
+
+    if (!this.reducedMotion) {
+      this.scene.cameras.main.shake(85, 0.00125);
+    }
+
+    await this.tweenPromise({
+      targets: burst,
+      scaleX: 1.38,
+      scaleY: 1.38,
+      alpha: 0,
+      duration: this.reducedMotion ? 95 : 155,
+      ease: 'Quad.easeOut'
+    });
+    burst.destroy(true);
   }
 
   private playHitFlash(): void {
@@ -777,7 +901,7 @@ export class PowView {
     width: number
   ): Phaser.GameObjects.Rectangle {
     return this.scene.add
-      .rectangle(x, y, width, 6, 0x163342, 1)
+      .rectangle(x, y, width, 7, 0x163342, 1)
       .setOrigin(0, 0.5);
   }
 
@@ -788,8 +912,21 @@ export class PowView {
     color: number
   ): Phaser.GameObjects.Rectangle {
     return this.scene.add
-      .rectangle(x, y, Math.max(0, width), 6, color, 1)
+      .rectangle(x, y, Math.max(0, width), 7, color, 1)
       .setOrigin(0, 0.5);
+  }
+
+  private makeBarText(y: number, color: string): Phaser.GameObjects.Text {
+    return this.scene.add
+      .text(0, y, '', {
+        fontFamily: 'Arial',
+        fontSize: '7px',
+        color,
+        fontStyle: 'bold',
+        stroke: '#06111c',
+        strokeThickness: 2
+      })
+      .setOrigin(0.5);
   }
 
   private setBarWidth(bar: Phaser.GameObjects.Rectangle, ratio: number): void {
