@@ -40,13 +40,13 @@ interface ParsedStatus {
 }
 
 const SELF_STATUSES = new Set([
-  'shield', 'regeneration', 'attack up', 'defense up', 'rage gain', 'ap up'
+  'shield', 'regeneration', 'attack up', 'defense up', 'rage gain'
 ]);
 
 export class SkillActionResolver {
   private readonly identity = new CombatIdentityRules();
 
-  /** Normal skills no longer consume a separate resource. */
+  /** Skill I/II are action-gated only; there is no Mana cost in Combat 2.3+. */
   canUse(actor: CombatUnitState, _slot: CombatSkillSlot): boolean {
     return actor.alive;
   }
@@ -59,6 +59,12 @@ export class SkillActionResolver {
     return ULTIMATE_RAGE_COST;
   }
 
+  /**
+   * Basic Skill I/II action gain is +2 raw Rage. A skill carrying `rage gain`
+   * adds +1 raw Rage to the same event, so +2 + 1 is processed as raw +3.
+   * Ultimate has no automatic action gain; only an explicit rage-gain effect
+   * can refund Rage after the 4-point spend.
+   */
   previewRawRageGain(ability: CombatAbility, slot: CombatAbilitySlot): number {
     const bonus = this.resourceBonusRaw(ability.status);
     return (slot === 'ultimate' ? 0 : ACTION_BASE_RAW_GAIN) + bonus;
@@ -199,8 +205,7 @@ export class SkillActionResolver {
         actor.defenseBuffActionsRemaining = Math.max(actor.defenseBuffActionsRemaining, 3 + durationBonus);
         break;
       }
-      case 'rage gain':
-      case 'ap up': {
+      case 'rage gain': {
         statusLabel = 'rage gain';
         break;
       }
@@ -280,7 +285,7 @@ export class SkillActionResolver {
 
   private resourceBonusRaw(rawStatus: string | undefined): number {
     const status = this.parseStatus(rawStatus).status;
-    return status === 'rage gain' || status === 'ap up' ? 1 : 0;
+    return status === 'rage gain' ? 1 : 0;
   }
 
   private parseStatus(rawStatus: string | undefined): ParsedStatus {
