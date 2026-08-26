@@ -10,7 +10,9 @@ export interface CombatUnitState {
   hp: number;
   mana: number;
   rage: number;
+  shield: number;
   speed: number;
+  speedBuffActionsRemaining: number;
   alive: boolean;
   actionLocked: boolean;
 }
@@ -48,7 +50,11 @@ export class CombatState {
       unit.hp = this.finiteClamp(unit.hp, 0, unit.pow.maxHp, 0);
       unit.mana = this.finiteClamp(unit.mana, 0, unit.pow.maxMana, 0);
       unit.rage = this.finiteClamp(unit.rage, 0, unit.pow.maxRage, 0);
+      unit.shield = this.finiteClamp(unit.shield, 0, unit.pow.maxHp * 3, 0);
       unit.speed = this.finiteClamp(unit.speed, 1, 9999, unit.pow.speed);
+      unit.speedBuffActionsRemaining = Math.floor(
+        this.finiteClamp(unit.speedBuffActionsRemaining, 0, 20, 0)
+      );
       unit.alive = unit.hp > 0;
     }
   }
@@ -62,7 +68,9 @@ export class CombatState {
       hp: pow.hp,
       mana: pow.mana,
       rage: pow.rage,
+      shield: 0,
       speed: this.finiteClamp(pow.speed, 1, 9999, 100),
+      speedBuffActionsRemaining: 0,
       alive: pow.hp > 0,
       actionLocked: false
     }));
