@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <meta name="powder-combat-version" content="2.3.0" />
+  <meta name="powder-combat-version" content="2.3.1" />
   <meta name="theme-color" content="#050c15" />
-  <title>Powder Combat 2.3.0</title>
+  <title>Powder Combat 2.3.1</title>
   <style>
     * { box-sizing: border-box; }
     html, body {
@@ -22,41 +22,13 @@
       min-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
       touch-action: none; display: flex; align-items: center; justify-content: center; overflow: hidden;
     }
-    #powder-combat2 canvas { display: block; margin: 0 auto; max-width: 100%; max-height: 100%; touch-action: none; }
-    #rotate-device {
-      position: fixed; inset: 0; z-index: 9999; display: none; align-items: center; justify-content: center;
-      padding: max(28px, env(safe-area-inset-top)) max(28px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) max(28px, env(safe-area-inset-left));
-      background: radial-gradient(circle at 50% 42%, rgba(20,74,99,.34), transparent 42%), #050c15;
-      color: #fff6df; text-align: center;
+    #powder-combat2 canvas {
+      display: block; margin: 0 auto; max-width: 100%; max-height: 100%; touch-action: none;
     }
-    .rotate-card {
-      width: min(440px,92vw); padding: 28px 25px 25px; border: 1px solid rgba(215,184,108,.72);
-      border-radius: 18px; background: rgba(7,24,35,.97); box-shadow: 0 18px 54px rgba(0,0,0,.34);
-    }
-    .phone-icon {
-      position: relative; width: 76px; height: 126px; margin: 0 auto 22px; border: 5px solid #70dced;
-      border-radius: 16px; transform: rotate(-90deg); animation: phone-pulse 1.8s ease-in-out infinite;
-    }
-    .phone-icon::after {
-      content: ''; position: absolute; left: 50%; bottom: 6px; width: 8px; height: 8px; border-radius: 50%;
-      background: #d7b86c; transform: translateX(-50%);
-    }
-    .rotate-title { margin: 0 0 10px; font-size: 24px; font-weight: 800; letter-spacing: .02em; }
-    .rotate-copy { margin: 0; color: #b7cbd2; font-family: Georgia, "Times New Roman", serif; font-size: 15px; line-height: 1.55; }
-    @keyframes phone-pulse { 0%,100% { transform: rotate(-90deg) scale(1); opacity:.9; } 50% { transform: rotate(-90deg) scale(1.045); opacity:1; } }
-    @media (orientation: portrait) and (max-width: 900px) { #rotate-device { display:flex; } }
-    @media (prefers-reduced-motion: reduce) { .phone-icon { animation:none; } }
   </style>
 </head>
 <body>
   <div id="powder-combat2"></div>
-  <div id="rotate-device" aria-live="polite">
-    <div class="rotate-card">
-      <div class="phone-icon" aria-hidden="true"></div>
-      <h1 class="rotate-title">Xoay ngang điện thoại để chiến đấu</h1>
-      <p class="rotate-copy">Combat dùng chiến trường ngang 16:9 để 3 Pow, 4 kỹ năng, HP và 4 điểm Nộ luôn đủ khoảng trống và dễ đọc.</p>
-    </div>
-  </div>
   <script type="module" src="/src/game/combat2/bootstrap.ts"></script>
 </body>
 </html>
