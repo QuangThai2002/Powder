@@ -137,14 +137,40 @@ export class TurnManager {
   }
 
   private tickActorDurations(unit: CombatUnitState): void {
-    if (unit.speedBuffActionsRemaining <= 0) {
-      return;
+    if (unit.speedBuffActionsRemaining > 0) {
+      unit.speedBuffActionsRemaining -= 1;
     }
 
-    unit.speedBuffActionsRemaining -= 1;
+    if (unit.speedDebuffActionsRemaining > 0) {
+      unit.speedDebuffActionsRemaining -= 1;
+    }
 
-    if (unit.speedBuffActionsRemaining <= 0) {
+    if (
+      unit.speedBuffActionsRemaining <= 0 &&
+      unit.speedDebuffActionsRemaining <= 0
+    ) {
       unit.speed = this.safeBaseSpeed(unit);
+    }
+
+    if (unit.attackBuffActionsRemaining > 0) {
+      unit.attackBuffActionsRemaining -= 1;
+      if (unit.attackBuffActionsRemaining <= 0) {
+        unit.attackMultiplier = 1;
+      }
+    }
+
+    if (unit.defenseBuffActionsRemaining > 0) {
+      unit.defenseBuffActionsRemaining -= 1;
+      if (unit.defenseBuffActionsRemaining <= 0) {
+        unit.defenseMultiplier = 1;
+      }
+    }
+
+    if (unit.controlActionsRemaining > 0) {
+      unit.controlActionsRemaining -= 1;
+      if (unit.controlActionsRemaining <= 0) {
+        unit.controlStatus = null;
+      }
     }
   }
 
