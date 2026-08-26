@@ -1,5 +1,5 @@
 export const COMBAT_DISPLAY_FONT = 'Palatino Linotype, Book Antiqua, Palatino, Georgia, serif';
-export const COMBAT_BODY_FONT = 'Georgia, Times New Roman, serif';
+export const COMBAT_BODY_FONT = 'Palatino Linotype, Book Antiqua, Palatino, Georgia, serif';
 
 export const COMBAT_COLORS = {
   text: '#f8f1df',
