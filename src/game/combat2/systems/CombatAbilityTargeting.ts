@@ -4,11 +4,7 @@ import type { CombatUnitState } from './CombatState';
 export type CombatAbilityTargetMode = 'enemy' | 'self' | 'ally' | 'deadAlly';
 
 const SELF_STATUSES = new Set([
-  'shield',
-  'regeneration',
-  'attack up',
-  'defense up',
-  'ap up'
+  'shield', 'regeneration', 'attack up', 'defense up', 'rage gain', 'ap up'
 ]);
 
 function normalizedStatus(ability: CombatAbility): string {
@@ -17,25 +13,17 @@ function normalizedStatus(ability: CombatAbility): string {
 }
 
 export function abilityTargetMode(ability: CombatAbility): CombatAbilityTargetMode {
+  const rawStatus = String(ability.status || '').trim().toLowerCase();
   const status = normalizedStatus(ability);
   const type = String(ability.type || '').trim().toLowerCase();
 
-  if (status === 'revive' || status === 'resurrection') {
-    return 'deadAlly';
-  }
+  if (status === 'revive' || status === 'resurrection') return 'deadAlly';
+  if (status === 'cleanse' || status === 'purify') return 'ally';
 
-  if (status === 'cleanse' || status === 'purify') {
-    return 'ally';
-  }
-
-  if (
-    String(ability.status || '').trim().toLowerCase().startsWith('self:') ||
-    type === 'support' ||
-    SELF_STATUSES.has(status)
-  ) {
+  // A damaging skill may carry a self: side effect while still targeting an enemy.
+  if (type === 'support' || (SELF_STATUSES.has(status) && !rawStatus.startsWith('self:'))) {
     return 'self';
   }
-
   return 'enemy';
 }
 
@@ -53,26 +41,14 @@ export function abilityHasLegalTarget(
   units: readonly CombatUnitState[]
 ): boolean {
   const mode = abilityTargetMode(ability);
-
-  if (mode === 'self') {
-    return actor.alive;
-  }
-
+  if (mode === 'self') return actor.alive;
   if (mode === 'enemy') {
-    return units.some(
-      (unit) => unit.side !== actor.side && unit.alive && unit.fieldSlot !== null
-    );
+    return units.some((unit) => unit.side !== actor.side && unit.alive && unit.fieldSlot !== null);
   }
-
   if (mode === 'ally') {
-    return units.some(
-      (unit) =>
-        unit.side === actor.side &&
-        unit.alive &&
-        unit.fieldSlot !== null &&
-        hasNegativeStatus(unit)
+    return units.some((unit) =>
+      unit.side === actor.side && unit.alive && unit.fieldSlot !== null && hasNegativeStatus(unit)
     );
   }
-
   return units.some((unit) => unit.side === actor.side && !unit.alive);
 }
