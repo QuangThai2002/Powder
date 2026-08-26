@@ -5,10 +5,10 @@ const TURN_DISTANCE = 1000;
 /**
  * Deterministic timeline scheduler for Combat 2.0.
  *
- * It deliberately avoids the legacy mutable meter loop that could become NaN
- * after SPEED buffs. Every timeline value is sanitized before it participates
- * in ordering, and completing an action is the only place an actor is
- * rescheduled.
+ * Only active-field Pow participate in the timeline. Reserve Pow are registered
+ * when CombatState promotes them into a vacant field slot. Every timeline value
+ * is sanitized before ordering and completeAction() is the only normal path
+ * that reschedules an actor after acting.
  */
 export class TurnManager {
   private readonly state: CombatState;
@@ -29,7 +29,7 @@ export class TurnManager {
     this.state.phase = 'ready';
     this.state.sanitizeRuntimeNumbers();
 
-    for (const unit of this.state.living()) {
+    for (const unit of this.state.activeLiving()) {
       this.nextReadyAt.set(unit.instanceId, this.intervalFor(unit));
     }
   }
@@ -77,6 +77,7 @@ export class TurnManager {
     if (
       !unit ||
       !unit.alive ||
+      unit.fieldSlot === null ||
       unit.actionLocked ||
       this.state.phase !== 'selecting' ||
       this.state.currentUnitId !== unitId
@@ -89,9 +90,7 @@ export class TurnManager {
     return true;
   }
 
-  /**
-   * This must be called from an action pipeline's finally block.
-   */
+  /** Must be called from an action pipeline's finally block. */
   completeAction(unitId: string): void {
     const unit = this.state.getUnit(unitId);
 
@@ -99,14 +98,14 @@ export class TurnManager {
       unit.actionLocked = false;
       this.tickActorDurations(unit);
 
-      if (unit.alive) {
+      if (unit.alive && unit.fieldSlot !== null) {
         this.nextReadyAt.set(
           unit.instanceId,
           this.timelineNow + this.intervalFor(unit)
         );
         this.actedThisRound.add(unit.instanceId);
       } else {
-        this.nextReadyAt.delete(unit.instanceId);
+        this.retireUnit(unit.instanceId);
       }
     }
 
@@ -122,14 +121,39 @@ export class TurnManager {
     this.state.phase = 'ready';
   }
 
+  /** Register a reserve only after it has actually entered an active field slot. */
+  registerPromoted(unitId: string): void {
+    const unit = this.state.getUnit(unitId);
+
+    if (!unit?.alive || unit.fieldSlot === null) {
+      return;
+    }
+
+    unit.actionLocked = false;
+    this.actedThisRound.delete(unitId);
+    this.nextReadyAt.set(
+      unitId,
+      this.timelineNow + this.intervalFor(unit)
+    );
+  }
+
+  retireUnit(unitId: string): void {
+    this.nextReadyAt.delete(unitId);
+    this.actedThisRound.delete(unitId);
+  }
+
   /**
-   * Recompute one waiting unit after a speed debuff/buff is applied by another
-   * actor. This prevents the old schedule from ignoring the new finite speed.
+   * Recompute one waiting active unit after a speed debuff/buff is applied by
+   * another actor. Reserve units never receive timeline entries.
    */
   rescheduleUnit(unitId: string): void {
     const unit = this.state.getUnit(unitId);
 
-    if (!unit?.alive || this.state.currentUnitId === unitId) {
+    if (
+      !unit?.alive ||
+      unit.fieldSlot === null ||
+      this.state.currentUnitId === unitId
+    ) {
       return;
     }
 
@@ -195,7 +219,7 @@ export class TurnManager {
     let best: CombatUnitState | null = null;
     let bestTime = Number.POSITIVE_INFINITY;
 
-    for (const unit of this.state.living()) {
+    for (const unit of this.state.activeLiving()) {
       const fallback = this.timelineNow + this.intervalFor(unit);
       const readyAt = this.safeTimelineValue(
         this.nextReadyAt.get(unit.instanceId),
@@ -234,11 +258,11 @@ export class TurnManager {
   }
 
   private advanceRoundIfNeeded(): void {
-    const livingIds = this.state.living().map((unit) => unit.instanceId);
+    const activeIds = this.state.activeLiving().map((unit) => unit.instanceId);
 
     if (
-      livingIds.length > 0 &&
-      livingIds.every((instanceId) => this.actedThisRound.has(instanceId))
+      activeIds.length > 0 &&
+      activeIds.every((instanceId) => this.actedThisRound.has(instanceId))
     ) {
       this.state.round += 1;
       this.actedThisRound.clear();
