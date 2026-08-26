@@ -1,11 +1,8 @@
 export type CombatSide = 'player' | 'enemy';
 
 export interface PowDisplayProfile {
-  /** Desired texture height relative to the art viewport. */
   heightRatio: number;
-  /** Fine-tune the texture after the base fit. */
   scaleAdjust?: number;
-  /** Display offsets inside the portrait viewport. */
   offsetX?: number;
   offsetY?: number;
 }
@@ -15,7 +12,6 @@ export interface CombatAbility {
   power: number;
   type: string;
   status?: string;
-  /** Optional canonical skill artwork used by the combat command dock. */
   iconKey?: string;
   iconUrl?: string;
 }
@@ -46,10 +42,6 @@ export interface CombatPow {
   speed: number;
   hp: number;
   maxHp: number;
-  mana: number;
-  maxMana: number;
-  rage: number;
-  maxRage: number;
   abilities: CombatAbilitySet;
   passive?: CombatPassive;
   display: PowDisplayProfile;
