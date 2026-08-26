@@ -18,6 +18,7 @@ export interface CombatRegressionReport {
   playerReserve: number;
   identityRulesChecked: boolean;
   rageEconomyChecked: boolean;
+  apSemanticsChecked: boolean;
 }
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -52,14 +53,28 @@ function validateRageEconomy(): void {
 
   assert(spendUltimate(6) === 2, 'Ultimate from 6 Rage must leave 2');
   assert(spendUltimate(8) === 4, 'Ultimate from 8 Rage must leave 4 and remain ready');
+}
 
+function validateApSemantics(): void {
   const state = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
-  for (const unit of state.units) {
-    for (const ability of [unit.pow.abilities.basic, ...unit.pow.abilities.skills, unit.pow.abilities.ultimate]) {
-      const status = String(ability.status || '').toLowerCase();
-      assert(!status.includes('ap up'), `${unit.pow.name} leaked legacy AP status into Combat runtime`);
-    }
-  }
+  const skills = new SkillActionResolver();
+  const actor = state.activeLiving('player')[0];
+  assert(actor, 'AP fixture requires active player');
+  actor.ragePoints = 0;
+  actor.attackMultiplier = 1;
+  actor.attackBuffActionsRemaining = 0;
+
+  const result = skills.resolve(actor, actor, {
+    name: 'AP Regression Fixture',
+    power: 1,
+    type: 'support',
+    status: 'ap up'
+  }, 0);
+
+  assert(result.rawRageGain === 2, 'AP Up must not add resource bonus Rage');
+  assert(result.rageGained === 2 && actor.ragePoints === 2, 'AP Up action should receive only normal +2 Rage');
+  assert(actor.attackMultiplier >= 1.2, 'AP Up must strengthen the offensive multiplier channel');
+  assert(actor.attackBuffActionsRemaining >= 3, 'AP Up duration was not applied');
 }
 
 function validateIdentityRules(): void {
@@ -109,6 +124,7 @@ function validateRevivePassive(): void {
 
 export function runCombat2SmokeRegression(): CombatRegressionReport {
   validateRageEconomy();
+  validateApSemantics();
   validateIdentityRules();
   validateRevivePassive();
   const state = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
@@ -154,6 +170,7 @@ export function runCombat2SmokeRegression(): CombatRegressionReport {
     playerActive: state.activeLiving('player').length,
     playerReserve: state.reserveLiving('player').length,
     identityRulesChecked: true,
-    rageEconomyChecked: true
+    rageEconomyChecked: true,
+    apSemanticsChecked: true
   };
 }
