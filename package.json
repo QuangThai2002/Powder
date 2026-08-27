@@ -1,7 +1,7 @@
 {
   "name": "powder",
   "private": true,
-  "version": "22.2.4",
+  "version": "22.2.5",
   "type": "module",
   "scripts": {
     "dev": "vite",
