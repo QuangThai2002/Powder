@@ -19,7 +19,7 @@ import { installCombat292LegacyAbilityMetadataPatch } from './views/Combat292Leg
 import { installCombat293LegacyDomainTickPatch } from './views/Combat293LegacyDomainTickPatch';
 import { installCombat294DomainControlsPatch } from './views/Combat294DomainControlsPatch';
 import { installCombat295LegacyDomainParityPatch } from './views/Combat295LegacyDomainParityPatch';
-import { installCombat295VersionPatch } from './views/Combat295VersionPatch';
+import { installCombat296VersionPatch } from './views/Combat296VersionPatch';
 import { PowView } from './views/PowView';
 
 const logicalWidth = 1600;
@@ -37,7 +37,7 @@ installCombat292LegacyAbilityMetadataPatch(BattleScene);
 installCombat293LegacyDomainTickPatch(BattleScene);
 installCombat294DomainControlsPatch(BattleScene);
 installCombat295LegacyDomainParityPatch();
-installCombat295VersionPatch(BattleScene);
+installCombat296VersionPatch(BattleScene);
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
