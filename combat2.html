@@ -27,10 +27,55 @@
     #powder-combat2 canvas {
       display: block; margin: 0 auto; max-width: 100%; max-height: 100%; touch-action: none;
     }
+    #orientation-guard {
+      display: none;
+      position: fixed; inset: 0; z-index: 9999;
+      align-items: center; justify-content: center; text-align: center;
+      padding: 32px;
+      background: radial-gradient(circle at 50% 35%, #17364d 0%, #07111b 58%, #03080d 100%);
+      color: #f8f1df;
+    }
+    #orientation-guard .guard-card {
+      width: min(440px, 88vw);
+      padding: 28px 24px;
+      border: 1px solid rgba(215, 184, 108, 0.7);
+      border-radius: 18px;
+      background: rgba(5, 18, 29, 0.9);
+      box-shadow: 0 18px 70px rgba(0, 0, 0, 0.38);
+    }
+    #orientation-guard .phone {
+      width: 58px; height: 94px; margin: 0 auto 18px;
+      border: 3px solid #8eeaff; border-radius: 11px;
+      position: relative; transform: rotate(90deg);
+    }
+    #orientation-guard .phone::after {
+      content: ""; position: absolute; left: 50%; bottom: 6px;
+      width: 12px; height: 3px; border-radius: 999px;
+      background: #8eeaff; transform: translateX(-50%);
+    }
+    #orientation-guard strong { display: block; font-size: 24px; margin-bottom: 8px; }
+    #orientation-guard span { display: block; color: #b9d4dc; font-size: 15px; line-height: 1.45; }
+    @media (orientation: portrait) and (max-width: 900px) {
+      #orientation-guard { display: flex; }
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      #orientation-guard .phone { animation: orientHint 1.8s ease-in-out infinite; }
+      @keyframes orientHint {
+        0%, 100% { transform: rotate(82deg) scale(0.96); }
+        50% { transform: rotate(90deg) scale(1); }
+      }
+    }
   </style>
 </head>
 <body>
   <div id="powder-combat2"></div>
+  <div id="orientation-guard" aria-hidden="true">
+    <div class="guard-card">
+      <div class="phone"></div>
+      <strong>Xoay ngang điện thoại để chiến đấu</strong>
+      <span>Combat được tối ưu theo khung 16:9 để Pow, kỹ năng và thanh trạng thái không chồng lên nhau.</span>
+    </div>
+  </div>
   <script type="module" src="/src/game/combat2/bootstrap.ts"></script>
 </body>
 </html>
