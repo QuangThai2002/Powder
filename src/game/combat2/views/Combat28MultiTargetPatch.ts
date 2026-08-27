@@ -10,6 +10,7 @@ import {
 } from '../systems/CombatMultiTargetEngine';
 import type { CombatUnitState } from '../systems/CombatState';
 import type { CombatAbilitySlot } from '../systems/SkillActionResolver';
+import { COMBAT_DISPLAY_FONT } from './CombatTheme';
 
 interface PatchableScene extends Phaser.Scene {
   combatState: any;
@@ -41,6 +42,7 @@ interface PatchableScene extends Phaser.Scene {
   wait: (ms: number) => Promise<void>;
   recoverTurnFlow: () => void;
   afterAction: () => void;
+  startCombatFlow: () => void;
 }
 
 const PATCH_FLAG = '__powderCombat28MultiTargetInstalled';
@@ -92,8 +94,15 @@ function installPlayerSelectionPatch(proto: any): void {
     }
 
     const representative = representativeTarget(this, actor, ability);
-    if (representative) void this.performAbility(actor, representative, action);
-    else this.createActionMenu(actor);
+    if (representative) {
+      this.destroyActionMenu();
+      this.destroyUndoMenu();
+      this.clearTargeting();
+      this.pendingPlayerAction = null;
+      void this.performAbility(actor, representative, action);
+    } else {
+      this.createActionMenu(actor);
+    }
   };
 }
 
@@ -102,7 +111,8 @@ async function showTargetFeedback(
   actor: CombatUnitState,
   target: CombatUnitState,
   result: any,
-  actorView: any
+  actorView: any,
+  allowSelfStatusLabel = true
 ): Promise<void> {
   const targetView = scene.powViews.get(target.instanceId);
   if (result.targetSpeedChanged && target.instanceId !== actor.instanceId) scene.turnManager.rescheduleUnit(target.instanceId);
@@ -118,11 +128,12 @@ async function showTargetFeedback(
     scene.showDamageNumber(targetView, result.hpDamage, result.shieldDamage, result.defeated, result.crit);
   }
   if (result.freezeShattered) scene.showFloatingLabel(targetView, 'PHÁ BĂNG · +30%', '#8eeaff');
-  if (result.healed > 0) scene.showFloatingLabel(scene.isSelfStatus(result.statusLabel || '') ? actorView : targetView, `HỒI +${result.healed}`, '#73f0aa');
-  if (result.shieldGranted > 0) scene.showFloatingLabel(scene.isSelfStatus(result.statusLabel || '') ? actorView : targetView, `KHIÊN +${result.shieldGranted}`, '#8edfff');
+  const selfStatus = scene.isSelfStatus(result.statusLabel || '');
+  if (result.healed > 0 && (!selfStatus || allowSelfStatusLabel)) scene.showFloatingLabel(selfStatus ? actorView : targetView, `HỒI +${result.healed}`, '#73f0aa');
+  if (result.shieldGranted > 0 && (!selfStatus || allowSelfStatusLabel)) scene.showFloatingLabel(selfStatus ? actorView : targetView, `KHIÊN +${result.shieldGranted}`, '#8edfff');
   if (result.cleansed) scene.showFloatingLabel(targetView, 'THANH TẨY', '#a8ffd8');
-  if (result.statusLabel && result.statusLabel !== 'evade' && !result.cleansed && !result.revived) {
-    const statusView = scene.isSelfStatus(result.statusLabel) ? actorView : targetView;
+  if (result.statusLabel && result.statusLabel !== 'evade' && !result.cleansed && !result.revived && (!selfStatus || allowSelfStatusLabel)) {
+    const statusView = selfStatus ? actorView : targetView;
     scene.showFloatingLabel(statusView, scene.statusDisplayName(result.statusLabel), scene.statusLabelColor(result.statusLabel));
   }
 }
@@ -186,8 +197,9 @@ function installMultiResolvePatch(proto: any): void {
         await this.presentation.playUltimateImpact(primaryView, actor.pow.elementKey, selfTargeted);
       }
 
-      for (const hit of cast.hits) {
-        await showTargetFeedback(this, actor, hit.target, hit.result, actorView);
+      for (let index = 0; index < cast.hits.length; index += 1) {
+        const hit = cast.hits[index];
+        await showTargetFeedback(this, actor, hit.target, hit.result, actorView, index === 0);
       }
 
       const resource = cast.primary;
@@ -201,6 +213,24 @@ function installMultiResolvePatch(proto: any): void {
   };
 }
 
+function installIntroPatch(proto: any): void {
+  proto.showPreBattleIntro = function showPreBattleIntro280(this: PatchableScene): void {
+    const { width, height } = this.scale;
+    const portrait = height > width;
+    const shade = this.add.rectangle(width / 2, height / 2, width, height, 0x02080e, 0.4);
+    const plateWidth = Math.min(portrait ? 620 : 690, width * 0.77);
+    const plate = this.add.rectangle(width / 2, height / 2, plateWidth, 108, 0x081d2a, 0.94).setStrokeStyle(1.5, 0xd7b86c, 0.68);
+    const title = this.add.text(width / 2, height / 2, 'POWDER COMBAT 2.8.0', {
+      fontFamily: COMBAT_DISPLAY_FONT,
+      fontSize: portrait ? '32px' : '34px',
+      color: '#fff6df',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    const intro = this.add.container(0, 0, [shade, plate, title]).setDepth(100);
+    this.tweens.add({ targets: intro, alpha: 0, delay: 950, duration: 320, ease: 'Quad.easeOut', onComplete: () => { intro.destroy(true); this.startCombatFlow(); } });
+  };
+}
+
 export function installCombat28MultiTargetPatch(BattleSceneClass: any): void {
   const root = globalThis as any;
   if (root[PATCH_FLAG]) return;
@@ -208,4 +238,5 @@ export function installCombat28MultiTargetPatch(BattleSceneClass: any): void {
   const proto = BattleSceneClass.prototype as any;
   installPlayerSelectionPatch(proto);
   installMultiResolvePatch(proto);
+  installIntroPatch(proto);
 }
