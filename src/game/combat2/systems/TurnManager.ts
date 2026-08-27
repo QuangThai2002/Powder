@@ -188,7 +188,8 @@ export class TurnManager {
       unit.antiHealActionsRemaining -= 1;
       if (unit.antiHealActionsRemaining <= 0) unit.antiHeal = 0;
     }
-    if (unit.regenerationActionsRemaining > 0) unit.regenerationActionsRemaining -= 1;
+    // Regeneration is a start-of-turn effect. Its duration is consumed only
+    // after an actual regeneration tick so casting it never burns one tick immediately.
 
     if (unit.controlActionsRemaining > 0) {
       unit.controlActionsRemaining -= 1;
