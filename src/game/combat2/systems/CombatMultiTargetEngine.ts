@@ -24,7 +24,7 @@ export function isMultiTargetAbility(ability: CombatAbility): boolean {
     [
       'all', 'all-enemies', 'team', 'allies', 'all-allies',
       'two-enemies', 'two-allies', 'three-allies',
-      'self-and-ally', 'self-and-lowest-ally'
+      'self-and-ally', 'self-and-lowest-ally', 'front-row', 'back-row'
     ].includes(target)
   );
 }
@@ -69,6 +69,14 @@ export function selectLegacyCastTargets(
     const support = String(ability.type || '').trim().toLowerCase() === 'support';
     return support ? allies : enemies;
   }
+  if (target === 'front-row') {
+    const row = enemies.filter((unit) => Number(unit.fieldSlot) < 2);
+    return row.length ? row : enemies.slice(0, 2);
+  }
+  if (target === 'back-row') {
+    const row = enemies.filter((unit) => Number(unit.fieldSlot) >= 2);
+    return row.length ? row : enemies.slice(-1);
+  }
   if (target === 'team' || target === 'allies' || target === 'all-allies' || target === 'three-allies') {
     return allies.slice(0, 3);
   }
@@ -93,8 +101,6 @@ function abilityForHit(ability: CombatAbility, index: number): CombatAbility {
   if (index <= 0) return ability;
   const status = String(ability.status || '').trim();
   if (!status.toLowerCase().startsWith('self:')) return ability;
-  // Self side-effects belong to the cast, not to every recipient. Damage/other
-  // target-facing behavior still resolves on all secondary targets.
   return { ...ability, status: undefined };
 }
 
