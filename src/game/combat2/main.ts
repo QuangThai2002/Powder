@@ -9,7 +9,7 @@ import { runCombatLegacyDomainRegression } from './systems/CombatLegacyDomainReg
 import { runCombatLegacyDomainSpecialRegression } from './systems/CombatLegacyDomainSpecialRegression';
 import { runCombatLegacyRoleRegression } from './systems/CombatLegacyRoleRegression';
 import { runCombatMultiTargetRegression } from './systems/CombatMultiTargetRegression';
-import { runCombatRageRegression } from './systems/CombatRageRegression';
+import { runCombatRageRegression } from './systems/CombatRageEngine';
 import { runCombatSpecialSupportRegression } from './systems/CombatSpecialSupportRegression';
 import { installCombat27UiPatch } from './views/Combat27UiPatch';
 import { installCombat28MultiTargetPatch } from './views/Combat28MultiTargetPatch';
@@ -27,6 +27,7 @@ import { installCombat2100ReserveFlowPatch } from './views/Combat2100ReserveFlow
 import { CombatPresentationDirector } from './views/CombatPresentationDirector';
 import { installCombat2101UltimateCinematicPatch } from './views/Combat2101UltimateCinematicPatch';
 import { installCombat2101VersionPatch } from './views/Combat2101VersionPatch';
+import { installCombat2102ArenaFocusPatch } from './views/Combat2102ArenaFocusPatch';
 import { PowView } from './views/PowView';
 
 const logicalWidth = 1600;
@@ -56,6 +57,7 @@ installCombat299StatusVisualPatch(BattleScene, PowView);
 installCombat2100ReserveFlowPatch(BattleScene, PowView);
 installCombat2101UltimateCinematicPatch(CombatPresentationDirector);
 installCombat2101VersionPatch(BattleScene);
+installCombat2102ArenaFocusPatch(BattleScene, PowView);
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -113,7 +115,8 @@ if (isLocalDev) {
         actionFx: (globalThis as any).POWDER_COMBAT2_ACTION_FX?.version ?? 'missing',
         statusFx: (globalThis as any).POWDER_COMBAT2_STATUS_FX?.version ?? 'missing',
         reserveFx: (globalThis as any).POWDER_COMBAT2_RESERVE_FX?.version ?? 'missing',
-        ultimateFx: (globalThis as any).POWDER_COMBAT2_ULTIMATE_FX?.version ?? 'missing'
+        ultimateFx: (globalThis as any).POWDER_COMBAT2_ULTIMATE_FX?.version ?? 'missing',
+        arenaFocus: (globalThis as any).POWDER_COMBAT2_ARENA_FOCUS?.version ?? 'missing'
       });
     } catch (error) {
       console.error('[Combat2 Regression FAIL - NON BLOCKING]', error);
