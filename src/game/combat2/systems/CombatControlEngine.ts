@@ -12,6 +12,7 @@ export const CONTROL_IMMUNITY_ACTIONS = 2;
 export const FREEZE_STAGE_ACTIONS = 3;
 export const FROSTBITE_DAMAGE_MULTIPLIER = 1.1;
 export const FREEZE_SHATTER_MULTIPLIER = 1.3;
+export const TENACITY_CAP = 60;
 
 export const CONTROL_CHANCE_BY_RARITY: Readonly<Record<CombatRarity, number>> = {
   common: 0.4,
@@ -54,12 +55,22 @@ export function baseControlChance(rarity: CombatRarity): number {
   return CONTROL_CHANCE_BY_RARITY[rarity] ?? CONTROL_CHANCE_BY_RARITY.common;
 }
 
-export function controlChanceFor(actor: CombatUnitState): number {
+/**
+ * Rarity + Effect Accuracy determine the attacker's pre-resist chance (80% cap).
+ * Legacy Tenacity then reduces that chance multiplicatively, matching Core V2.
+ */
+export function controlChanceFor(actor: CombatUnitState, target?: CombatUnitState): number {
   const base = baseControlChance(actor.pow.rarity);
   const bonus = Number.isFinite(actor.effectAccuracyBonus)
     ? Math.max(0, actor.effectAccuracyBonus)
     : 0;
-  return Math.min(CONTROL_EFFECT_CHANCE_CAP, base + bonus);
+  const preResist = Math.min(CONTROL_EFFECT_CHANCE_CAP, base + bonus);
+  if (!target) return preResist;
+  const tenacity = Math.min(
+    TENACITY_CAP,
+    Math.max(0, Number(target.pow.tenacity || 0) + Number(target.tenacityBonus || 0))
+  ) / 100;
+  return Math.max(0, preResist * (1 - tenacity));
 }
 
 export function pruneControlHistory(target: CombatUnitState, currentRound: number): void {
@@ -100,7 +111,17 @@ export function cooldownForAbility(
     status === 'defense up' ||
     status === 'rage gain' ||
     status === 'cleanse' ||
-    status === 'purify'
+    status === 'purify' ||
+    status === 'speed up' ||
+    status === 'effect resist' ||
+    status === 'guard' ||
+    status === 'crit up' ||
+    status === 'evasion up' ||
+    status === 'anti heal' ||
+    status === 'attack down' ||
+    status === 'ap down' ||
+    status === 'defense down' ||
+    status === 'accuracy down'
   ) return 1;
   // Pure damage, Burn and Poison stay fluid; Rage already gates Ultimate.
   return slot === 'ultimate' ? 0 : 0;
@@ -110,7 +131,7 @@ export class CombatControlEngine {
   constructor(private readonly random: () => number = Math.random) {}
 
   rollControl(actor: CombatUnitState, target: CombatUnitState): ControlRollResult {
-    const chance = controlChanceFor(actor);
+    const chance = controlChanceFor(actor, target);
     if (target.controlImmunityActionsRemaining > 0) {
       return { success: false, blockedByImmunity: true, chance, roll: 1 };
     }
@@ -133,8 +154,6 @@ export class CombatControlEngine {
     const normalizedSource = String(sourceKey || status).trim().toLowerCase() || status;
     target.controlHistory.push({ status, round, sourceKey: normalizedSource });
 
-    // Every landed hard-CC counts. The fourth active hit in the rolling
-    // five-round window immediately grants Control Immunity.
     if (
       target.controlHistory.length < CONTROL_IMMUNITY_TRIGGER_HITS ||
       target.controlImmunityActionsRemaining > 0
@@ -142,9 +161,6 @@ export class CombatControlEngine {
 
     target.controlImmunityActionsRemaining = CONTROL_IMMUNITY_ACTIONS;
     target.controlHistory = [];
-    // Deliberately clear only hard control. Burn, Poison, Slow and future
-    // non-control debuffs remain on the target so immunity cannot act as a
-    // free full cleanse.
     this.clearHardControl(target);
     return true;
   }

@@ -4,6 +4,7 @@ import {
   FREEZE_SHATTER_MULTIPLIER
 } from './CombatControlEngine';
 import { CombatIdentityRules } from './CombatIdentityRules';
+import { CombatLegacyStatEngine } from './CombatLegacyStatEngine';
 import { ACTION_BASE_RAW_GAIN, applyRawRageGain } from './CombatRageEngine';
 
 export interface BasicAttackResult {
@@ -18,18 +19,31 @@ export interface BasicAttackResult {
   rageAfter: number;
   freezeShattered: boolean;
   defeated: boolean;
+  crit: boolean;
+  evaded: boolean;
+  hitChance: number;
+  critChance: number;
+  mitigation: number;
 }
 
 export class BasicAttackResolver {
   private readonly identity = new CombatIdentityRules();
+  private readonly legacyStats: CombatLegacyStatEngine;
+
+  constructor(random: () => number = () => 0.5) {
+    this.legacyStats = new CombatLegacyStatEngine(random);
+  }
 
   resolve(attacker: CombatUnitState, target: CombatUnitState): BasicAttackResult {
-    const attack = this.safeStat(attacker.pow.attack, 1) * this.safeMultiplier(attacker.attackMultiplier);
-    const defense = this.safeStat(target.pow.defense, 0) * this.safeMultiplier(target.defenseMultiplier);
     const basicPower = this.safeStat(attacker.pow.abilities.basic.power, 100);
     const coefficient = Math.min(3, Math.max(0.1, basicPower / 100));
     const targetHpBefore = this.safeHp(target.hp, target.pow.maxHp);
     const identity = this.identity.evaluateDamage(attacker, target, 'basic', 'physical');
+    const hit = this.legacyStats.resolveHit(attacker, target, {
+      usesAttack: true,
+      unavoidable: Boolean(attacker.pow.abilities.basic.unavoidable || attacker.pow.abilities.basic.sureHit),
+      area: Boolean(attacker.pow.abilities.basic.area)
+    });
     const frozen = target.controlStatus === 'freeze' && target.controlActionsRemaining > 0;
     const frostbitten = target.freezeStage === 2 && target.freezeStageActionsRemaining > 0;
     const vulnerability = frozen
@@ -38,8 +52,20 @@ export class BasicAttackResolver {
         ? FROSTBITE_DAMAGE_MULTIPLIER
         : 1;
 
-    const rawDamage = Math.max(1, attack * coefficient - defense * 0.45);
-    const damage = Math.max(1, Math.round(rawDamage * identity.totalMultiplier * vulnerability));
+    const damage = !hit.hit || identity.totalMultiplier <= 0
+      ? 0
+      : Math.max(
+          1,
+          Math.round(
+            coefficient *
+            hit.offense *
+            (1 - hit.mitigation) *
+            identity.totalMultiplier *
+            hit.critMultiplier *
+            vulnerability *
+            (1 - hit.damageReduction)
+          )
+        );
     const shieldBefore = this.safeStat(target.shield, 0);
     const shieldDamage = Math.min(shieldBefore, damage);
     const hpDamage = Math.max(0, damage - shieldDamage);
@@ -68,12 +94,13 @@ export class BasicAttackResolver {
       rageGained: rage.effectiveGain,
       rageAfter: rage.next,
       freezeShattered,
-      defeated: !target.alive
+      defeated: !target.alive,
+      crit: hit.crit,
+      evaded: hit.evaded,
+      hitChance: hit.hitChance,
+      critChance: hit.critChance,
+      mitigation: hit.mitigation
     };
-  }
-
-  private safeMultiplier(value: number): number {
-    return Number.isFinite(value) ? Math.min(10, Math.max(0.1, value)) : 1;
   }
 
   private safeStat(value: number, fallback: number): number {

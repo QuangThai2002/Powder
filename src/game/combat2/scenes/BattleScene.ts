@@ -2,7 +2,13 @@ import Phaser from 'phaser';
 import type { CombatAbility, CombatPow, CombatSide } from '../data/CombatPow';
 import { ACTIVE_TEAM_SIZE, ALL_COMBAT2_STARTER_POWS, COMBAT2_STARTER_ROSTER } from '../data/PowderDataAdapter';
 import { ActionPipeline } from '../systems/ActionPipeline';
-import { abilityHasLegalTarget, abilityTargetMode, hasNegativeStatus, type CombatAbilityTargetMode } from '../systems/CombatAbilityTargeting';
+import {
+  abilityHasLegalTarget,
+  abilityRequiresDebuffedAlly,
+  abilityTargetMode,
+  hasNegativeStatus,
+  type CombatAbilityTargetMode
+} from '../systems/CombatAbilityTargeting';
 import { BasicAttackResolver } from '../systems/BasicAttackResolver';
 import {
   FROSTBITE_DAMAGE_MULTIPLIER,
@@ -15,6 +21,11 @@ import { TurnManager } from '../systems/TurnManager';
 import { CombatPresentationDirector } from '../views/CombatPresentationDirector';
 import { COMBAT_BODY_FONT, COMBAT_COLORS, COMBAT_DISPLAY_FONT } from '../views/CombatTheme';
 import { PowView } from '../views/PowView';
+
+const BATTLE_BG_KEY = 'combat2-battle-bg';
+const BATTLE_BG_URL = '/assets/backgrounds/bg-battle-legend-cloud-arena.webp';
+const BATTLE_BGM_KEY = 'combat2-bgm';
+const BATTLE_BGM_URL = '/assets/audio/combat/user-combat-bgm.mp3';
 
 interface ActionMenuItem {
   label: string;
@@ -46,12 +57,15 @@ export class BattleScene extends Phaser.Scene {
   private actionMenu: Phaser.GameObjects.Container | null = null;
   private undoMenu: Phaser.GameObjects.Container | null = null;
   private pendingPlayerAction: PendingPlayerAction | null = null;
+  private battleMusic: Phaser.Sound.BaseSound | null = null;
   private flowStarted = false;
   private lineupSettling = false;
 
   constructor() { super('BattleScene'); }
 
   preload(): void {
+    if (!this.textures.exists(BATTLE_BG_KEY)) this.load.image(BATTLE_BG_KEY, BATTLE_BG_URL);
+    if (!this.cache.audio.exists(BATTLE_BGM_KEY)) this.load.audio(BATTLE_BGM_KEY, BATTLE_BGM_URL);
     for (const pow of ALL_COMBAT2_STARTER_POWS) {
       if (!this.textures.exists(pow.assetKey)) this.load.image(pow.assetKey, pow.assetUrl);
       for (const ability of [pow.abilities.basic, ...pow.abilities.skills, pow.abilities.ultimate]) {
@@ -65,8 +79,8 @@ export class BattleScene extends Phaser.Scene {
     this.combatState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
     this.turnManager = new TurnManager(this.combatState);
     this.actionPipeline = new ActionPipeline(this.turnManager);
-    this.basicAttack = new BasicAttackResolver();
-    this.skillActions = new SkillActionResolver();
+    this.basicAttack = new BasicAttackResolver(Math.random);
+    this.skillActions = new SkillActionResolver(Math.random);
     this.presentation = new CombatPresentationDirector(this);
     this.cameras.main.setBackgroundColor('#06111c');
     this.createBattlefield(width, height);
@@ -79,20 +93,41 @@ export class BattleScene extends Phaser.Scene {
     this.turnText = this.add.text(width / 2, height / 2 - 27, '', {
       fontFamily: COMBAT_BODY_FONT, fontSize: '17px', color: COMBAT_COLORS.muted, fontStyle: 'bold'
     }).setOrigin(0.5);
+
+    this.startBattleMusic();
+    this.input.once('pointerdown', () => this.startBattleMusic());
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.stopBattleMusic());
+    this.events.once(Phaser.Scenes.Events.DESTROY, () => this.stopBattleMusic());
     this.showPreBattleIntro();
   }
 
   private showPreBattleIntro(): void {
     const { width, height } = this.scale;
     const portrait = height > width;
-    const shade = this.add.rectangle(width / 2, height / 2, width, height, 0x02080e, 0.48);
+    const shade = this.add.rectangle(width / 2, height / 2, width, height, 0x02080e, 0.46);
     const plateWidth = Math.min(portrait ? 650 : 720, width * 0.8);
-    const plate = this.add.rectangle(width / 2, height / 2, plateWidth, 118, 0x081d2a, 0.98).setStrokeStyle(2, 0xd7b86c, 0.76);
-    const title = this.add.text(width / 2, height / 2, 'POWDER COMBAT 2.5.0', {
+    const plate = this.add.rectangle(width / 2, height / 2, plateWidth, 118, 0x081d2a, 0.96).setStrokeStyle(2, 0xd7b86c, 0.78);
+    const title = this.add.text(width / 2, height / 2, 'POWDER COMBAT 2.6.0', {
       fontFamily: COMBAT_DISPLAY_FONT, fontSize: portrait ? '34px' : '36px', color: '#fff6df', fontStyle: 'bold'
     }).setOrigin(0.5);
     const intro = this.add.container(0, 0, [shade, plate, title]).setDepth(100);
-    this.tweens.add({ targets: intro, alpha: 0, delay: 1100, duration: 360, ease: 'Quad.easeOut', onComplete: () => { intro.destroy(true); this.startCombatFlow(); } });
+    this.tweens.add({ targets: intro, alpha: 0, delay: 1200, duration: 380, ease: 'Quad.easeOut', onComplete: () => { intro.destroy(true); this.startCombatFlow(); } });
+  }
+
+  private startBattleMusic(): void {
+    if (this.battleMusic?.isPlaying || !this.cache.audio.exists(BATTLE_BGM_KEY)) return;
+    try {
+      if (!this.battleMusic) this.battleMusic = this.sound.add(BATTLE_BGM_KEY, { loop: true, volume: 0.32 });
+      this.battleMusic.play();
+    } catch (error) {
+      console.warn('[Combat2 Audio] BGM will retry after player interaction.', error);
+    }
+  }
+
+  private stopBattleMusic(): void {
+    if (!this.battleMusic) return;
+    try { this.battleMusic.stop(); this.battleMusic.destroy(); } catch { /* noop */ }
+    this.battleMusic = null;
   }
 
   private startCombatFlow(): void {
@@ -120,7 +155,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private async continueTurn(actor: CombatUnitState): Promise<void> {
-    await this.applyStartOfTurnDot(actor);
+    await this.applyStartOfTurnEffects(actor);
     if (!actor.alive) {
       this.turnManager.completeAction(actor.instanceId);
       this.afterAction();
@@ -268,16 +303,22 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
     this.pendingPlayerAction = { actorId: actor.instanceId, action, targetMode: mode };
-    this.prepareTargeting(actor, mode as 'enemy' | 'ally');
+    this.prepareTargeting(actor, mode as 'enemy' | 'ally', ability);
     this.createUndoMenu(actor);
   }
 
-  private prepareTargeting(actor: CombatUnitState, mode: 'enemy' | 'ally'): void {
+  private prepareTargeting(actor: CombatUnitState, mode: 'enemy' | 'ally', ability?: CombatAbility): void {
+    const requireDebuff = ability ? abilityRequiresDebuffedAlly(ability) : false;
     const targets = mode === 'enemy'
       ? this.combatState.activeLiving(actor.side === 'player' ? 'enemy' : 'player')
-      : this.combatState.activeLiving(actor.side).filter(hasNegativeStatus);
+      : this.combatState.activeLiving(actor.side).filter((unit) => !requireDebuff || hasNegativeStatus(unit));
     targets.forEach((target) => this.powViews.get(target.instanceId)?.setTargetable(true));
-    this.turnText.setText(mode === 'enemy' ? 'CHỌN POW ĐỊCH' : 'CHỌN ĐỒNG MINH CẦN THANH TẨY').setColor(mode === 'enemy' ? '#8eeaff' : '#73f0aa');
+    const prompt = mode === 'enemy'
+      ? 'CHỌN POW ĐỊCH'
+      : requireDebuff
+        ? 'CHỌN ĐỒNG MINH CẦN THANH TẨY'
+        : 'CHỌN ĐỒNG MINH';
+    this.turnText.setText(prompt).setColor(mode === 'enemy' ? '#8eeaff' : '#73f0aa');
   }
 
   private createUndoMenu(actor: CombatUnitState): void {
@@ -297,9 +338,15 @@ export class BattleScene extends Phaser.Scene {
     const actor = this.combatState.getUnit(pending.actorId);
     const target = this.combatState.getUnit(instanceId);
     if (!actor || !target || this.combatState.currentUnitId !== actor.instanceId) return;
+    const selectedAbility = pending.action === 'basic'
+      ? null
+      : pending.action === 'ultimate'
+        ? actor.pow.abilities.ultimate
+        : actor.pow.abilities.skills[pending.action];
+    const requireDebuff = selectedAbility ? abilityRequiresDebuffedAlly(selectedAbility) : false;
     const valid = pending.targetMode === 'enemy'
       ? target.side !== actor.side && target.alive && target.fieldSlot !== null
-      : target.side === actor.side && target.alive && target.fieldSlot !== null && hasNegativeStatus(target);
+      : target.side === actor.side && target.alive && target.fieldSlot !== null && (!requireDebuff || hasNegativeStatus(target));
     if (!valid) return;
     const action = pending.action;
     this.pendingPlayerAction = null;
@@ -320,9 +367,12 @@ export class BattleScene extends Phaser.Scene {
       this.combatState.sanitizeRuntimeNumbers();
       this.refreshViews();
       if (targetView) {
-        await targetView.playHit();
-        this.showDamageNumber(targetView, result.hpDamage, result.shieldDamage, result.defeated);
-        if (result.freezeShattered) this.showFloatingLabel(targetView, 'PHÁ BĂNG · +30%', '#8eeaff');
+        if (result.evaded) this.showFloatingLabel(targetView, 'NÉ TRÁNH', '#d8f3ff');
+        else {
+          await targetView.playHit();
+          this.showDamageNumber(targetView, result.hpDamage, result.shieldDamage, result.defeated, result.crit);
+          if (result.freezeShattered) this.showFloatingLabel(targetView, 'PHÁ BĂNG · +30%', '#8eeaff');
+        }
       }
       this.showRageGain(actorView, result.rageGained, result.rawRageGain);
       await this.wait(300);
@@ -359,15 +409,16 @@ export class BattleScene extends Phaser.Scene {
       if (result.revived) { this.restoreRevivedReserve(target); this.showFloatingLabel(this.powViews.get(target.instanceId), 'HỒI SINH · 35% HP', '#73f0aa'); }
       this.presentation.showElementOutcome(targetView, result.elementOutcome);
       if (slot === 'ultimate') await this.presentation.playUltimateImpact(targetView, actor.pow.elementKey, selfTargeted);
-      if (result.damage > 0 && targetView && !selfTargeted) {
+      if (result.evaded && targetView && !selfTargeted) this.showFloatingLabel(targetView, 'NÉ TRÁNH', '#d8f3ff');
+      else if (result.damage > 0 && targetView && !selfTargeted) {
         await targetView.playHit();
-        this.showDamageNumber(targetView, result.hpDamage, result.shieldDamage, result.defeated);
+        this.showDamageNumber(targetView, result.hpDamage, result.shieldDamage, result.defeated, result.crit);
       }
       if (result.freezeShattered) this.showFloatingLabel(targetView, 'PHÁ BĂNG · +30%', '#8eeaff');
-      if (result.healed > 0) this.showFloatingLabel(actorView, `HỒI +${result.healed}`, '#73f0aa');
-      if (result.shieldGranted > 0) this.showFloatingLabel(actorView, `KHIÊN +${result.shieldGranted}`, '#8edfff');
+      if (result.healed > 0) this.showFloatingLabel(this.isSelfStatus(result.statusLabel || '') ? actorView : targetView, `HỒI +${result.healed}`, '#73f0aa');
+      if (result.shieldGranted > 0) this.showFloatingLabel(this.isSelfStatus(result.statusLabel || '') ? actorView : targetView, `KHIÊN +${result.shieldGranted}`, '#8edfff');
       if (result.cleansed) this.showFloatingLabel(targetView, 'THANH TẨY', '#a8ffd8');
-      if (result.statusLabel && !result.cleansed && !result.revived) {
+      if (result.statusLabel && result.statusLabel !== 'evade' && !result.cleansed && !result.revived) {
         const statusView = this.isSelfStatus(result.statusLabel) ? actorView : targetView;
         this.showFloatingLabel(statusView, this.statusDisplayName(result.statusLabel), this.statusLabelColor(result.statusLabel));
       }
@@ -379,32 +430,68 @@ export class BattleScene extends Phaser.Scene {
     if (completed === null) this.recoverTurnFlow(); else this.afterAction();
   }
 
-  private async applyStartOfTurnDot(actor: CombatUnitState): Promise<void> {
-    if (actor.dotActionsRemaining <= 0 || actor.dotDamage <= 0 || !actor.dotStatus) return;
-    const frozen = actor.controlStatus === 'freeze' && actor.controlActionsRemaining > 0;
-    const frostbitten = actor.freezeStage === 2 && actor.freezeStageActionsRemaining > 0;
-    const vulnerability = frozen
-      ? FREEZE_SHATTER_MULTIPLIER
-      : frostbitten
-        ? FROSTBITE_DAMAGE_MULTIPLIER
-        : 1;
-    const damage = Math.min(actor.hp, Math.max(1, Math.round(actor.dotDamage * vulnerability)));
-    const status = actor.dotStatus;
-    actor.hp = Math.max(0, actor.hp - damage);
-    if (frozen && damage > 0) {
-      actor.controlStatus = null;
-      actor.controlActionsRemaining = 0;
-    }
-    actor.dotActionsRemaining = Math.max(0, actor.dotActionsRemaining - 1);
-    if (actor.dotActionsRemaining <= 0) { actor.dotStatus = null; actor.dotDamage = 0; }
-    this.combatState.sanitizeRuntimeNumbers(); this.refreshViews();
+  private async applyStartOfTurnEffects(actor: CombatUnitState): Promise<void> {
     const view = this.powViews.get(actor.instanceId);
-    if (view) {
-      await view.playHit();
-      this.showFloatingLabel(view, `${status === 'poison' ? 'ĐỘC' : 'THIÊU ĐỐT'} -${damage}`, status === 'poison' ? '#a6e66f' : '#ff9b68');
-      if (frozen) this.showFloatingLabel(view, 'PHÁ BĂNG · +30%', '#8eeaff');
+
+    if (actor.burnActionsRemaining > 0 && actor.burnDamage > 0 && actor.alive) {
+      const frozen = actor.controlStatus === 'freeze' && actor.controlActionsRemaining > 0;
+      const frostbitten = actor.freezeStage === 2 && actor.freezeStageActionsRemaining > 0;
+      const vulnerability = frozen ? FREEZE_SHATTER_MULTIPLIER : frostbitten ? FROSTBITE_DAMAGE_MULTIPLIER : 1;
+      const damage = Math.max(1, Math.round(actor.burnDamage * vulnerability));
+      const dealt = this.applyEffectDamage(actor, damage);
+      actor.burnActionsRemaining = Math.max(0, actor.burnActionsRemaining - 1);
+      if (actor.burnActionsRemaining <= 0) actor.burnDamage = 0;
+      if (frozen && dealt.total > 0) { actor.controlStatus = null; actor.controlActionsRemaining = 0; }
+      this.combatState.sanitizeRuntimeNumbers(); this.refreshViews();
+      if (view) {
+        await view.playHit();
+        this.showFloatingLabel(view, `THIÊU ĐỐT -${dealt.total}`, '#ff9b68');
+        if (frozen && dealt.total > 0) this.showFloatingLabel(view, 'PHÁ BĂNG · +30%', '#8eeaff');
+      }
+      await this.wait(260);
     }
-    await this.wait(360);
+
+    if (actor.poisonActionsRemaining > 0 && actor.poisonStacks > 0 && actor.alive) {
+      const frozen = actor.controlStatus === 'freeze' && actor.controlActionsRemaining > 0;
+      const frostbitten = actor.freezeStage === 2 && actor.freezeStageActionsRemaining > 0;
+      const vulnerability = frozen ? FREEZE_SHATTER_MULTIPLIER : frostbitten ? FROSTBITE_DAMAGE_MULTIPLIER : 1;
+      const base = Math.max(1, Math.round(actor.pow.maxHp * 0.02 * actor.poisonStacks));
+      const damage = Math.max(1, Math.round(base * vulnerability));
+      const dealt = this.applyEffectDamage(actor, damage);
+      actor.poisonActionsRemaining = Math.max(0, actor.poisonActionsRemaining - 1);
+      if (actor.poisonActionsRemaining <= 0) actor.poisonStacks = 0;
+      if (frozen && dealt.total > 0) { actor.controlStatus = null; actor.controlActionsRemaining = 0; }
+      this.combatState.sanitizeRuntimeNumbers(); this.refreshViews();
+      if (view) {
+        await view.playHit();
+        this.showFloatingLabel(view, `ĐỘC ×${Math.max(1, actor.poisonStacks || 1)} · -${dealt.total}`, '#a6e66f');
+        if (frozen && dealt.total > 0) this.showFloatingLabel(view, 'PHÁ BĂNG · +30%', '#8eeaff');
+      }
+      await this.wait(260);
+    }
+
+    if (actor.regenerationActionsRemaining > 0 && actor.alive) {
+      const poisonAnti = Math.min(0.4, actor.poisonStacks * 0.06);
+      const antiHeal = Math.min(0.4, Math.max(0, actor.antiHeal) + poisonAnti);
+      const healPower = Math.min(60, Math.max(0, actor.pow.healPower)) / 100;
+      const raw = Math.round(actor.pow.maxHp * 0.06 * (1 + healPower) * (1 - antiHeal));
+      const healed = Math.min(Math.max(0, actor.pow.maxHp - actor.hp), Math.max(0, raw));
+      actor.hp += healed;
+      actor.regenerationActionsRemaining = Math.max(0, actor.regenerationActionsRemaining - 1);
+      this.combatState.sanitizeRuntimeNumbers(); this.refreshViews();
+      if (healed > 0 && view) this.showFloatingLabel(view, `HỒI PHỤC +${healed}`, '#73f0aa');
+      if (healed > 0) await this.wait(220);
+    }
+  }
+
+  private applyEffectDamage(target: CombatUnitState, amount: number): { total: number; shield: number; hp: number } {
+    const safe = Math.max(0, Math.round(amount));
+    const shieldDamage = Math.min(Math.max(0, target.shield), safe);
+    const hpDamage = Math.min(Math.max(0, target.hp), Math.max(0, safe - shieldDamage));
+    target.shield = Math.max(0, target.shield - shieldDamage);
+    target.hp = Math.max(0, target.hp - hpDamage);
+    target.alive = target.hp > 0;
+    return { total: shieldDamage + hpDamage, shield: shieldDamage, hp: hpDamage };
   }
 
   private afterAction(): void { void this.settleAfterAction(); }
@@ -457,7 +544,11 @@ export class BattleScene extends Phaser.Scene {
     const mode = abilityTargetMode(ability);
     if (mode === 'self') return actor;
     if (mode === 'enemy') return this.pickTarget(actor.side === 'player' ? 'enemy' : 'player');
-    if (mode === 'ally') return this.combatState.activeLiving(actor.side).filter(hasNegativeStatus).sort((a, b) => a.hp / a.pow.maxHp - b.hp / b.pow.maxHp)[0] ?? null;
+    if (mode === 'ally') {
+      const allies = this.combatState.activeLiving(actor.side);
+      const eligible = abilityRequiresDebuffedAlly(ability) ? allies.filter(hasNegativeStatus) : allies;
+      return eligible.sort((a, b) => a.hp / a.pow.maxHp - b.hp / b.pow.maxHp)[0] ?? null;
+    }
     return this.combatState.units.filter((unit) => unit.side === actor.side && !unit.alive).sort((a, b) => a.slot - b.slot)[0] ?? null;
   }
 
@@ -472,11 +563,17 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.add({ targets: text, y: y + (top ? 12 : -12), alpha: 0, delay: 480, duration: 1000, ease: 'Quad.easeOut', onComplete: () => text.destroy() });
   }
 
-  private showDamageNumber(view: PowView, hpDamage: number, shieldDamage: number, defeated: boolean): void {
+  private showDamageNumber(view: PowView, hpDamage: number, shieldDamage: number, defeated: boolean, crit = false): void {
     const p = view.getWorldPosition();
-    const label = shieldDamage > 0 && hpDamage <= 0 ? `KHIÊN -${shieldDamage}` : shieldDamage > 0 ? `-${hpDamage}  ·  KHIÊN -${shieldDamage}` : `-${hpDamage}`;
-    const text = this.add.text(p.x, p.y - 96, label, { fontFamily: COMBAT_DISPLAY_FONT, fontSize: defeated ? '38px' : '34px', color: defeated ? '#ff6478' : shieldDamage > 0 ? '#8edfff' : '#ffd36a', fontStyle: 'bold', stroke: '#06111c', strokeThickness: 6 }).setOrigin(0.5).setDepth(50);
-    this.floatAndDestroy(text, 1250);
+    const core = shieldDamage > 0 && hpDamage <= 0 ? `KHIÊN -${shieldDamage}` : shieldDamage > 0 ? `-${hpDamage} · KHIÊN -${shieldDamage}` : `-${hpDamage}`;
+    const label = crit ? `CHÍ MẠNG · ${core}` : core;
+    const text = this.add.text(p.x, p.y - 96, label, {
+      fontFamily: COMBAT_DISPLAY_FONT,
+      fontSize: defeated ? '38px' : crit ? '37px' : '34px',
+      color: defeated ? '#ff6478' : crit ? '#fff09a' : shieldDamage > 0 ? '#8edfff' : '#ffd36a',
+      fontStyle: 'bold', stroke: '#06111c', strokeThickness: 6
+    }).setOrigin(0.5).setDepth(50);
+    this.floatAndDestroy(text, crit ? 1450 : 1250);
   }
 
   private showFloatingLabel(view: PowView | undefined, label: string, color: string): void {
@@ -534,6 +631,19 @@ export class BattleScene extends Phaser.Scene {
     if (status === 'rage gain') return 'NỘ';
     if (status === 'ap up') return 'AP+';
     if (status === 'attack up') return 'ATK+';
+    if (status === 'defense up') return 'DEF+';
+    if (status === 'speed up') return 'SPD+';
+    if (status === 'effect resist') return 'RES';
+    if (status === 'guard') return 'GUARD';
+    if (status === 'crit up') return 'CRIT+';
+    if (status === 'evasion up') return 'EVA+';
+    if (status === 'attack down') return 'ATK-';
+    if (status === 'ap down') return 'AP-';
+    if (status === 'defense down') return 'DEF-';
+    if (status === 'accuracy down') return 'ACC-';
+    if (status === 'anti heal') return 'HEAL-';
+    if (status === 'burn') return 'BURN';
+    if (status === 'poison') return 'POISON';
     if (type === 'support') return 'SUP';
     if (type === 'debuff') return 'CTRL';
     if (type === 'physical') return 'ATK';
@@ -549,17 +659,24 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private isSelfStatus(status: string): boolean {
-    return ['shield', 'regeneration', 'attack up', 'ap up', 'defense up', 'rage gain'].includes(status.replace(/^self:/i, '').trim().toLowerCase());
+    return [
+      'shield', 'regeneration', 'attack up', 'ap up', 'defense up', 'rage gain',
+      'speed up', 'effect resist', 'guard', 'crit up', 'evasion up'
+    ].includes(status.replace(/^self:/i, '').trim().toLowerCase());
   }
 
   private statusDisplayName(status: string): string {
     const normalized = status.replace(/^self:/i, '').trim().toLowerCase();
     const names: Record<string, string> = {
       shield: 'KHIÊN', regeneration: 'HỒI PHỤC', 'attack up': 'TĂNG CÔNG', 'ap up': 'TĂNG AP',
-      'defense up': 'TĂNG THỦ', 'rage gain': 'HỒI NỘ', silence: 'CÂM LẶNG', stun: 'CHOÁNG',
-      paralysis: 'TÊ LIỆT', chill: 'LÀM LẠNH · -10% TỐC', frostbite: 'TÊ CÓNG · -20% TỐC · +10% ST',
+      'defense up': 'TĂNG THỦ', 'speed up': 'TĂNG TỐC', 'effect resist': 'KHÁNG HIỆU ỨNG',
+      guard: 'BẢO HỘ', 'crit up': 'TĂNG CHÍ MẠNG', 'evasion up': 'TĂNG NÉ', 'rage gain': 'HỒI NỘ',
+      'attack down': 'GIẢM CÔNG', 'ap down': 'GIẢM AP', 'defense down': 'GIẢM THỦ',
+      'accuracy down': 'GIẢM CHÍNH XÁC', 'anti heal': 'GIẢM HỒI MÁU',
+      silence: 'CÂM LẶNG', stun: 'CHOÁNG', paralysis: 'TÊ LIỆT',
+      chill: 'LÀM LẠNH · -10% TỐC', frostbite: 'TÊ CÓNG · -20% TỐC · +10% ST',
       freeze: 'ĐÓNG BĂNG', slow: 'CHẬM', burn: 'THIÊU ĐỐT', poison: 'NHIỄM ĐỘC',
-      'control miss': 'KHỐNG CHẾ TRƯỢT', 'control immune': 'MIỄN KHỐNG',
+      evade: 'NÉ TRÁNH', 'control miss': 'KHỐNG CHẾ TRƯỢT', 'control immune': 'MIỄN KHỐNG',
       'control immunity': 'MIỄN KHỐNG · 2 LƯỢT'
     };
     return names[normalized] ?? status.toUpperCase();
@@ -568,21 +685,33 @@ export class BattleScene extends Phaser.Scene {
   private statusLabelColor(status: string): string {
     const normalized = status.replace(/^self:/i, '').trim().toLowerCase();
     if (normalized === 'control immunity' || normalized === 'control immune') return '#8ef7ff';
-    if (normalized === 'control miss') return '#aeb9be';
+    if (normalized === 'control miss' || normalized === 'evade') return '#d8f3ff';
     if (normalized === 'freeze' || normalized === 'chill' || normalized === 'frostbite') return '#8edfff';
     if (normalized === 'stun' || normalized === 'paralysis') return '#ffe66f';
     if (normalized === 'silence') return '#d6a7ff';
+    if (normalized === 'burn') return '#ff9b68';
+    if (normalized === 'poison') return '#a6e66f';
+    if (normalized.includes('down') || normalized === 'anti heal') return '#ff9aa9';
+    if (this.isSelfStatus(normalized)) return '#89f0c0';
     return '#c9b0ff';
   }
 
   private shortName(name: string, maxLength: number): string { const clean = String(name || '').trim(); return clean.length > maxLength ? `${clean.slice(0, maxLength - 1)}…` : clean; }
 
   private createBattlefield(width: number, height: number): void {
-    const g = this.add.graphics();
-    g.fillStyle(0x071827, 1).fillRect(0, 0, width, height);
-    g.fillStyle(0x0a2031, 0.74).fillEllipse(width / 2, height / 2, Math.min(1220, width * 0.86), Math.min(430, height * 0.5));
-    g.lineStyle(1, 0x21475c, 0.45).strokeEllipse(width / 2, height / 2, Math.min(1220, width * 0.86), Math.min(430, height * 0.5));
-    g.lineStyle(1, 0x15394e, 0.55).lineBetween(width * 0.07, height / 2, width * 0.93, height / 2);
+    if (this.textures.exists(BATTLE_BG_KEY)) {
+      const image = this.add.image(width / 2, height / 2, BATTLE_BG_KEY).setDepth(-20);
+      const source = image.texture.getSourceImage() as HTMLImageElement | HTMLCanvasElement;
+      const coverScale = Math.max(width / Math.max(1, source.width), height / Math.max(1, source.height));
+      image.setScale(coverScale);
+      this.add.rectangle(width / 2, height / 2, width, height, 0x03101b, 0.38).setDepth(-19);
+    } else {
+      this.add.rectangle(width / 2, height / 2, width, height, 0x071827, 1).setDepth(-20);
+    }
+    const g = this.add.graphics().setDepth(-18);
+    g.fillStyle(0x071827, 0.34).fillEllipse(width / 2, height / 2, Math.min(1260, width * 0.88), Math.min(450, height * 0.52));
+    g.lineStyle(2, 0xd7b86c, 0.22).strokeEllipse(width / 2, height / 2, Math.min(1260, width * 0.88), Math.min(450, height * 0.52));
+    g.lineStyle(1, 0xb9e8ff, 0.18).lineBetween(width * 0.08, height / 2, width * 0.92, height / 2);
   }
 
   private createTeam(side: CombatSide, team: CombatPow[]): void {

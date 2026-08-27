@@ -1,5 +1,5 @@
 import type { CombatAbility } from '../data/CombatPow';
-import type { CombatUnitState, DotStatus, HardControlStatus } from './CombatState';
+import type { CombatUnitState, HardControlStatus } from './CombatState';
 import { CombatIdentityRules, type ElementOutcome } from './CombatIdentityRules';
 import {
   CombatControlEngine,
@@ -8,6 +8,7 @@ import {
   cooldownForAbility,
   isHardControlStatus
 } from './CombatControlEngine';
+import { CombatLegacyStatEngine } from './CombatLegacyStatEngine';
 import {
   ACTION_BASE_RAW_GAIN,
   ULTIMATE_RAGE_COST,
@@ -46,6 +47,11 @@ export interface SkillActionResult {
   controlImmunityTriggered: boolean;
   freezeShattered: boolean;
   cooldownApplied: number;
+  crit: boolean;
+  evaded: boolean;
+  hitChance: number;
+  critChance: number;
+  mitigation: number;
 }
 
 interface ParsedStatus {
@@ -70,15 +76,18 @@ interface StatusApplicationResult {
 }
 
 const SELF_STATUSES = new Set([
-  'shield', 'regeneration', 'attack up', 'ap up', 'defense up', 'rage gain'
+  'shield', 'regeneration', 'attack up', 'ap up', 'defense up', 'rage gain',
+  'speed up', 'effect resist', 'guard', 'crit up', 'evasion up'
 ]);
 
 export class SkillActionResolver {
   private readonly identity = new CombatIdentityRules();
   private readonly control: CombatControlEngine;
+  private readonly legacyStats: CombatLegacyStatEngine;
 
   constructor(random: () => number = Math.random) {
     this.control = new CombatControlEngine(random);
+    this.legacyStats = new CombatLegacyStatEngine(random);
   }
 
   canUse(actor: CombatUnitState, slot: CombatSkillSlot): boolean {
@@ -167,11 +176,18 @@ export class SkillActionResolver {
           hpDamage: 0,
           identityMultiplier: 1,
           elementOutcome: 'neutral' as ElementOutcome,
-          freezeShattered: false
+          freezeShattered: false,
+          crit: false,
+          evaded: false,
+          hitChance: 1,
+          critChance: 0,
+          mitigation: 0
         }
-      : this.applyDamage(actor, target, ability.power, damageKind, ability.type);
+      : this.applyDamage(actor, target, ability, damageKind);
 
-    const statusResult = this.applyStatus(actor, target, ability, currentRound);
+    const statusResult = damageResult.evaded && !noDirectDamage
+      ? this.emptyStatusResult('evade')
+      : this.applyStatus(actor, target, ability, currentRound, damageResult.damage);
     const rawRageGain = this.previewRawRageGain(ability, abilitySlot);
     const rageResult = applyRawRageGain(actor.ragePoints, rawRageGain);
     actor.ragePoints = rageResult.next;
@@ -196,19 +212,21 @@ export class SkillActionResolver {
   private applyDamage(
     actor: CombatUnitState,
     target: CombatUnitState,
-    power: number,
-    kind: 'skill' | 'ultimate',
-    abilityType: string
-  ): Pick<SkillActionResult, 'damage' | 'shieldDamage' | 'hpDamage' | 'identityMultiplier' | 'elementOutcome' | 'freezeShattered'> {
-    const normalizedType = String(abilityType || '').trim().toLowerCase();
+    ability: CombatAbility,
+    kind: 'skill' | 'ultimate'
+  ): Pick<SkillActionResult,
+    'damage' | 'shieldDamage' | 'hpDamage' | 'identityMultiplier' | 'elementOutcome' |
+    'freezeShattered' | 'crit' | 'evaded' | 'hitChance' | 'critChance' | 'mitigation'> {
+    const normalizedType = String(ability.type || '').trim().toLowerCase();
     const usesAttack = normalizedType === 'physical';
-    const offense = usesAttack
-      ? this.safeStat(actor.pow.attack, 1) * this.safeMultiplier(actor.attackMultiplier)
-      : this.safeStat(actor.pow.abilityPower, actor.pow.attack) * this.safeMultiplier(actor.abilityPowerMultiplier);
-    const defense = this.safeStat(target.pow.defense, 0) * this.safeMultiplier(target.defenseMultiplier);
-    const coefficient = Math.min(5, Math.max(0.1, this.safeStat(power, 100) / 100));
-    const identity = this.identity.evaluateDamage(actor, target, kind, abilityType);
-    const rawDamage = Math.max(1, offense * coefficient - defense * 0.35);
+    const coefficient = Math.min(5, Math.max(0.1, this.safeStat(ability.power, 100) / 100));
+    const identity = this.identity.evaluateDamage(actor, target, kind, ability.type);
+    const hit = this.legacyStats.resolveHit(actor, target, {
+      usesAttack,
+      ultimate: kind === 'ultimate',
+      unavoidable: Boolean(ability.unavoidable || ability.sureHit),
+      area: Boolean(ability.area)
+    });
     const frozen = target.controlStatus === 'freeze' && target.controlActionsRemaining > 0;
     const frostbitten = target.freezeStage === 2 && target.freezeStageActionsRemaining > 0;
     const vulnerability = frozen
@@ -216,9 +234,20 @@ export class SkillActionResolver {
       : frostbitten
         ? FROSTBITE_DAMAGE_MULTIPLIER
         : 1;
-    const damage = identity.totalMultiplier <= 0
+    const damage = !hit.hit || identity.totalMultiplier <= 0
       ? 0
-      : Math.max(1, Math.round(rawDamage * identity.totalMultiplier * vulnerability));
+      : Math.max(
+          1,
+          Math.round(
+            coefficient *
+            hit.offense *
+            (1 - hit.mitigation) *
+            identity.totalMultiplier *
+            hit.critMultiplier *
+            vulnerability *
+            (1 - hit.damageReduction)
+          )
+        );
     const shieldBefore = this.safeStat(target.shield, 0);
     const shieldDamage = Math.min(shieldBefore, damage);
     const hpDamage = Math.max(0, damage - shieldDamage);
@@ -234,7 +263,12 @@ export class SkillActionResolver {
       hpDamage,
       identityMultiplier: identity.totalMultiplier,
       elementOutcome: identity.outcome,
-      freezeShattered
+      freezeShattered,
+      crit: hit.crit,
+      evaded: hit.evaded,
+      hitChance: hit.hitChance,
+      critChance: hit.critChance,
+      mitigation: hit.mitigation
     };
   }
 
@@ -242,10 +276,12 @@ export class SkillActionResolver {
     actor: CombatUnitState,
     target: CombatUnitState,
     ability: CombatAbility,
-    currentRound: number
+    currentRound: number,
+    impactDamage: number
   ): StatusApplicationResult {
     const parsed = this.parseStatus(ability.status);
     const status = parsed.status;
+    const effectTarget = parsed.selfDirected ? actor : target;
     const supportMultiplier = this.identity.supportMultiplier(actor);
     const durationBonus = this.identity.statusDurationBonus(actor, status);
     let healed = 0;
@@ -266,20 +302,10 @@ export class SkillActionResolver {
       controlChance = roll.chance;
       controlRoll = roll.roll;
       if (roll.blockedByImmunity) {
-        statusLabel = 'control immune';
-        controlBlocked = true;
-        return {
-          healed, shieldGranted, statusLabel, targetSpeedChanged, cleansed, revived,
-          controlChance, controlRoll, controlApplied, controlMissed, controlBlocked, controlImmunityTriggered
-        };
+        return this.emptyStatusResult('control immune', { controlChance, controlRoll, controlBlocked: true });
       }
       if (!roll.success) {
-        statusLabel = 'control miss';
-        controlMissed = true;
-        return {
-          healed, shieldGranted, statusLabel, targetSpeedChanged, cleansed, revived,
-          controlChance, controlRoll, controlApplied, controlMissed, controlBlocked, controlImmunityTriggered
-        };
+        return this.emptyStatusResult('control miss', { controlChance, controlRoll, controlMissed: true });
       }
 
       controlApplied = true;
@@ -299,7 +325,7 @@ export class SkillActionResolver {
           break;
         case 'freeze':
           statusLabel = this.control.applyFreezeStage(target);
-          targetSpeedChanged = true;
+          targetSpeedChanged = target.instanceId !== actor.instanceId;
           break;
       }
 
@@ -312,7 +338,7 @@ export class SkillActionResolver {
       );
       if (controlImmunityTriggered) {
         statusLabel = 'control immunity';
-        targetSpeedChanged = true;
+        targetSpeedChanged = target.instanceId !== actor.instanceId;
       }
 
       return {
@@ -323,40 +349,96 @@ export class SkillActionResolver {
 
     switch (status) {
       case 'shield': {
-        shieldGranted = Math.max(1, Math.round(actor.pow.maxHp * 0.18 * supportMultiplier));
-        actor.shield = Math.min(actor.pow.maxHp * 3, actor.shield + shieldGranted);
+        const role = this.normalizedRole(effectTarget);
+        const capRatio = role.includes('do don') || role.includes('tank') ? 0.8 : 0.6;
+        const raw = effectTarget.pow.maxHp * 0.2 * supportMultiplier * this.legacyStats.shieldMultiplier(actor);
+        const cap = Math.max(1, Math.round(effectTarget.pow.maxHp * capRatio));
+        const before = effectTarget.shield;
+        effectTarget.shield = Math.min(cap, effectTarget.shield + Math.max(1, Math.round(raw)));
+        shieldGranted = Math.max(0, effectTarget.shield - before);
         break;
       }
       case 'regeneration': {
-        const missingHp = Math.max(0, actor.pow.maxHp - actor.hp);
-        healed = Math.min(missingHp, Math.max(1, Math.round(actor.pow.maxHp * 0.15 * supportMultiplier)));
-        actor.hp += healed;
+        healed = this.healTarget(actor, effectTarget, effectTarget.pow.maxHp * 0.1 * supportMultiplier);
+        effectTarget.regenerationActionsRemaining = Math.max(effectTarget.regenerationActionsRemaining, 2 + durationBonus);
         break;
       }
       case 'attack up':
-        actor.attackMultiplier = Math.max(actor.attackMultiplier, 1.2);
-        actor.attackBuffActionsRemaining = Math.max(actor.attackBuffActionsRemaining, 3 + durationBonus);
+        effectTarget.attackMultiplier = Math.max(effectTarget.attackMultiplier, 1.3);
+        effectTarget.attackBuffActionsRemaining = Math.max(effectTarget.attackBuffActionsRemaining, 3 + durationBonus);
         break;
       case 'ap up':
-        actor.abilityPowerMultiplier = Math.max(actor.abilityPowerMultiplier, 1.2);
-        actor.abilityPowerBuffActionsRemaining = Math.max(actor.abilityPowerBuffActionsRemaining, 3 + durationBonus);
+        effectTarget.abilityPowerMultiplier = Math.max(effectTarget.abilityPowerMultiplier, 1.3);
+        effectTarget.abilityPowerBuffActionsRemaining = Math.max(effectTarget.abilityPowerBuffActionsRemaining, 3 + durationBonus);
         break;
       case 'defense up':
-        actor.defenseMultiplier = Math.max(actor.defenseMultiplier, 1.2);
-        actor.defenseBuffActionsRemaining = Math.max(actor.defenseBuffActionsRemaining, 3 + durationBonus);
+        effectTarget.defenseMultiplier = Math.max(effectTarget.defenseMultiplier, 1.3);
+        effectTarget.defenseBuffActionsRemaining = Math.max(effectTarget.defenseBuffActionsRemaining, 3 + durationBonus);
+        break;
+      case 'speed up':
+        effectTarget.speedBuffActionsRemaining = Math.max(effectTarget.speedBuffActionsRemaining, 2 + durationBonus);
+        this.refreshSpeed(effectTarget);
+        targetSpeedChanged = effectTarget.instanceId === target.instanceId && target.instanceId !== actor.instanceId;
+        break;
+      case 'effect resist':
+        effectTarget.tenacityBonus = Math.max(effectTarget.tenacityBonus, 20);
+        effectTarget.tenacityBuffActionsRemaining = Math.max(effectTarget.tenacityBuffActionsRemaining, 2 + durationBonus);
+        break;
+      case 'guard':
+        effectTarget.damageReductionBonus = Math.max(effectTarget.damageReductionBonus, 0.25);
+        effectTarget.guardActionsRemaining = Math.max(effectTarget.guardActionsRemaining, 2 + durationBonus);
+        break;
+      case 'crit up':
+        effectTarget.critRateBonus = Math.max(effectTarget.critRateBonus, 15);
+        effectTarget.critBuffActionsRemaining = Math.max(effectTarget.critBuffActionsRemaining, 2 + durationBonus);
+        break;
+      case 'evasion up':
+        effectTarget.evasionBonus = Math.max(effectTarget.evasionBonus, 15);
+        effectTarget.evasionBuffActionsRemaining = Math.max(effectTarget.evasionBuffActionsRemaining, 2 + durationBonus);
         break;
       case 'rage gain':
         statusLabel = 'rage gain';
+        break;
+      case 'attack down':
+        target.attackMultiplier = Math.min(target.attackMultiplier, 0.8);
+        target.attackBuffActionsRemaining = Math.max(target.attackBuffActionsRemaining, 2 + durationBonus);
+        break;
+      case 'ap down':
+        target.abilityPowerMultiplier = Math.min(target.abilityPowerMultiplier, 0.8);
+        target.abilityPowerBuffActionsRemaining = Math.max(target.abilityPowerBuffActionsRemaining, 2 + durationBonus);
+        break;
+      case 'defense down':
+        target.defenseMultiplier = Math.min(target.defenseMultiplier, 0.8);
+        target.defenseBuffActionsRemaining = Math.max(target.defenseBuffActionsRemaining, 2 + durationBonus);
+        break;
+      case 'accuracy down':
+        target.accuracyBonus = Math.min(target.accuracyBonus, -20);
+        target.accuracyDebuffActionsRemaining = Math.max(target.accuracyDebuffActionsRemaining, 2 + durationBonus);
+        break;
+      case 'anti heal':
+        target.antiHeal = Math.max(target.antiHeal, 0.25);
+        target.antiHealActionsRemaining = Math.max(target.antiHealActionsRemaining, 2 + durationBonus);
         break;
       case 'cleanse':
       case 'purify': {
         const hadSpeedDebuff = target.speedDebuffActionsRemaining > 0 || target.freezeStage > 0;
         target.speedDebuffActionsRemaining = 0;
         this.control.clearHardControl(target);
+        target.burnDamage = 0;
+        target.burnActionsRemaining = 0;
+        target.poisonStacks = 0;
+        target.poisonActionsRemaining = 0;
         target.dotStatus = null;
         target.dotDamage = 0;
         target.dotActionsRemaining = 0;
-        targetSpeedChanged = hadSpeedDebuff;
+        target.antiHeal = 0;
+        target.antiHealActionsRemaining = 0;
+        if (target.attackMultiplier < 1) { target.attackMultiplier = 1; target.attackBuffActionsRemaining = 0; }
+        if (target.abilityPowerMultiplier < 1) { target.abilityPowerMultiplier = 1; target.abilityPowerBuffActionsRemaining = 0; }
+        if (target.defenseMultiplier < 1) { target.defenseMultiplier = 1; target.defenseBuffActionsRemaining = 0; }
+        if (target.accuracyBonus < 0) { target.accuracyBonus = 0; target.accuracyDebuffActionsRemaining = 0; }
+        targetSpeedChanged = hadSpeedDebuff && target.instanceId !== actor.instanceId;
+        this.refreshSpeed(target);
         cleansed = true;
         statusLabel = 'cleanse';
         break;
@@ -367,48 +449,43 @@ export class SkillActionResolver {
           target.hp = Math.max(1, Math.round(target.pow.maxHp * 0.35));
           target.ragePoints = Math.max(0, Math.floor(target.ragePoints));
           target.shield = 0;
-          target.speedBuffActionsRemaining = 0;
-          target.speedDebuffActionsRemaining = 0;
-          target.attackMultiplier = 1;
-          target.abilityPowerMultiplier = 1;
-          target.defenseMultiplier = 1;
-          target.attackBuffActionsRemaining = 0;
-          target.abilityPowerBuffActionsRemaining = 0;
-          target.defenseBuffActionsRemaining = 0;
-          target.controlImmunityActionsRemaining = 0;
-          target.controlHistory = [];
-          this.control.clearHardControl(target);
-          target.dotStatus = null;
-          target.dotDamage = 0;
-          target.dotActionsRemaining = 0;
+          this.resetRevivedEffects(target);
           target.reviveMarkerActionsRemaining = 1;
           target.actionLocked = false;
           target.alive = true;
           revived = true;
-          targetSpeedChanged = true;
+          targetSpeedChanged = target.instanceId !== actor.instanceId;
         }
         statusLabel = 'revive';
         break;
       }
-      case 'slow': {
-        const baseSpeed = Math.max(1, this.safeStat(target.pow.speed, 1));
-        let multiplier = 0.8;
-        if (target.freezeStage === 1 && target.freezeStageActionsRemaining > 0) multiplier *= 0.9;
-        if (target.freezeStage === 2 && target.freezeStageActionsRemaining > 0) multiplier *= 0.8;
-        target.speed = Math.max(1, baseSpeed * multiplier);
+      case 'slow':
         target.speedDebuffActionsRemaining = Math.max(target.speedDebuffActionsRemaining, 2 + durationBonus);
-        targetSpeedChanged = true;
+        this.refreshSpeed(target);
+        targetSpeedChanged = target.instanceId !== actor.instanceId;
+        break;
+      case 'burn': {
+        const seed = impactDamage > 0
+          ? impactDamage
+          : this.safeStat(actor.pow.abilityPower, actor.pow.attack) * 0.5;
+        const tick = Math.max(1, Math.min(
+          Math.round(target.pow.maxHp * 0.12),
+          Math.round(seed * 0.3)
+        ));
+        target.burnDamage = Math.max(target.burnDamage, tick);
+        target.burnActionsRemaining = Math.max(target.burnActionsRemaining, 2 + durationBonus);
+        target.dotStatus = 'burn';
+        target.dotDamage = target.burnDamage;
+        target.dotActionsRemaining = target.burnActionsRemaining;
         break;
       }
-      case 'burn':
-      case 'poison': {
-        const abilityPower = this.safeStat(actor.pow.abilityPower, actor.pow.attack) * this.safeMultiplier(actor.abilityPowerMultiplier);
-        const dotDamage = Math.max(1, Math.round(abilityPower * 0.18));
-        target.dotStatus = status as DotStatus;
-        target.dotDamage = Math.max(target.dotDamage, dotDamage);
-        target.dotActionsRemaining = Math.max(target.dotActionsRemaining, 2 + durationBonus);
+      case 'poison':
+        target.poisonStacks = Math.min(3, Math.max(1, target.poisonStacks + 1));
+        target.poisonActionsRemaining = Math.max(target.poisonActionsRemaining, 2 + durationBonus);
+        target.dotStatus = 'poison';
+        target.dotDamage = Math.max(1, Math.round(target.pow.maxHp * 0.02 * target.poisonStacks));
+        target.dotActionsRemaining = target.poisonActionsRemaining;
         break;
-      }
       case '':
         statusLabel = null;
         break;
@@ -419,6 +496,85 @@ export class SkillActionResolver {
     return {
       healed, shieldGranted, statusLabel, targetSpeedChanged, cleansed, revived,
       controlChance, controlRoll, controlApplied, controlMissed, controlBlocked, controlImmunityTriggered
+    };
+  }
+
+  private healTarget(source: CombatUnitState, target: CombatUnitState, rawAmount: number): number {
+    const poisonAntiHeal = Math.min(0.4, Math.max(0, target.poisonStacks) * 0.06);
+    const antiHeal = Math.min(0.4, Math.max(0, target.antiHeal) + poisonAntiHeal);
+    const boosted = Math.max(0, rawAmount) * this.legacyStats.healMultiplier(source);
+    const amount = Math.min(
+      Math.round(target.pow.maxHp * 0.35),
+      Math.max(0, Math.round(boosted * (1 - antiHeal)))
+    );
+    const missing = Math.max(0, target.pow.maxHp - target.hp);
+    const healed = Math.min(missing, amount);
+    target.hp += healed;
+    return healed;
+  }
+
+  private resetRevivedEffects(target: CombatUnitState): void {
+    target.speedBuffActionsRemaining = 0;
+    target.speedDebuffActionsRemaining = 0;
+    target.attackMultiplier = 1;
+    target.abilityPowerMultiplier = 1;
+    target.defenseMultiplier = 1;
+    target.attackBuffActionsRemaining = 0;
+    target.abilityPowerBuffActionsRemaining = 0;
+    target.defenseBuffActionsRemaining = 0;
+    target.critRateBonus = 0;
+    target.critBuffActionsRemaining = 0;
+    target.evasionBonus = 0;
+    target.evasionBuffActionsRemaining = 0;
+    target.accuracyBonus = 0;
+    target.accuracyDebuffActionsRemaining = 0;
+    target.tenacityBonus = 0;
+    target.tenacityBuffActionsRemaining = 0;
+    target.damageReductionBonus = 0;
+    target.guardActionsRemaining = 0;
+    target.antiHeal = 0;
+    target.antiHealActionsRemaining = 0;
+    target.regenerationActionsRemaining = 0;
+    target.controlImmunityActionsRemaining = 0;
+    target.controlHistory = [];
+    this.control.clearHardControl(target);
+    target.burnDamage = 0;
+    target.burnActionsRemaining = 0;
+    target.poisonStacks = 0;
+    target.poisonActionsRemaining = 0;
+    target.dotStatus = null;
+    target.dotDamage = 0;
+    target.dotActionsRemaining = 0;
+    this.refreshSpeed(target);
+  }
+
+  private refreshSpeed(target: CombatUnitState): void {
+    let multiplier = 1;
+    if (target.speedBuffActionsRemaining > 0) multiplier *= 1.2;
+    if (target.speedDebuffActionsRemaining > 0) multiplier *= 0.8;
+    if (target.freezeStage === 1 && target.freezeStageActionsRemaining > 0) multiplier *= 0.9;
+    if (target.freezeStage === 2 && target.freezeStageActionsRemaining > 0) multiplier *= 0.8;
+    target.speed = Math.max(1, this.safeStat(target.pow.speed, 1) * multiplier);
+  }
+
+  private emptyStatusResult(
+    statusLabel: string | null = null,
+    overrides: Partial<StatusApplicationResult> = {}
+  ): StatusApplicationResult {
+    return {
+      healed: 0,
+      shieldGranted: 0,
+      statusLabel,
+      targetSpeedChanged: false,
+      cleansed: false,
+      revived: false,
+      controlChance: null,
+      controlRoll: null,
+      controlApplied: false,
+      controlMissed: false,
+      controlBlocked: false,
+      controlImmunityTriggered: false,
+      ...overrides
     };
   }
 
@@ -444,8 +600,11 @@ export class SkillActionResolver {
     return { status: label.toLowerCase(), selfDirected, label: label || null };
   }
 
-  private safeMultiplier(value: number): number {
-    return Number.isFinite(value) ? Math.min(10, Math.max(0.1, value)) : 1;
+  private normalizedRole(unit: CombatUnitState): string {
+    return String(unit.pow.role || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
   }
 
   private safeStat(value: number, fallback: number): number {

@@ -33,6 +33,20 @@ export interface CombatUnitState {
   attackBuffActionsRemaining: number;
   abilityPowerBuffActionsRemaining: number;
   defenseBuffActionsRemaining: number;
+  /** Legacy secondary-stat runtime modifiers restored in Combat 2.6. */
+  critRateBonus: number;
+  critBuffActionsRemaining: number;
+  evasionBonus: number;
+  evasionBuffActionsRemaining: number;
+  accuracyBonus: number;
+  accuracyDebuffActionsRemaining: number;
+  tenacityBonus: number;
+  tenacityBuffActionsRemaining: number;
+  damageReductionBonus: number;
+  guardActionsRemaining: number;
+  antiHeal: number;
+  antiHealActionsRemaining: number;
+  regenerationActionsRemaining: number;
   /** Future own turns before Skill I/II become usable again. */
   skillCooldownActionsRemaining: [number, number];
   /** Future own turns before Ultimate becomes usable again. Rage is still required. */
@@ -47,9 +61,14 @@ export interface CombatUnitState {
   freezeStageActionsRemaining: number;
   controlImmunityActionsRemaining: number;
   controlHistory: ControlHistoryEntry[];
+  /** Compatibility DOT summary; dedicated Burn/Poison state below is authoritative in 2.6+. */
   dotStatus: DotStatus;
   dotDamage: number;
   dotActionsRemaining: number;
+  burnDamage: number;
+  burnActionsRemaining: number;
+  poisonStacks: number;
+  poisonActionsRemaining: number;
   passiveUsed: boolean;
   reviveMarkerActionsRemaining: number;
   alive: boolean;
@@ -143,7 +162,7 @@ export class CombatState {
     for (const unit of this.units) {
       unit.hp = this.finiteClamp(unit.hp, 0, unit.pow.maxHp, 0);
       unit.ragePoints = sanitizeRagePoints(unit.ragePoints);
-      unit.shield = this.finiteClamp(unit.shield, 0, unit.pow.maxHp * 3, 0);
+      unit.shield = this.finiteClamp(unit.shield, 0, unit.pow.maxHp * 0.8, 0);
       unit.speed = this.finiteClamp(unit.speed, 1, 9999, unit.pow.speed);
       unit.speedBuffActionsRemaining = this.safeDuration(unit.speedBuffActionsRemaining);
       unit.speedDebuffActionsRemaining = this.safeDuration(unit.speedDebuffActionsRemaining);
@@ -153,6 +172,19 @@ export class CombatState {
       unit.attackBuffActionsRemaining = this.safeDuration(unit.attackBuffActionsRemaining);
       unit.abilityPowerBuffActionsRemaining = this.safeDuration(unit.abilityPowerBuffActionsRemaining);
       unit.defenseBuffActionsRemaining = this.safeDuration(unit.defenseBuffActionsRemaining);
+      unit.critRateBonus = this.finiteClamp(unit.critRateBonus, -100, 100, 0);
+      unit.critBuffActionsRemaining = this.safeDuration(unit.critBuffActionsRemaining);
+      unit.evasionBonus = this.finiteClamp(unit.evasionBonus, -75, 75, 0);
+      unit.evasionBuffActionsRemaining = this.safeDuration(unit.evasionBuffActionsRemaining);
+      unit.accuracyBonus = this.finiteClamp(unit.accuracyBonus, -100, 100, 0);
+      unit.accuracyDebuffActionsRemaining = this.safeDuration(unit.accuracyDebuffActionsRemaining);
+      unit.tenacityBonus = this.finiteClamp(unit.tenacityBonus, -60, 60, 0);
+      unit.tenacityBuffActionsRemaining = this.safeDuration(unit.tenacityBuffActionsRemaining);
+      unit.damageReductionBonus = this.finiteClamp(unit.damageReductionBonus, 0, 0.45, 0);
+      unit.guardActionsRemaining = this.safeDuration(unit.guardActionsRemaining);
+      unit.antiHeal = this.finiteClamp(unit.antiHeal, 0, 0.4, 0);
+      unit.antiHealActionsRemaining = this.safeDuration(unit.antiHealActionsRemaining);
+      unit.regenerationActionsRemaining = this.safeDuration(unit.regenerationActionsRemaining);
       unit.skillCooldownActionsRemaining = [
         this.safeDuration(unit.skillCooldownActionsRemaining?.[0] ?? 0),
         this.safeDuration(unit.skillCooldownActionsRemaining?.[1] ?? 0)
@@ -166,6 +198,10 @@ export class CombatState {
       unit.freezeStageActionsRemaining = this.safeDuration(unit.freezeStageActionsRemaining);
       unit.controlImmunityActionsRemaining = this.safeDuration(unit.controlImmunityActionsRemaining);
       unit.controlHistory = this.sanitizeControlHistory(unit.controlHistory);
+      unit.burnDamage = Math.floor(this.finiteClamp(unit.burnDamage, 0, unit.pow.maxHp, 0));
+      unit.burnActionsRemaining = this.safeDuration(unit.burnActionsRemaining);
+      unit.poisonStacks = Math.floor(this.finiteClamp(unit.poisonStacks, 0, 3, 0));
+      unit.poisonActionsRemaining = this.safeDuration(unit.poisonActionsRemaining);
       unit.dotDamage = Math.floor(this.finiteClamp(unit.dotDamage, 0, unit.pow.maxHp, 0));
       unit.dotActionsRemaining = this.safeDuration(unit.dotActionsRemaining);
       unit.reviveMarkerActionsRemaining = this.safeDuration(unit.reviveMarkerActionsRemaining);
@@ -180,7 +216,24 @@ export class CombatState {
         unit.freezeStage = 0;
         unit.freezeStageActionsRemaining = 0;
       }
-      if (unit.dotActionsRemaining <= 0 || unit.dotDamage <= 0) {
+      if (unit.burnActionsRemaining <= 0 || unit.burnDamage <= 0) {
+        unit.burnDamage = 0;
+        unit.burnActionsRemaining = 0;
+      }
+      if (unit.poisonActionsRemaining <= 0 || unit.poisonStacks <= 0) {
+        unit.poisonStacks = 0;
+        unit.poisonActionsRemaining = 0;
+      }
+      // Legacy summary remains populated for old UI/tests that still inspect it.
+      if (unit.poisonActionsRemaining > 0) {
+        unit.dotStatus = 'poison';
+        unit.dotDamage = Math.max(1, Math.round(unit.pow.maxHp * 0.02 * unit.poisonStacks));
+        unit.dotActionsRemaining = unit.poisonActionsRemaining;
+      } else if (unit.burnActionsRemaining > 0) {
+        unit.dotStatus = 'burn';
+        unit.dotDamage = unit.burnDamage;
+        unit.dotActionsRemaining = unit.burnActionsRemaining;
+      } else {
         unit.dotStatus = null;
         unit.dotDamage = 0;
         unit.dotActionsRemaining = 0;
@@ -205,30 +258,51 @@ export class CombatState {
       fallen.hp = Math.max(1, Math.round(fallen.pow.maxHp * 0.3));
       fallen.ragePoints = sanitizeRagePoints(fallen.ragePoints);
       fallen.shield = 0;
-      fallen.controlStatus = null;
-      fallen.controlActionsRemaining = 0;
-      fallen.silenceActionsRemaining = 0;
-      fallen.paralysisActionsRemaining = 0;
-      fallen.freezeStage = 0;
-      fallen.freezeStageActionsRemaining = 0;
-      fallen.controlImmunityActionsRemaining = 0;
-      fallen.controlHistory = [];
-      fallen.dotStatus = null;
-      fallen.dotDamage = 0;
-      fallen.dotActionsRemaining = 0;
-      fallen.speedDebuffActionsRemaining = 0;
-      fallen.speedBuffActionsRemaining = 0;
-      fallen.speed = Math.max(1, fallen.pow.speed);
-      fallen.attackMultiplier = 1;
-      fallen.abilityPowerMultiplier = 1;
-      fallen.defenseMultiplier = 1;
-      fallen.attackBuffActionsRemaining = 0;
-      fallen.abilityPowerBuffActionsRemaining = 0;
-      fallen.defenseBuffActionsRemaining = 0;
+      this.resetRuntimeEffects(fallen);
       fallen.reviveMarkerActionsRemaining = 1;
       fallen.actionLocked = false;
       fallen.alive = true;
     }
+  }
+
+  resetRuntimeEffects(unit: CombatUnitState): void {
+    unit.controlStatus = null;
+    unit.controlActionsRemaining = 0;
+    unit.silenceActionsRemaining = 0;
+    unit.paralysisActionsRemaining = 0;
+    unit.freezeStage = 0;
+    unit.freezeStageActionsRemaining = 0;
+    unit.controlImmunityActionsRemaining = 0;
+    unit.controlHistory = [];
+    unit.dotStatus = null;
+    unit.dotDamage = 0;
+    unit.dotActionsRemaining = 0;
+    unit.burnDamage = 0;
+    unit.burnActionsRemaining = 0;
+    unit.poisonStacks = 0;
+    unit.poisonActionsRemaining = 0;
+    unit.speedDebuffActionsRemaining = 0;
+    unit.speedBuffActionsRemaining = 0;
+    unit.speed = Math.max(1, unit.pow.speed);
+    unit.attackMultiplier = 1;
+    unit.abilityPowerMultiplier = 1;
+    unit.defenseMultiplier = 1;
+    unit.attackBuffActionsRemaining = 0;
+    unit.abilityPowerBuffActionsRemaining = 0;
+    unit.defenseBuffActionsRemaining = 0;
+    unit.critRateBonus = 0;
+    unit.critBuffActionsRemaining = 0;
+    unit.evasionBonus = 0;
+    unit.evasionBuffActionsRemaining = 0;
+    unit.accuracyBonus = 0;
+    unit.accuracyDebuffActionsRemaining = 0;
+    unit.tenacityBonus = 0;
+    unit.tenacityBuffActionsRemaining = 0;
+    unit.damageReductionBonus = 0;
+    unit.guardActionsRemaining = 0;
+    unit.antiHeal = 0;
+    unit.antiHealActionsRemaining = 0;
+    unit.regenerationActionsRemaining = 0;
   }
 
   private makeUnits(team: CombatPow[], side: CombatSide): CombatUnitState[] {
@@ -250,6 +324,19 @@ export class CombatState {
       attackBuffActionsRemaining: 0,
       abilityPowerBuffActionsRemaining: 0,
       defenseBuffActionsRemaining: 0,
+      critRateBonus: 0,
+      critBuffActionsRemaining: 0,
+      evasionBonus: 0,
+      evasionBuffActionsRemaining: 0,
+      accuracyBonus: 0,
+      accuracyDebuffActionsRemaining: 0,
+      tenacityBonus: 0,
+      tenacityBuffActionsRemaining: 0,
+      damageReductionBonus: 0,
+      guardActionsRemaining: 0,
+      antiHeal: 0,
+      antiHealActionsRemaining: 0,
+      regenerationActionsRemaining: 0,
       skillCooldownActionsRemaining: [0, 0],
       ultimateCooldownActionsRemaining: 0,
       effectAccuracyBonus: 0,
@@ -264,6 +351,10 @@ export class CombatState {
       dotStatus: null,
       dotDamage: 0,
       dotActionsRemaining: 0,
+      burnDamage: 0,
+      burnActionsRemaining: 0,
+      poisonStacks: 0,
+      poisonActionsRemaining: 0,
       passiveUsed: false,
       reviveMarkerActionsRemaining: 0,
       alive: pow.hp > 0,
