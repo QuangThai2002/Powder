@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { BattleScene } from './scenes/BattleScene';
 import { runCombat2SmokeRegression } from './systems/CombatRegression';
+import { runCombatGuardRegression } from './systems/CombatGuardRegression';
 import { runCombatRageRegression } from './systems/CombatRageRegression';
 import { runCombatSpecialSupportRegression } from './systems/CombatSpecialSupportRegression';
 
@@ -44,7 +45,8 @@ if (isLocalDev) {
       const report = runCombat2SmokeRegression();
       const specialSupport = runCombatSpecialSupportRegression();
       const rage = runCombatRageRegression();
-      console.info('[Combat2 Regression PASS]', { ...report, specialSupport, rage });
+      const guard = runCombatGuardRegression();
+      console.info('[Combat2 Regression PASS]', { ...report, specialSupport, rage, guard });
     } catch (error) {
       console.error('[Combat2 Regression FAIL - NON BLOCKING]', error);
     }
