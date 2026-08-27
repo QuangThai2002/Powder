@@ -221,6 +221,17 @@ function installMarkTickPatch(TurnManagerClass: any): void {
   };
 }
 
+function installStateResetPatch(CombatStateClass: any): void {
+  const proto = CombatStateClass.prototype as any;
+  const originalReset = proto.resetRuntimeEffects;
+  if (typeof originalReset !== 'function') return;
+
+  proto.resetRuntimeEffects = function patchedRoleMarkReset(unit: CombatUnitState): void {
+    originalReset.call(this, unit);
+    engine.clearMarks(unit);
+  };
+}
+
 function installMarkPresentationPatch(PowViewClass: any): void {
   const proto = PowViewClass.prototype as any;
   const originalStatus = proto.getRuntimeStatus;
@@ -277,6 +288,7 @@ export function installCombat282LegacyRoleCompletionPatch(
   BattleSceneClass: any,
   SkillActionResolverClass: any,
   TurnManagerClass: any,
+  CombatStateClass: any,
   PowViewClass: any
 ): void {
   const root = globalThis as any;
@@ -286,6 +298,7 @@ export function installCombat282LegacyRoleCompletionPatch(
   installRoleCastPatch(BattleSceneClass);
   installRoleAiPatch(BattleSceneClass);
   installMarkTickPatch(TurnManagerClass);
+  installStateResetPatch(CombatStateClass);
   installMarkPresentationPatch(PowViewClass);
   installIntroPatch(BattleSceneClass);
 }
