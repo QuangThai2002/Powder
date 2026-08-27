@@ -14,6 +14,7 @@ import {
   FROSTBITE_DAMAGE_MULTIPLIER,
   FREEZE_SHATTER_MULTIPLIER
 } from '../systems/CombatControlEngine';
+import { CombatGuardEngine } from '../systems/CombatGuardEngine';
 import { CombatState, type CombatUnitState } from '../systems/CombatState';
 import { ACTION_BASE_RAW_GAIN, ULTIMATE_RAGE_COST } from '../systems/CombatRageEngine';
 import { SkillActionResolver, type CombatAbilitySlot, type CombatSkillSlot } from '../systems/SkillActionResolver';
@@ -50,6 +51,7 @@ export class BattleScene extends Phaser.Scene {
   private actionPipeline!: ActionPipeline;
   private basicAttack!: BasicAttackResolver;
   private skillActions!: SkillActionResolver;
+  private guard!: CombatGuardEngine;
   private presentation!: CombatPresentationDirector;
   private readonly powViews = new Map<string, PowView>();
   private roundText!: Phaser.GameObjects.Text;
@@ -81,6 +83,7 @@ export class BattleScene extends Phaser.Scene {
     this.actionPipeline = new ActionPipeline(this.turnManager);
     this.basicAttack = new BasicAttackResolver(Math.random);
     this.skillActions = new SkillActionResolver(Math.random);
+    this.guard = new CombatGuardEngine(Math.random);
     this.presentation = new CombatPresentationDirector(this);
     this.cameras.main.setBackgroundColor('#06111c');
     this.createBattlefield(width, height);
@@ -107,7 +110,7 @@ export class BattleScene extends Phaser.Scene {
     const shade = this.add.rectangle(width / 2, height / 2, width, height, 0x02080e, 0.46);
     const plateWidth = Math.min(portrait ? 650 : 720, width * 0.8);
     const plate = this.add.rectangle(width / 2, height / 2, plateWidth, 118, 0x081d2a, 0.96).setStrokeStyle(2, 0xd7b86c, 0.78);
-    const title = this.add.text(width / 2, height / 2, 'POWDER COMBAT 2.6.0', {
+    const title = this.add.text(width / 2, height / 2, 'POWDER COMBAT 2.6.1', {
       fontFamily: COMBAT_DISPLAY_FONT, fontSize: portrait ? '34px' : '36px', color: '#fff6df', fontStyle: 'bold'
     }).setOrigin(0.5);
     const intro = this.add.container(0, 0, [shade, plate, title]).setDepth(100);
@@ -356,11 +359,17 @@ export class BattleScene extends Phaser.Scene {
     else void this.performAbility(actor, target, action);
   }
 
-  private async performBasicAttack(actor: CombatUnitState, target: CombatUnitState): Promise<void> {
+  private async performBasicAttack(actor: CombatUnitState, requestedTarget: CombatUnitState): Promise<void> {
     const actorView = this.powViews.get(actor.instanceId);
-    const targetView = this.powViews.get(target.instanceId);
     const completed = await this.actionPipeline.execute(actor.instanceId, async () => {
       actorView?.setActiveTurn(false);
+      const guard = this.guard.resolve(actor, requestedTarget, actor.pow.abilities.basic, this.combatState.activeLiving(requestedTarget.side));
+      const target = guard.target;
+      const targetView = this.powViews.get(target.instanceId);
+      if (guard.guarded && targetView) {
+        this.showFloatingLabel(targetView, `BẢO HỘ CHO ${requestedTarget.pow.name.toUpperCase()}`, '#90d8ff');
+        await this.wait(150);
+      }
       this.showActionBanner(actorView, actor.pow.abilities.basic.name, '#8eeaff');
       if (actorView && targetView) { const p = targetView.getWorldPosition(); await actorView.playAttackLunge(p.x, p.y); }
       const result = this.basicAttack.resolve(actor, target);
@@ -381,13 +390,21 @@ export class BattleScene extends Phaser.Scene {
     if (completed === null) this.recoverTurnFlow(); else this.afterAction();
   }
 
-  private async performAbility(actor: CombatUnitState, target: CombatUnitState, slot: CombatAbilitySlot): Promise<void> {
+  private async performAbility(actor: CombatUnitState, requestedTarget: CombatUnitState, slot: CombatAbilitySlot): Promise<void> {
     const actorView = this.powViews.get(actor.instanceId);
-    const targetView = this.powViews.get(target.instanceId);
     const ability = slot === 'ultimate' ? actor.pow.abilities.ultimate : actor.pow.abilities.skills[slot];
-    const selfTargeted = actor.instanceId === target.instanceId;
     const completed = await this.actionPipeline.execute(actor.instanceId, async () => {
       actorView?.setActiveTurn(false);
+      const guard = requestedTarget.side !== actor.side
+        ? this.guard.resolve(actor, requestedTarget, ability, this.combatState.activeLiving(requestedTarget.side))
+        : { target: requestedTarget, guarded: false };
+      const target = guard.target;
+      const targetView = this.powViews.get(target.instanceId);
+      const selfTargeted = actor.instanceId === target.instanceId;
+      if (guard.guarded && targetView) {
+        this.showFloatingLabel(targetView, `BẢO HỘ CHO ${requestedTarget.pow.name.toUpperCase()}`, '#90d8ff');
+        await this.wait(150);
+      }
       if (slot === 'ultimate') {
         this.roundText.setVisible(false); this.turnText.setVisible(false);
         try { await this.presentation.playUltimateIntro(actorView, ability, actor.side, actor.pow.elementKey); }

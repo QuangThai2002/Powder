@@ -34,6 +34,9 @@ interface CatalogAbility {
   area?: boolean;
   sureHit?: boolean;
   unavoidable?: boolean;
+  bypassGuard?: boolean;
+  pierceGuard?: boolean;
+  bypassFront?: boolean;
 }
 interface CatalogPassive { id?: string; name?: string; element?: string; }
 interface CatalogAbilities {
@@ -335,6 +338,9 @@ function normalizeAbility(
     ...(ability?.area ? { area: true } : {}),
     ...(ability?.sureHit ? { sureHit: true } : {}),
     ...(ability?.unavoidable ? { unavoidable: true } : {}),
+    ...(ability?.bypassGuard ? { bypassGuard: true } : {}),
+    ...(ability?.pierceGuard ? { pierceGuard: true } : {}),
+    ...(ability?.bypassFront ? { bypassFront: true } : {}),
     ...canonicalSkillVisual(standardSkillIndex(pow.rosterOrder, abilityOffset))
   };
 }

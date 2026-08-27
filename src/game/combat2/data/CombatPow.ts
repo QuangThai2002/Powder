@@ -24,6 +24,9 @@ export interface CombatAbility {
   area?: boolean;
   sureHit?: boolean;
   unavoidable?: boolean;
+  bypassGuard?: boolean;
+  pierceGuard?: boolean;
+  bypassFront?: boolean;
   iconKey?: string;
   iconUrl?: string;
 }
