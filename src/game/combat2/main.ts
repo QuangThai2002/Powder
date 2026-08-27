@@ -3,6 +3,7 @@ import { BattleScene } from './scenes/BattleScene';
 import { runCombat2SmokeRegression } from './systems/CombatRegression';
 import { CombatGuardEngine } from './systems/CombatGuardEngine';
 import { runCombatGuardRegression } from './systems/CombatGuardRegression';
+import { runCombatLegacyDomainParityRegression } from './systems/CombatLegacyDomainParityRegression';
 import { runCombatLegacyDomainRegression } from './systems/CombatLegacyDomainRegression';
 import { runCombatLegacyDomainSpecialRegression } from './systems/CombatLegacyDomainSpecialRegression';
 import { runCombatLegacyRoleRegression } from './systems/CombatLegacyRoleRegression';
@@ -17,7 +18,8 @@ import { installCombat291LegacyDomainHardeningPatch } from './views/Combat291Leg
 import { installCombat292LegacyAbilityMetadataPatch } from './views/Combat292LegacyAbilityMetadataPatch';
 import { installCombat293LegacyDomainTickPatch } from './views/Combat293LegacyDomainTickPatch';
 import { installCombat294DomainControlsPatch } from './views/Combat294DomainControlsPatch';
-import { installCombat294VersionPatch } from './views/Combat294VersionPatch';
+import { installCombat295LegacyDomainParityPatch } from './views/Combat295LegacyDomainParityPatch';
+import { installCombat295VersionPatch } from './views/Combat295VersionPatch';
 import { PowView } from './views/PowView';
 
 const logicalWidth = 1600;
@@ -34,7 +36,8 @@ installCombat291LegacyDomainHardeningPatch();
 installCombat292LegacyAbilityMetadataPatch(BattleScene);
 installCombat293LegacyDomainTickPatch(BattleScene);
 installCombat294DomainControlsPatch(BattleScene);
-installCombat294VersionPatch(BattleScene);
+installCombat295LegacyDomainParityPatch();
+installCombat295VersionPatch(BattleScene);
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -77,6 +80,7 @@ if (isLocalDev) {
       const legacyRole = runCombatLegacyRoleRegression();
       const legacyDomain = runCombatLegacyDomainRegression();
       const legacyDomainSpecial = runCombatLegacyDomainSpecialRegression();
+      const legacyDomainParity = runCombatLegacyDomainParityRegression();
       console.info('[Combat2 Regression PASS]', {
         ...report,
         specialSupport,
@@ -85,7 +89,8 @@ if (isLocalDev) {
         multiTarget,
         legacyRole,
         legacyDomain,
-        legacyDomainSpecial
+        legacyDomainSpecial,
+        legacyDomainParity
       });
     } catch (error) {
       console.error('[Combat2 Regression FAIL - NON BLOCKING]', error);
