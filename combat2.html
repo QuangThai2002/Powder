@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <meta name="powder-combat-version" content="2.9.6" />
+  <meta name="powder-combat-version" content="2.9.7" />
   <meta name="powder-combat-resource-system" content="rage-points-v1" />
-  <meta name="powder-combat-effects" content="legacy-core-v2+cc-2.5.1+guard-2.6.1+shared-overlay-2.7.1+elemental-ult-ready+legacy-multitarget-2.8.0+legacy-role-row-2.8.1+legacy-domain-v15-2.9.6" />
+  <meta name="powder-combat-effects" content="legacy-core-v2+cc-2.5.1+guard-2.6.1+shared-overlay-2.7.1+elemental-ult-ready+legacy-multitarget-2.8.0+legacy-role-row-2.8.1+legacy-domain-v15-2.9.6+vite-launch-guard-2.9.7" />
   <meta name="theme-color" content="#050c15" />
-  <title>Powder Combat 2.9.6</title>
+  <title>Powder Combat 2.9.7</title>
   <style>
     * { box-sizing: border-box; }
     html, body {
@@ -27,6 +27,22 @@
     #powder-combat2 canvas {
       display: block; margin: 0 auto; max-width: 100%; max-height: 100%; touch-action: none;
     }
+    #combat2-launch-guard {
+      position: fixed; inset: 0; z-index: 10000; display: none; place-items: center; padding: 24px;
+      background: radial-gradient(circle at 50% 28%, rgba(29,77,105,.58), rgba(5,12,21,.98) 54%, #03070d 100%);
+      color: #eefaff; text-align: center;
+    }
+    #combat2-launch-guard.show { display: grid; }
+    #combat2-launch-guard .card {
+      width: min(680px, 92vw); padding: 28px; border-radius: 20px;
+      border: 1px solid rgba(120,218,255,.38); background: rgba(4,18,29,.94);
+      box-shadow: 0 24px 80px rgba(0,0,0,.42), inset 0 0 36px rgba(80,190,240,.05);
+    }
+    #combat2-launch-guard b { display: block; font-size: 13px; letter-spacing: .12em; color: #8fe7ff; margin-bottom: 8px; }
+    #combat2-launch-guard h1 { margin: 0 0 12px; font-size: clamp(24px, 4vw, 38px); }
+    #combat2-launch-guard p { margin: 8px auto; max-width: 570px; color: #b7ceda; line-height: 1.55; }
+    #combat2-launch-guard code { display: block; margin: 16px auto; padding: 12px 14px; border-radius: 10px; background: #07131f; color: #ffe2a2; font-family: Consolas, monospace; user-select: text; }
+    #combat2-launch-guard a { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; margin-top: 6px; padding: 0 16px; border-radius: 10px; border: 1px solid rgba(120,218,255,.45); background: rgba(72,181,226,.14); color: #dff8ff; text-decoration: none; font-weight: 800; }
     #orientation-guard {
       display: none;
       position: fixed; inset: 0; z-index: 9999;
@@ -69,6 +85,16 @@
 </head>
 <body>
   <div id="powder-combat2"></div>
+  <div id="combat2-launch-guard" aria-live="assertive">
+    <div class="card">
+      <b>POWDER COMBAT 2.9.7 · KHỞI ĐỘNG SAI SERVER</b>
+      <h1>Combat2 cần chạy bằng Vite</h1>
+      <p>Live Server chỉ phục vụ file tĩnh nên không biên dịch TypeScript và không thể nạp package Phaser. Vì vậy Combat2 trước đây chỉ hiện nền tối.</p>
+      <code>npm run dev</code>
+      <p>Sau đó mở Combat2 ở cổng Vite:</p>
+      <a id="combat2-vite-link" href="http://127.0.0.1:5173/combat2.html">Mở http://127.0.0.1:5173/combat2.html</a>
+    </div>
+  </div>
   <div id="orientation-guard" aria-hidden="true">
     <div class="guard-card">
       <div class="phone"></div>
@@ -76,6 +102,20 @@
       <span>Combat được tối ưu theo khung 16:9 để Pow, kỹ năng và thanh trạng thái không chồng lên nhau.</span>
     </div>
   </div>
-  <script type="module" src="/src/game/combat2/bootstrap.ts"></script>
+  <script>
+    (() => {
+      const staticPorts = new Set(['5500', '5501']);
+      const wrongServer = staticPorts.has(location.port) || location.protocol === 'file:';
+      if (!wrongServer) return;
+      const guard = document.getElementById('combat2-launch-guard');
+      guard?.classList.add('show');
+      document.documentElement.dataset.combat2LaunchBlocked = 'static-server';
+      window.POWDER_COMBAT2_LAUNCH_GUARD = { version: '2.9.7', blocked: true, reason: 'vite-required', current: location.href };
+    })();
+  </script>
+  <script type="module">
+    const blocked = document.documentElement.dataset.combat2LaunchBlocked === 'static-server';
+    if (!blocked) import('/src/game/combat2/bootstrap.ts');
+  </script>
 </body>
 </html>
