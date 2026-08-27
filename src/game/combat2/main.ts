@@ -24,6 +24,9 @@ import { installCombat296VersionPatch } from './views/Combat296VersionPatch';
 import { installCombat298ActionChoreographyPatch } from './views/Combat298ActionChoreographyPatch';
 import { installCombat299StatusVisualPatch } from './views/Combat299StatusVisualPatch';
 import { installCombat2100ReserveFlowPatch } from './views/Combat2100ReserveFlowPatch';
+import { CombatPresentationDirector } from './views/CombatPresentationDirector';
+import { installCombat2101UltimateCinematicPatch } from './views/Combat2101UltimateCinematicPatch';
+import { installCombat2101VersionPatch } from './views/Combat2101VersionPatch';
 import { PowView } from './views/PowView';
 
 const logicalWidth = 1600;
@@ -51,6 +54,8 @@ installCombat296VersionPatch(BattleScene);
 installCombat298ActionChoreographyPatch(BattleScene, PowView);
 installCombat299StatusVisualPatch(BattleScene, PowView);
 installCombat2100ReserveFlowPatch(BattleScene, PowView);
+installCombat2101UltimateCinematicPatch(CombatPresentationDirector);
+installCombat2101VersionPatch(BattleScene);
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -107,7 +112,8 @@ if (isLocalDev) {
         roster: testRosterReport,
         actionFx: (globalThis as any).POWDER_COMBAT2_ACTION_FX?.version ?? 'missing',
         statusFx: (globalThis as any).POWDER_COMBAT2_STATUS_FX?.version ?? 'missing',
-        reserveFx: (globalThis as any).POWDER_COMBAT2_RESERVE_FX?.version ?? 'missing'
+        reserveFx: (globalThis as any).POWDER_COMBAT2_RESERVE_FX?.version ?? 'missing',
+        ultimateFx: (globalThis as any).POWDER_COMBAT2_ULTIMATE_FX?.version ?? 'missing'
       });
     } catch (error) {
       console.error('[Combat2 Regression FAIL - NON BLOCKING]', error);
