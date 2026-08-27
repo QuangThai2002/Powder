@@ -27,9 +27,13 @@ const config: Phaser.Types.Core.GameConfig = {
 
 // Rendering is never blocked by DEV regressions.
 const game = new Phaser.Game(config);
+let earlyRefreshTimer = 0;
+let lateRefreshTimer = 0;
 const refreshScale = (): void => {
-  window.setTimeout(() => game.scale.refresh(), 80);
-  window.setTimeout(() => game.scale.refresh(), 260);
+  window.clearTimeout(earlyRefreshTimer);
+  window.clearTimeout(lateRefreshTimer);
+  earlyRefreshTimer = window.setTimeout(() => game.scale.refresh(), 80);
+  lateRefreshTimer = window.setTimeout(() => game.scale.refresh(), 260);
 };
 window.addEventListener('orientationchange', refreshScale, { passive: true });
 window.addEventListener('resize', refreshScale, { passive: true });
