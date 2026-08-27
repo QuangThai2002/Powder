@@ -58,6 +58,8 @@ const HOSTILE_SUPPORT_STATUSES = new Set([
 ]);
 const HARD_CONTROL_SOURCE = new Set(['stun', 'silence', 'paralysis', 'freeze']);
 const BALANCED_CONTROL_ROTATION = ['stun', 'silence', 'paralysis', 'freeze'] as const;
+type BalancedHardControl = typeof BALANCED_CONTROL_ROTATION[number];
+const hardControlBalanceBySkillIndex = new Map<number, BalancedHardControl>();
 const BENEFICIAL_STATUSES = new Set([
   'shield', 'regeneration', 'attack up', 'defense up', 'rage gain', 'ap up'
 ]);
@@ -99,12 +101,59 @@ function migrateLegacyStatus(rawStatus: string | undefined): string | undefined 
   return raw;
 }
 
+export function standardSkillIndex(rosterOrder: number | undefined, offset: 0 | 1 | 2 | 3): number | undefined {
+  if (!Number.isInteger(rosterOrder) || (rosterOrder as number) < 1 || (rosterOrder as number) > STANDARD_POW_COUNT) return undefined;
+  const index = ((rosterOrder as number) - 1) * STANDARD_SKILLS_PER_POW + offset + 1;
+  return index <= STANDARD_POW_SKILL_COUNT ? index : undefined;
+}
+
 /**
- * Preserve the number of existing hard-CC skills, but distribute their control
- * identity through the whole 99-Pow roster. The rotation prevents a random
- * three-Pow team from inheriting the old pattern where several adjacent Pow
- * could all expose Stun/Freeze at once.
+ * Preserve the exact number of existing hard-CC skills, sort them by canonical
+ * skill order, then distribute STUN -> SILENCE -> PARALYSIS -> FREEZE in a
+ * strict rotation. Across the full 99-Pow roster the four counts therefore
+ * differ by at most one without creating any additional hard-control skills.
  */
+function configureHardControlDistribution(
+  pows: readonly CatalogPow[]
+): Readonly<Record<BalancedHardControl, number>> {
+  hardControlBalanceBySkillIndex.clear();
+  const hardSlots: number[] = [];
+
+  for (const pow of pows) {
+    const skills = Array.isArray(pow.abilities?.skills) ? pow.abilities.skills : [];
+    const abilities: Array<[0 | 1 | 2 | 3, CatalogAbility | undefined]> = [
+      [0, pow.abilities?.basic],
+      [1, skills[0]],
+      [2, skills[1]],
+      [3, pow.abilities?.ultimate]
+    ];
+
+    for (const [offset, ability] of abilities) {
+      const raw = String(ability?.status || '').trim();
+      const core = raw.toLowerCase().startsWith('self:') ? raw.slice(5).trim() : raw;
+      if (!HARD_CONTROL_SOURCE.has(core.toLowerCase())) continue;
+      const skillIndex = standardSkillIndex(pow.rosterOrder, offset);
+      if (skillIndex !== undefined) hardSlots.push(skillIndex);
+    }
+  }
+
+  hardSlots.sort((a, b) => a - b);
+  const counts: Record<BalancedHardControl, number> = {
+    stun: 0,
+    silence: 0,
+    paralysis: 0,
+    freeze: 0
+  };
+
+  hardSlots.forEach((skillIndex, ordinal) => {
+    const mapped = BALANCED_CONTROL_ROTATION[ordinal % BALANCED_CONTROL_ROTATION.length];
+    hardControlBalanceBySkillIndex.set(skillIndex, mapped);
+    counts[mapped] += 1;
+  });
+
+  return Object.freeze(counts);
+}
+
 export function balancedHardControlStatus(
   rawStatus: string | undefined,
   rosterOrder: number | undefined,
@@ -116,11 +165,16 @@ export function balancedHardControlStatus(
   const core = selfDirected ? raw.slice(5).trim() : raw;
   if (!HARD_CONTROL_SOURCE.has(core.toLowerCase())) return raw;
 
-  const order = Number.isInteger(rosterOrder) && (rosterOrder as number) > 0
+  const skillIndex = standardSkillIndex(rosterOrder, abilityOffset);
+  const mapped = skillIndex !== undefined
+    ? hardControlBalanceBySkillIndex.get(skillIndex)
+    : undefined;
+  const fallbackOrder = Number.isInteger(rosterOrder) && (rosterOrder as number) > 0
     ? (rosterOrder as number)
     : 1;
-  const mapped = BALANCED_CONTROL_ROTATION[(order + abilityOffset) % BALANCED_CONTROL_ROTATION.length];
-  return selfDirected ? `self:${mapped}` : mapped;
+  const fallback = BALANCED_CONTROL_ROTATION[(fallbackOrder + abilityOffset) % BALANCED_CONTROL_ROTATION.length];
+  const status = mapped ?? fallback;
+  return selfDirected ? `self:${status}` : status;
 }
 
 function normalizeAbilityStatus(rawStatus: string | undefined, normalizedType: string): string | undefined {
@@ -144,12 +198,6 @@ function canonicalSkillVisual(skillIndex: number | undefined): Pick<CombatAbilit
     iconKey: `combat2-skill-${padded}`,
     iconUrl: `${CANONICAL_SKILL_ART_PREFIX}skill-${padded}.webp`
   };
-}
-
-export function standardSkillIndex(rosterOrder: number | undefined, offset: 0 | 1 | 2 | 3): number | undefined {
-  if (!Number.isInteger(rosterOrder) || (rosterOrder as number) < 1 || (rosterOrder as number) > STANDARD_POW_COUNT) return undefined;
-  const index = ((rosterOrder as number) - 1) * STANDARD_SKILLS_PER_POW + offset + 1;
-  return index <= STANDARD_POW_SKILL_COUNT ? index : undefined;
 }
 
 function normalizeAbility(
@@ -314,6 +362,10 @@ const catalogPows = Array.isArray(catalog?.pows) ? catalog.pows : [];
 if (catalogPows.length < TOTAL_TEAM_SIZE * 2) {
   throw new Error('[Combat2] POWDER_DATA is missing or incomplete. Load the canonical catalog before Combat 2.0.');
 }
+
+export const CANONICAL_HARD_CONTROL_COUNTS = configureHardControlDistribution(catalogPows);
+export const CANONICAL_HARD_CONTROL_TOTAL = Object.values(CANONICAL_HARD_CONTROL_COUNTS)
+  .reduce((sum, value) => sum + value, 0);
 
 const usedIds = new Set<string>();
 const playerReserved = new Set<string>(PLAYER_PREFERRED_IDS);
