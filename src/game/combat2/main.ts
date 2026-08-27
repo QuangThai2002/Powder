@@ -9,7 +9,7 @@ import { runCombatLegacyDomainRegression } from './systems/CombatLegacyDomainReg
 import { runCombatLegacyDomainSpecialRegression } from './systems/CombatLegacyDomainSpecialRegression';
 import { runCombatLegacyRoleRegression } from './systems/CombatLegacyRoleRegression';
 import { runCombatMultiTargetRegression } from './systems/CombatMultiTargetRegression';
-import { runCombatRageRegression } from './systems/CombatRageEngine';
+import { runCombatRageRegression } from './systems/CombatRageRegression';
 import { runCombatSpecialSupportRegression } from './systems/CombatSpecialSupportRegression';
 import { installCombat27UiPatch } from './views/Combat27UiPatch';
 import { installCombat28MultiTargetPatch } from './views/Combat28MultiTargetPatch';
