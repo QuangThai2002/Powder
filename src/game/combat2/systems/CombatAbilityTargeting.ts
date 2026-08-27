@@ -30,6 +30,9 @@ export function abilityTargetMode(ability: CombatAbility): CombatAbilityTargetMo
 export function hasNegativeStatus(unit: CombatUnitState): boolean {
   return Boolean(
     unit.controlActionsRemaining > 0 ||
+    unit.silenceActionsRemaining > 0 ||
+    unit.paralysisActionsRemaining > 0 ||
+    (unit.freezeStage > 0 && unit.freezeStageActionsRemaining > 0) ||
     unit.dotActionsRemaining > 0 ||
     unit.speedDebuffActionsRemaining > 0
   );
