@@ -8,9 +8,11 @@ import {
   CONTROL_EFFECT_CHANCE_CAP,
   CONTROL_HISTORY_ROUNDS,
   CONTROL_IMMUNITY_ACTIONS,
+  CONTROL_IMMUNITY_TRIGGER_HITS,
   PARALYSIS_SKIP_CHANCE,
   baseControlChance,
   controlChanceFor,
+  controlWindowSnapshot,
   cooldownForAbility
 } from './CombatControlEngine';
 import { CombatState } from './CombatState';
@@ -229,7 +231,8 @@ function validateFreezeStages(): void {
 }
 
 function validateAntiChain(): void {
-  assert(CONTROL_HISTORY_ROUNDS === 5, 'anti-chain window must remain five rounds');
+  assert(CONTROL_HISTORY_ROUNDS === 5, 'each CC must count through its own round plus four following rounds');
+  assert(CONTROL_IMMUNITY_TRIGGER_HITS === 4, 'Control Immunity must trigger on the fourth active CC hit');
   assert(CONTROL_IMMUNITY_ACTIONS === 2, 'Control Immunity must remain two target own turns');
   const state = fixture();
   const actor = state.activeLiving('player')[0];
@@ -240,25 +243,38 @@ function validateAntiChain(): void {
   const controls = [
     { name: 'Anti Chain Skill A', status: 'stun' },
     { name: 'Anti Chain Skill B', status: 'silence' },
-    { name: 'Anti Chain Skill C', status: 'paralysis' }
+    { name: 'Anti Chain Skill C', status: 'paralysis' },
+    { name: 'Anti Chain Skill D', status: 'freeze' }
   ] as const;
 
   controls.forEach((control, index) => {
     actor.skillCooldownActionsRemaining[0] = 0;
+    if (index === 3) {
+      target.dotStatus = 'burn';
+      target.dotDamage = 11;
+      target.dotActionsRemaining = 2;
+      target.speedDebuffActionsRemaining = 2;
+      target.speed = target.pow.speed * 0.8;
+    }
     const result = skills.resolve(actor, target, {
       name: control.name, power: 1, type: 'debuff', status: control.status
     }, 0, index + 1);
-    if (index < 2) assert(!result.controlImmunityTriggered, 'Control Immunity triggered before the third distinct CC skill');
-    else assert(result.controlImmunityTriggered, 'third distinct CC skill in five rounds must trigger Control Immunity');
+    if (index < 3) assert(!result.controlImmunityTriggered, 'Control Immunity must not trigger before the fourth landed CC');
+    else assert(result.controlImmunityTriggered, 'the fourth landed CC inside the active window must trigger Control Immunity');
   });
 
   assert(target.controlImmunityActionsRemaining === 2, 'anti-chain immunity duration mismatch');
   assert(target.controlActionsRemaining === 0 && target.silenceActionsRemaining === 0 && target.paralysisActionsRemaining === 0, 'Control Immunity must clear active hard controls');
+  assert(target.freezeStage === 0 && target.freezeStageActionsRemaining === 0, 'Control Immunity must clear Chill/Frostbite/Freeze state');
+  assert(target.dotStatus === 'burn' && target.dotActionsRemaining === 2 && target.dotDamage === 11, 'Control Immunity must not cleanse Burn/Poison');
+  assert(target.speedDebuffActionsRemaining === 2, 'Control Immunity must not cleanse Slow or other non-CC debuffs');
+  assert(approx(target.speed, target.pow.speed * 0.8, 0.01), 'Slow must remain composed after hard CC is cleared');
+  assert(target.controlHistory.length === 0, 'history must reset after immunity triggers');
 
   actor.skillCooldownActionsRemaining[0] = 0;
   const blocked = skills.resolve(actor, target, {
-    name: 'Anti Chain Skill D', power: 1, type: 'debuff', status: 'freeze'
-  }, 0, 4);
+    name: 'Blocked During Immunity', power: 1, type: 'debuff', status: 'stun'
+  }, 0, 5);
   assert(blocked.controlBlocked && !blocked.controlApplied, 'new CC must be blocked while Control Immunity is active');
 }
 
@@ -268,18 +284,20 @@ function validateSameStatusAntiChain(): void {
   const target = state.activeLiving('enemy')[0];
   assert(actor && target, 'same-status anti-chain fixture missing');
   const skills = new SkillActionResolver(() => 0);
-  const names = ['Triple Stun A', 'Triple Stun B', 'Triple Stun C'];
 
-  names.forEach((name, index) => {
+  for (let index = 0; index < CONTROL_IMMUNITY_TRIGGER_HITS; index += 1) {
     actor.skillCooldownActionsRemaining[0] = 0;
     const result = skills.resolve(actor, target, {
-      name, power: 1, type: 'debuff', status: 'stun'
+      name: 'Repeated Stun Skill', power: 1, type: 'debuff', status: 'stun'
     }, 0, index + 1);
-    if (index < 2) assert(!result.controlImmunityTriggered, 'two distinct Stun skills must not trigger immunity early');
-    else assert(result.controlImmunityTriggered, 'three distinct Stun skills must trigger Control Immunity');
-  });
+    if (index < CONTROL_IMMUNITY_TRIGGER_HITS - 1) {
+      assert(!result.controlImmunityTriggered, 'repeated Stun must not trigger immunity before hit four');
+    } else {
+      assert(result.controlImmunityTriggered, 'the fourth landed hard CC must trigger even when it is the same skill/status');
+    }
+  }
 
-  assert(target.controlImmunityActionsRemaining === 2, 'three distinct same-status CC skills must grant two own turns of immunity');
+  assert(target.controlImmunityActionsRemaining === 2, 'four same-source hard CC hits must grant two own turns of immunity');
 }
 
 function validateControlWindowExpiry(): void {
@@ -289,24 +307,24 @@ function validateControlWindowExpiry(): void {
   assert(actor && target, 'control-window fixture missing');
   const skills = new SkillActionResolver(() => 0);
 
-  actor.skillCooldownActionsRemaining[0] = 0;
-  const first = skills.resolve(actor, target, {
-    name: 'Window Skill A', power: 1, type: 'debuff', status: 'stun'
-  }, 0, 1);
-  assert(!first.controlImmunityTriggered, 'first CC must not trigger immunity');
+  for (const round of [1, 2, 3]) {
+    actor.skillCooldownActionsRemaining[0] = 0;
+    const result = skills.resolve(actor, target, {
+      name: `Window Stun ${round}`, power: 1, type: 'debuff', status: 'stun'
+    }, 0, round);
+    assert(!result.controlImmunityTriggered, `CC at round ${round} must not trigger immunity before hit four`);
+  }
+  let snapshot = controlWindowSnapshot(target);
+  assert(snapshot.count === 3 && snapshot.firstRound === 1 && snapshot.expiresRound === 5, 'round-1/2/3 history must show 3/4 with V1→V5 window');
 
   actor.skillCooldownActionsRemaining[0] = 0;
-  const second = skills.resolve(actor, target, {
-    name: 'Window Skill B', power: 1, type: 'debuff', status: 'stun'
-  }, 0, 5);
-  assert(!second.controlImmunityTriggered, 'two CC skills inside five rounds must not trigger immunity');
-
-  actor.skillCooldownActionsRemaining[0] = 0;
-  const third = skills.resolve(actor, target, {
-    name: 'Window Skill C', power: 1, type: 'debuff', status: 'stun'
+  const roundSix = skills.resolve(actor, target, {
+    name: 'Window Stun 6', power: 1, type: 'debuff', status: 'stun'
   }, 0, 6);
-  assert(!third.controlImmunityTriggered, 'round-1 CC must expire before the round-6 anti-chain calculation');
-  assert(target.controlHistory.length === 2, 'only round-5 and round-6 CC history entries should remain');
+  assert(!roundSix.controlImmunityTriggered, 'round-1 CC must expire before the round-6 fourth-hit calculation');
+  snapshot = controlWindowSnapshot(target);
+  assert(snapshot.count === 3, 'round 6 must count only rounds 2, 3 and 6');
+  assert(snapshot.firstRound === 2 && snapshot.expiresRound === 6, 'after round 1 expires the tactical window must become V2→V6');
 }
 
 function validateOwnTurnDurations(): void {
