@@ -113,6 +113,28 @@ export class TurnManager {
     this.nextReadyAt.set(unit.instanceId, this.timelineNow + this.intervalFor(unit));
   }
 
+  /**
+   * Advance an inactive Pow on the timeline by a fraction of one full personal
+   * action cycle. Legacy Core V2's +12 meter therefore maps to progress=0.12.
+   * Returns the timeline distance actually removed.
+   */
+  advanceUnit(unitId: string, progress = 0.12): number {
+    const unit = this.state.getUnit(unitId);
+    if (!unit?.alive || unit.fieldSlot === null || this.state.currentUnitId === unitId) return 0;
+    const ratio = Math.min(0.95, Math.max(0, Number.isFinite(progress) ? progress : 0));
+    if (ratio <= 0) return 0;
+    const interval = this.intervalFor(unit);
+    const readyAt = this.safeTimelineValue(
+      this.nextReadyAt.get(unit.instanceId),
+      this.timelineNow + interval
+    );
+    const remaining = Math.max(0, readyAt - this.timelineNow);
+    const amount = Math.min(remaining, interval * ratio);
+    if (amount <= 0) return 0;
+    this.nextReadyAt.set(unit.instanceId, Math.max(this.timelineNow, readyAt - amount));
+    return amount;
+  }
+
   recoverActionLock(): void {
     const current = this.state.currentUnitId ? this.state.getUnit(this.state.currentUnitId) : undefined;
     if (current) current.actionLocked = false;
