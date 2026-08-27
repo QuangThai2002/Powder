@@ -52,10 +52,7 @@ export function controlChanceFor(actor: CombatUnitState): number {
   return Math.min(CONTROL_EFFECT_CHANCE_CAP, base + bonus);
 }
 
-/**
- * Cooldown is measured in the acting Pow's future turns.
- * Hard control is deliberately slower than light utility/damage-over-time.
- */
+/** Cooldown is measured in the acting Pow's future turns. */
 export function cooldownForAbility(
   ability: CombatAbility,
   slot: CombatAbilitySlot
@@ -73,10 +70,8 @@ export function cooldownForAbility(
     status === 'rage gain' ||
     status === 'cleanse' ||
     status === 'purify'
-  ) {
-    return 1;
-  }
-  // Pure damage, Burn and Poison remain fluid. Rage already gates Ultimate.
+  ) return 1;
+  // Pure damage, Burn and Poison stay fluid; Rage already gates Ultimate.
   return slot === 'ultimate' ? 0 : 0;
 }
 
@@ -89,12 +84,7 @@ export class CombatControlEngine {
       return { success: false, blockedByImmunity: true, chance, roll: 1 };
     }
     const roll = this.safeRandom();
-    return {
-      success: roll < chance,
-      blockedByImmunity: false,
-      chance,
-      roll
-    };
+    return { success: roll < chance, blockedByImmunity: false, chance, roll };
   }
 
   shouldParalysisSkip(): boolean {
@@ -104,17 +94,21 @@ export class CombatControlEngine {
   recordSuccessfulControl(
     target: CombatUnitState,
     status: HardControlStatus,
-    currentRound: number
+    currentRound: number,
+    sourceKey: string
   ): boolean {
     const round = Math.max(1, Math.floor(Number.isFinite(currentRound) ? currentRound : 1));
     const earliestRound = Math.max(1, round - CONTROL_HISTORY_ROUNDS + 1);
+    const normalizedSource = String(sourceKey || status).trim().toLowerCase() || status;
     target.controlHistory = target.controlHistory.filter((entry) =>
       entry.round >= earliestRound && entry.round <= round
     );
-    target.controlHistory.push({ status, round });
+    target.controlHistory.push({ status, round, sourceKey: normalizedSource });
 
-    const unique = new Set(target.controlHistory.map((entry) => entry.status));
-    if (unique.size < 3 || target.controlImmunityActionsRemaining > 0) return false;
+    // The protection is based on three distinct CC skills, not three different
+    // status names. Three different Pow using three Stun skills still count.
+    const uniqueSkills = new Set(target.controlHistory.map((entry) => entry.sourceKey));
+    if (uniqueSkills.size < 3 || target.controlImmunityActionsRemaining > 0) return false;
 
     target.controlImmunityActionsRemaining = CONTROL_IMMUNITY_ACTIONS;
     target.controlHistory = [];
@@ -140,14 +134,12 @@ export class CombatControlEngine {
       target.speed = Math.max(1, Math.min(target.speed, baseSpeed * 0.9));
       return 'chill';
     }
-
     if (target.freezeStage === 1) {
       target.freezeStage = 2;
       target.freezeStageActionsRemaining = FREEZE_STAGE_ACTIONS;
       target.speed = Math.max(1, Math.min(target.speed, baseSpeed * 0.8));
       return 'frostbite';
     }
-
     target.freezeStage = 0;
     target.freezeStageActionsRemaining = 0;
     target.controlStatus = 'freeze';
