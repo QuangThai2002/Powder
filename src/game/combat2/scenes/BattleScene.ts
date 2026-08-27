@@ -84,13 +84,13 @@ export class BattleScene extends Phaser.Scene {
     const shade = this.add.rectangle(width / 2, height / 2, width, height, 0x02080e, 0.54);
     const plateWidth = Math.min(portrait ? 760 : 820, width * 0.86);
     const plate = this.add.rectangle(width / 2, height / 2, plateWidth, 210, 0x081d2a, 0.98).setStrokeStyle(2, 0xd7b86c, 0.76);
-    const title = this.add.text(width / 2, height / 2 - 66, 'POWDER COMBAT 2.3.1', {
+    const title = this.add.text(width / 2, height / 2 - 66, 'POWDER COMBAT 2.4.0', {
       fontFamily: COMBAT_DISPLAY_FONT, fontSize: portrait ? '34px' : '36px', color: '#fff6df', fontStyle: 'bold'
     }).setOrigin(0.5);
     const subtitle = this.add.text(width / 2, height / 2 - 14, '4 CHẤM NỘ · XANH = 1 · ĐỎ = 2', {
       fontFamily: COMBAT_DISPLAY_FONT, fontSize: '18px', color: '#7de6ff', fontStyle: 'bold'
     }).setOrigin(0.5);
-    const hint = this.add.text(width / 2, height / 2 + 42, 'Đòn thường / Skill +2 Nộ · đủ 4 dùng Tuyệt Kỹ\nPhần Nộ vượt 4 nhận 50% và làm tròn xuống', {
+    const hint = this.add.text(width / 2, height / 2 + 42, 'Đòn thường / Skill: +2 Nộ cơ bản · Skill Hồi Nộ có thể cộng thêm\nTuyệt Kỹ tốn 4 Nộ · phần vượt mốc 4 chỉ nhận 50%', {
       fontFamily: COMBAT_BODY_FONT, fontSize: '16px', color: '#c4d9df', align: 'center', lineSpacing: 8
     }).setOrigin(0.5);
     const intro = this.add.container(0, 0, [shade, plate, title, subtitle, hint]).setDepth(100);
@@ -470,9 +470,12 @@ export class BattleScene extends Phaser.Scene {
     if (status === 'cleanse' || status === 'purify') return 'CLEAN';
     if (status === 'revive' || status === 'resurrection') return 'REVIVE';
     if (status === 'rage gain') return 'NỘ';
+    if (status === 'ap up') return 'AP+';
+    if (status === 'attack up') return 'ATK+';
     if (type === 'support') return 'SUP';
     if (type === 'debuff') return 'CTRL';
-    return 'ATK';
+    if (type === 'physical') return 'ATK';
+    return 'AP';
   }
 
   private actionTargetLabel(ability: CombatAbility): string {
@@ -484,12 +487,12 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private isSelfStatus(status: string): boolean {
-    return ['shield', 'regeneration', 'attack up', 'defense up', 'rage gain'].includes(status.replace(/^self:/i, '').trim().toLowerCase());
+    return ['shield', 'regeneration', 'attack up', 'ap up', 'defense up', 'rage gain'].includes(status.replace(/^self:/i, '').trim().toLowerCase());
   }
 
   private statusDisplayName(status: string): string {
     const normalized = status.replace(/^self:/i, '').trim().toLowerCase();
-    const names: Record<string, string> = { shield: 'KHIÊN', regeneration: 'HỒI PHỤC', 'attack up': 'TĂNG CÔNG', 'defense up': 'TĂNG THỦ', 'rage gain': 'HỒI NỘ', stun: 'CHOÁNG', freeze: 'ĐÓNG BĂNG', slow: 'CHẬM', burn: 'THIÊU ĐỐT', poison: 'NHIỄM ĐỘC' };
+    const names: Record<string, string> = { shield: 'KHIÊN', regeneration: 'HỒI PHỤC', 'attack up': 'TĂNG CÔNG', 'ap up': 'TĂNG AP', 'defense up': 'TĂNG THỦ', 'rage gain': 'HỒI NỘ', stun: 'CHOÁNG', freeze: 'ĐÓNG BĂNG', slow: 'CHẬM', burn: 'THIÊU ĐỐT', poison: 'NHIỄM ĐỘC' };
     return names[normalized] ?? status.toUpperCase();
   }
 
