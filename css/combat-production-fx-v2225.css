@@ -1,0 +1,32 @@
+/* Powder Combat Production FX 22.2.5
+   Visible, one-shot combat feedback layer loaded through forced-refresh server-combat bootstrap. */
+.combat-v7-mount.cpx225-ready{--cpx225-heal:#87f2b3;--cpx225-shield:#8bdfff;--cpx225-control:#c6efff;--cpx225-ultimate:#ffe89b}
+.combat-v7-mount.cpx225-ready .cpx225-layer{position:absolute;inset:0;z-index:42;pointer-events:none;overflow:hidden}
+.combat-v7-mount.cpx225-ready .cpx225-badge{position:absolute;z-index:70;left:10px;top:9px;padding:4px 7px;border:1px solid rgba(164,222,244,.2);border-radius:999px;background:rgba(3,13,22,.72);backdrop-filter:blur(6px);color:#a9d9e8;font:900 7px/1 system-ui;letter-spacing:.08em;opacity:.72;pointer-events:none}
+.combat-v7-mount.cpx225-ready:not(.cpx225-test-mode) .cpx225-badge{display:none}
+.combat-v7-mount.cpx225-ready .cpx225-ring,.combat-v7-mount.cpx225-ready .cpx225-burst,.combat-v7-mount.cpx225-ready .cpx225-lock,.combat-v7-mount.cpx225-ready .cpx225-skip{position:absolute;left:var(--cpx-x);top:var(--cpx-y);transform:translate(-50%,-50%);pointer-events:none}
+.combat-v7-mount.cpx225-ready .cpx225-ring{width:116px;height:116px;border-radius:50%;border:2px solid currentColor;box-shadow:0 0 22px currentColor,inset 0 0 18px color-mix(in srgb,currentColor 32%,transparent);animation:cpx225Ring .6s ease-out both}
+.combat-v7-mount.cpx225-ready .cpx225-ring.heal{color:var(--cpx225-heal);background:radial-gradient(circle,rgba(113,241,170,.16),transparent 68%)}
+.combat-v7-mount.cpx225-ready .cpx225-ring.shield{color:var(--cpx225-shield);border-radius:28%;transform:translate(-50%,-50%) rotate(45deg);background:linear-gradient(135deg,rgba(118,219,255,.12),transparent 62%)}
+.combat-v7-mount.cpx225-ready .cpx225-burst{width:154px;height:154px;border-radius:50%;background:repeating-conic-gradient(from 0deg,currentColor 0 2deg,transparent 2deg 21deg);mask:radial-gradient(circle,transparent 0 36%,#000 39% 58%,transparent 62%);animation:cpx225Burst .55s ease-out both}
+.combat-v7-mount.cpx225-ready .cpx225-burst.heal{color:rgba(130,242,178,.9)}
+.combat-v7-mount.cpx225-ready .cpx225-burst.shield{color:rgba(139,223,255,.82)}
+.combat-v7-mount.cpx225-ready .cpx225-lock{width:128px;height:128px;border-radius:22%;border:2px solid rgba(201,242,255,.82);box-shadow:0 0 20px rgba(116,211,255,.34),inset 0 0 18px rgba(116,211,255,.18);animation:cpx225Lock .72s ease-out both}
+.combat-v7-mount.cpx225-ready .cpx225-lock.freeze{clip-path:polygon(50% 0,62% 28%,88% 12%,72% 39%,100% 50%,72% 61%,88% 88%,62% 72%,50% 100%,38% 72%,12% 88%,28% 61%,0 50%,28% 39%,12% 12%,38% 28%)}
+.combat-v7-mount.cpx225-ready .cpx225-lock.stun{border-radius:50%;border-style:dashed;animation:cpx225Stun .62s ease-out both}
+.combat-v7-mount.cpx225-ready .cpx225-skip{top:calc(var(--cpx-y) - 76px);padding:5px 9px;border:1px solid rgba(255,228,150,.42);border-radius:999px;background:rgba(30,20,6,.84);box-shadow:0 8px 22px rgba(0,0,0,.38);color:#ffe6a7;font:1000 9px/1 system-ui;letter-spacing:.08em;white-space:nowrap;animation:cpx225Skip .8s ease-out both}
+.combat-v7-mount.cpx225-ready .cpx225-ultimate-field{position:absolute;inset:-6%;z-index:41;pointer-events:none;border-radius:18%;background:radial-gradient(circle at 50% 50%,rgba(255,246,194,.21),rgba(114,203,255,.11) 32%,transparent 67%);box-shadow:inset 0 0 80px rgba(255,235,158,.18);animation:cpx225Ultimate .7s cubic-bezier(.16,.7,.18,1) both}
+.combat-v7-mount.cpx225-ready .cpx225-ultimate-field:before,.combat-v7-mount.cpx225-ready .cpx225-ultimate-field:after{content:"";position:absolute;left:50%;top:50%;border:2px solid rgba(255,239,172,.7);border-radius:50%;transform:translate(-50%,-50%);animation:cpx225UltimateRing .68s ease-out both}
+.combat-v7-mount.cpx225-ready .cpx225-ultimate-field:before{width:190px;height:190px}.combat-v7-mount.cpx225-ready .cpx225-ultimate-field:after{width:300px;height:300px;animation-delay:.05s}
+.combat-v7-mount.cpx225-ready .cpx225-chain{position:absolute;z-index:70;left:50%;top:20%;transform:translate(-50%,-50%);padding:5px 10px;border:1px solid rgba(255,255,255,.17);border-radius:999px;background:rgba(4,14,24,.72);color:#dff7ff;font:1000 9px/1 system-ui;letter-spacing:.1em;animation:cpx225Chain .44s ease-out both}
+.combat-v7-mount.cpx225-pressure-reduced .cpx225-burst,.combat-v7-mount.cpx225-pressure-reduced .cpx225-ultimate-field:after{display:none}
+.combat-v7-mount.cv71-fx-low .cpx225-burst,.combat-v7-mount.cv71-fx-low .cpx225-chain{display:none}
+@keyframes cpx225Ring{0%{opacity:0;scale:.48}38%{opacity:1;scale:1.04}100%{opacity:0;scale:1.38}}
+@keyframes cpx225Burst{0%{opacity:0;scale:.52;rotate:-8deg}42%{opacity:.92;scale:1;rotate:4deg}100%{opacity:0;scale:1.28;rotate:15deg}}
+@keyframes cpx225Lock{0%{opacity:0;scale:.55;rotate:-7deg}34%{opacity:1;scale:1.03;rotate:2deg}100%{opacity:0;scale:1.1;rotate:0deg}}
+@keyframes cpx225Stun{0%{opacity:0;scale:.58;rotate:0deg}42%{opacity:1;scale:1.02;rotate:22deg}100%{opacity:0;scale:1.16;rotate:58deg}}
+@keyframes cpx225Skip{0%{opacity:0;translate:0 8px;scale:.92}28%{opacity:1;translate:0 0;scale:1.04}100%{opacity:0;translate:0 -12px;scale:1}}
+@keyframes cpx225Ultimate{0%{opacity:0;scale:.96}34%{opacity:1;scale:1.012}100%{opacity:0;scale:1.03}}
+@keyframes cpx225UltimateRing{0%{opacity:0;scale:.38}42%{opacity:.92;scale:1}100%{opacity:0;scale:1.75}}
+@keyframes cpx225Chain{0%{opacity:0;translate:0 7px;scale:.9}40%{opacity:1;translate:0 0;scale:1.06}100%{opacity:0;translate:0 -7px;scale:1}}
+@media(prefers-reduced-motion:reduce){.combat-v7-mount.cpx225-ready .cpx225-burst,.combat-v7-mount.cpx225-ready .cpx225-ultimate-field,.combat-v7-mount.cpx225-ready .cpx225-chain{display:none}.combat-v7-mount.cpx225-ready .cpx225-ring,.combat-v7-mount.cpx225-ready .cpx225-lock,.combat-v7-mount.cpx225-ready .cpx225-skip{animation-duration:.18s!important}}
