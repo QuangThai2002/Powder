@@ -15,6 +15,24 @@ permissions:
   contents: read
 
 jobs:
+  combat2-typecheck-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Typecheck Combat2 and project TypeScript
+        run: npm run typecheck
+      - name: Build Vite production bundle
+        run: npm run build
+
   admin-combat-syntax:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -238,7 +256,7 @@ jobs:
 
   browser-e2e:
     if: ${{ always() }}
-    needs: project-gate
+    needs: [project-gate, combat2-typecheck-build]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
