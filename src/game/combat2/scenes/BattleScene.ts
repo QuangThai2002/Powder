@@ -84,7 +84,7 @@ export class BattleScene extends Phaser.Scene {
     const shade = this.add.rectangle(width / 2, height / 2, width, height, 0x02080e, 0.54);
     const plateWidth = Math.min(portrait ? 760 : 820, width * 0.86);
     const plate = this.add.rectangle(width / 2, height / 2, plateWidth, 210, 0x081d2a, 0.98).setStrokeStyle(2, 0xd7b86c, 0.76);
-    const title = this.add.text(width / 2, height / 2 - 66, 'POWDER COMBAT 2.4.0', {
+    const title = this.add.text(width / 2, height / 2 - 66, 'POWDER COMBAT 2.4.1', {
       fontFamily: COMBAT_DISPLAY_FONT, fontSize: portrait ? '34px' : '36px', color: '#fff6df', fontStyle: 'bold'
     }).setOrigin(0.5);
     const subtitle = this.add.text(width / 2, height / 2 - 14, '4 CHẤM NỘ · XANH = 1 · ĐỎ = 2', {
