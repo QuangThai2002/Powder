@@ -1,0 +1,32 @@
+/* Powder Main Combat Choreography 22.2.3
+   Reusable, short-lived GPU-first combat beats. No continuous particle loops. */
+.combat-v7-mount.cmc223-ready .cv7-field{position:relative}
+.combat-v7-mount.cmc223-ready .cmc223-overlay{position:absolute;inset:0;pointer-events:none;z-index:26;opacity:0;will-change:opacity,transform;background:radial-gradient(circle at 50% 48%,rgba(255,255,255,.16),rgba(130,210,255,.06) 22%,transparent 58%)}
+.combat-v7-mount.cmc223-ready .cmc223-overlay.el-fire,.combat-v7-mount.cmc223-ready .cmc223-overlay.el-lava{background:radial-gradient(circle at 50% 50%,rgba(255,238,205,.3),rgba(255,92,42,.13) 22%,transparent 58%)}
+.combat-v7-mount.cmc223-ready .cmc223-overlay.el-water,.combat-v7-mount.cmc223-ready .cmc223-overlay.el-ice{background:radial-gradient(circle at 50% 50%,rgba(232,252,255,.3),rgba(80,190,255,.12) 24%,transparent 60%)}
+.combat-v7-mount.cmc223-ready .cmc223-overlay.el-lightning,.combat-v7-mount.cmc223-ready .cmc223-overlay.el-storm{background:radial-gradient(circle at 50% 50%,rgba(255,255,232,.34),rgba(255,218,66,.13) 20%,transparent 54%)}
+.combat-v7-mount.cmc223-ready .cmc223-overlay.el-leaf,.combat-v7-mount.cmc223-ready .cmc223-overlay.el-poison{background:radial-gradient(circle at 50% 50%,rgba(239,255,224,.27),rgba(82,205,92,.12) 22%,transparent 58%)}
+.combat-v7-mount.cmc223-ready .cmc223-overlay.el-dark{background:radial-gradient(circle at 50% 50%,rgba(216,195,255,.24),rgba(73,38,125,.17) 24%,transparent 61%)}
+.combat-v7-mount.cmc223-ready .cmc223-overlay.el-light{background:radial-gradient(circle at 50% 50%,rgba(255,254,226,.36),rgba(255,223,116,.13) 24%,transparent 58%)}
+.combat-v7-mount.cmc223-ready .cmc223-overlay.el-earth,.combat-v7-mount.cmc223-ready .cmc223-overlay.el-steel{background:radial-gradient(circle at 50% 50%,rgba(255,248,229,.25),rgba(168,137,91,.12) 24%,transparent 58%)}
+.combat-v7-mount.cmc223-ready .cmc223-overlay.el-wind{background:radial-gradient(circle at 50% 50%,rgba(232,255,249,.3),rgba(95,210,186,.11) 24%,transparent 59%)}
+
+.combat-v7-mount.cmc223-ready .cv7-unit.cmc223-charging .cv7-art-wrap:after{content:"";position:absolute;left:50%;top:50%;width:116px;height:116px;transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;z-index:1;border:1px solid rgba(218,245,255,.7);box-shadow:0 0 14px rgba(130,220,255,.28),inset 0 0 18px rgba(130,220,255,.18);animation:cmc223ChargeRing .46s cubic-bezier(.16,.7,.2,1) both}
+.combat-v7-mount.cmc223-ready[data-cmc223-key="ultimate"] .cv7-unit.cmc223-charging .cv7-art-wrap:after{width:156px;height:156px;border-width:2px;box-shadow:0 0 22px rgba(174,226,255,.38),inset 0 0 24px rgba(174,226,255,.22)}
+.combat-v7-mount.cmc223-ready .cv7-unit.cmc223-releasing .cv7-art{filter:drop-shadow(0 0 10px rgba(205,240,255,.26))}
+.combat-v7-mount.cmc223-ready .cv7-unit.cmc223-releasing .cv7-art-wrap:after{content:"";position:absolute;left:50%;top:50%;width:86px;height:46px;transform:translate(-50%,-50%) rotate(-18deg);pointer-events:none;z-index:0;border-radius:50%;background:linear-gradient(90deg,transparent,rgba(215,246,255,.18),transparent);filter:blur(4px);animation:cmc223Afterimage .36s ease-out both}
+
+.combat-v7-mount.cmc223-ready[data-cmc223-chain="2"] .cv7-attack-hit-ring{animation-duration:.42s!important}
+.combat-v7-mount.cmc223-ready[data-cmc223-chain="3"] .cv7-attack-hit-ring,.combat-v7-mount.cmc223-ready[data-cmc223-chain="4"] .cv7-attack-hit-ring{animation-duration:.34s!important;border-width:3px!important}
+.combat-v7-mount.cmc223-ready[data-cmc223-chain="5"] .cv7-attack-hit-ring{animation-duration:.3s!important;border-width:3px!important;box-shadow:0 0 22px var(--cmv-soft),inset 0 0 16px var(--cmv-soft)!important}
+
+.combat-v7-mount.cmc223-ready.cmc223-impact-heavy .cv7-field:after,.combat-v7-mount.cmc223-ready.cmc223-impact-fatal .cv7-field:after{content:"";position:absolute;inset:0;pointer-events:none;z-index:25;background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.18),transparent 45%);animation:cmc223FieldBloom .28s ease-out both}
+.combat-v7-mount.cmc223-ready.cmc223-impact-fatal .cv7-field:after{background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.28),rgba(255,115,115,.08) 30%,transparent 58%);animation-duration:.38s}
+
+@keyframes cmc223ChargeRing{0%{opacity:0;transform:translate(-50%,-50%) scale(.54) rotate(-18deg)}55%{opacity:.95;transform:translate(-50%,-50%) scale(1.06) rotate(5deg)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.2) rotate(12deg)}}
+@keyframes cmc223Afterimage{0%{opacity:0;transform:translate(-50%,-50%) rotate(-18deg) scale(.5)}35%{opacity:.9}100%{opacity:0;transform:translate(-50%,-50%) rotate(-18deg) scale(1.7)}}
+@keyframes cmc223FieldBloom{0%{opacity:0;transform:scale(.96)}28%{opacity:1}100%{opacity:0;transform:scale(1.03)}}
+
+.combat-v7-mount.cmc223-pressure-reduced .cmc223-overlay,.combat-v7-mount.cv71-fx-low .cmc223-overlay{display:none!important}
+.combat-v7-mount.cmc223-pressure-reduced .cv7-unit.cmc223-releasing .cv7-art-wrap:after,.combat-v7-mount.cv71-fx-low .cv7-unit.cmc223-releasing .cv7-art-wrap:after{display:none!important}
+@media (prefers-reduced-motion:reduce){.combat-v7-mount.cmc223-ready .cmc223-overlay,.combat-v7-mount.cmc223-ready .cv7-unit.cmc223-charging .cv7-art-wrap:after,.combat-v7-mount.cmc223-ready .cv7-unit.cmc223-releasing .cv7-art-wrap:after{display:none!important}}
