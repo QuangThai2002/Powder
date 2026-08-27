@@ -46,16 +46,17 @@ export class CombatLegacyStatEngine {
     const mitigation = this.mitigationFromDefense(offense, effectiveDefense);
 
     const evasionCap = ['wind', 'storm', 'dark'].includes(String(target.pow.elementKey).toLowerCase()) ? 75 : 60;
-    let effectiveEvasion = this.clamp(target.pow.evasion, 0, evasionCap);
+    let effectiveEvasion = this.clamp(target.pow.evasion + target.evasionBonus, 0, evasionCap);
     if (options.area) effectiveEvasion *= 0.7;
-    const accuracyBonus = (this.clamp(actor.pow.accuracy, 25, 200) - 100) + (options.ultimate ? 10 : 0);
+    const effectiveAccuracy = this.clamp(actor.pow.accuracy + actor.accuracyBonus, 25, 200);
+    const accuracyBonus = (effectiveAccuracy - 100) + (options.ultimate ? 10 : 0);
     const hitChance = options.unavoidable
       ? 1
       : this.clamp((100 + accuracyBonus - effectiveEvasion) / 100, HIT_CHANCE_MIN, 1);
     const hit = Boolean(options.unavoidable) || this.safeRandom() < hitChance;
 
     const critChance = this.clamp(
-      (this.clamp(actor.pow.critRate, 0, 100) - this.clamp(target.pow.critResist, 0, CRIT_RESIST_CAP)) / 100,
+      (this.clamp(actor.pow.critRate + actor.critRateBonus, 0, 100) - this.clamp(target.pow.critResist, 0, CRIT_RESIST_CAP)) / 100,
       0,
       1
     );
@@ -63,7 +64,11 @@ export class CombatLegacyStatEngine {
     const critMultiplier = crit
       ? this.clamp(actor.pow.critDamage, 150, CRIT_DAMAGE_CAP) / 100
       : 1;
-    const damageReduction = this.clamp(target.pow.damageReduction, 0, DAMAGE_REDUCTION_CAP);
+    const damageReduction = this.clamp(
+      target.pow.damageReduction + target.damageReductionBonus,
+      0,
+      DAMAGE_REDUCTION_CAP
+    );
 
     return {
       hit,
