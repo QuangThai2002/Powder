@@ -20,6 +20,7 @@ import { installCombat293LegacyDomainTickPatch } from './views/Combat293LegacyDo
 import { installCombat294DomainControlsPatch } from './views/Combat294DomainControlsPatch';
 import { installCombat295LegacyDomainParityPatch } from './views/Combat295LegacyDomainParityPatch';
 import { installCombat296VersionPatch } from './views/Combat296VersionPatch';
+import { installCombat298ActionChoreographyPatch } from './views/Combat298ActionChoreographyPatch';
 import { PowView } from './views/PowView';
 
 const logicalWidth = 1600;
@@ -38,6 +39,9 @@ installCombat293LegacyDomainTickPatch(BattleScene);
 installCombat294DomainControlsPatch(BattleScene);
 installCombat295LegacyDomainParityPatch();
 installCombat296VersionPatch(BattleScene);
+// 2.9.8 is intentionally installed last so the visible action choreography
+// wraps the fully-hardened combat/domain stack rather than being overwritten by it.
+installCombat298ActionChoreographyPatch(BattleScene, PowView);
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -90,7 +94,8 @@ if (isLocalDev) {
         legacyRole,
         legacyDomain,
         legacyDomainSpecial,
-        legacyDomainParity
+        legacyDomainParity,
+        actionFx: (globalThis as any).POWDER_COMBAT2_ACTION_FX?.version ?? 'missing'
       });
     } catch (error) {
       console.error('[Combat2 Regression FAIL - NON BLOCKING]', error);
