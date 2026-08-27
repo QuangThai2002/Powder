@@ -173,6 +173,29 @@ function validateLegacyStatsAndEffects(): void {
     shieldResolver.resolve(shielder, shielder, { name: 'Shield Fixture', power: 1, type: 'support', status: 'shield' }, 0);
   }
   assert(shielder.shield <= shielder.pow.maxHp * 0.8, 'Shield must never exceed the legacy absolute 80% Max HP cap');
+
+  const allyState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
+  const caster = allyState.activeLiving('player')[0];
+  const ally = allyState.activeLiving('player')[1];
+  assert(caster && ally && caster.instanceId !== ally.instanceId, 'ally support fixture requires two active allies');
+  const allyResolver = new SkillActionResolver(() => 0);
+  const casterShieldBefore = caster.shield;
+  allyResolver.resolve(caster, ally, { name: 'Ally Shield Fixture', power: 1, type: 'support', status: 'shield', target: 'ally' }, 0);
+  assert(ally.shield > 0, 'ally-target Shield must apply to the selected ally');
+  assert(caster.shield === casterShieldBefore, 'ally-target Shield must not apply to the caster');
+
+  caster.skillCooldownActionsRemaining[0] = 0;
+  ally.hp = Math.max(1, Math.floor(ally.pow.maxHp * 0.5));
+  const allyHpBefore = ally.hp;
+  const casterHpBefore = caster.hp;
+  allyResolver.resolve(caster, ally, { name: 'Ally Heal Fixture', power: 1, type: 'support', status: 'regeneration', target: 'ally' }, 0);
+  assert(ally.hp > allyHpBefore, 'ally-target Regeneration must heal the selected ally');
+  assert(caster.hp === casterHpBefore, 'ally-target Regeneration must not heal the caster');
+
+  caster.skillCooldownActionsRemaining[0] = 0;
+  allyResolver.resolve(caster, ally, { name: 'Ally ATK Fixture', power: 1, type: 'support', status: 'attack up', target: 'ally' }, 0);
+  assert(ally.attackMultiplier >= 1.3, 'ally-target Attack Up must buff the selected ally');
+  assert(caster.attackMultiplier === 1, 'ally-target Attack Up must not buff the caster');
 }
 
 function validateIdentityRules(): void {
