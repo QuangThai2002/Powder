@@ -3,6 +3,7 @@ import { BattleScene } from './scenes/BattleScene';
 import { installCombat2100TestRoster } from './data/Combat2100TestRoster';
 import { runCombat2SmokeRegression } from './systems/CombatRegression';
 import { runCombatFinalRegression } from './systems/CombatFinalRegression';
+import { runCombatPresentationRegression } from './systems/CombatPresentationRegression';
 import { CombatGuardEngine } from './systems/CombatGuardEngine';
 import { runCombatGuardRegression } from './systems/CombatGuardRegression';
 import { runCombatLegacyDomainParityRegression } from './systems/CombatLegacyDomainParityRegression';
@@ -88,6 +89,7 @@ if (isLocalDev) {
     try {
       const report = runCombat2SmokeRegression();
       const finalGate = runCombatFinalRegression();
+      const presentationGate = runCombatPresentationRegression(testRosterReport);
       const specialSupport = runCombatSpecialSupportRegression();
       const rage = runCombatRageRegression();
       const guard = runCombatGuardRegression();
@@ -97,7 +99,7 @@ if (isLocalDev) {
       const legacyDomainSpecial = runCombatLegacyDomainSpecialRegression();
       const legacyDomainParity = runCombatLegacyDomainParityRegression();
       console.info('[Combat2 Regression PASS]', {
-        ...report, finalGate, specialSupport, rage, guard, multiTarget, legacyRole, legacyDomain, legacyDomainSpecial, legacyDomainParity,
+        ...report, finalGate, presentationGate, specialSupport, rage, guard, multiTarget, legacyRole, legacyDomain, legacyDomainSpecial, legacyDomainParity,
         roster: testRosterReport,
         actionFx: (globalThis as any).POWDER_COMBAT2_ACTION_FX?.version ?? 'missing',
         statusFx: (globalThis as any).POWDER_COMBAT2_STATUS_FX?.version ?? 'missing',
