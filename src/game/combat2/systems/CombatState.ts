@@ -13,15 +13,17 @@ export interface CombatUnitState {
   slot: number;
   fieldSlot: number | null;
   hp: number;
-  /** Unified Combat 2.3 resource: 0..8 effective Rage points. */
+  /** Unified Combat 2.4 resource: 0..8 effective Rage points. */
   ragePoints: number;
   shield: number;
   speed: number;
   speedBuffActionsRemaining: number;
   speedDebuffActionsRemaining: number;
   attackMultiplier: number;
+  abilityPowerMultiplier: number;
   defenseMultiplier: number;
   attackBuffActionsRemaining: number;
+  abilityPowerBuffActionsRemaining: number;
   defenseBuffActionsRemaining: number;
   controlStatus: ControlStatus;
   controlActionsRemaining: number;
@@ -117,8 +119,10 @@ export class CombatState {
       unit.speedBuffActionsRemaining = this.safeDuration(unit.speedBuffActionsRemaining);
       unit.speedDebuffActionsRemaining = this.safeDuration(unit.speedDebuffActionsRemaining);
       unit.attackMultiplier = this.finiteClamp(unit.attackMultiplier, 0.1, 10, 1);
+      unit.abilityPowerMultiplier = this.finiteClamp(unit.abilityPowerMultiplier, 0.1, 10, 1);
       unit.defenseMultiplier = this.finiteClamp(unit.defenseMultiplier, 0.1, 10, 1);
       unit.attackBuffActionsRemaining = this.safeDuration(unit.attackBuffActionsRemaining);
+      unit.abilityPowerBuffActionsRemaining = this.safeDuration(unit.abilityPowerBuffActionsRemaining);
       unit.defenseBuffActionsRemaining = this.safeDuration(unit.defenseBuffActionsRemaining);
       unit.controlActionsRemaining = this.safeDuration(unit.controlActionsRemaining);
       unit.dotDamage = Math.floor(this.finiteClamp(unit.dotDamage, 0, unit.pow.maxHp, 0));
@@ -158,6 +162,12 @@ export class CombatState {
       fallen.dotActionsRemaining = 0;
       fallen.speedDebuffActionsRemaining = 0;
       fallen.speed = Math.max(1, fallen.pow.speed);
+      fallen.attackMultiplier = 1;
+      fallen.abilityPowerMultiplier = 1;
+      fallen.defenseMultiplier = 1;
+      fallen.attackBuffActionsRemaining = 0;
+      fallen.abilityPowerBuffActionsRemaining = 0;
+      fallen.defenseBuffActionsRemaining = 0;
       fallen.reviveMarkerActionsRemaining = 1;
       fallen.actionLocked = false;
       fallen.alive = true;
@@ -178,8 +188,10 @@ export class CombatState {
       speedBuffActionsRemaining: 0,
       speedDebuffActionsRemaining: 0,
       attackMultiplier: 1,
+      abilityPowerMultiplier: 1,
       defenseMultiplier: 1,
       attackBuffActionsRemaining: 0,
+      abilityPowerBuffActionsRemaining: 0,
       defenseBuffActionsRemaining: 0,
       controlStatus: null,
       controlActionsRemaining: 0,

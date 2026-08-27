@@ -200,6 +200,13 @@ export class TurnManager {
       }
     }
 
+    if (unit.abilityPowerBuffActionsRemaining > 0) {
+      unit.abilityPowerBuffActionsRemaining -= 1;
+      if (unit.abilityPowerBuffActionsRemaining <= 0) {
+        unit.abilityPowerMultiplier = 1;
+      }
+    }
+
     if (unit.defenseBuffActionsRemaining > 0) {
       unit.defenseBuffActionsRemaining -= 1;
       if (unit.defenseBuffActionsRemaining <= 0) {

@@ -1,4 +1,5 @@
 import { COMBAT2_STARTER_ROSTER } from '../data/PowderDataAdapter';
+import { BasicAttackResolver } from './BasicAttackResolver';
 import { CombatIdentityRules } from './CombatIdentityRules';
 import {
   applyRawRageGain,
@@ -19,6 +20,7 @@ export interface CombatRegressionReport {
   identityRulesChecked: boolean;
   rageEconomyChecked: boolean;
   apSemanticsChecked: boolean;
+  offenseChannelsChecked: boolean;
 }
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -55,26 +57,111 @@ function validateRageEconomy(): void {
   assert(spendUltimate(8) === 4, 'Ultimate from 8 Rage must leave 4 and remain ready');
 }
 
-function validateApSemantics(): void {
-  const state = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
+function validateOffenseChannels(): void {
   const skills = new SkillActionResolver();
-  const actor = state.activeLiving('player')[0];
-  assert(actor, 'AP fixture requires active player');
-  actor.ragePoints = 0;
-  actor.attackMultiplier = 1;
-  actor.attackBuffActionsRemaining = 0;
+  const basic = new BasicAttackResolver();
 
-  const result = skills.resolve(actor, actor, {
+  const apState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
+  const apBaselineState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
+  const apActor = apState.activeLiving('player')[0];
+  const apTarget = apState.activeLiving('enemy')[0];
+  const apBaselineActor = apBaselineState.activeLiving('player')[0];
+  const apBaselineTarget = apBaselineState.activeLiving('enemy')[0];
+  assert(apActor && apTarget && apBaselineActor && apBaselineTarget, 'AP fixture requires active units');
+  assert(apActor.pow.abilityPower > 0, 'canonical AP stat was not mapped into Combat2');
+
+  apActor.ragePoints = 0;
+  apActor.attackMultiplier = 1;
+  apActor.abilityPowerMultiplier = 1;
+  apActor.attackBuffActionsRemaining = 0;
+  apActor.abilityPowerBuffActionsRemaining = 0;
+
+  const apBuff = skills.resolve(apActor, apActor, {
     name: 'AP Regression Fixture',
     power: 1,
     type: 'support',
     status: 'ap up'
   }, 0);
 
-  assert(result.rawRageGain === 2, 'AP Up must not add resource bonus Rage');
-  assert(result.rageGained === 2 && actor.ragePoints === 2, 'AP Up action should receive only normal +2 Rage');
-  assert(actor.attackMultiplier >= 1.2, 'AP Up must strengthen the offensive multiplier channel');
-  assert(actor.attackBuffActionsRemaining >= 3, 'AP Up duration was not applied');
+  assert(apBuff.rawRageGain === 2, 'AP Up must not add resource bonus Rage');
+  assert(apBuff.rageGained === 2 && apActor.ragePoints === 2, 'AP Up action should receive only normal +2 Rage');
+  assert(apActor.attackMultiplier === 1, 'AP Up must not modify the physical ATK multiplier');
+  assert(apActor.abilityPowerMultiplier >= 1.2, 'AP Up must strengthen the Ability Power multiplier');
+  assert(apActor.abilityPowerBuffActionsRemaining >= 3, 'AP Up duration was not applied');
+
+  const baselineElemental = skills.resolve(apBaselineActor, apBaselineTarget, {
+    name: 'Elemental AP Baseline',
+    power: 140,
+    type: 'elemental'
+  }, 0);
+  const boostedElemental = skills.resolve(apActor, apTarget, {
+    name: 'Elemental AP Boosted',
+    power: 140,
+    type: 'elemental'
+  }, 0);
+  assert(boostedElemental.damage > baselineElemental.damage, 'AP Up must increase elemental skill damage');
+
+  const apPhysicalState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
+  const apPhysicalBaselineState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
+  const apPhysicalActor = apPhysicalState.activeLiving('player')[0];
+  const apPhysicalTarget = apPhysicalState.activeLiving('enemy')[0];
+  const apPhysicalBaselineActor = apPhysicalBaselineState.activeLiving('player')[0];
+  const apPhysicalBaselineTarget = apPhysicalBaselineState.activeLiving('enemy')[0];
+  assert(apPhysicalActor && apPhysicalTarget && apPhysicalBaselineActor && apPhysicalBaselineTarget, 'physical AP fixture missing');
+  skills.resolve(apPhysicalActor, apPhysicalActor, {
+    name: 'AP Physical Isolation Fixture',
+    power: 1,
+    type: 'support',
+    status: 'ap up'
+  }, 0);
+  const apBoostedBasic = basic.resolve(apPhysicalActor, apPhysicalTarget);
+  const apBaselineBasic = basic.resolve(apPhysicalBaselineActor, apPhysicalBaselineTarget);
+  assert(apBoostedBasic.damage === apBaselineBasic.damage, 'AP Up must not increase physical/basic damage');
+
+  const atkState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
+  const atkBaselineState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
+  const atkActor = atkState.activeLiving('player')[0];
+  const atkTarget = atkState.activeLiving('enemy')[0];
+  const atkBaselineActor = atkBaselineState.activeLiving('player')[0];
+  const atkBaselineTarget = atkBaselineState.activeLiving('enemy')[0];
+  assert(atkActor && atkTarget && atkBaselineActor && atkBaselineTarget, 'ATK fixture requires active units');
+  const atkBuff = skills.resolve(atkActor, atkActor, {
+    name: 'ATK Regression Fixture',
+    power: 1,
+    type: 'support',
+    status: 'attack up'
+  }, 0);
+  assert(atkBuff.rawRageGain === 2 && atkActor.ragePoints === 2, 'Attack Up must use normal +2 Rage only');
+  assert(atkActor.attackMultiplier >= 1.2, 'Attack Up must strengthen the physical ATK multiplier');
+  assert(atkActor.abilityPowerMultiplier === 1, 'Attack Up must not modify the AP multiplier');
+  const atkBoostedBasic = basic.resolve(atkActor, atkTarget);
+  const atkBaselineBasic = basic.resolve(atkBaselineActor, atkBaselineTarget);
+  assert(atkBoostedBasic.damage > atkBaselineBasic.damage, 'Attack Up must increase physical/basic damage');
+
+  const atkElementalState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
+  const atkElementalBaselineState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
+  const atkElementalActor = atkElementalState.activeLiving('player')[0];
+  const atkElementalTarget = atkElementalState.activeLiving('enemy')[0];
+  const atkElementalBaselineActor = atkElementalBaselineState.activeLiving('player')[0];
+  const atkElementalBaselineTarget = atkElementalBaselineState.activeLiving('enemy')[0];
+  assert(atkElementalActor && atkElementalTarget && atkElementalBaselineActor && atkElementalBaselineTarget, 'ATK elemental fixture missing');
+  skills.resolve(atkElementalActor, atkElementalActor, {
+    name: 'ATK AP Isolation Fixture',
+    power: 1,
+    type: 'support',
+    status: 'attack up'
+  }, 0);
+  const atkBoostedElemental = skills.resolve(atkElementalActor, atkElementalTarget, {
+    name: 'Elemental ATK Isolation Boosted',
+    power: 140,
+    type: 'elemental'
+  }, 0);
+  const atkBaselineElemental = skills.resolve(atkElementalBaselineActor, atkElementalBaselineTarget, {
+    name: 'Elemental ATK Isolation Baseline',
+    power: 140,
+    type: 'elemental'
+  }, 0);
+  assert(atkBoostedElemental.damage === atkBaselineElemental.damage, 'Attack Up must not increase elemental/AP damage');
 }
 
 function validateIdentityRules(): void {
@@ -124,7 +211,7 @@ function validateRevivePassive(): void {
 
 export function runCombat2SmokeRegression(): CombatRegressionReport {
   validateRageEconomy();
-  validateApSemantics();
+  validateOffenseChannels();
   validateIdentityRules();
   validateRevivePassive();
   const state = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
@@ -171,6 +258,7 @@ export function runCombat2SmokeRegression(): CombatRegressionReport {
     playerReserve: state.reserveLiving('player').length,
     identityRulesChecked: true,
     rageEconomyChecked: true,
-    apSemanticsChecked: true
+    apSemanticsChecked: true,
+    offenseChannelsChecked: true
   };
 }

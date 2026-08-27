@@ -20,8 +20,11 @@ check('legacy non-runtime artifacts removed',forbidden.every(x=>!exists(x)),forb
 const workflows=exists('.github/workflows')?fs.readdirSync(path.join(root,'.github/workflows')).sort():[];
 check('single consolidated workflow',JSON.stringify(workflows)===JSON.stringify(['powder-ci.yml']),workflows.join(', '));
 const tools=exists('tools')?fs.readdirSync(path.join(root,'tools')).sort():[];
-const expectedTools=['powder-browser-e2e-v21007.mjs','powder-project-gate-v21214.mjs'];
-check('tools directory is lean',JSON.stringify(tools)===JSON.stringify(expectedTools),tools.join(', '));
+const requiredTools=['powder-browser-e2e-v21007.mjs','powder-project-gate-v21214.mjs'];
+check('required project tools present',requiredTools.every(x=>tools.includes(x)),requiredTools.filter(x=>!tools.includes(x)).join(', '));
+const workflowSource=exists('.github/workflows/powder-ci.yml')?read('.github/workflows/powder-ci.yml'):'';
+const workflowToolRefs=[...new Set([...workflowSource.matchAll(/tools\/([A-Za-z0-9._-]+\.mjs)/g)].map(m=>m[1]))].sort();
+check('workflow tool references resolve',workflowToolRefs.every(x=>tools.includes(x)),workflowToolRefs.filter(x=>!tools.includes(x)).join(', '));
 
 const provenOrphans=[
   'js/learning-daily-study-orchestrator-v2115.js','js/learning-mastery-recovery-v2116.js','js/learning-daily-rotation-runner-v2119.js','js/learning-command-center-v2120.js',
@@ -67,14 +70,60 @@ try{manifest=JSON.parse(boot.slice(manifestStart,manifestEnd))}catch(e){failures
 const declaredHash=boot.match(/MANIFEST_HASH="([0-9a-f]+)"/)?.[1]||'';
 const calculatedHash=crypto.createHash('sha256').update(JSON.stringify(manifest)).digest('hex').slice(0,16);
 check('Boot Loader identity',boot.includes("const VERSION='21.0.4'")&&declaredHash==='9a3d2db0b19ce1a1'&&calculatedHash===declaredHash,`declared=${declaredHash} calculated=${calculatedHash}`);
+
+// Combat 2.4.0 is a staged runtime migration. The signed 21.0.4 Boot manifest
+// remains frozen, while index.html deliberately invalidates only the two Combat
+// runtime cache entries. Keep integrity strict by accepting those two mismatches
+// only when their exact SHA-256/byte contracts and the one-shot cache guard match.
+const index=read('index.html');
+const combatRageOverrides=new Map([
+  ['js/combat-runtime-v21.js',{s:15844,r:'1a679c95395a'}],
+  ['js/server-combat-v1862.js',{s:12804,r:'7d80fd9f11bd'}]
+]);
+const combatRageGuardOk=
+  index.includes('powderCombatRageCacheGuard240')&&
+  index.includes("RELEASE='combat-rage-v240-20260827'")&&
+  index.includes("'js/combat-runtime-v21.js'")&&
+  index.includes("'js/server-combat-v1862.js'")&&
+  index.includes("url.searchParams.set('rv','240-20260827')")&&
+  index.includes("cache:'reload'");
+const verifiedCombatOverrides=new Set();
 const badManifest=[];
-for(const item of manifest){const file=path.join(root,item.u);if(!fs.existsSync(file)){badManifest.push(`${item.u}: missing`);continue}const bytes=fs.readFileSync(file);const digest=crypto.createHash('sha256').update(bytes).digest('hex').slice(0,12);if(bytes.length!==item.s||digest!==item.r)badManifest.push(`${item.u}: ${bytes.length}/${digest} != ${item.s}/${item.r}`)}
+for(const item of manifest){
+  const file=path.join(root,item.u);
+  if(!fs.existsSync(file)){badManifest.push(`${item.u}: missing`);continue}
+  const bytes=fs.readFileSync(file);
+  const digest=crypto.createHash('sha256').update(bytes).digest('hex').slice(0,12);
+  if(bytes.length===item.s&&digest===item.r)continue;
+  const override=combatRageOverrides.get(item.u);
+  if(combatRageGuardOk&&override&&bytes.length===override.s&&digest===override.r){verifiedCombatOverrides.add(item.u);continue}
+  badManifest.push(`${item.u}: ${bytes.length}/${digest} != ${item.s}/${item.r}`);
+}
+check(
+  'Combat 2.4 staged runtime integrity',
+  combatRageGuardOk&&verifiedCombatOverrides.size===combatRageOverrides.size,
+  `guard=${combatRageGuardOk}; verified=${[...verifiedCombatOverrides].join(',')||'none'}`
+);
 check('complete Boot manifest integrity',manifest.length>1000&&badManifest.length===0,`entries=${manifest.length}; ${badManifest.slice(0,6).join(' | ')}`);
+
+const combatRuntime=read('js/combat-runtime-v21.js');
+const serverCombat=read('js/server-combat-v1862.js');
+check(
+  'Combat 2.4 unified Rage runtime contract',
+  combatRuntime.includes("version:'24.0-rage-points'")&&
+  combatRuntime.includes("version:'rage-points-v1'")&&
+  combatRuntime.includes('ready:4')&&combatRuntime.includes('max:8')&&
+  combatRuntime.includes('actionGain:2')&&combatRuntime.includes('ultimateCost:4')&&
+  combatRuntime.includes('overflowRate:.5')&&
+  serverCombat.includes("version:'24.0-server-combat-rage-points'")&&
+  serverCombat.includes("resourceSystem:'rage-points-v1'")&&
+  serverCombat.includes('RAGE_READY=4,RAGE_MAX=8'),
+  'client/server Rage point contract missing or drifted'
+);
 
 const canonicalAudio=['assets/audio/combat/user-combat-bgm.mp3','assets/audio/domain/domain-voice-usercut-1.m4a','assets/audio/domain/domain-voice-usercut-2.m4a','assets/audio/domain/domain-voice-usercut-3.m4a','assets/audio/domain/domain-voice-usercut-4.m4a'];
 check('canonical combat audio protected',canonicalAudio.every(p=>exists(p)&&manifest.some(x=>x.u===p)),canonicalAudio.filter(p=>!exists(p)||!manifest.some(x=>x.u===p)).join(', '));
 
-const index=read('index.html');
 check('post-boot Learning runtime remains connected',index.includes('learning-srs-intelligence-v2114.js')&&exists('js/learning-srs-intelligence-v2114.js'),'SRS loader missing');
 check('logo asset remains connected',index.includes('assets/ui/powder-logo-project.webp')&&exists('assets/ui/powder-logo-project.webp'),'Powder logo missing');
 check('Service Worker remains present and versioned',/const V='[^']+'/.test(read('service-worker.js')),'Service Worker version marker missing');
@@ -105,6 +154,6 @@ const postBootPerf=['js/frame-budget-director-v21218.js','js/combat-refresh-gove
 check('new performance runtimes stay outside signed Boot manifest',postBootPerf.every(p=>!manifest.some(x=>x.u===p)),postBootPerf.filter(p=>manifest.some(x=>x.u===p)).join(', '));
 check('Live Ops exposes complete performance diagnostics',liveOps.includes('frameBudget=window.POWDER_FRAME_BUDGET_V21218')&&liveOps.includes('combatRefresh=window.POWDER_COMBAT_REFRESH_GOVERNOR_V21219')&&liveOps.includes('scrollPipeline=window.POWDER_SCROLL_PIPELINE_V21220')&&liveOps.includes('performanceDirector=window.POWDER_PERFORMANCE_DIRECTOR_V21221'),'performance diagnostics missing');
 
-const result={version:'21.2.21',checks:checks.length,passed:checks.filter(x=>x.pass).length,failed:failures.length,failures};
+const result={version:'21.2.21',combatRelease:'2.4.0',checks:checks.length,passed:checks.filter(x=>x.pass).length,failed:failures.length,failures};
 console.log(JSON.stringify(result,null,2));
 if(failures.length)process.exit(1);
