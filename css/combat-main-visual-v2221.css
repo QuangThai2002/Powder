@@ -1,0 +1,223 @@
+/* Powder Main Combat Visual 22.2.1
+   Restores the dormant impact layers already emitted by player-combat-scene-v1862.
+   High/medium tiers get richer one-shot FX; low/reduced-motion keeps core feedback only. */
+
+.combat-v7-mount.cmv221-ready{
+  --cmv-core:#8fe1ff;
+  --cmv-line:#c3f2ff;
+  --cmv-soft:rgba(143,225,255,.22);
+  --cmv-hot:rgba(255,255,255,.92);
+}
+
+.combat-v7-mount.cmv221-ready .cv7-fx-layer{overflow:visible!important;isolation:isolate}
+.combat-v7-mount.cmv221-ready .cv7-vfx{overflow:visible!important;filter:none!important}
+.combat-v7-mount.cmv221-ready .cv7-vfx.el-fire,
+.combat-v7-mount.cmv221-ready .cv7-vfx.el-lava,
+.combat-v7-mount.cmv221-ready .cv7-attack-flow.el-fire,
+.combat-v7-mount.cmv221-ready .cv7-attack-flow.el-lava{--cmv-core:#ff8d5f;--cmv-line:#ffc17e;--cmv-soft:rgba(255,141,95,.26)}
+.combat-v7-mount.cmv221-ready .cv7-vfx.el-water,
+.combat-v7-mount.cmv221-ready .cv7-vfx.el-ice,
+.combat-v7-mount.cmv221-ready .cv7-attack-flow.el-water,
+.combat-v7-mount.cmv221-ready .cv7-attack-flow.el-ice{--cmv-core:#7dd9ff;--cmv-line:#c5f5ff;--cmv-soft:rgba(125,217,255,.25)}
+.combat-v7-mount.cmv221-ready .cv7-vfx.el-leaf,
+.combat-v7-mount.cmv221-ready .cv7-vfx.el-poison,
+.combat-v7-mount.cmv221-ready .cv7-attack-flow.el-leaf,
+.combat-v7-mount.cmv221-ready .cv7-attack-flow.el-poison{--cmv-core:#8dde80;--cmv-line:#c6ff9f;--cmv-soft:rgba(141,222,128,.24)}
+.combat-v7-mount.cmv221-ready .cv7-vfx.el-lightning,
+.combat-v7-mount.cmv221-ready .cv7-vfx.el-storm,
+.combat-v7-mount.cmv221-ready .cv7-attack-flow.el-lightning,
+.combat-v7-mount.cmv221-ready .cv7-attack-flow.el-storm{--cmv-core:#ffe177;--cmv-line:#fff1a9;--cmv-soft:rgba(255,225,119,.25)}
+.combat-v7-mount.cmv221-ready .cv7-vfx.el-dark,
+.combat-v7-mount.cmv221-ready .cv7-attack-flow.el-dark{--cmv-core:#a58be8;--cmv-line:#d7c0ff;--cmv-soft:rgba(165,139,232,.27)}
+.combat-v7-mount.cmv221-ready .cv7-vfx.el-light,
+.combat-v7-mount.cmv221-ready .cv7-attack-flow.el-light{--cmv-core:#ffe89c;--cmv-line:#fff8d0;--cmv-soft:rgba(255,232,156,.26)}
+.combat-v7-mount.cmv221-ready .cv7-vfx.el-earth,
+.combat-v7-mount.cmv221-ready .cv7-vfx.el-steel,
+.combat-v7-mount.cmv221-ready .cv7-attack-flow.el-earth,
+.combat-v7-mount.cmv221-ready .cv7-attack-flow.el-steel{--cmv-core:#cdb995;--cmv-line:#ece0c9;--cmv-soft:rgba(205,185,149,.23)}
+.combat-v7-mount.cmv221-ready .cv7-vfx.el-wind,
+.combat-v7-mount.cmv221-ready .cv7-attack-flow.el-wind{--cmv-core:#8fe8d5;--cmv-line:#d0fff4;--cmv-soft:rgba(143,232,213,.23)}
+
+/* CAST — no longer a tiny two-circle blip. */
+.combat-v7-mount.cmv221-ready .cv7-vfx.cast{width:154px!important;height:154px!important}
+.combat-v7-mount.cmv221-ready .cv7-vfx.cast .cv7-vfx-core{
+  width:62px!important;height:62px!important;
+  background:radial-gradient(circle,#fff 0 8%,var(--cmv-line) 18%,var(--cmv-core) 40%,transparent 70%)!important;
+  box-shadow:0 0 16px var(--cmv-soft),0 0 34px var(--cmv-soft)!important;
+  animation:cmv221CastCore .58s cubic-bezier(.16,.72,.22,1) both!important
+}
+.combat-v7-mount.cmv221-ready .cv7-vfx.cast .cv7-vfx-ring{
+  width:112px!important;height:112px!important;border-color:var(--cmv-line)!important;border-width:2px!important;
+  box-shadow:0 0 15px var(--cmv-soft),inset 0 0 15px var(--cmv-soft)!important;
+  animation:cmv221CastRing .62s cubic-bezier(.15,.65,.2,1) both!important
+}
+.combat-v7-mount.cmv221-ready .cv7-vfx.cast:before,
+.combat-v7-mount.cmv221-ready .cv7-vfx.cast:after{
+  content:"";position:absolute;left:50%;top:50%;pointer-events:none;border-radius:50%;transform:translate(-50%,-50%);z-index:-1
+}
+.combat-v7-mount.cmv221-ready .cv7-vfx.cast:before{
+  width:132px;height:132px;border:1px solid color-mix(in srgb,var(--cmv-line) 68%,transparent);
+  animation:cmv221Orbit .72s ease-out both
+}
+.combat-v7-mount.cmv221-ready .cv7-vfx.cast:after{
+  width:92px;height:92px;background:conic-gradient(from 0deg,transparent 0 18%,var(--cmv-soft) 23%,transparent 30% 56%,var(--cmv-soft) 63%,transparent 70%);
+  animation:cmv221Spin .66s ease-out both
+}
+.combat-v7-mount.cmv221-ready .cv7-vfx-label{top:112px!important;font-size:9px!important;padding:4px 9px!important;border-color:color-mix(in srgb,var(--cmv-line) 72%,transparent)!important;box-shadow:0 6px 18px rgba(0,0,0,.25)!important}
+
+/* IMPACT — re-enable every dormant layer emitted by the scene. */
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact{width:170px!important;height:170px!important}
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact .cv7-vfx-burst{
+  display:block!important;width:70px!important;height:70px!important;
+  background:radial-gradient(circle,#fff 0 6%,var(--cmv-line) 12%,var(--cmv-core) 27%,transparent 65%)!important;
+  box-shadow:0 0 24px var(--cmv-soft)!important;
+  animation:cmv221Burst .48s cubic-bezier(.1,.7,.18,1) both!important
+}
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact .cv7-vfx-shock{
+  display:block!important;width:86px!important;height:86px!important;border:3px solid var(--cmv-line)!important;background:transparent!important;
+  box-shadow:0 0 14px var(--cmv-soft),inset 0 0 12px var(--cmv-soft)!important;
+  animation:cmv221Shock .52s ease-out both!important
+}
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact .cv7-vfx-ripple{
+  display:block!important;position:absolute!important;left:50%!important;top:50%!important;width:116px!important;height:116px!important;
+  border-radius:50%!important;border:2px solid color-mix(in srgb,var(--cmv-line) 82%,transparent)!important;
+  box-shadow:0 0 18px var(--cmv-soft)!important;
+  animation:cmv221Ripple .64s ease-out both!important
+}
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact .cv7-vfx-frag{
+  display:block!important;position:absolute!important;left:50%!important;top:50%!important;width:18px!important;height:42px!important;
+  background:linear-gradient(180deg,var(--cmv-line),transparent)!important;
+  clip-path:polygon(50% 0,100% 38%,58% 100%,36% 58%,0 32%)!important;
+  box-shadow:36px 8px 0 -5px var(--cmv-core),-34px 18px 0 -6px var(--cmv-line),18px -34px 0 -7px var(--cmv-core)!important;
+  animation:cmv221Frag .58s cubic-bezier(.12,.7,.2,1) both!important
+}
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact .cv7-vfx-spark{
+  display:block!important;position:absolute!important;left:50%!important;top:50%!important;width:74px!important;height:3px!important;
+  transform-origin:0 50%!important;background:linear-gradient(90deg,#fff,var(--cmv-line) 36%,transparent 90%)!important;border-radius:999px!important;
+  opacity:0;animation:cmv221Spark .44s ease-out both!important
+}
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact .cv7-vfx-spark.a{transform:translate(-2px,-1px) rotate(18deg)!important}
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact .cv7-vfx-spark.b{transform:translate(-2px,-1px) rotate(142deg)!important;animation-delay:.02s!important}
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact .cv7-vfx-spark.c{transform:translate(-2px,-1px) rotate(258deg)!important;animation-delay:.04s!important}
+
+/* SOURCE -> TARGET is now visually obvious. */
+.combat-v7-mount.cmv221-ready .cv7-attack-flow{--attack-line:var(--cmv-line,#93e4ff)!important;filter:none!important}
+.combat-v7-mount.cmv221-ready .cv7-attack-trace{
+  height:5px!important;opacity:.96!important;
+  background:linear-gradient(90deg,transparent 0,var(--cmv-core) 14%,#fff 44%,var(--cmv-line) 70%,transparent 100%)!important;
+  box-shadow:0 0 8px var(--cmv-soft),0 0 16px var(--cmv-soft)!important;
+  border-radius:999px!important;overflow:visible!important
+}
+.combat-v7-mount.cmv221-ready .cv7-attack-trace:before{
+  content:"";position:absolute;left:0;top:50%;width:42px;height:11px;transform:translate(-12px,-50%);
+  border-radius:999px;background:radial-gradient(ellipse,#fff 0 10%,var(--cmv-line) 34%,transparent 72%);
+  box-shadow:0 0 12px var(--cmv-soft);animation:cmv221Projectile var(--flow-duration,620ms) cubic-bezier(.18,.68,.2,1) both
+}
+.combat-v7-mount.cmv221-ready .cv7-attack-trace:after{
+  content:"";position:absolute;left:0;top:50%;width:38%;height:2px;transform:translateY(-50%);
+  background:linear-gradient(90deg,transparent,var(--cmv-line),#fff);opacity:.82;
+  animation:cmv221TraceSweep var(--flow-duration,620ms) ease-out both
+}
+.combat-v7-mount.cmv221-ready .cv7-attack-hit{
+  width:76px!important;height:76px!important;
+  background:radial-gradient(circle,#fff 0 7%,var(--cmv-line) 18%,var(--cmv-core) 33%,transparent 65%)!important;
+  box-shadow:0 0 20px var(--cmv-soft)!important
+}
+.combat-v7-mount.cmv221-ready .cv7-attack-hit-ring{
+  display:block!important;width:104px!important;height:104px!important;border:2px solid var(--cmv-line)!important;
+  box-shadow:0 0 14px var(--cmv-soft),inset 0 0 12px var(--cmv-soft)!important;
+  animation:cmv221TargetRing .52s ease-out var(--impact-delay,420ms) both!important
+}
+.combat-v7-mount.cmv221-ready .cv7-signature-impact{
+  width:94px!important;height:94px!important;border-width:2px!important;border-color:var(--cmv-line)!important;
+  box-shadow:0 0 20px var(--cmv-soft),inset 0 0 18px var(--cmv-soft)!important;
+  background:radial-gradient(circle,rgba(6,18,28,.42),rgba(6,18,28,.9))!important;
+  animation:cmv221Signature .58s ease-out both!important
+}
+
+/* Make damage/heal/shield values read like combat feedback, not debug text. */
+.combat-v7-mount.cmv221-ready .cv7-fx.damage,
+.combat-v7-mount.cmv221-ready .cv7-fx.crit,
+.combat-v7-mount.cmv221-ready .cv7-fx.heal,
+.combat-v7-mount.cmv221-ready .cv7-fx.shield-gain{
+  z-index:40!important;font-weight:1000!important;letter-spacing:.01em!important;
+  text-shadow:0 3px 8px rgba(0,0,0,.72),0 0 12px currentColor!important
+}
+.combat-v7-mount.cmv221-ready .cv7-fx.damage{font-size:31px!important}
+.combat-v7-mount.cmv221-ready .cv7-fx.crit{font-size:37px!important;padding:3px 8px!important;transform-origin:center!important}
+.combat-v7-mount.cmv221-ready .cv7-fx.heal,
+.combat-v7-mount.cmv221-ready .cv7-fx.shield-gain{font-size:28px!important}
+
+/* Target reaction halo driven by JS impact feedback. */
+.combat-v7-mount.cmv221-ready .cv7-unit.cmv221-impact .cv7-art-wrap:before{
+  content:"";position:absolute;z-index:2;left:50%;top:50%;width:126px;height:126px;border-radius:50%;pointer-events:none;
+  transform:translate(-50%,-50%);border:2px solid color-mix(in srgb,var(--el,#fff) 72%,#fff 28%);
+  box-shadow:0 0 22px color-mix(in srgb,var(--el,#fff) 46%,transparent);animation:cmv221UnitHalo .46s ease-out both
+}
+.combat-v7-mount.cmv221-ready .cv7-unit.cmv221-impact-heavy .cv7-art-wrap:before,
+.combat-v7-mount.cmv221-ready .cv7-unit.cmv221-impact-fatal .cv7-art-wrap:before{width:154px;height:154px;border-width:3px}
+.combat-v7-mount.cmv221-ready .cv7-unit.cmv221-impact-fatal .cv7-unit-info{box-shadow:0 0 24px rgba(255,91,102,.24)}
+.combat-v7-mount.cmv221-ready .cv7-unit.cmv221-shield-react .cv7-ring{box-shadow:0 0 20px rgba(120,220,255,.44),inset 0 0 16px rgba(120,220,255,.24)}
+.combat-v7-mount.cmv221-ready .cv7-unit.cmv221-heal-react .cv7-ring{box-shadow:0 0 20px rgba(104,235,158,.36),inset 0 0 15px rgba(104,235,158,.2)}
+
+/* Skill rank changes scale — basic stays quick, Ultimate owns the screen briefly. */
+.combat-v7-mount.cmv221-ready[data-csi218-key="basic"] .cv7-vfx.cast,
+.combat-v7-mount.cmv221-ready[data-csi218-key="basic"] .cv7-vfx.impact{scale:.82}
+.combat-v7-mount.cmv221-ready[data-csi218-key="skill1"] .cv7-vfx.cast,
+.combat-v7-mount.cmv221-ready[data-csi218-key="skill1"] .cv7-vfx.impact{scale:.94}
+.combat-v7-mount.cmv221-ready[data-csi218-key="skill2"] .cv7-vfx.cast,
+.combat-v7-mount.cmv221-ready[data-csi218-key="skill2"] .cv7-vfx.impact{scale:1.04}
+.combat-v7-mount.cmv221-ready[data-csi218-key="exclusive"] .cv7-vfx.cast,
+.combat-v7-mount.cmv221-ready[data-csi218-key="exclusive"] .cv7-vfx.impact{scale:1.12}
+.combat-v7-mount.cmv221-ready[data-csi218-key="ultimate"] .cv7-vfx.cast,
+.combat-v7-mount.cmv221-ready[data-csi218-key="ultimate"] .cv7-vfx.impact{scale:1.25}
+.combat-v7-mount.cmv221-ready[data-csi218-key="ultimate"] .cv7-attack-trace{height:7px!important;box-shadow:0 0 12px var(--cmv-soft),0 0 28px var(--cmv-soft)!important}
+.combat-v7-mount.cmv221-ready[data-csi218-key="ultimate"] .cv7-attack-hit-ring{width:132px!important;height:132px!important;border-width:3px!important}
+
+/* Keep adaptive FX: low keeps numbers/reaction, drops decorative particles. */
+.combat-v7-mount.cmv221-ready.cv71-fx-medium .cv7-vfx-frag{display:none!important}
+.combat-v7-mount.cmv221-ready.cv71-fx-medium .cv7-vfx-spark.c{display:none!important}
+.combat-v7-mount.cmv221-ready.cv71-fx-low .cv7-vfx.impact{display:block!important;width:96px!important;height:96px!important}
+.combat-v7-mount.cmv221-ready.cv71-fx-low .cv7-vfx.impact .cv7-vfx-burst{display:block!important;width:48px!important;height:48px!important}
+.combat-v7-mount.cmv221-ready.cv71-fx-low .cv7-vfx-shock,
+.combat-v7-mount.cmv221-ready.cv71-fx-low .cv7-vfx-ripple,
+.combat-v7-mount.cmv221-ready.cv71-fx-low .cv7-vfx-frag,
+.combat-v7-mount.cmv221-ready.cv71-fx-low .cv7-vfx-spark,
+.combat-v7-mount.cmv221-ready.cv71-fx-low .cv7-attack-trace:after,
+.combat-v7-mount.cmv221-ready.cv71-fx-low .cv7-attack-hit-ring,
+.combat-v7-mount.cmv221-ready.cmv221-pressure-reduced .cv7-vfx-frag,
+.combat-v7-mount.cmv221-ready.cmv221-pressure-reduced .cv7-vfx-spark{display:none!important}
+.combat-v7-mount.cmv221-ready.cv71-fx-low .cv7-attack-trace{height:3px!important;box-shadow:none!important}
+
+@keyframes cmv221CastCore{0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}32%{opacity:1;transform:translate(-50%,-50%) scale(1.16)}100%{opacity:0;transform:translate(-50%,-50%) scale(.72)}}
+@keyframes cmv221CastRing{0%{opacity:0;transform:translate(-50%,-50%) scale(.35)}30%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1.48)}}
+@keyframes cmv221Orbit{0%{opacity:0;transform:translate(-50%,-50%) scale(.45) rotate(-26deg)}26%{opacity:.9}100%{opacity:0;transform:translate(-50%,-50%) scale(1.38) rotate(38deg)}}
+@keyframes cmv221Spin{0%{opacity:0;transform:translate(-50%,-50%) scale(.58) rotate(-65deg)}28%{opacity:.8}100%{opacity:0;transform:translate(-50%,-50%) scale(1.24) rotate(74deg)}}
+@keyframes cmv221Burst{0%{opacity:0;transform:translate(-50%,-50%) scale(.18)}18%{opacity:1;transform:translate(-50%,-50%) scale(1.18)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.55)}}
+@keyframes cmv221Shock{0%{opacity:0;transform:translate(-50%,-50%) scale(.22)}24%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1.68)}}
+@keyframes cmv221Ripple{0%{opacity:0;transform:translate(-50%,-50%) scale(.28)}20%{opacity:.86}100%{opacity:0;transform:translate(-50%,-50%) scale(1.82)}}
+@keyframes cmv221Frag{0%{opacity:0;transform:translate(-50%,-50%) rotate(18deg) scale(.25)}24%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) rotate(72deg) scale(1.45)}}
+@keyframes cmv221Spark{0%{opacity:0;scale:.12 1}18%{opacity:1}100%{opacity:0;scale:1.25 1}}
+@keyframes cmv221Projectile{0%{left:0;opacity:0;scale:.6}12%{opacity:1}78%{opacity:1}100%{left:100%;opacity:0;scale:1.05}}
+@keyframes cmv221TraceSweep{0%{left:0;opacity:0}18%{opacity:.85}100%{left:62%;opacity:0}}
+@keyframes cmv221TargetRing{0%{opacity:0;transform:translate(50%,-50%) scale(.3)}25%{opacity:1}100%{opacity:0;transform:translate(50%,-50%) scale(1.42)}}
+@keyframes cmv221Signature{0%{opacity:0;scale:.5}24%{opacity:1;scale:1.1}100%{opacity:0;scale:1.36}}
+@keyframes cmv221UnitHalo{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}24%{opacity:.95}100%{opacity:0;transform:translate(-50%,-50%) scale(1.5)}}
+
+html.reduce-motion .combat-v7-mount.cmv221-ready .cv7-vfx-shock,
+html.reduce-motion .combat-v7-mount.cmv221-ready .cv7-vfx-ripple,
+html.reduce-motion .combat-v7-mount.cmv221-ready .cv7-vfx-frag,
+html.reduce-motion .combat-v7-mount.cmv221-ready .cv7-vfx-spark,
+html.reduce-motion .combat-v7-mount.cmv221-ready .cv7-attack-trace:before,
+html.reduce-motion .combat-v7-mount.cmv221-ready .cv7-attack-trace:after,
+html.reduce-motion .combat-v7-mount.cmv221-ready .cv7-attack-hit-ring{display:none!important}
+html.reduce-motion .combat-v7-mount.cmv221-ready .cv7-vfx-burst,
+html.reduce-motion .combat-v7-mount.cmv221-ready .cv7-vfx-core,
+html.reduce-motion .combat-v7-mount.cmv221-ready .cv7-vfx-ring{animation:none!important;opacity:.9!important}
+
+@media(max-width:850px){
+  .combat-v7-mount.cmv221-ready .cv7-vfx.cast,.combat-v7-mount.cmv221-ready .cv7-vfx.impact{scale:.82}
+  .combat-v7-mount.cmv221-ready[data-csi218-key="ultimate"] .cv7-vfx.cast,.combat-v7-mount.cmv221-ready[data-csi218-key="ultimate"] .cv7-vfx.impact{scale:1.02}
+  .combat-v7-mount.cmv221-ready .cv7-fx.damage{font-size:27px!important}
+  .combat-v7-mount.cmv221-ready .cv7-fx.crit{font-size:32px!important}
+}
