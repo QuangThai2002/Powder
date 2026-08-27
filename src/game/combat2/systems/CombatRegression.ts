@@ -6,6 +6,7 @@ import {
   standardSkillIndex
 } from '../data/PowderDataAdapter';
 import { BasicAttackResolver } from './BasicAttackResolver';
+import { runCombatControlRegression } from './CombatControlRegression';
 import { CombatIdentityRules } from './CombatIdentityRules';
 import {
   applyRawRageGain,
@@ -28,13 +29,16 @@ export interface CombatRegressionReport {
   apSemanticsChecked: boolean;
   offenseChannelsChecked: boolean;
   skillArtCoverageChecked: boolean;
+  controlSystemChecked: boolean;
 }
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(`[Combat2 Regression] ${message}`);
 }
 
-const HOSTILE_STATUSES = new Set(['stun', 'freeze', 'slow', 'burn', 'poison']);
+const HOSTILE_STATUSES = new Set([
+  'silence', 'stun', 'paralysis', 'freeze', 'slow', 'burn', 'poison'
+]);
 
 function validateSkillArtCoverage(): void {
   assert(STANDARD_POW_COUNT === 99, 'canonical Combat2 roster must expose 99 Pow');
@@ -110,6 +114,7 @@ function validateOffenseChannels(): void {
     power: 140,
     type: 'elemental'
   }, 0);
+  apActor.skillCooldownActionsRemaining[0] = 0;
   const boostedElemental = skills.resolve(apActor, apTarget, {
     name: 'Elemental AP Boosted',
     power: 140,
@@ -167,6 +172,7 @@ function validateOffenseChannels(): void {
     type: 'support',
     status: 'attack up'
   }, 0);
+  atkElementalActor.skillCooldownActionsRemaining[0] = 0;
   const atkBoostedElemental = skills.resolve(atkElementalActor, atkElementalTarget, {
     name: 'Elemental ATK Isolation Boosted',
     power: 140,
@@ -198,7 +204,9 @@ function validateIdentityRules(): void {
   const evaluation = identity.evaluateDamage(actor, target, 'skill', 'elemental');
   assert(Number.isFinite(evaluation.totalMultiplier) && evaluation.totalMultiplier >= 0, 'identity multiplier invalid');
 
-  const debuffFixture = state.units.flatMap((unit) => unit.pow.abilities.skills.map((ability, slot) => ({ unit, ability, slot: slot as 0 | 1 }))).find(({ ability }) => ability.type === 'debuff');
+  const debuffFixture = state.units
+    .flatMap((unit) => unit.pow.abilities.skills.map((ability, slot) => ({ unit, ability, slot: slot as 0 | 1 })))
+    .find(({ ability }) => ability.type === 'debuff');
   if (debuffFixture) {
     const debuffTarget = state.activeLiving(debuffFixture.unit.side === 'player' ? 'enemy' : 'player')[0];
     assert(debuffTarget, 'debuff target missing');
@@ -231,6 +239,8 @@ export function runCombat2SmokeRegression(): CombatRegressionReport {
   validateOffenseChannels();
   validateIdentityRules();
   validateRevivePassive();
+  runCombatControlRegression();
+
   const state = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
   const turns = new TurnManager(state);
   for (const unit of state.units) {
@@ -277,6 +287,7 @@ export function runCombat2SmokeRegression(): CombatRegressionReport {
     rageEconomyChecked: true,
     apSemanticsChecked: true,
     offenseChannelsChecked: true,
-    skillArtCoverageChecked: true
+    skillArtCoverageChecked: true,
+    controlSystemChecked: true
   };
 }

@@ -1,4 +1,12 @@
 export type CombatSide = 'player' | 'enemy';
+export type CombatRarity =
+  | 'common'
+  | 'rare'
+  | 'super_rare'
+  | 'epic'
+  | 'legendary'
+  | 'mythic'
+  | 'ancient';
 
 export interface PowDisplayProfile {
   heightRatio: number;
@@ -36,6 +44,7 @@ export interface CombatPow {
   element: string;
   elementKey: string;
   role: string;
+  rarity: CombatRarity;
   level: number;
   attack: number;
   abilityPower: number;
