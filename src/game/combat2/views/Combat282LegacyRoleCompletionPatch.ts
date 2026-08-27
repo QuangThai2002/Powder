@@ -86,24 +86,28 @@ function installExecutePatch(SkillActionResolverClass: any): void {
     ability: CombatAbility,
     kind: 'skill' | 'ultimate'
   ): any {
+    // Legacy execute eligibility is evaluated before the hit lands.
     const mechanic = catalogMechanicByAbility(actor, ability);
     const multiplier = engine.executeMultiplier(target, mechanic);
     const result = originalApplyDamage.call(this, actor, target, ability, kind);
-    if (multiplier <= 1 || result?.evaded || Number(result?.damage) <= 0 || target.hp <= 0) return result;
+    if (multiplier <= 1 || result?.evaded || Number(result?.damage) <= 0) return result;
 
-    let extra = Math.max(0, Math.round(Number(result.damage) * (multiplier - 1)));
-    if (extra <= 0) return result;
-    const extraShield = Math.min(Math.max(0, target.shield), extra);
+    const bonus = Math.max(0, Math.round(Number(result.damage) * (multiplier - 1)));
+    if (bonus <= 0) return result;
+
+    let remaining = bonus;
+    const extraShield = Math.min(Math.max(0, target.shield), remaining);
     target.shield = Math.max(0, target.shield - extraShield);
-    extra -= extraShield;
-    const extraHp = Math.min(Math.max(0, target.hp), extra);
+    remaining -= extraShield;
+    const extraHp = Math.min(Math.max(0, target.hp), remaining);
     target.hp = Math.max(0, target.hp - extraHp);
-    const applied = extraShield + extraHp;
-    if (applied <= 0) return result;
 
-    result.damage += applied;
+    // Preserve the complete execute amount in combat feedback even when the
+    // original hit already killed the target; state application remains capped
+    // by the shield/HP that actually remained after the base hit.
+    result.damage += bonus;
     result.shieldDamage += extraShield;
-    result.hpDamage += extraHp;
+    result.hpDamage += Math.max(0, bonus - extraShield);
     result.legacyExecute = true;
     return result;
   };
