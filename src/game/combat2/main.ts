@@ -33,6 +33,7 @@ import { installCombat2103DomainStagePatch } from './views/Combat2103DomainStage
 import { installCombat2104PowSkillSignaturePatch } from './views/Combat2104PowSkillSignaturePatch';
 import { installCombat2105AudioImpactPatch } from './views/Combat2105AudioImpactPatch';
 import { installCombat2106AdaptiveFxPatch } from './views/Combat2106AdaptiveFxPatch';
+import { installCombat2109BattleEndPatch } from './views/Combat2109BattleEndPatch';
 import { PowView } from './views/PowView';
 
 const logicalWidth = 1600;
@@ -60,6 +61,7 @@ installCombat2103DomainStagePatch(BattleScene);
 installCombat2104PowSkillSignaturePatch(BattleScene);
 installCombat2105AudioImpactPatch(BattleScene, PowView);
 installCombat2106AdaptiveFxPatch(BattleScene);
+installCombat2109BattleEndPatch(BattleScene);
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO, parent: 'powder-combat2', width: logicalWidth, height: logicalHeight, backgroundColor: '#08131f',
@@ -105,7 +107,8 @@ if (isLocalDev) {
         domainStage: (globalThis as any).POWDER_COMBAT2_DOMAIN_STAGE?.version ?? 'missing',
         powSignature: (globalThis as any).POWDER_COMBAT2_POW_SIGNATURE?.version ?? 'missing',
         audioImpact: (globalThis as any).POWDER_COMBAT2_AUDIO_IMPACT?.version ?? 'missing',
-        performance: (globalThis as any).POWDER_COMBAT2_PERFORMANCE?.version ?? 'missing'
+        performance: (globalThis as any).POWDER_COMBAT2_PERFORMANCE?.version ?? 'missing',
+        battleEnd: (globalThis as any).POWDER_COMBAT2_BATTLE_END?.version ?? 'missing'
       });
     } catch (error) { console.error('[Combat2 Regression FAIL - NON BLOCKING]', error); }
   });
