@@ -3,25 +3,37 @@ import { BattleScene } from './scenes/BattleScene';
 import { runCombat2SmokeRegression } from './systems/CombatRegression';
 import { CombatGuardEngine } from './systems/CombatGuardEngine';
 import { runCombatGuardRegression } from './systems/CombatGuardRegression';
+import { runCombatLegacyRoleCompletionRegression } from './systems/CombatLegacyRoleCompletionRegression';
 import { runCombatLegacyRoleRegression } from './systems/CombatLegacyRoleRegression';
 import { runCombatMultiTargetRegression } from './systems/CombatMultiTargetRegression';
 import { runCombatRageRegression } from './systems/CombatRageRegression';
+import { CombatState } from './systems/CombatState';
 import { runCombatSpecialSupportRegression } from './systems/CombatSpecialSupportRegression';
+import { SkillActionResolver } from './systems/SkillActionResolver';
+import { TurnManager } from './systems/TurnManager';
 import { installCombat27UiPatch } from './views/Combat27UiPatch';
 import { installCombat28MultiTargetPatch } from './views/Combat28MultiTargetPatch';
 import { installCombat281LegacyRolePatch } from './views/Combat281LegacyRolePatch';
+import { installCombat282LegacyRoleCompletionPatch } from './views/Combat282LegacyRoleCompletionPatch';
 import { PowView } from './views/PowView';
 
 const logicalWidth = 1600;
 const logicalHeight = 900;
 const isLocalDev = ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
-// Presentation first, then gameplay compatibility overlays. Role mechanics wrap
-// the already-upgraded single/multi-target cast flow and Guard prototype before
-// BattleScene creates any Guard instances.
+// Presentation first, then gameplay compatibility overlays. 2.8.2 wraps the
+// 2.8.1 role layer so restored healer/haste/marks/execute can reuse the current
+// Guard, multi-target, Rage and CC pipelines instead of duplicating them.
 installCombat27UiPatch(BattleScene, PowView);
 installCombat28MultiTargetPatch(BattleScene);
 installCombat281LegacyRolePatch(BattleScene, CombatGuardEngine);
+installCombat282LegacyRoleCompletionPatch(
+  BattleScene,
+  SkillActionResolver,
+  TurnManager,
+  CombatState,
+  PowView
+);
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -62,7 +74,16 @@ if (isLocalDev) {
       const guard = runCombatGuardRegression();
       const multiTarget = runCombatMultiTargetRegression();
       const legacyRole = runCombatLegacyRoleRegression();
-      console.info('[Combat2 Regression PASS]', { ...report, specialSupport, rage, guard, multiTarget, legacyRole });
+      const legacyRoleCompletion = runCombatLegacyRoleCompletionRegression();
+      console.info('[Combat2 Regression PASS]', {
+        ...report,
+        specialSupport,
+        rage,
+        guard,
+        multiTarget,
+        legacyRole,
+        legacyRoleCompletion
+      });
     } catch (error) {
       console.error('[Combat2 Regression FAIL - NON BLOCKING]', error);
     }
