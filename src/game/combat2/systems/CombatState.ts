@@ -4,7 +4,14 @@ import { sanitizeRagePoints } from './CombatRageEngine';
 
 export type CombatPhase = 'ready' | 'selecting' | 'resolving' | 'finished';
 export type ControlStatus = 'stun' | 'freeze' | null;
+export type HardControlStatus = 'silence' | 'stun' | 'paralysis' | 'freeze';
+export type FreezeStage = 0 | 1 | 2;
 export type DotStatus = 'burn' | 'poison' | null;
+
+export interface ControlHistoryEntry {
+  status: HardControlStatus;
+  round: number;
+}
 
 export interface CombatUnitState {
   instanceId: string;
@@ -13,7 +20,7 @@ export interface CombatUnitState {
   slot: number;
   fieldSlot: number | null;
   hp: number;
-  /** Unified Combat 2.4 resource: 0..8 effective Rage points. */
+  /** Unified Combat 2.4+ resource: 0..8 effective Rage points. */
   ragePoints: number;
   shield: number;
   speed: number;
@@ -25,8 +32,20 @@ export interface CombatUnitState {
   attackBuffActionsRemaining: number;
   abilityPowerBuffActionsRemaining: number;
   defenseBuffActionsRemaining: number;
+  /** Future own turns before Skill I/II become usable again. */
+  skillCooldownActionsRemaining: [number, number];
+  /** Future own turns before Ultimate becomes usable again. Rage is still required. */
+  ultimateCooldownActionsRemaining: number;
+  /** Additive control-effect accuracy from equipment/buffs; final CC chance is capped elsewhere at 80%. */
+  effectAccuracyBonus: number;
   controlStatus: ControlStatus;
   controlActionsRemaining: number;
+  silenceActionsRemaining: number;
+  paralysisActionsRemaining: number;
+  freezeStage: FreezeStage;
+  freezeStageActionsRemaining: number;
+  controlImmunityActionsRemaining: number;
+  controlHistory: ControlHistoryEntry[];
   dotStatus: DotStatus;
   dotDamage: number;
   dotActionsRemaining: number;
@@ -42,6 +61,10 @@ export interface ReservePromotion {
   defeatedUnitId: string;
   promotedUnitId: string;
 }
+
+const HARD_CONTROL_VALUES = new Set<HardControlStatus>([
+  'silence', 'stun', 'paralysis', 'freeze'
+]);
 
 export class CombatState {
   readonly units: CombatUnitState[];
@@ -110,6 +133,16 @@ export class CombatState {
     return promotions;
   }
 
+  refreshSpeed(unit: CombatUnitState): void {
+    const base = Number.isFinite(unit.pow.speed) && unit.pow.speed > 0 ? unit.pow.speed : 1;
+    let multiplier = 1;
+    if (unit.speedBuffActionsRemaining > 0) multiplier *= 1.2;
+    if (unit.speedDebuffActionsRemaining > 0) multiplier *= 0.8;
+    if (unit.freezeStage === 1 && unit.freezeStageActionsRemaining > 0) multiplier *= 0.9;
+    if (unit.freezeStage === 2 && unit.freezeStageActionsRemaining > 0) multiplier *= 0.8;
+    unit.speed = Math.max(1, base * multiplier);
+  }
+
   sanitizeRuntimeNumbers(): void {
     for (const unit of this.units) {
       unit.hp = this.finiteClamp(unit.hp, 0, unit.pow.maxHp, 0);
@@ -124,12 +157,33 @@ export class CombatState {
       unit.attackBuffActionsRemaining = this.safeDuration(unit.attackBuffActionsRemaining);
       unit.abilityPowerBuffActionsRemaining = this.safeDuration(unit.abilityPowerBuffActionsRemaining);
       unit.defenseBuffActionsRemaining = this.safeDuration(unit.defenseBuffActionsRemaining);
+      unit.skillCooldownActionsRemaining = [
+        this.safeDuration(unit.skillCooldownActionsRemaining?.[0] ?? 0),
+        this.safeDuration(unit.skillCooldownActionsRemaining?.[1] ?? 0)
+      ];
+      unit.ultimateCooldownActionsRemaining = this.safeDuration(unit.ultimateCooldownActionsRemaining);
+      unit.effectAccuracyBonus = this.finiteClamp(unit.effectAccuracyBonus, 0, 0.4, 0);
       unit.controlActionsRemaining = this.safeDuration(unit.controlActionsRemaining);
+      unit.silenceActionsRemaining = this.safeDuration(unit.silenceActionsRemaining);
+      unit.paralysisActionsRemaining = this.safeDuration(unit.paralysisActionsRemaining);
+      unit.freezeStage = this.safeFreezeStage(unit.freezeStage);
+      unit.freezeStageActionsRemaining = this.safeDuration(unit.freezeStageActionsRemaining);
+      unit.controlImmunityActionsRemaining = this.safeDuration(unit.controlImmunityActionsRemaining);
+      unit.controlHistory = this.sanitizeControlHistory(unit.controlHistory);
       unit.dotDamage = Math.floor(this.finiteClamp(unit.dotDamage, 0, unit.pow.maxHp, 0));
       unit.dotActionsRemaining = this.safeDuration(unit.dotActionsRemaining);
       unit.reviveMarkerActionsRemaining = this.safeDuration(unit.reviveMarkerActionsRemaining);
 
       if (unit.controlActionsRemaining <= 0) unit.controlStatus = null;
+      if (unit.freezeStageActionsRemaining <= 0) unit.freezeStage = 0;
+      if (unit.controlImmunityActionsRemaining > 0) {
+        unit.controlStatus = null;
+        unit.controlActionsRemaining = 0;
+        unit.silenceActionsRemaining = 0;
+        unit.paralysisActionsRemaining = 0;
+        unit.freezeStage = 0;
+        unit.freezeStageActionsRemaining = 0;
+      }
       if (unit.dotActionsRemaining <= 0 || unit.dotDamage <= 0) {
         unit.dotStatus = null;
         unit.dotDamage = 0;
@@ -157,10 +211,17 @@ export class CombatState {
       fallen.shield = 0;
       fallen.controlStatus = null;
       fallen.controlActionsRemaining = 0;
+      fallen.silenceActionsRemaining = 0;
+      fallen.paralysisActionsRemaining = 0;
+      fallen.freezeStage = 0;
+      fallen.freezeStageActionsRemaining = 0;
+      fallen.controlImmunityActionsRemaining = 0;
+      fallen.controlHistory = [];
       fallen.dotStatus = null;
       fallen.dotDamage = 0;
       fallen.dotActionsRemaining = 0;
       fallen.speedDebuffActionsRemaining = 0;
+      fallen.speedBuffActionsRemaining = 0;
       fallen.speed = Math.max(1, fallen.pow.speed);
       fallen.attackMultiplier = 1;
       fallen.abilityPowerMultiplier = 1;
@@ -193,8 +254,17 @@ export class CombatState {
       attackBuffActionsRemaining: 0,
       abilityPowerBuffActionsRemaining: 0,
       defenseBuffActionsRemaining: 0,
+      skillCooldownActionsRemaining: [0, 0],
+      ultimateCooldownActionsRemaining: 0,
+      effectAccuracyBonus: 0,
       controlStatus: null,
       controlActionsRemaining: 0,
+      silenceActionsRemaining: 0,
+      paralysisActionsRemaining: 0,
+      freezeStage: 0,
+      freezeStageActionsRemaining: 0,
+      controlImmunityActionsRemaining: 0,
+      controlHistory: [],
       dotStatus: null,
       dotDamage: 0,
       dotActionsRemaining: 0,
@@ -203,6 +273,21 @@ export class CombatState {
       alive: pow.hp > 0,
       actionLocked: false
     }));
+  }
+
+  private sanitizeControlHistory(value: ControlHistoryEntry[] | undefined): ControlHistoryEntry[] {
+    if (!Array.isArray(value)) return [];
+    return value
+      .filter((entry) =>
+        Boolean(entry) && HARD_CONTROL_VALUES.has(entry.status) && Number.isFinite(entry.round) && entry.round >= 1
+      )
+      .slice(-12)
+      .map((entry) => ({ status: entry.status, round: Math.floor(entry.round) }));
+  }
+
+  private safeFreezeStage(value: number): FreezeStage {
+    const safe = Math.floor(this.finiteClamp(value, 0, 2, 0));
+    return (safe === 1 || safe === 2 ? safe : 0) as FreezeStage;
   }
 
   private safeDuration(value: number): number {
