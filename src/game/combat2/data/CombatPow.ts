@@ -22,6 +22,11 @@ export interface CombatAbility {
   status?: string;
   target?: string;
   area?: boolean;
+  /** Canonical nominal hit count from the legacy catalog when present. */
+  hits?: number;
+  /** Legacy named mechanic hook (role/domain/special skill semantics). */
+  mechanic?: string;
+  description?: string;
   sureHit?: boolean;
   unavoidable?: boolean;
   bypassGuard?: boolean;
