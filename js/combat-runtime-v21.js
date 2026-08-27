@@ -212,6 +212,16 @@ function startUiBridge(){
   if(document.documentElement)start();else document.addEventListener('DOMContentLoaded',start,{once:true});
 }
 
-const API={version:'24.0-rage-points',LIMITS,RAGE_POINTS,stable,hashText,hash,compactUnit,compactCore,coreHash,register,get,list,batched,sanitizeRage,applyRawRageGain,rageMarkerStates:markerStates,installUnifiedRage,activeCore};
-window.POWDER_COMBAT_RUNTIME_V21=API;register('runtime',API);installCoreExportInterceptor();startUiBridge();
+function loadMainCombatVisual2221(){
+  if(typeof document==='undefined'||window.POWDER_MAIN_COMBAT_VISUAL_V2221||document.getElementById('powderMainCombatVisual2221'))return;
+  const script=document.createElement('script');
+  script.id='powderMainCombatVisual2221';
+  script.src='js/combat-main-visual-v2221.js?v=2221-main';
+  script.async=true;
+  script.dataset.powderRuntimeBridge='combat-main-visual-22.2.1';
+  document.head?.appendChild(script);
+}
+
+const API={version:'24.0-rage-points+main-visual-22.2.1',LIMITS,RAGE_POINTS,stable,hashText,hash,compactUnit,compactCore,coreHash,register,get,list,batched,sanitizeRage,applyRawRageGain,rageMarkerStates:markerStates,installUnifiedRage,activeCore,loadMainCombatVisual2221};
+window.POWDER_COMBAT_RUNTIME_V21=API;register('runtime',API);installCoreExportInterceptor();startUiBridge();loadMainCombatVisual2221();
 })();
