@@ -172,6 +172,7 @@ function validateOffenseChannels(): void {
     type: 'support',
     status: 'attack up'
   }, 0);
+  atkElementalActor.skillCooldownActionsRemaining[0] = 0;
   const atkBoostedElemental = skills.resolve(atkElementalActor, atkElementalTarget, {
     name: 'Elemental ATK Isolation Boosted',
     power: 140,
