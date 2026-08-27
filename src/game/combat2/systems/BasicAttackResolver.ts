@@ -1,4 +1,8 @@
 import type { CombatUnitState } from './CombatState';
+import {
+  FROSTBITE_DAMAGE_MULTIPLIER,
+  FREEZE_SHATTER_MULTIPLIER
+} from './CombatControlEngine';
 import { CombatIdentityRules } from './CombatIdentityRules';
 import { ACTION_BASE_RAW_GAIN, applyRawRageGain } from './CombatRageEngine';
 
@@ -12,6 +16,7 @@ export interface BasicAttackResult {
   rawRageGain: number;
   rageGained: number;
   rageAfter: number;
+  freezeShattered: boolean;
   defeated: boolean;
 }
 
@@ -25,9 +30,16 @@ export class BasicAttackResolver {
     const coefficient = Math.min(3, Math.max(0.1, basicPower / 100));
     const targetHpBefore = this.safeHp(target.hp, target.pow.maxHp);
     const identity = this.identity.evaluateDamage(attacker, target, 'basic', 'physical');
+    const frozen = target.controlStatus === 'freeze' && target.controlActionsRemaining > 0;
+    const frostbitten = target.freezeStage === 2 && target.freezeStageActionsRemaining > 0;
+    const vulnerability = frozen
+      ? FREEZE_SHATTER_MULTIPLIER
+      : frostbitten
+        ? FROSTBITE_DAMAGE_MULTIPLIER
+        : 1;
 
     const rawDamage = Math.max(1, attack * coefficient - defense * 0.45);
-    const damage = Math.max(1, Math.round(rawDamage * identity.totalMultiplier));
+    const damage = Math.max(1, Math.round(rawDamage * identity.totalMultiplier * vulnerability));
     const shieldBefore = this.safeStat(target.shield, 0);
     const shieldDamage = Math.min(shieldBefore, damage);
     const hpDamage = Math.max(0, damage - shieldDamage);
@@ -36,6 +48,11 @@ export class BasicAttackResolver {
     target.shield = Math.max(0, shieldBefore - shieldDamage);
     target.hp = targetHpAfter;
     target.alive = targetHpAfter > 0;
+    const freezeShattered = frozen && damage > 0;
+    if (freezeShattered) {
+      target.controlStatus = null;
+      target.controlActionsRemaining = 0;
+    }
 
     const rage = applyRawRageGain(attacker.ragePoints, ACTION_BASE_RAW_GAIN);
     attacker.ragePoints = rage.next;
@@ -50,6 +67,7 @@ export class BasicAttackResolver {
       rawRageGain: rage.rawGain,
       rageGained: rage.effectiveGain,
       rageAfter: rage.next,
+      freezeShattered,
       defeated: !target.alive
     };
   }
