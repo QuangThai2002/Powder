@@ -4,10 +4,16 @@ import { runCombat2SmokeRegression } from './systems/CombatRegression';
 import { runCombatGuardRegression } from './systems/CombatGuardRegression';
 import { runCombatRageRegression } from './systems/CombatRageRegression';
 import { runCombatSpecialSupportRegression } from './systems/CombatSpecialSupportRegression';
+import { installCombat27UiPatch } from './views/Combat27UiPatch';
+import { PowView } from './views/PowView';
 
 const logicalWidth = 1600;
 const logicalHeight = 900;
 const isLocalDev = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+
+// Install presentation-only overrides before Phaser instantiates the battle scene.
+// Gameplay state/resolvers remain the 2.6.x implementations.
+installCombat27UiPatch(BattleScene, PowView);
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
