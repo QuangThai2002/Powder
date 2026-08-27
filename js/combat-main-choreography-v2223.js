@@ -24,7 +24,7 @@ function flashOverlay(element,key,severity='none'){
   n.className='cmc223-overlay';if(element)n.classList.add(element);const strong=key==='ultimate'||severity==='fatal',mid=key==='exclusive'||key==='skill2'||severity==='heavy';
   if(!n.animate)return;state.overlayFlashes++;
   n.getAnimations?.().forEach(a=>{try{a.cancel()}catch(_){}});
-  n.animate([{opacity:0,transform:'scale(.97)'},{opacity:strong?.72:mid?.48:.28,transform:'scale(1)',offset:.34},{opacity:0,transform:'scale(1.025)'}],{duration:strong?430:mid?320:240,easing:'ease-out'});
+  n.animate([{opacity:0,transform:'scale(.97)'},{opacity:strong ? .72 : mid ? .48 : .28,transform:'scale(1)',offset:.34},{opacity:0,transform:'scale(1.025)'}],{duration:strong?430:mid?320:240,easing:'ease-out'});
 }
 function updateChain(){const t=now();if(t-state.lastImpactAt>620)chain=0;state.lastImpactAt=t;chain=Math.min(5,chain+1);state.maxChain=Math.max(state.maxChain,chain);if(chain>1)state.chains++;if(mount)mount.dataset.cmc223Chain=String(chain);clearTimeout(chainTimer);chainTimer=setTimeout(()=>{chain=0;if(mount)delete mount.dataset.cmc223Chain},720)}
 function onImpact(detail={}){if(!mount)return;state.impacts++;const severity=String(detail.severity||'none');updateChain();const element=inferElement()||state.lastElement;flashOverlay(element,state.lastKey,severity);clearTimeout(impactClassTimer);mount.classList.remove('cmc223-impact-heavy','cmc223-impact-fatal');if(severity==='heavy'){state.heavyImpacts++;mount.classList.add('cmc223-impact-heavy')}else if(severity==='fatal'){state.fatalImpacts++;mount.classList.add('cmc223-impact-fatal')}impactClassTimer=setTimeout(()=>mount?.classList.remove('cmc223-impact-heavy','cmc223-impact-fatal'),420)}
