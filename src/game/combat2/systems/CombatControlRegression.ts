@@ -20,12 +20,15 @@ import { TurnManager } from './TurnManager';
 export interface CombatControlRegressionReport {
   rarityChanceChecked: boolean;
   cooldownPolicyChecked: boolean;
+  cooldownRuntimeChecked: boolean;
   hardControlDistributionChecked: boolean;
   silenceChecked: boolean;
   stunChanceChecked: boolean;
   paralysisChecked: boolean;
   freezeStagesChecked: boolean;
   antiChainChecked: boolean;
+  sameStatusAntiChainChecked: boolean;
+  controlWindowExpiryChecked: boolean;
   ownTurnDurationChecked: boolean;
 }
 
@@ -74,6 +77,54 @@ function validateCooldownPolicy(): void {
   assert(cooldownForAbility({ name: 'Burn', power: 100, type: 'elemental', status: 'burn' }, 0) === 0, 'Burn must remain CD0');
   assert(cooldownForAbility({ name: 'Poison', power: 100, type: 'elemental', status: 'poison' }, 0) === 0, 'Poison must remain CD0');
   assert(cooldownForAbility({ name: 'Damage', power: 100, type: 'elemental' }, 0) === 0, 'pure damage must remain CD0');
+}
+
+function validateCooldownRuntime(): void {
+  const state = fixture();
+  const tracked = state.activeLiving('player')[0];
+  const target = state.activeLiving('enemy')[0];
+  assert(tracked && target, 'runtime cooldown fixture requires active units');
+
+  const turns = new TurnManager(state);
+  const skills = new SkillActionResolver(() => 0);
+  const hardCc = { name: 'Runtime CD2 Stun', power: 1, type: 'debuff', status: 'stun' } as const;
+  let phase: 'waitingForCast' | 'blockedOne' | 'blockedTwo' | 'readyAgain' = 'waitingForCast';
+  let iterations = 0;
+
+  while (phase !== 'readyAgain' && iterations < 120) {
+    const actor = turns.beginNextTurn();
+    assert(actor, 'scheduler ended during runtime cooldown fixture');
+
+    if (actor.instanceId === tracked.instanceId) {
+      if (phase === 'waitingForCast') {
+        assert(skills.canUse(tracked, 0), 'hard CC must be available before first cast');
+        skills.resolve(tracked, target, hardCc, 0, state.round);
+        turns.completeAction(tracked.instanceId);
+        assert(skills.cooldownRemaining(tracked, 0) === 2, 'CD2 must display 2 after the casting turn completes');
+        phase = 'blockedOne';
+      } else if (phase === 'blockedOne') {
+        assert(!skills.canUse(tracked, 0), 'CD2 must block the first future own turn');
+        assert(skills.cooldownRemaining(tracked, 0) === 2, 'other Pow turns must not consume the first CD2 charge');
+        turns.completeAction(tracked.instanceId);
+        assert(skills.cooldownRemaining(tracked, 0) === 1, 'first blocked own turn must reduce CD2 to 1');
+        phase = 'blockedTwo';
+      } else if (phase === 'blockedTwo') {
+        assert(!skills.canUse(tracked, 0), 'CD2 must block the second future own turn');
+        assert(skills.cooldownRemaining(tracked, 0) === 1, 'CD2 must remain 1 until the second blocked own turn completes');
+        turns.completeAction(tracked.instanceId);
+        assert(skills.cooldownRemaining(tracked, 0) === 0, 'second blocked own turn must finish CD2');
+        phase = 'readyAgain';
+      }
+    } else {
+      const before = skills.cooldownRemaining(tracked, 0);
+      turns.completeAction(actor.instanceId);
+      assert(skills.cooldownRemaining(tracked, 0) === before, 'other Pow actions must never consume this Pow cooldown');
+    }
+    iterations += 1;
+  }
+
+  assert(phase === 'readyAgain', 'CD2 runtime fixture did not finish two blocked own turns');
+  assert(skills.canUse(tracked, 0), 'hard CC must be usable again after two blocked own turns');
 }
 
 function validateDistribution(): void {
@@ -211,6 +262,53 @@ function validateAntiChain(): void {
   assert(blocked.controlBlocked && !blocked.controlApplied, 'new CC must be blocked while Control Immunity is active');
 }
 
+function validateSameStatusAntiChain(): void {
+  const state = fixture();
+  const actor = state.activeLiving('player')[0];
+  const target = state.activeLiving('enemy')[0];
+  assert(actor && target, 'same-status anti-chain fixture missing');
+  const skills = new SkillActionResolver(() => 0);
+  const names = ['Triple Stun A', 'Triple Stun B', 'Triple Stun C'];
+
+  names.forEach((name, index) => {
+    actor.skillCooldownActionsRemaining[0] = 0;
+    const result = skills.resolve(actor, target, {
+      name, power: 1, type: 'debuff', status: 'stun'
+    }, 0, index + 1);
+    if (index < 2) assert(!result.controlImmunityTriggered, 'two distinct Stun skills must not trigger immunity early');
+    else assert(result.controlImmunityTriggered, 'three distinct Stun skills must trigger Control Immunity');
+  });
+
+  assert(target.controlImmunityActionsRemaining === 2, 'three distinct same-status CC skills must grant two own turns of immunity');
+}
+
+function validateControlWindowExpiry(): void {
+  const state = fixture();
+  const actor = state.activeLiving('player')[0];
+  const target = state.activeLiving('enemy')[0];
+  assert(actor && target, 'control-window fixture missing');
+  const skills = new SkillActionResolver(() => 0);
+
+  actor.skillCooldownActionsRemaining[0] = 0;
+  const first = skills.resolve(actor, target, {
+    name: 'Window Skill A', power: 1, type: 'debuff', status: 'stun'
+  }, 0, 1);
+  assert(!first.controlImmunityTriggered, 'first CC must not trigger immunity');
+
+  actor.skillCooldownActionsRemaining[0] = 0;
+  const second = skills.resolve(actor, target, {
+    name: 'Window Skill B', power: 1, type: 'debuff', status: 'stun'
+  }, 0, 5);
+  assert(!second.controlImmunityTriggered, 'two CC skills inside five rounds must not trigger immunity');
+
+  actor.skillCooldownActionsRemaining[0] = 0;
+  const third = skills.resolve(actor, target, {
+    name: 'Window Skill C', power: 1, type: 'debuff', status: 'stun'
+  }, 0, 6);
+  assert(!third.controlImmunityTriggered, 'round-1 CC must expire before the round-6 anti-chain calculation');
+  assert(target.controlHistory.length === 2, 'only round-5 and round-6 CC history entries should remain');
+}
+
 function validateOwnTurnDurations(): void {
   const state = fixture();
   const tracked = state.activeLiving('player')[0];
@@ -240,23 +338,29 @@ function validateOwnTurnDurations(): void {
 export function runCombatControlRegression(): CombatControlRegressionReport {
   validateRarityChance();
   validateCooldownPolicy();
+  validateCooldownRuntime();
   validateDistribution();
   validateSilence();
   validateStunChance();
   validateParalysis();
   validateFreezeStages();
   validateAntiChain();
+  validateSameStatusAntiChain();
+  validateControlWindowExpiry();
   validateOwnTurnDurations();
 
   return {
     rarityChanceChecked: true,
     cooldownPolicyChecked: true,
+    cooldownRuntimeChecked: true,
     hardControlDistributionChecked: true,
     silenceChecked: true,
     stunChanceChecked: true,
     paralysisChecked: true,
     freezeStagesChecked: true,
     antiChainChecked: true,
+    sameStatusAntiChainChecked: true,
+    controlWindowExpiryChecked: true,
     ownTurnDurationChecked: true
   };
 }
