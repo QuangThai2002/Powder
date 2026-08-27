@@ -56,7 +56,9 @@ function representativeTarget(scene: PatchableScene, actor: CombatUnitState, abi
   const type = String(ability.type || '').trim().toLowerCase();
   const allies = scene.combatState.activeLiving(actor.side) as CombatUnitState[];
   const enemies = scene.combatState.activeLiving(actor.side === 'player' ? 'enemy' : 'player') as CombatUnitState[];
-  if (ability.area || target === 'all' || target === 'all-enemies') return type === 'support' ? (allies[0] ?? actor) : (enemies[0] ?? null);
+  if (ability.area || target === 'all' || target === 'all-enemies' || target === 'front-row' || target === 'back-row') {
+    return type === 'support' ? (allies[0] ?? actor) : (enemies[0] ?? null);
+  }
   if (['team', 'allies', 'all-allies', 'three-allies', 'self-and-lowest-ally'].includes(target)) return actor;
   return null;
 }
@@ -193,9 +195,7 @@ function installMultiResolvePatch(proto: any): void {
       this.combatState.sanitizeRuntimeNumbers();
       this.refreshViews();
 
-      if (slot === 'ultimate') {
-        await this.presentation.playUltimateImpact(primaryView, actor.pow.elementKey, selfTargeted);
-      }
+      if (slot === 'ultimate') await this.presentation.playUltimateImpact(primaryView, actor.pow.elementKey, selfTargeted);
 
       for (let index = 0; index < cast.hits.length; index += 1) {
         const hit = cast.hits[index];
@@ -214,13 +214,13 @@ function installMultiResolvePatch(proto: any): void {
 }
 
 function installIntroPatch(proto: any): void {
-  proto.showPreBattleIntro = function showPreBattleIntro280(this: PatchableScene): void {
+  proto.showPreBattleIntro = function showPreBattleIntro281(this: PatchableScene): void {
     const { width, height } = this.scale;
     const portrait = height > width;
     const shade = this.add.rectangle(width / 2, height / 2, width, height, 0x02080e, 0.4);
     const plateWidth = Math.min(portrait ? 620 : 690, width * 0.77);
     const plate = this.add.rectangle(width / 2, height / 2, plateWidth, 108, 0x081d2a, 0.94).setStrokeStyle(1.5, 0xd7b86c, 0.68);
-    const title = this.add.text(width / 2, height / 2, 'POWDER COMBAT 2.8.0', {
+    const title = this.add.text(width / 2, height / 2, 'POWDER COMBAT 2.8.1', {
       fontFamily: COMBAT_DISPLAY_FONT,
       fontSize: portrait ? '32px' : '34px',
       color: '#fff6df',
