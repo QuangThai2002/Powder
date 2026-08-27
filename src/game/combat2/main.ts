@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { BattleScene } from './scenes/BattleScene';
+import { installCombat2100TestRoster } from './data/Combat2100TestRoster';
 import { runCombat2SmokeRegression } from './systems/CombatRegression';
 import { CombatGuardEngine } from './systems/CombatGuardEngine';
 import { runCombatGuardRegression } from './systems/CombatGuardRegression';
@@ -22,11 +23,16 @@ import { installCombat295LegacyDomainParityPatch } from './views/Combat295Legacy
 import { installCombat296VersionPatch } from './views/Combat296VersionPatch';
 import { installCombat298ActionChoreographyPatch } from './views/Combat298ActionChoreographyPatch';
 import { installCombat299StatusVisualPatch } from './views/Combat299StatusVisualPatch';
+import { installCombat2100ReserveFlowPatch } from './views/Combat2100ReserveFlowPatch';
 import { PowView } from './views/PowView';
 
 const logicalWidth = 1600;
 const logicalHeight = 900;
 const isLocalDev = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+
+// Swap only the standalone Combat2 test roster. This does not touch the main
+// Powder save/formation and falls back safely if a requested catalog Pow is absent.
+const testRosterReport = installCombat2100TestRoster();
 
 // Presentation first, then compatibility overlays. Each legacy layer wraps the
 // already-restored behavior instead of replacing the current Combat2 core.
@@ -44,6 +50,7 @@ installCombat296VersionPatch(BattleScene);
 // fully-hardened battle/domain stack rather than being overwritten by it.
 installCombat298ActionChoreographyPatch(BattleScene, PowView);
 installCombat299StatusVisualPatch(BattleScene, PowView);
+installCombat2100ReserveFlowPatch(BattleScene, PowView);
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -97,8 +104,10 @@ if (isLocalDev) {
         legacyDomain,
         legacyDomainSpecial,
         legacyDomainParity,
+        roster: testRosterReport,
         actionFx: (globalThis as any).POWDER_COMBAT2_ACTION_FX?.version ?? 'missing',
-        statusFx: (globalThis as any).POWDER_COMBAT2_STATUS_FX?.version ?? 'missing'
+        statusFx: (globalThis as any).POWDER_COMBAT2_STATUS_FX?.version ?? 'missing',
+        reserveFx: (globalThis as any).POWDER_COMBAT2_RESERVE_FX?.version ?? 'missing'
       });
     } catch (error) {
       console.error('[Combat2 Regression FAIL - NON BLOCKING]', error);
