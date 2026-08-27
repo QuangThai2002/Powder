@@ -36,7 +36,8 @@ function play(detail={}){
   place(n,anchor);state.lastPowId=powId;state.lastMotif=spec.motif;state.lastKey=key;n.dataset.motif=spec.motif;n.querySelector('i').textContent=spec.icon;
   const colors=ELEMENT_COLOR[elementOf(unit)]||['#d9f4ff','rgba(125,220,255,.32)'];n.style.setProperty('--cms-color',colors[0]);n.style.setProperty('--cms-glow',colors[1]);
   const rank=key==='ultimate'?5:key==='exclusive'?4:key==='skill2'?3:2,low=pressure()==='hot'||pressure()==='critical'||mount.classList.contains('cv71-fx-low');
-  const duration=low?260:rank===5?620:rank===4?500:rank===3?420:340,peak=low?.62:rank===5?1:rank===4?.9:.78;
+  const duration=low ? 260 : rank===5 ? 620 : rank===4 ? 500 : rank===3 ? 420 : 340;
+  const peak=low ? .62 : rank===5 ? 1 : rank===4 ? .9 : .78;
   n.getAnimations?.().forEach(a=>{try{a.cancel()}catch(_){}});
   n.animate([{opacity:0,scale:.56},{opacity:peak,scale:rank>=4?1.08:1,offset:.42},{opacity:0,scale:rank>=4?1.24:1.14}],{duration,easing:'cubic-bezier(.15,.7,.18,1)'});
   state.shows++;if(phase==='charge')state.chargeShows++;else if(phase==='release')state.releaseShows++;else if(phase==='impact')state.impactShows++;if(key==='ultimate')state.ultimates++;
