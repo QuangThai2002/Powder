@@ -62,27 +62,31 @@ function dealRawDamage(target: CombatUnitState, amount: number): number {
   return shieldDamage + hpDamage;
 }
 
-function applySwordStatus(target: CombatUnitState, sword: Sword): void {
+function applySwordStatus(engine: CombatLegacyDomainEngine, target: CombatUnitState, sword: Sword): boolean {
+  const resistance = engine.simpleExpansionResistance(target.side);
   switch (sword.id) {
     case 'flame':
-      target.burnDamage = Math.max(target.burnDamage, Math.max(1, Math.round(target.pow.maxHp * 0.06)));
+      target.burnDamage = Math.max(target.burnDamage, Math.max(1, Math.round(target.pow.maxHp * 0.06 * (1 - resistance))));
       target.burnActionsRemaining = Math.max(target.burnActionsRemaining, 3);
-      break;
+      return true;
     case 'poison':
-      target.poisonStacks = Math.min(6, Math.max(1, target.poisonStacks + 1));
+      // Legacy Draw Swords Poison is force-applied but remains a normal 3-stack Poison.
+      target.poisonStacks = Math.min(3, Math.max(1, target.poisonStacks + 1));
       target.poisonActionsRemaining = Math.max(target.poisonActionsRemaining, 3);
-      break;
+      return true;
     case 'thunder':
-      target.paralysisActionsRemaining = Math.max(target.paralysisActionsRemaining, 1);
-      break;
+      target.paralysisActionsRemaining = Math.max(target.paralysisActionsRemaining, 2);
+      return true;
     case 'sever':
-      target.antiHeal = Math.max(target.antiHeal, 0.40);
+      target.antiHeal = Math.max(target.antiHeal, 0.50);
       target.antiHealActionsRemaining = Math.max(target.antiHealActionsRemaining, 2);
-      break;
+      return true;
     case 'ice':
+      // Sword damage is Sure-Hit, but legacy Freeze still respects Simple Domain hard-CC resistance.
+      if (resistance > 0 && Math.random() < resistance) return false;
       target.controlStatus = 'freeze';
       target.controlActionsRemaining = Math.max(target.controlActionsRemaining, 1);
-      break;
+      return true;
   }
 }
 
@@ -126,12 +130,13 @@ function installDrawSwordParity(): void {
     const target = foes[Math.floor(Math.random() * foes.length)] || foes[0];
     const resistance = this.simpleExpansionResistance(target.side);
     const damage = dealRawDamage(target, Math.round(target.pow.maxHp * 0.20 * (1 - resistance)));
-    applySwordStatus(target, sword);
+    const statusApplied = target.alive ? applySwordStatus(this, target, sword) : false;
+    const statusText = statusApplied ? '' : sword.id === 'ice' ? ' · FREEZE BỊ KHÁNG' : '';
     return [{
       kind: 'damage',
       targetId: target.instanceId,
       value: damage,
-      label: `${sword.name} · TẤT TRÚNG -${damage}`
+      label: `${sword.name} · TẤT TRÚNG -${damage}${statusText}`
     }];
   };
 }
@@ -150,25 +155,33 @@ function installColdSpeedCleanup(): void {
   };
 }
 
-function installPoisonSixStackSanitizer(): void {
+function installLegacyDomainSanitizer(): void {
   const proto = CombatState.prototype as any;
-  if (proto.__powderCombat295PoisonSixStack) return;
-  proto.__powderCombat295PoisonSixStack = true;
+  if (proto.__powderCombat295DomainSanitizer) return;
+  proto.__powderCombat295DomainSanitizer = true;
   const original = proto.sanitizeRuntimeNumbers;
   proto.sanitizeRuntimeNumbers = function combat295Sanitize(this: CombatState): void {
-    const preserve = new Map<string, number>();
+    const poisonPreserve = new Map<string, number>();
+    const antiHealPreserve = new Map<string, number>();
     for (const unit of this.units) {
       const engine = combatLegacyDomainForUnit(unit);
       if (!engine) continue;
       const hostile = engine.snapshot(otherSide(unit.side)).expansion;
       if (hostile?.id === 'myriad_poison' && unit.poisonStacks > 3) {
-        preserve.set(unit.instanceId, Math.min(6, Math.max(0, Math.floor(unit.poisonStacks))));
+        poisonPreserve.set(unit.instanceId, Math.min(6, Math.max(0, Math.floor(unit.poisonStacks))));
+      }
+      if (hostile?.id === 'draw_swords' && unit.antiHeal > 0.40) {
+        antiHealPreserve.set(unit.instanceId, Math.min(0.50, Math.max(0, unit.antiHeal)));
       }
     }
     original.call(this);
-    for (const [instanceId, stacks] of preserve) {
+    for (const [instanceId, stacks] of poisonPreserve) {
       const unit = this.getUnit(instanceId);
       if (unit) unit.poisonStacks = stacks;
+    }
+    for (const [instanceId, antiHeal] of antiHealPreserve) {
+      const unit = this.getUnit(instanceId);
+      if (unit) unit.antiHeal = antiHeal;
     }
   };
 }
@@ -179,5 +192,5 @@ export function installCombat295LegacyDomainParityPatch(): void {
   root[PATCH_FLAG] = true;
   installDrawSwordParity();
   installColdSpeedCleanup();
-  installPoisonSixStackSanitizer();
+  installLegacyDomainSanitizer();
 }
