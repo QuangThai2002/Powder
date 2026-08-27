@@ -1,22 +1,27 @@
 import Phaser from 'phaser';
 import { BattleScene } from './scenes/BattleScene';
 import { runCombat2SmokeRegression } from './systems/CombatRegression';
+import { CombatGuardEngine } from './systems/CombatGuardEngine';
 import { runCombatGuardRegression } from './systems/CombatGuardRegression';
+import { runCombatLegacyRoleRegression } from './systems/CombatLegacyRoleRegression';
 import { runCombatMultiTargetRegression } from './systems/CombatMultiTargetRegression';
 import { runCombatRageRegression } from './systems/CombatRageRegression';
 import { runCombatSpecialSupportRegression } from './systems/CombatSpecialSupportRegression';
 import { installCombat27UiPatch } from './views/Combat27UiPatch';
 import { installCombat28MultiTargetPatch } from './views/Combat28MultiTargetPatch';
+import { installCombat281LegacyRolePatch } from './views/Combat281LegacyRolePatch';
 import { PowView } from './views/PowView';
 
 const logicalWidth = 1600;
 const logicalHeight = 900;
 const isLocalDev = ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
-// Presentation first, then gameplay compatibility overlays. Both install before
-// Phaser creates BattleScene instances, so no live scene has to be rebuilt.
+// Presentation first, then gameplay compatibility overlays. Role mechanics wrap
+// the already-upgraded single/multi-target cast flow and Guard prototype before
+// BattleScene creates any Guard instances.
 installCombat27UiPatch(BattleScene, PowView);
 installCombat28MultiTargetPatch(BattleScene);
+installCombat281LegacyRolePatch(BattleScene, CombatGuardEngine);
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -56,7 +61,8 @@ if (isLocalDev) {
       const rage = runCombatRageRegression();
       const guard = runCombatGuardRegression();
       const multiTarget = runCombatMultiTargetRegression();
-      console.info('[Combat2 Regression PASS]', { ...report, specialSupport, rage, guard, multiTarget });
+      const legacyRole = runCombatLegacyRoleRegression();
+      console.info('[Combat2 Regression PASS]', { ...report, specialSupport, rage, guard, multiTarget, legacyRole });
     } catch (error) {
       console.error('[Combat2 Regression FAIL - NON BLOCKING]', error);
     }
