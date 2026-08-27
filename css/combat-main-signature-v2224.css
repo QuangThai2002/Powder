@@ -1,0 +1,23 @@
+/* Powder Main Combat Signature 22.2.4 */
+.combat-v7-mount.cms224-ready .cms224-sigil{position:absolute;left:50%;top:50%;width:118px;height:118px;z-index:31;pointer-events:none;display:grid;place-items:center;transform:translate(-50%,-50%);border:2px solid var(--cms-color,#c8f3ff);border-radius:50%;color:var(--cms-color,#eaffff);background:radial-gradient(circle,rgba(255,255,255,.13),rgba(8,19,31,.52) 44%,transparent 72%);box-shadow:0 0 20px var(--cms-glow,rgba(125,220,255,.28)),inset 0 0 18px var(--cms-glow,rgba(125,220,255,.18));will-change:transform,opacity}
+.combat-v7-mount.cms224-ready .cms224-sigil>i{font-style:normal;font-size:40px;line-height:1;text-shadow:0 0 12px currentColor;filter:drop-shadow(0 2px 4px rgba(0,0,0,.55))}
+.combat-v7-mount.cms224-ready .cms224-sigil:before,.combat-v7-mount.cms224-ready .cms224-sigil:after{content:"";position:absolute;inset:12px;border:1px solid currentColor;border-radius:inherit;opacity:.55}
+.combat-v7-mount.cms224-ready .cms224-sigil:after{inset:24px;opacity:.32}
+.combat-v7-mount.cms224-ready .cms224-sigil[data-motif="flame-crown"]{clip-path:polygon(50% 0,62% 17%,77% 8%,80% 28%,100% 34%,87% 52%,94% 72%,70% 75%,50% 100%,30% 75%,6% 72%,13% 52%,0 34%,20% 28%,23% 8%,38% 17%)}
+.combat-v7-mount.cms224-ready .cms224-sigil[data-motif="tide-wheel"]{border-width:3px;border-style:double}
+.combat-v7-mount.cms224-ready .cms224-sigil[data-motif="world-tree"]{border-radius:48% 52% 44% 56%/56% 44% 56% 44%;transform:translate(-50%,-50%) rotate(45deg)}
+.combat-v7-mount.cms224-ready .cms224-sigil[data-motif="world-tree"]>i{transform:rotate(-45deg)}
+.combat-v7-mount.cms224-ready .cms224-sigil[data-motif="mountain-seal"],.combat-v7-mount.cms224-ready .cms224-sigil[data-motif="magma-core"]{border-radius:18%;transform:translate(-50%,-50%) rotate(45deg)}
+.combat-v7-mount.cms224-ready .cms224-sigil[data-motif="mountain-seal"]>i,.combat-v7-mount.cms224-ready .cms224-sigil[data-motif="magma-core"]>i{transform:rotate(-45deg)}
+.combat-v7-mount.cms224-ready .cms224-sigil[data-motif="sky-feather"],.combat-v7-mount.cms224-ready .cms224-sigil[data-motif="dragon"],.combat-v7-mount.cms224-ready .cms224-sigil[data-motif="kunpeng"]{width:154px;height:88px;border-radius:60% 40% 60% 40%/50% 65% 35% 50%}
+.combat-v7-mount.cms224-ready .cms224-sigil[data-motif="thunder-seal"]{clip-path:polygon(46% 0,88% 0,61% 36%,92% 36%,39% 100%,51% 57%,20% 57%)}
+.combat-v7-mount.cms224-ready .cms224-sigil[data-motif="ice-crown"]{border-radius:8%;transform:translate(-50%,-50%) rotate(45deg)}
+.combat-v7-mount.cms224-ready .cms224-sigil[data-motif="ice-crown"]>i{transform:rotate(-45deg)}
+.combat-v7-mount.cms224-ready .cms224-sigil[data-motif="venom-mandala"]{border-style:dashed}
+.combat-v7-mount.cms224-ready .cms224-sigil[data-motif="solar-halo"]{box-shadow:0 0 28px var(--cms-glow),0 0 48px var(--cms-glow),inset 0 0 18px var(--cms-glow)}
+.combat-v7-mount.cms224-ready .cms224-sigil[data-motif="eclipse"]{background:radial-gradient(circle at 62% 42%,rgba(255,255,255,.11) 0 18%,rgba(5,5,14,.92) 20% 45%,transparent 47%)}
+.combat-v7-mount.cms224-ready .cms224-sigil[data-motif="phoenix"]{clip-path:polygon(50% 0,62% 31%,100% 18%,72% 52%,93% 82%,59% 70%,50% 100%,41% 70%,7% 82%,28% 52%,0 18%,38% 31%)}
+.combat-v7-mount.cms224-ready .cms224-sigil[data-motif="royal-lion"]{border-width:3px;box-shadow:0 0 24px var(--cms-glow),inset 0 0 26px var(--cms-glow)}
+.combat-v7-mount.cms224-ready .cms224-sigil[data-motif="lich-crown"]{border-style:dotted;background:radial-gradient(circle,rgba(190,160,255,.12),rgba(6,5,15,.82) 50%,transparent 72%)}
+.combat-v7-mount.cms224-pressure-reduced .cms224-sigil,.combat-v7-mount.cv71-fx-low .cms224-sigil{width:86px;height:86px;box-shadow:none}
+@media (prefers-reduced-motion:reduce){.combat-v7-mount.cms224-ready .cms224-sigil{display:none!important}}
