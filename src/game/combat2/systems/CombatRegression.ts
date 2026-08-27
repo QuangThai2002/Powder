@@ -1,4 +1,5 @@
 import { COMBAT2_STARTER_ROSTER } from '../data/PowderDataAdapter';
+import { BasicAttackResolver } from './BasicAttackResolver';
 import { CombatIdentityRules } from './CombatIdentityRules';
 import {
   applyRawRageGain,
@@ -56,13 +57,22 @@ function validateRageEconomy(): void {
 }
 
 function validateApSemantics(): void {
-  const state = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
+  const boostedState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
+  const baselineState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
   const skills = new SkillActionResolver();
-  const actor = state.activeLiving('player')[0];
-  assert(actor, 'AP fixture requires active player');
+  const basic = new BasicAttackResolver();
+  const actor = boostedState.activeLiving('player')[0];
+  const target = boostedState.activeLiving('enemy')[0];
+  const baselineActor = baselineState.activeLiving('player')[0];
+  const baselineTarget = baselineState.activeLiving('enemy')[0];
+  assert(actor && target && baselineActor && baselineTarget, 'AP fixture requires active units');
+  assert(actor.pow.abilityPower > 0, 'canonical AP stat was not mapped into Combat2');
+
   actor.ragePoints = 0;
   actor.attackMultiplier = 1;
+  actor.abilityPowerMultiplier = 1;
   actor.attackBuffActionsRemaining = 0;
+  actor.abilityPowerBuffActionsRemaining = 0;
 
   const result = skills.resolve(actor, actor, {
     name: 'AP Regression Fixture',
@@ -73,8 +83,38 @@ function validateApSemantics(): void {
 
   assert(result.rawRageGain === 2, 'AP Up must not add resource bonus Rage');
   assert(result.rageGained === 2 && actor.ragePoints === 2, 'AP Up action should receive only normal +2 Rage');
-  assert(actor.attackMultiplier >= 1.2, 'AP Up must strengthen the offensive multiplier channel');
-  assert(actor.attackBuffActionsRemaining >= 3, 'AP Up duration was not applied');
+  assert(actor.attackMultiplier === 1, 'AP Up must not modify the physical ATK multiplier');
+  assert(actor.abilityPowerMultiplier >= 1.2, 'AP Up must strengthen the Ability Power multiplier');
+  assert(actor.abilityPowerBuffActionsRemaining >= 3, 'AP Up duration was not applied');
+
+  const baselineElemental = skills.resolve(baselineActor, baselineTarget, {
+    name: 'Elemental AP Baseline',
+    power: 140,
+    type: 'elemental'
+  }, 0);
+  const boostedElemental = skills.resolve(actor, target, {
+    name: 'Elemental AP Boosted',
+    power: 140,
+    type: 'elemental'
+  }, 0);
+  assert(boostedElemental.damage > baselineElemental.damage, 'AP Up must increase elemental skill damage');
+
+  const physicalBoostedState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
+  const physicalBaselineState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
+  const physicalActor = physicalBoostedState.activeLiving('player')[0];
+  const physicalTarget = physicalBoostedState.activeLiving('enemy')[0];
+  const physicalBaselineActor = physicalBaselineState.activeLiving('player')[0];
+  const physicalBaselineTarget = physicalBaselineState.activeLiving('enemy')[0];
+  assert(physicalActor && physicalTarget && physicalBaselineActor && physicalBaselineTarget, 'physical AP fixture missing');
+  skills.resolve(physicalActor, physicalActor, {
+    name: 'AP Physical Isolation Fixture',
+    power: 1,
+    type: 'support',
+    status: 'ap up'
+  }, 0);
+  const boostedBasic = basic.resolve(physicalActor, physicalTarget);
+  const baselineBasic = basic.resolve(physicalBaselineActor, physicalBaselineTarget);
+  assert(boostedBasic.damage === baselineBasic.damage, 'AP Up must not increase physical/basic damage');
 }
 
 function validateIdentityRules(): void {
