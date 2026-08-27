@@ -11,6 +11,7 @@ export type DotStatus = 'burn' | 'poison' | null;
 export interface ControlHistoryEntry {
   status: HardControlStatus;
   round: number;
+  sourceKey: string;
 }
 
 export interface CombatUnitState {
@@ -121,12 +122,7 @@ export class CombatState {
         if (!reserve) continue;
         reserve.fieldSlot = fieldSlot;
         reserve.actionLocked = false;
-        promotions.push({
-          side,
-          fieldSlot,
-          defeatedUnitId: defeated.instanceId,
-          promotedUnitId: reserve.instanceId
-        });
+        promotions.push({ side, fieldSlot, defeatedUnitId: defeated.instanceId, promotedUnitId: reserve.instanceId });
       }
     }
 
@@ -282,7 +278,11 @@ export class CombatState {
         Boolean(entry) && HARD_CONTROL_VALUES.has(entry.status) && Number.isFinite(entry.round) && entry.round >= 1
       )
       .slice(-12)
-      .map((entry) => ({ status: entry.status, round: Math.floor(entry.round) }));
+      .map((entry) => ({
+        status: entry.status,
+        round: Math.floor(entry.round),
+        sourceKey: String(entry.sourceKey || entry.status).trim().toLowerCase() || entry.status
+      }));
   }
 
   private safeFreezeStage(value: number): FreezeStage {
