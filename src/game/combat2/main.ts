@@ -2,18 +2,21 @@ import Phaser from 'phaser';
 import { BattleScene } from './scenes/BattleScene';
 import { runCombat2SmokeRegression } from './systems/CombatRegression';
 import { runCombatGuardRegression } from './systems/CombatGuardRegression';
+import { runCombatMultiTargetRegression } from './systems/CombatMultiTargetRegression';
 import { runCombatRageRegression } from './systems/CombatRageRegression';
 import { runCombatSpecialSupportRegression } from './systems/CombatSpecialSupportRegression';
 import { installCombat27UiPatch } from './views/Combat27UiPatch';
+import { installCombat28MultiTargetPatch } from './views/Combat28MultiTargetPatch';
 import { PowView } from './views/PowView';
 
 const logicalWidth = 1600;
 const logicalHeight = 900;
 const isLocalDev = ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
-// Install presentation-only overrides before Phaser instantiates the battle scene.
-// Gameplay state/resolvers remain the 2.6.x implementations.
+// Presentation first, then gameplay compatibility overlays. Both install before
+// Phaser creates BattleScene instances, so no live scene has to be rebuilt.
 installCombat27UiPatch(BattleScene, PowView);
+installCombat28MultiTargetPatch(BattleScene);
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -52,7 +55,8 @@ if (isLocalDev) {
       const specialSupport = runCombatSpecialSupportRegression();
       const rage = runCombatRageRegression();
       const guard = runCombatGuardRegression();
-      console.info('[Combat2 Regression PASS]', { ...report, specialSupport, rage, guard });
+      const multiTarget = runCombatMultiTargetRegression();
+      console.info('[Combat2 Regression PASS]', { ...report, specialSupport, rage, guard, multiTarget });
     } catch (error) {
       console.error('[Combat2 Regression FAIL - NON BLOCKING]', error);
     }
