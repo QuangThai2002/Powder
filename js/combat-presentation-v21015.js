@@ -1,6 +1,6 @@
 (()=>{'use strict';
 if(window.POWDER_COMBAT_PRESENTATION_V21015)return;
-const VERSION='21.0.15+2221';
+const VERSION='21.0.15+2222';
 const state={mounts:0,handoffs:0,syncs:0,mutations:0,fxSeen:0,maxFxCluster:0,attackFlows:0,controlLocks:0,criticalUnits:0,woundedUnits:0,lastSyncAt:0,lastPressure:'calm',mounted:false};
 let mount=null,mountObserver=null,raf=0;
 const now=()=>performance?.now?.()||Date.now();
@@ -8,7 +8,7 @@ const pressure=()=>String(window.POWDER_ADAPTIVE_PRESSURE_V21011?.level?.()||doc
 const activeByDom=n=>Boolean(n?.isConnected&&!n.closest?.('[hidden]'));
 function loadMainVisual(){
   if(window.POWDER_MAIN_COMBAT_VISUAL_V2221||document.getElementById('powderMainCombatVisual2221'))return;
-  const s=document.createElement('script');s.id='powderMainCombatVisual2221';s.src='js/combat-main-visual-v2221.js?v=2221';s.async=true;document.head.appendChild(s);
+  const s=document.createElement('script');s.id='powderMainCombatVisual2221';s.src='js/combat-main-visual-v2221.js?v=2222';s.async=true;document.head.appendChild(s);
 }
 function fxKind(n){for(const k of ['crit','damage','heal','shield-gain','shield','blocked','evade','status-control','status-dot','status-heal','break','kill','cleanse','guard'])if(n.classList.contains(k))return k;return 'other'}
 function groupKey(n){const side=n.classList.contains('enemy')?'enemy':n.classList.contains('player')?'player':'center';const s=[0,1,2].find(i=>n.classList.contains(`slot-${i}`));return `${side}:${s??'x'}`}
