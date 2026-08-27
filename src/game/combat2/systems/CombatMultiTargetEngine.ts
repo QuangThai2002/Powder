@@ -89,6 +89,15 @@ export function selectLegacyCastTargets(
   return [requestedTarget];
 }
 
+function abilityForHit(ability: CombatAbility, index: number): CombatAbility {
+  if (index <= 0) return ability;
+  const status = String(ability.status || '').trim();
+  if (!status.toLowerCase().startsWith('self:')) return ability;
+  // Self side-effects belong to the cast, not to every recipient. Damage/other
+  // target-facing behavior still resolves on all secondary targets.
+  return { ...ability, status: undefined };
+}
+
 export class CombatMultiTargetEngine {
   resolveCast(
     resolver: SkillActionResolver,
@@ -121,9 +130,10 @@ export class CombatMultiTargetEngine {
         actor.ultimateCooldownActionsRemaining = initialUltimateCooldown;
       }
 
+      const hitAbility = abilityForHit(ability, index);
       const result = slot === 'ultimate'
-        ? resolver.resolveUltimate(actor, target, ability, currentRound)
-        : resolver.resolve(actor, target, ability, slot, currentRound);
+        ? resolver.resolveUltimate(actor, target, hitAbility, currentRound)
+        : resolver.resolve(actor, target, hitAbility, slot, currentRound);
       hits.push({ target, result });
 
       if (index === 0) {
