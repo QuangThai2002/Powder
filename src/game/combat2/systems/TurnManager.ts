@@ -33,9 +33,7 @@ export class TurnManager {
     }
   }
 
-  peekNext(): CombatUnitState | null {
-    return this.findNextUnit();
-  }
+  peekNext(): CombatUnitState | null { return this.findNextUnit(); }
 
   beginNextTurn(): CombatUnitState | null {
     if (this.state.isBattleOver()) {
@@ -70,25 +68,20 @@ export class TurnManager {
       !unit || !unit.alive || unit.fieldSlot === null || unit.actionLocked ||
       this.state.phase !== 'selecting' || this.state.currentUnitId !== unitId
     ) return false;
-
     unit.actionLocked = true;
     this.state.phase = 'resolving';
     return true;
   }
 
-  /** Must be called from an action pipeline's finally block. */
   completeAction(unitId: string): void {
     const unit = this.state.getUnit(unitId);
     if (unit) {
       unit.actionLocked = false;
       this.tickActorDurations(unit);
-
       if (unit.alive && unit.fieldSlot !== null) {
         this.nextReadyAt.set(unit.instanceId, this.timelineNow + this.intervalFor(unit));
         this.actedThisRound.add(unit.instanceId);
-      } else {
-        this.retireUnit(unit.instanceId);
-      }
+      } else this.retireUnit(unit.instanceId);
     }
 
     this.state.currentUnitId = null;
@@ -97,7 +90,6 @@ export class TurnManager {
       this.state.phase = 'finished';
       return;
     }
-
     this.advanceRoundIfNeeded();
     this.state.phase = 'ready';
   }
@@ -122,9 +114,7 @@ export class TurnManager {
   }
 
   recoverActionLock(): void {
-    const current = this.state.currentUnitId
-      ? this.state.getUnit(this.state.currentUnitId)
-      : undefined;
+    const current = this.state.currentUnitId ? this.state.getUnit(this.state.currentUnitId) : undefined;
     if (current) current.actionLocked = false;
     this.state.currentUnitId = null;
     this.state.sanitizeRuntimeNumbers();
@@ -174,6 +164,32 @@ export class TurnManager {
       if (unit.defenseBuffActionsRemaining <= 0) unit.defenseMultiplier = 1;
     }
 
+    if (unit.critBuffActionsRemaining > 0) {
+      unit.critBuffActionsRemaining -= 1;
+      if (unit.critBuffActionsRemaining <= 0) unit.critRateBonus = 0;
+    }
+    if (unit.evasionBuffActionsRemaining > 0) {
+      unit.evasionBuffActionsRemaining -= 1;
+      if (unit.evasionBuffActionsRemaining <= 0) unit.evasionBonus = 0;
+    }
+    if (unit.accuracyDebuffActionsRemaining > 0) {
+      unit.accuracyDebuffActionsRemaining -= 1;
+      if (unit.accuracyDebuffActionsRemaining <= 0) unit.accuracyBonus = 0;
+    }
+    if (unit.tenacityBuffActionsRemaining > 0) {
+      unit.tenacityBuffActionsRemaining -= 1;
+      if (unit.tenacityBuffActionsRemaining <= 0) unit.tenacityBonus = 0;
+    }
+    if (unit.guardActionsRemaining > 0) {
+      unit.guardActionsRemaining -= 1;
+      if (unit.guardActionsRemaining <= 0) unit.damageReductionBonus = 0;
+    }
+    if (unit.antiHealActionsRemaining > 0) {
+      unit.antiHealActionsRemaining -= 1;
+      if (unit.antiHealActionsRemaining <= 0) unit.antiHeal = 0;
+    }
+    if (unit.regenerationActionsRemaining > 0) unit.regenerationActionsRemaining -= 1;
+
     if (unit.controlActionsRemaining > 0) {
       unit.controlActionsRemaining -= 1;
       if (unit.controlActionsRemaining <= 0) unit.controlStatus = null;
@@ -186,7 +202,6 @@ export class TurnManager {
   private findNextUnit(): CombatUnitState | null {
     let best: CombatUnitState | null = null;
     let bestTime = Number.POSITIVE_INFINITY;
-
     for (const unit of this.state.activeLiving()) {
       const fallback = this.timelineNow + this.intervalFor(unit);
       const readyAt = this.safeTimelineValue(this.nextReadyAt.get(unit.instanceId), fallback);
@@ -197,7 +212,6 @@ export class TurnManager {
       }
       if (readyAt === bestTime && best && unit.speed > best.speed) best = unit;
     }
-
     return best;
   }
 
