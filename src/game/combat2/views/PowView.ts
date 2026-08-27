@@ -211,23 +211,9 @@ export class PowView {
     const source = this.portrait.texture.getSourceImage() as HTMLImageElement | HTMLCanvasElement;
     const baseScale = Math.min((artHeight * this.pow.display.heightRatio) / Math.max(1, source.height), (artWidth * 0.96) / Math.max(1, source.width));
     this.portrait.setScale(baseScale * (this.pow.display.scaleAdjust ?? 1));
-    this.controlImmunityRing = this.scene.add.ellipse(
-      0,
-      artY,
-      artWidth * 0.86,
-      artHeight * 0.82,
-      0x000000,
-      0
-    ).setStrokeStyle(4, 0x8ef7ff, 0.92).setVisible(false);
+    this.controlImmunityRing = this.scene.add.ellipse(0, artY, artWidth * 0.86, artHeight * 0.82, 0x000000, 0).setStrokeStyle(4, 0x8ef7ff, 0.92).setVisible(false);
     this.controlHistoryText = this.scene.add.text(w / 2 - 11, top + 11, '', {
-      fontFamily: COMBAT_DISPLAY_FONT,
-      fontSize: '11px',
-      color: '#bff6ff',
-      fontStyle: 'bold',
-      backgroundColor: '#102f3bdd',
-      padding: { x: 7, y: 4 },
-      stroke: '#041018',
-      strokeThickness: 2
+      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '11px', color: '#bff6ff', fontStyle: 'bold', backgroundColor: '#102f3bdd', padding: { x: 7, y: 4 }, stroke: '#041018', strokeThickness: 2
     }).setOrigin(1, 0).setVisible(false);
 
     const infoY = top + artHeight + 15;
@@ -248,13 +234,7 @@ export class PowView {
     const rageY = hpY + 29;
     const markerStartX = -36;
     for (let index = 0; index < 4; index += 1) {
-      const marker = this.scene.add.circle(
-        markerStartX + index * 24,
-        rageY,
-        8.4,
-        COMBAT_COLORS.rageEmpty,
-        0.38
-      ).setStrokeStyle(1, 0x496675, 0.4);
+      const marker = this.scene.add.circle(markerStartX + index * 24, rageY, 8.4, COMBAT_COLORS.rageEmpty, 0.38).setStrokeStyle(1, 0x496675, 0.4);
       this.rageMarkers.push(marker);
     }
 
@@ -275,26 +255,17 @@ export class PowView {
   }
 
   private updateControlHistoryBadge(unit: CombatUnitState): void {
-    if (
-      !unit.alive ||
-      unit.fieldSlot === null ||
-      unit.controlImmunityActionsRemaining > 0 ||
-      unit.controlHistory.length <= 0
-    ) {
+    if (!unit.alive || unit.fieldSlot === null || unit.controlImmunityActionsRemaining > 0 || unit.controlHistory.length <= 0) {
       this.controlHistoryText.setVisible(false);
       return;
     }
-
     const snapshot = controlWindowSnapshot(unit);
     if (snapshot.count <= 0 || snapshot.firstRound === null || snapshot.expiresRound === null) {
       this.controlHistoryText.setVisible(false);
       return;
     }
-
     const count = Math.min(CONTROL_IMMUNITY_TRIGGER_HITS - 1, snapshot.count);
-    this.controlHistoryText
-      .setText(`CC ${count}/${CONTROL_IMMUNITY_TRIGGER_HITS} · V${snapshot.firstRound}→${snapshot.expiresRound}`)
-      .setVisible(true);
+    this.controlHistoryText.setText(`CC ${count}/${CONTROL_IMMUNITY_TRIGGER_HITS} · V${snapshot.firstRound}→${snapshot.expiresRound}`).setVisible(true);
   }
 
   private playResourcePulse(color: number): void {
@@ -444,26 +415,24 @@ export class PowView {
   private refreshStatusFrame(status: string): void {
     const color = this.statusColor(status);
     if (!color) { this.statusFrame.setVisible(false); return; }
-    const strong =
-      status === 'ĐÓNG BĂNG' ||
-      status === 'CHOÁNG' ||
-      status.startsWith('MIỄN KHỐNG');
+    const strong = status === 'ĐÓNG BĂNG' || status === 'CHOÁNG' || status.startsWith('MIỄN KHỐNG');
     this.statusFrame.setStrokeStyle(strong ? 5 : 3, color, strong ? 0.92 : 0.64).setVisible(true);
   }
 
   private statusColor(status: string): number | null {
     if (status.startsWith('MIỄN KHỐNG')) return 0x8ef7ff;
     if (status === 'ĐÓNG BĂNG') return 0x8adfff;
-    if (status === 'CHOÁNG') return 0xf5dd62;
-    if (status === 'TÊ LIỆT') return 0xffdf63;
+    if (status === 'CHOÁNG' || status === 'TÊ LIỆT') return 0xf5dd62;
     if (status === 'CÂM LẶNG') return 0xc9a0ff;
-    if (status === 'LÀM LẠNH') return 0xb7ecff;
-    if (status === 'TÊ CÓNG') return 0x80d8ff;
-    if (status === 'NHIỄM ĐỘC') return 0xa5df66;
+    if (status === 'LÀM LẠNH' || status === 'TÊ CÓNG') return 0x8adfff;
+    if (status.startsWith('NHIỄM ĐỘC') || status.startsWith('SONG DOT')) return 0xa5df66;
     if (status === 'THIÊU ĐỐT') return 0xff7043;
     if (status === 'CHẬM') return 0x78a9ff;
-    if (status === 'TĂNG CÔNG') return 0xffc46b;
-    if (status === 'TĂNG THỦ') return 0x7ed4ff;
+    if (status.startsWith('GIẢM ')) return 0xff8da0;
+    if (status === 'KHÁNG HIỆU ỨNG') return 0x8ef7ff;
+    if (status === 'BẢO HỘ') return 0x90d8ff;
+    if (status.startsWith('HỒI PHỤC')) return 0x73f0aa;
+    if (status.startsWith('TĂNG ')) return 0xffc46b;
     if (status.startsWith('KHIÊN')) return 0x8edfff;
     if (status === 'DỰ BỊ') return 0x617f8d;
     if (status === 'HẠ GỤC') return 0xff6478;
@@ -472,15 +441,17 @@ export class PowView {
 
   private statusBackground(status: string): string {
     if (status.startsWith('MIỄN KHỐNG')) return '#164650';
-    if (status === 'ĐÓNG BĂNG') return '#1d4658';
+    if (status === 'ĐÓNG BĂNG' || status === 'LÀM LẠNH' || status === 'TÊ CÓNG') return '#1d4658';
     if (status === 'CHOÁNG' || status === 'TÊ LIỆT') return '#554a1d';
     if (status === 'CÂM LẶNG') return '#462d59';
-    if (status === 'LÀM LẠNH') return '#285067';
-    if (status === 'TÊ CÓNG') return '#1e4b68';
-    if (status === 'NHIỄM ĐỘC') return '#31491f';
+    if (status.startsWith('NHIỄM ĐỘC') || status.startsWith('SONG DOT')) return '#31491f';
     if (status === 'THIÊU ĐỐT') return '#552c20';
     if (status === 'CHẬM') return '#283b63';
-    if (status.startsWith('KHIÊN')) return '#21475a';
+    if (status.startsWith('GIẢM ')) return '#572631';
+    if (status === 'KHÁNG HIỆU ỨNG') return '#17454c';
+    if (status === 'BẢO HỘ' || status.startsWith('KHIÊN')) return '#21475a';
+    if (status.startsWith('HỒI PHỤC')) return '#1f4f3c';
+    if (status.startsWith('TĂNG ')) return '#4c3b25';
     if (status === 'DỰ BỊ') return '#263944';
     return status ? '#3d3152' : '#4a2535';
   }
@@ -493,10 +464,25 @@ export class PowView {
     if (unit.paralysisActionsRemaining > 0) return 'TÊ LIỆT';
     if (unit.freezeStage === 2 && unit.freezeStageActionsRemaining > 0) return 'TÊ CÓNG';
     if (unit.freezeStage === 1 && unit.freezeStageActionsRemaining > 0) return 'LÀM LẠNH';
-    if (unit.dotActionsRemaining > 0) return unit.dotStatus === 'poison' ? 'NHIỄM ĐỘC' : 'THIÊU ĐỐT';
+
+    if (unit.antiHealActionsRemaining > 0 && unit.antiHeal > 0) return 'GIẢM HỒI MÁU';
+    if (unit.attackBuffActionsRemaining > 0 && unit.attackMultiplier < 1) return 'GIẢM CÔNG';
+    if (unit.abilityPowerBuffActionsRemaining > 0 && unit.abilityPowerMultiplier < 1) return 'GIẢM AP';
+    if (unit.defenseBuffActionsRemaining > 0 && unit.defenseMultiplier < 1) return 'GIẢM THỦ';
+    if (unit.accuracyDebuffActionsRemaining > 0 && unit.accuracyBonus < 0) return 'GIẢM CHÍNH XÁC';
+    if (unit.burnActionsRemaining > 0 && unit.poisonActionsRemaining > 0) return `SONG DOT · ĐỘC ×${unit.poisonStacks}`;
+    if (unit.poisonActionsRemaining > 0) return `NHIỄM ĐỘC ×${unit.poisonStacks}`;
+    if (unit.burnActionsRemaining > 0) return 'THIÊU ĐỐT';
     if (unit.speedDebuffActionsRemaining > 0) return 'CHẬM';
-    if (unit.attackBuffActionsRemaining > 0) return 'TĂNG CÔNG';
-    if (unit.defenseBuffActionsRemaining > 0) return 'TĂNG THỦ';
+
+    if (unit.regenerationActionsRemaining > 0) return `HỒI PHỤC · ${unit.regenerationActionsRemaining}`;
+    if (unit.guardActionsRemaining > 0 && unit.damageReductionBonus > 0) return 'BẢO HỘ';
+    if (unit.tenacityBuffActionsRemaining > 0 && unit.tenacityBonus > 0) return 'KHÁNG HIỆU ỨNG';
+    if (unit.critBuffActionsRemaining > 0 && unit.critRateBonus > 0) return 'TĂNG CHÍ MẠNG';
+    if (unit.evasionBuffActionsRemaining > 0 && unit.evasionBonus > 0) return 'TĂNG NÉ';
+    if (unit.attackBuffActionsRemaining > 0 && unit.attackMultiplier > 1) return 'TĂNG CÔNG';
+    if (unit.abilityPowerBuffActionsRemaining > 0 && unit.abilityPowerMultiplier > 1) return 'TĂNG AP';
+    if (unit.defenseBuffActionsRemaining > 0 && unit.defenseMultiplier > 1) return 'TĂNG THỦ';
     if (unit.speedBuffActionsRemaining > 0) return 'TĂNG TỐC';
     if (unit.shield > 0) return `KHIÊN ${Math.round(unit.shield)}`;
     return '';
