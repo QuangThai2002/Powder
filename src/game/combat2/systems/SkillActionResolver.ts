@@ -185,8 +185,6 @@ export class SkillActionResolver {
         }
       : this.applyDamage(actor, target, ability, damageKind);
 
-    // Core V2 rule: an evaded damaging ability cannot sneak its attached status
-    // through after the hit has already missed. Pure support/debuff skills remain valid.
     const statusResult = damageResult.evaded && !noDirectDamage
       ? this.emptyStatusResult('evade')
       : this.applyStatus(actor, target, ability, currentRound, damageResult.damage);
@@ -283,6 +281,7 @@ export class SkillActionResolver {
   ): StatusApplicationResult {
     const parsed = this.parseStatus(ability.status);
     const status = parsed.status;
+    const effectTarget = parsed.selfDirected ? actor : target;
     const supportMultiplier = this.identity.supportMultiplier(actor);
     const durationBonus = this.identity.statusDurationBonus(actor, status);
     let healed = 0;
@@ -326,7 +325,7 @@ export class SkillActionResolver {
           break;
         case 'freeze':
           statusLabel = this.control.applyFreezeStage(target);
-          targetSpeedChanged = true;
+          targetSpeedChanged = target.instanceId !== actor.instanceId;
           break;
       }
 
@@ -339,7 +338,7 @@ export class SkillActionResolver {
       );
       if (controlImmunityTriggered) {
         statusLabel = 'control immunity';
-        targetSpeedChanged = true;
+        targetSpeedChanged = target.instanceId !== actor.instanceId;
       }
 
       return {
@@ -350,52 +349,52 @@ export class SkillActionResolver {
 
     switch (status) {
       case 'shield': {
-        const role = this.normalizedRole(actor);
+        const role = this.normalizedRole(effectTarget);
         const capRatio = role.includes('do don') || role.includes('tank') ? 0.8 : 0.6;
-        const raw = actor.pow.maxHp * 0.2 * supportMultiplier * this.legacyStats.shieldMultiplier(actor);
-        const cap = Math.max(1, Math.round(actor.pow.maxHp * capRatio));
-        const before = actor.shield;
-        actor.shield = Math.min(cap, actor.shield + Math.max(1, Math.round(raw)));
-        shieldGranted = Math.max(0, actor.shield - before);
+        const raw = effectTarget.pow.maxHp * 0.2 * supportMultiplier * this.legacyStats.shieldMultiplier(actor);
+        const cap = Math.max(1, Math.round(effectTarget.pow.maxHp * capRatio));
+        const before = effectTarget.shield;
+        effectTarget.shield = Math.min(cap, effectTarget.shield + Math.max(1, Math.round(raw)));
+        shieldGranted = Math.max(0, effectTarget.shield - before);
         break;
       }
       case 'regeneration': {
-        healed = this.healTarget(actor, actor, actor.pow.maxHp * 0.1 * supportMultiplier);
-        actor.regenerationActionsRemaining = Math.max(actor.regenerationActionsRemaining, 2 + durationBonus);
+        healed = this.healTarget(actor, effectTarget, effectTarget.pow.maxHp * 0.1 * supportMultiplier);
+        effectTarget.regenerationActionsRemaining = Math.max(effectTarget.regenerationActionsRemaining, 2 + durationBonus);
         break;
       }
       case 'attack up':
-        actor.attackMultiplier = Math.max(actor.attackMultiplier, 1.3);
-        actor.attackBuffActionsRemaining = Math.max(actor.attackBuffActionsRemaining, 3 + durationBonus);
+        effectTarget.attackMultiplier = Math.max(effectTarget.attackMultiplier, 1.3);
+        effectTarget.attackBuffActionsRemaining = Math.max(effectTarget.attackBuffActionsRemaining, 3 + durationBonus);
         break;
       case 'ap up':
-        actor.abilityPowerMultiplier = Math.max(actor.abilityPowerMultiplier, 1.3);
-        actor.abilityPowerBuffActionsRemaining = Math.max(actor.abilityPowerBuffActionsRemaining, 3 + durationBonus);
+        effectTarget.abilityPowerMultiplier = Math.max(effectTarget.abilityPowerMultiplier, 1.3);
+        effectTarget.abilityPowerBuffActionsRemaining = Math.max(effectTarget.abilityPowerBuffActionsRemaining, 3 + durationBonus);
         break;
       case 'defense up':
-        actor.defenseMultiplier = Math.max(actor.defenseMultiplier, 1.3);
-        actor.defenseBuffActionsRemaining = Math.max(actor.defenseBuffActionsRemaining, 3 + durationBonus);
+        effectTarget.defenseMultiplier = Math.max(effectTarget.defenseMultiplier, 1.3);
+        effectTarget.defenseBuffActionsRemaining = Math.max(effectTarget.defenseBuffActionsRemaining, 3 + durationBonus);
         break;
       case 'speed up':
-        actor.speedBuffActionsRemaining = Math.max(actor.speedBuffActionsRemaining, 2 + durationBonus);
-        this.refreshSpeed(actor);
-        targetSpeedChanged = true;
+        effectTarget.speedBuffActionsRemaining = Math.max(effectTarget.speedBuffActionsRemaining, 2 + durationBonus);
+        this.refreshSpeed(effectTarget);
+        targetSpeedChanged = effectTarget.instanceId === target.instanceId && target.instanceId !== actor.instanceId;
         break;
       case 'effect resist':
-        actor.tenacityBonus = Math.max(actor.tenacityBonus, 20);
-        actor.tenacityBuffActionsRemaining = Math.max(actor.tenacityBuffActionsRemaining, 2 + durationBonus);
+        effectTarget.tenacityBonus = Math.max(effectTarget.tenacityBonus, 20);
+        effectTarget.tenacityBuffActionsRemaining = Math.max(effectTarget.tenacityBuffActionsRemaining, 2 + durationBonus);
         break;
       case 'guard':
-        actor.damageReductionBonus = Math.max(actor.damageReductionBonus, 0.25);
-        actor.guardActionsRemaining = Math.max(actor.guardActionsRemaining, 2 + durationBonus);
+        effectTarget.damageReductionBonus = Math.max(effectTarget.damageReductionBonus, 0.25);
+        effectTarget.guardActionsRemaining = Math.max(effectTarget.guardActionsRemaining, 2 + durationBonus);
         break;
       case 'crit up':
-        actor.critRateBonus = Math.max(actor.critRateBonus, 15);
-        actor.critBuffActionsRemaining = Math.max(actor.critBuffActionsRemaining, 2 + durationBonus);
+        effectTarget.critRateBonus = Math.max(effectTarget.critRateBonus, 15);
+        effectTarget.critBuffActionsRemaining = Math.max(effectTarget.critBuffActionsRemaining, 2 + durationBonus);
         break;
       case 'evasion up':
-        actor.evasionBonus = Math.max(actor.evasionBonus, 15);
-        actor.evasionBuffActionsRemaining = Math.max(actor.evasionBuffActionsRemaining, 2 + durationBonus);
+        effectTarget.evasionBonus = Math.max(effectTarget.evasionBonus, 15);
+        effectTarget.evasionBuffActionsRemaining = Math.max(effectTarget.evasionBuffActionsRemaining, 2 + durationBonus);
         break;
       case 'rage gain':
         statusLabel = 'rage gain';
@@ -438,7 +437,7 @@ export class SkillActionResolver {
         if (target.abilityPowerMultiplier < 1) { target.abilityPowerMultiplier = 1; target.abilityPowerBuffActionsRemaining = 0; }
         if (target.defenseMultiplier < 1) { target.defenseMultiplier = 1; target.defenseBuffActionsRemaining = 0; }
         if (target.accuracyBonus < 0) { target.accuracyBonus = 0; target.accuracyDebuffActionsRemaining = 0; }
-        targetSpeedChanged = hadSpeedDebuff;
+        targetSpeedChanged = hadSpeedDebuff && target.instanceId !== actor.instanceId;
         this.refreshSpeed(target);
         cleansed = true;
         statusLabel = 'cleanse';
@@ -455,7 +454,7 @@ export class SkillActionResolver {
           target.actionLocked = false;
           target.alive = true;
           revived = true;
-          targetSpeedChanged = true;
+          targetSpeedChanged = target.instanceId !== actor.instanceId;
         }
         statusLabel = 'revive';
         break;
@@ -463,11 +462,9 @@ export class SkillActionResolver {
       case 'slow':
         target.speedDebuffActionsRemaining = Math.max(target.speedDebuffActionsRemaining, 2 + durationBonus);
         this.refreshSpeed(target);
-        targetSpeedChanged = true;
+        targetSpeedChanged = target.instanceId !== actor.instanceId;
         break;
       case 'burn': {
-        // Core V2 Burn is tied to the igniting impact, refreshes duration and
-        // keeps the stronger burn. Tick is capped at 12% Max HP.
         const seed = impactDamage > 0
           ? impactDamage
           : this.safeStat(actor.pow.abilityPower, actor.pow.attack) * 0.5;
