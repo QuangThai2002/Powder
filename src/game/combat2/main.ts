@@ -4,6 +4,7 @@ import { runCombat2SmokeRegression } from './systems/CombatRegression';
 import { CombatGuardEngine } from './systems/CombatGuardEngine';
 import { runCombatGuardRegression } from './systems/CombatGuardRegression';
 import { runCombatLegacyDomainRegression } from './systems/CombatLegacyDomainRegression';
+import { runCombatLegacyDomainSpecialRegression } from './systems/CombatLegacyDomainSpecialRegression';
 import { runCombatLegacyRoleRegression } from './systems/CombatLegacyRoleRegression';
 import { runCombatMultiTargetRegression } from './systems/CombatMultiTargetRegression';
 import { runCombatRageRegression } from './systems/CombatRageRegression';
@@ -12,18 +13,28 @@ import { installCombat27UiPatch } from './views/Combat27UiPatch';
 import { installCombat28MultiTargetPatch } from './views/Combat28MultiTargetPatch';
 import { installCombat281LegacyRolePatch } from './views/Combat281LegacyRolePatch';
 import { installCombat29LegacyDomainPatch } from './views/Combat29LegacyDomainPatch';
+import { installCombat291LegacyDomainHardeningPatch } from './views/Combat291LegacyDomainHardeningPatch';
+import { installCombat292LegacyAbilityMetadataPatch } from './views/Combat292LegacyAbilityMetadataPatch';
+import { installCombat293LegacyDomainTickPatch } from './views/Combat293LegacyDomainTickPatch';
+import { installCombat294DomainControlsPatch } from './views/Combat294DomainControlsPatch';
+import { installCombat294VersionPatch } from './views/Combat294VersionPatch';
 import { PowView } from './views/PowView';
 
 const logicalWidth = 1600;
 const logicalHeight = 900;
 const isLocalDev = ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
-// Presentation first, then compatibility overlays. Domain installs last so it
-// observes the restored multi-target/role/Guard behavior instead of replacing it.
+// Presentation first, then compatibility overlays. Each legacy layer wraps the
+// already-restored behavior instead of replacing the current Combat2 core.
 installCombat27UiPatch(BattleScene, PowView);
 installCombat28MultiTargetPatch(BattleScene);
 installCombat281LegacyRolePatch(BattleScene, CombatGuardEngine);
 installCombat29LegacyDomainPatch(BattleScene);
+installCombat291LegacyDomainHardeningPatch();
+installCombat292LegacyAbilityMetadataPatch(BattleScene);
+installCombat293LegacyDomainTickPatch(BattleScene);
+installCombat294DomainControlsPatch(BattleScene);
+installCombat294VersionPatch(BattleScene);
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -65,7 +76,17 @@ if (isLocalDev) {
       const multiTarget = runCombatMultiTargetRegression();
       const legacyRole = runCombatLegacyRoleRegression();
       const legacyDomain = runCombatLegacyDomainRegression();
-      console.info('[Combat2 Regression PASS]', { ...report, specialSupport, rage, guard, multiTarget, legacyRole, legacyDomain });
+      const legacyDomainSpecial = runCombatLegacyDomainSpecialRegression();
+      console.info('[Combat2 Regression PASS]', {
+        ...report,
+        specialSupport,
+        rage,
+        guard,
+        multiTarget,
+        legacyRole,
+        legacyDomain,
+        legacyDomainSpecial
+      });
     } catch (error) {
       console.error('[Combat2 Regression FAIL - NON BLOCKING]', error);
     }
