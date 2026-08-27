@@ -3,6 +3,7 @@ import type {
   CombatAbilitySet,
   CombatPassive,
   CombatPow,
+  CombatRarity,
   PowDisplayProfile
 } from './CombatPow';
 
@@ -21,6 +22,7 @@ interface CatalogPow {
   name?: string;
   element?: string;
   role?: string;
+  rarity?: string;
   asset?: string;
   rosterOrder?: number;
   stats?: CatalogStats;
@@ -48,16 +50,19 @@ const ENEMY_PREFERRED_IDS = [
 
 const CANONICAL_PREFIX = 'assets/pow-beta12/';
 const CANONICAL_SKILL_ART_PREFIX = '/assets/skills/v81/';
-// Canonical roster currently contains 99 Pow and every Pow owns exactly four
-// visual ability slots: Basic, Skill I, Skill II and Ultimate. Keep this as a
-// formula instead of the old 384 literal so Pow 97-99 use skill-385..396 rather
-// than silently falling back to generic glyphs.
 export const STANDARD_POW_COUNT = 99;
 export const STANDARD_SKILLS_PER_POW = 4;
 export const STANDARD_POW_SKILL_COUNT = STANDARD_POW_COUNT * STANDARD_SKILLS_PER_POW;
-const HOSTILE_SUPPORT_STATUSES = new Set(['stun', 'freeze', 'slow', 'burn', 'poison']);
+const HOSTILE_SUPPORT_STATUSES = new Set([
+  'stun', 'silence', 'paralysis', 'freeze', 'slow', 'burn', 'poison'
+]);
+const HARD_CONTROL_SOURCE = new Set(['stun', 'silence', 'paralysis', 'freeze']);
+const BALANCED_CONTROL_ROTATION = ['stun', 'silence', 'paralysis', 'freeze'] as const;
 const BENEFICIAL_STATUSES = new Set([
   'shield', 'regeneration', 'attack up', 'defense up', 'rage gain', 'ap up'
+]);
+const COMBAT_RARITIES = new Set<CombatRarity>([
+  'common', 'rare', 'super_rare', 'epic', 'legendary', 'mythic', 'ancient'
 ]);
 
 const DEFAULT_DISPLAY: PowDisplayProfile = {
@@ -69,6 +74,11 @@ const DEFAULT_DISPLAY: PowDisplayProfile = {
 
 function finitePositive(value: number | undefined, fallback: number): number {
   return Number.isFinite(value) && (value as number) > 0 ? (value as number) : fallback;
+}
+
+function normalizeRarity(raw: string | undefined): CombatRarity {
+  const rarity = String(raw || 'common').trim().toLowerCase() as CombatRarity;
+  return COMBAT_RARITIES.has(rarity) ? rarity : 'common';
 }
 
 function normalizeAbilityType(
@@ -85,10 +95,32 @@ function normalizeAbilityType(
 function migrateLegacyStatus(rawStatus: string | undefined): string | undefined {
   const raw = String(rawStatus || '').trim();
   if (!raw) return undefined;
-  // AP = Ability Power in the canonical Powder catalog. It is an offensive
-  // stat buff and must never be converted into the four-point Rage resource.
-  // Only genuine Mana/resource-restoration effects are migrated to Rage.
+  // AP = Ability Power. It must never be converted into the Rage resource.
   return raw;
+}
+
+/**
+ * Preserve the number of existing hard-CC skills, but distribute their control
+ * identity through the whole 99-Pow roster. The rotation prevents a random
+ * three-Pow team from inheriting the old pattern where several adjacent Pow
+ * could all expose Stun/Freeze at once.
+ */
+export function balancedHardControlStatus(
+  rawStatus: string | undefined,
+  rosterOrder: number | undefined,
+  abilityOffset: 0 | 1 | 2 | 3
+): string | undefined {
+  const raw = String(rawStatus || '').trim();
+  if (!raw) return undefined;
+  const selfDirected = raw.toLowerCase().startsWith('self:');
+  const core = selfDirected ? raw.slice(5).trim() : raw;
+  if (!HARD_CONTROL_SOURCE.has(core.toLowerCase())) return raw;
+
+  const order = Number.isInteger(rosterOrder) && (rosterOrder as number) > 0
+    ? (rosterOrder as number)
+    : 1;
+  const mapped = BALANCED_CONTROL_ROTATION[(order + abilityOffset) % BALANCED_CONTROL_ROTATION.length];
+  return selfDirected ? `self:${mapped}` : mapped;
 }
 
 function normalizeAbilityStatus(rawStatus: string | undefined, normalizedType: string): string | undefined {
@@ -121,21 +153,23 @@ export function standardSkillIndex(rosterOrder: number | undefined, offset: 0 | 
 }
 
 function normalizeAbility(
+  pow: CatalogPow,
   ability: CatalogAbility | undefined,
   fallbackName: string,
   fallbackPower: number,
   fallbackType: string,
-  skillIndex?: number
+  abilityOffset: 0 | 1 | 2 | 3
 ): CombatAbility {
   const migratedStatus = migrateLegacyStatus(ability?.status);
-  const type = normalizeAbilityType(ability?.type, migratedStatus, fallbackType);
-  const status = normalizeAbilityStatus(migratedStatus, type);
+  const balancedStatus = balancedHardControlStatus(migratedStatus, pow.rosterOrder, abilityOffset);
+  const type = normalizeAbilityType(ability?.type, balancedStatus, fallbackType);
+  const status = normalizeAbilityStatus(balancedStatus, type);
   return {
     name: String(ability?.name || fallbackName),
     power: finitePositive(ability?.power, fallbackPower),
     type,
     ...(status ? { status } : {}),
-    ...canonicalSkillVisual(skillIndex)
+    ...canonicalSkillVisual(standardSkillIndex(pow.rosterOrder, abilityOffset))
   };
 }
 
@@ -153,16 +187,12 @@ function normalizeAbilities(pow: CatalogPow): CombatAbilitySet {
   const name = String(pow.name || pow.id || 'Pow');
   const skills = Array.isArray(pow.abilities?.skills) ? pow.abilities.skills.slice(0, 2) : [];
   const normalized: CombatAbilitySet = {
-    basic: normalizeAbility(
-      pow.abilities?.basic, `${name} Strike`, 80, 'physical', standardSkillIndex(pow.rosterOrder, 0)
-    ),
+    basic: normalizeAbility(pow, pow.abilities?.basic, `${name} Strike`, 80, 'physical', 0),
     skills: [
-      normalizeAbility(skills[0], `${name} Skill 1`, 110, 'elemental', standardSkillIndex(pow.rosterOrder, 1)),
-      normalizeAbility(skills[1], `${name} Skill 2`, 95, 'support', standardSkillIndex(pow.rosterOrder, 2))
+      normalizeAbility(pow, skills[0], `${name} Skill 1`, 110, 'elemental', 1),
+      normalizeAbility(pow, skills[1], `${name} Skill 2`, 95, 'support', 2)
     ],
-    ultimate: normalizeAbility(
-      pow.abilities?.ultimate, `${name} Ultimate`, 175, 'ultimate', standardSkillIndex(pow.rosterOrder, 3)
-    )
+    ultimate: normalizeAbility(pow, pow.abilities?.ultimate, `${name} Ultimate`, 175, 'ultimate', 3)
   };
 
   // Combat-only fixture: real Cleanse and active Revive for deterministic testing.
@@ -220,6 +250,7 @@ function toCombatPow(pow: CatalogPow): CombatPow {
     element: elementName,
     elementKey,
     role: String(pow.role || 'Không xác định'),
+    rarity: normalizeRarity(pow.rarity),
     level: 60,
     attack,
     abilityPower,
