@@ -47,8 +47,10 @@ export function runCombatLegacyDomainRegression(): CombatLegacyDomainRegressionR
   assert(profile.crit === 20 && profile.critDamage === 100, 'Cao cấp Xích Viêm must restore +20 crit and +100 crit damage');
   engine.afterActorAction(actor);
   assert(engine.profile(actor).damage === 0, 'Simple Domain must expire after the activating Pow action');
-  assert(engine.activateSimple('player').ok && engine.activateSimple('player').ok, 'remaining two Simple charges must be usable');
+
+  assert(engine.activateSimple('player').ok, 'second Simple charge must be usable after the first Domain expires');
   engine.afterActorAction(actor);
+  assert(engine.activateSimple('player').ok, 'third Simple charge must be usable after the second Domain expires');
   engine.afterActorAction(actor);
   assert(!engine.activateSimple('player').ok, 'Simple Domain must stop at three activations per battle');
 
