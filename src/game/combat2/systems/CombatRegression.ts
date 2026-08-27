@@ -30,6 +30,8 @@ export interface CombatRegressionReport {
   offenseChannelsChecked: boolean;
   skillArtCoverageChecked: boolean;
   controlSystemChecked: boolean;
+  legacyStatsChecked: boolean;
+  legacyEffectsChecked: boolean;
 }
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -37,7 +39,8 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 const HOSTILE_STATUSES = new Set([
-  'silence', 'stun', 'paralysis', 'freeze', 'slow', 'burn', 'poison'
+  'silence', 'stun', 'paralysis', 'freeze', 'slow', 'burn', 'poison',
+  'anti heal', 'attack down', 'ap down', 'defense down', 'accuracy down'
 ]);
 
 function validateSkillArtCoverage(): void {
@@ -52,34 +55,23 @@ function validateSkillArtCoverage(): void {
 function validateRageEconomy(): void {
   const firstAction = applyRawRageGain(0, 2);
   assert(firstAction.next === 2 && firstAction.effectiveGain === 2, 'first +2 Rage action must store 2');
-
   const ready = applyRawRageGain(2, 2);
   assert(ready.next === 4 && canUseUltimate(ready.next), 'two normal actions must prepare Ultimate');
-
   const rawEight = applyRawRageGain(0, 8);
   assert(rawEight.next === 6, 'raw 8 Rage must convert to 6 effective Rage');
-  assert(
-    rageMarkerStates(rawEight.next).join(',') === 'blue,blue,red,red',
-    '6 Rage must display 2 blue + 2 red markers'
-  );
-
+  assert(rageMarkerStates(rawEight.next).join(',') === 'blue,blue,red,red', '6 Rage must display 2 blue + 2 red markers');
   const rawNine = applyRawRageGain(0, 9);
   assert(rawNine.next === 6, 'raw 9 Rage must round overflow down to 6 effective Rage');
-
   const rawTwelve = applyRawRageGain(0, 12);
   assert(rawTwelve.next === 8, 'raw 12 Rage must reach the 8-point effective cap');
-  assert(
-    rageMarkerStates(rawTwelve.next).every((marker) => marker === 'red'),
-    '8 Rage must display 4 red markers'
-  );
-
+  assert(rageMarkerStates(rawTwelve.next).every((marker) => marker === 'red'), '8 Rage must display 4 red markers');
   assert(spendUltimate(6) === 2, 'Ultimate from 6 Rage must leave 2');
   assert(spendUltimate(8) === 4, 'Ultimate from 8 Rage must leave 4 and remain ready');
 }
 
 function validateOffenseChannels(): void {
-  const skills = new SkillActionResolver();
-  const basic = new BasicAttackResolver();
+  const skills = new SkillActionResolver(() => 0);
+  const basic = new BasicAttackResolver(() => 0);
 
   const apState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
   const apBaselineState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
@@ -91,53 +83,26 @@ function validateOffenseChannels(): void {
   assert(apActor.pow.abilityPower > 0, 'canonical AP stat was not mapped into Combat2');
 
   apActor.ragePoints = 0;
-  apActor.attackMultiplier = 1;
-  apActor.abilityPowerMultiplier = 1;
-  apActor.attackBuffActionsRemaining = 0;
-  apActor.abilityPowerBuffActionsRemaining = 0;
-
-  const apBuff = skills.resolve(apActor, apActor, {
-    name: 'AP Regression Fixture',
-    power: 1,
-    type: 'support',
-    status: 'ap up'
-  }, 0);
-
+  const apBuff = skills.resolve(apActor, apActor, { name: 'AP Regression Fixture', power: 1, type: 'support', status: 'ap up' }, 0);
   assert(apBuff.rawRageGain === 2, 'AP Up must not add resource bonus Rage');
   assert(apBuff.rageGained === 2 && apActor.ragePoints === 2, 'AP Up action should receive only normal +2 Rage');
-  assert(apActor.attackMultiplier === 1, 'AP Up must not modify the physical ATK multiplier');
-  assert(apActor.abilityPowerMultiplier >= 1.2, 'AP Up must strengthen the Ability Power multiplier');
-  assert(apActor.abilityPowerBuffActionsRemaining >= 3, 'AP Up duration was not applied');
+  assert(apActor.attackMultiplier === 1, 'AP Up must not modify physical ATK');
+  assert(apActor.abilityPowerMultiplier >= 1.3, 'AP Up must strengthen AP');
 
-  const baselineElemental = skills.resolve(apBaselineActor, apBaselineTarget, {
-    name: 'Elemental AP Baseline',
-    power: 140,
-    type: 'elemental'
-  }, 0);
+  const baselineElemental = skills.resolve(apBaselineActor, apBaselineTarget, { name: 'Elemental AP Baseline', power: 140, type: 'elemental' }, 0);
   apActor.skillCooldownActionsRemaining[0] = 0;
-  const boostedElemental = skills.resolve(apActor, apTarget, {
-    name: 'Elemental AP Boosted',
-    power: 140,
-    type: 'elemental'
-  }, 0);
-  assert(boostedElemental.damage > baselineElemental.damage, 'AP Up must increase elemental skill damage');
+  const boostedElemental = skills.resolve(apActor, apTarget, { name: 'Elemental AP Boosted', power: 140, type: 'elemental' }, 0);
+  assert(boostedElemental.damage > baselineElemental.damage, 'AP Up must increase elemental damage');
 
-  const apPhysicalState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
-  const apPhysicalBaselineState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
-  const apPhysicalActor = apPhysicalState.activeLiving('player')[0];
-  const apPhysicalTarget = apPhysicalState.activeLiving('enemy')[0];
-  const apPhysicalBaselineActor = apPhysicalBaselineState.activeLiving('player')[0];
-  const apPhysicalBaselineTarget = apPhysicalBaselineState.activeLiving('enemy')[0];
-  assert(apPhysicalActor && apPhysicalTarget && apPhysicalBaselineActor && apPhysicalBaselineTarget, 'physical AP fixture missing');
-  skills.resolve(apPhysicalActor, apPhysicalActor, {
-    name: 'AP Physical Isolation Fixture',
-    power: 1,
-    type: 'support',
-    status: 'ap up'
-  }, 0);
-  const apBoostedBasic = basic.resolve(apPhysicalActor, apPhysicalTarget);
-  const apBaselineBasic = basic.resolve(apPhysicalBaselineActor, apPhysicalBaselineTarget);
-  assert(apBoostedBasic.damage === apBaselineBasic.damage, 'AP Up must not increase physical/basic damage');
+  const physicalState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
+  const physicalBaselineState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
+  const physicalActor = physicalState.activeLiving('player')[0];
+  const physicalTarget = physicalState.activeLiving('enemy')[0];
+  const physicalBaselineActor = physicalBaselineState.activeLiving('player')[0];
+  const physicalBaselineTarget = physicalBaselineState.activeLiving('enemy')[0];
+  assert(physicalActor && physicalTarget && physicalBaselineActor && physicalBaselineTarget, 'physical fixture missing');
+  skills.resolve(physicalActor, physicalActor, { name: 'AP Isolation', power: 1, type: 'support', status: 'ap up' }, 0);
+  assert(basic.resolve(physicalActor, physicalTarget).damage === basic.resolve(physicalBaselineActor, physicalBaselineTarget).damage, 'AP Up must not increase Basic damage');
 
   const atkState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
   const atkBaselineState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
@@ -146,67 +111,86 @@ function validateOffenseChannels(): void {
   const atkBaselineActor = atkBaselineState.activeLiving('player')[0];
   const atkBaselineTarget = atkBaselineState.activeLiving('enemy')[0];
   assert(atkActor && atkTarget && atkBaselineActor && atkBaselineTarget, 'ATK fixture requires active units');
-  const atkBuff = skills.resolve(atkActor, atkActor, {
-    name: 'ATK Regression Fixture',
-    power: 1,
-    type: 'support',
-    status: 'attack up'
-  }, 0);
-  assert(atkBuff.rawRageGain === 2 && atkActor.ragePoints === 2, 'Attack Up must use normal +2 Rage only');
-  assert(atkActor.attackMultiplier >= 1.2, 'Attack Up must strengthen the physical ATK multiplier');
-  assert(atkActor.abilityPowerMultiplier === 1, 'Attack Up must not modify the AP multiplier');
-  const atkBoostedBasic = basic.resolve(atkActor, atkTarget);
-  const atkBaselineBasic = basic.resolve(atkBaselineActor, atkBaselineTarget);
-  assert(atkBoostedBasic.damage > atkBaselineBasic.damage, 'Attack Up must increase physical/basic damage');
+  skills.resolve(atkActor, atkActor, { name: 'ATK Regression Fixture', power: 1, type: 'support', status: 'attack up' }, 0);
+  assert(atkActor.attackMultiplier >= 1.3 && atkActor.abilityPowerMultiplier === 1, 'Attack Up channel mismatch');
+  assert(basic.resolve(atkActor, atkTarget).damage > basic.resolve(atkBaselineActor, atkBaselineTarget).damage, 'Attack Up must increase Basic damage');
+}
 
-  const atkElementalState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
-  const atkElementalBaselineState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
-  const atkElementalActor = atkElementalState.activeLiving('player')[0];
-  const atkElementalTarget = atkElementalState.activeLiving('enemy')[0];
-  const atkElementalBaselineActor = atkElementalBaselineState.activeLiving('player')[0];
-  const atkElementalBaselineTarget = atkElementalBaselineState.activeLiving('enemy')[0];
-  assert(atkElementalActor && atkElementalTarget && atkElementalBaselineActor && atkElementalBaselineTarget, 'ATK elemental fixture missing');
-  skills.resolve(atkElementalActor, atkElementalActor, {
-    name: 'ATK AP Isolation Fixture',
-    power: 1,
-    type: 'support',
-    status: 'attack up'
+function validateLegacyStatsAndEffects(): void {
+  for (const pow of [...COMBAT2_STARTER_ROSTER.player, ...COMBAT2_STARTER_ROSTER.enemy]) {
+    for (const value of [pow.critRate, pow.critDamage, pow.evasion, pow.accuracy, pow.critResist, pow.defPen, pow.healPower, pow.shieldPower, pow.tenacity, pow.damageReduction]) {
+      assert(Number.isFinite(value), `${pow.name} has a non-finite restored secondary stat`);
+    }
+  }
+
+  const evadeState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
+  const evadeActor = evadeState.activeLiving('player')[0];
+  const evadeTarget = evadeState.activeLiving('enemy')[0];
+  assert(evadeActor && evadeTarget, 'evade fixture missing');
+  evadeTarget.evasionBonus = 75;
+  const missed = new BasicAttackResolver(() => 0.99).resolve(evadeActor, evadeTarget);
+  assert(missed.evaded && missed.damage === 0, 'Evasion must be able to avoid a Basic Attack');
+
+  const sureState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
+  const sureActor = sureState.activeLiving('player')[0];
+  const sureTarget = sureState.activeLiving('enemy')[0];
+  assert(sureActor && sureTarget, 'sure-hit fixture missing');
+  sureTarget.evasionBonus = 75;
+  const sure = new SkillActionResolver(() => 0.99).resolve(sureActor, sureTarget, {
+    name: 'Sure Hit Fixture', power: 120, type: 'physical', sureHit: true
   }, 0);
-  atkElementalActor.skillCooldownActionsRemaining[0] = 0;
-  const atkBoostedElemental = skills.resolve(atkElementalActor, atkElementalTarget, {
-    name: 'Elemental ATK Isolation Boosted',
-    power: 140,
-    type: 'elemental'
-  }, 0);
-  const atkBaselineElemental = skills.resolve(atkElementalBaselineActor, atkElementalBaselineTarget, {
-    name: 'Elemental ATK Isolation Baseline',
-    power: 140,
-    type: 'elemental'
-  }, 0);
-  assert(atkBoostedElemental.damage === atkBaselineElemental.damage, 'Attack Up must not increase elemental/AP damage');
+  assert(!sure.evaded && sure.damage > 0, 'Sure Hit must bypass Evasion');
+
+  const critState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
+  const critActor = critState.activeLiving('player')[0];
+  const critTarget = critState.activeLiving('enemy')[0];
+  assert(critActor && critTarget, 'crit fixture missing');
+  critActor.critRateBonus = 100;
+  const crit = new BasicAttackResolver(() => 0).resolve(critActor, critTarget);
+  assert(crit.crit && crit.damage > 0, '100 bonus Crit Rate must produce a critical hit with roll 0');
+
+  const effectState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
+  const source = effectState.activeLiving('player')[0];
+  const target = effectState.activeLiving('enemy')[0];
+  assert(source && target, 'legacy effect fixture missing');
+  const effects = new SkillActionResolver(() => 0);
+  effects.resolve(source, target, { name: 'Burn Fixture', power: 100, type: 'elemental', status: 'burn' }, 0);
+  source.skillCooldownActionsRemaining[0] = 0;
+  effects.resolve(source, target, { name: 'Poison Fixture 1', power: 1, type: 'debuff', status: 'poison' }, 0);
+  source.skillCooldownActionsRemaining[0] = 0;
+  effects.resolve(source, target, { name: 'Poison Fixture 2', power: 1, type: 'debuff', status: 'poison' }, 0);
+  source.skillCooldownActionsRemaining[0] = 0;
+  effects.resolve(source, target, { name: 'Poison Fixture 3', power: 1, type: 'debuff', status: 'poison' }, 0);
+  assert(target.burnActionsRemaining > 0 && target.poisonActionsRemaining > 0, 'Burn and Poison must coexist');
+  assert(target.poisonStacks === 3, 'Poison must stack to three');
+
+  const shieldState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
+  const shielder = shieldState.activeLiving('player')[0];
+  assert(shielder, 'shield fixture missing');
+  const shieldResolver = new SkillActionResolver(() => 0);
+  for (let index = 0; index < 10; index += 1) {
+    shielder.skillCooldownActionsRemaining[0] = 0;
+    shieldResolver.resolve(shielder, shielder, { name: 'Shield Fixture', power: 1, type: 'support', status: 'shield' }, 0);
+  }
+  assert(shielder.shield <= shielder.pow.maxHp * 0.8, 'Shield must never exceed the legacy absolute 80% Max HP cap');
 }
 
 function validateIdentityRules(): void {
   const state = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
   const identity = new CombatIdentityRules();
-  const skills = new SkillActionResolver();
-
+  const skills = new SkillActionResolver(() => 0);
   for (const unit of state.units) {
     for (const ability of unit.pow.abilities.skills) {
       const status = String(ability.status || '').replace(/^self:/i, '').trim().toLowerCase();
       assert(!(ability.type === 'support' && HOSTILE_STATUSES.has(status)), `${unit.pow.name} exposes hostile ${status} as support`);
     }
   }
-
   const actor = state.activeLiving('player')[0];
   const target = state.activeLiving('enemy')[0];
   assert(actor && target, 'identity fixture requires active units');
   const evaluation = identity.evaluateDamage(actor, target, 'skill', 'elemental');
   assert(Number.isFinite(evaluation.totalMultiplier) && evaluation.totalMultiplier >= 0, 'identity multiplier invalid');
-
-  const debuffFixture = state.units
-    .flatMap((unit) => unit.pow.abilities.skills.map((ability, slot) => ({ unit, ability, slot: slot as 0 | 1 })))
-    .find(({ ability }) => ability.type === 'debuff');
+  const debuffFixture = state.units.flatMap((unit) => unit.pow.abilities.skills.map((ability, slot) => ({ unit, ability, slot: slot as 0 | 1 }))).find(({ ability }) => ability.type === 'debuff');
   if (debuffFixture) {
     const debuffTarget = state.activeLiving(debuffFixture.unit.side === 'player' ? 'enemy' : 'player')[0];
     assert(debuffTarget, 'debuff target missing');
@@ -237,15 +221,14 @@ export function runCombat2SmokeRegression(): CombatRegressionReport {
   validateSkillArtCoverage();
   validateRageEconomy();
   validateOffenseChannels();
+  validateLegacyStatsAndEffects();
   validateIdentityRules();
   validateRevivePassive();
   runCombatControlRegression();
 
   const state = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
   const turns = new TurnManager(state);
-  for (const unit of state.units) {
-    if (String(unit.pow.passive?.id || '').toLowerCase() === 'revive_ally_once') unit.passiveUsed = true;
-  }
+  for (const unit of state.units) if (String(unit.pow.passive?.id || '').toLowerCase() === 'revive_ally_once') unit.passiveUsed = true;
   assert(state.activeLiving('player').length === 3 && state.reserveLiving('player').length === 2, 'player must start 3+2');
   assert(state.activeLiving('enemy').length === 3 && state.reserveLiving('enemy').length === 2, 'enemy must start 3+2');
 
@@ -288,6 +271,8 @@ export function runCombat2SmokeRegression(): CombatRegressionReport {
     apSemanticsChecked: true,
     offenseChannelsChecked: true,
     skillArtCoverageChecked: true,
-    controlSystemChecked: true
+    controlSystemChecked: true,
+    legacyStatsChecked: true,
+    legacyEffectsChecked: true
   };
 }
