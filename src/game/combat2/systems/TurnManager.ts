@@ -1,3 +1,4 @@
+import { pruneControlHistory } from './CombatControlEngine';
 import { CombatState, type CombatUnitState } from './CombatState';
 
 const TURN_DISTANCE = 1000;
@@ -214,6 +215,7 @@ export class TurnManager {
     if (activeIds.length > 0 && activeIds.every((instanceId) => this.actedThisRound.has(instanceId))) {
       this.state.round += 1;
       this.actedThisRound.clear();
+      for (const unit of this.state.units) pruneControlHistory(unit, this.state.round);
     }
   }
 }

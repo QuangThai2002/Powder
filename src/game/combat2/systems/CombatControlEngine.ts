@@ -5,7 +5,9 @@ export type CombatCooldownSlot = 0 | 1 | 'ultimate';
 
 export const CONTROL_EFFECT_CHANCE_CAP = 0.8;
 export const PARALYSIS_SKIP_CHANCE = 0.3;
+/** A landed CC counts for its own round plus the following four rounds. */
 export const CONTROL_HISTORY_ROUNDS = 5;
+export const CONTROL_IMMUNITY_TRIGGER_HITS = 4;
 export const CONTROL_IMMUNITY_ACTIONS = 2;
 export const FREEZE_STAGE_ACTIONS = 3;
 export const FROSTBITE_DAMAGE_MULTIPLIER = 1.1;
@@ -30,6 +32,13 @@ export interface ControlRollResult {
   roll: number;
 }
 
+export interface ControlWindowSnapshot {
+  count: number;
+  triggerAt: number;
+  firstRound: number | null;
+  expiresRound: number | null;
+}
+
 export function normalizedStatus(rawStatus: string | undefined): string {
   return String(rawStatus || '')
     .replace(/^self:/i, '')
@@ -51,6 +60,27 @@ export function controlChanceFor(actor: CombatUnitState): number {
     ? Math.max(0, actor.effectAccuracyBonus)
     : 0;
   return Math.min(CONTROL_EFFECT_CHANCE_CAP, base + bonus);
+}
+
+export function pruneControlHistory(target: CombatUnitState, currentRound: number): void {
+  const round = Math.max(1, Math.floor(Number.isFinite(currentRound) ? currentRound : 1));
+  const earliestRound = Math.max(1, round - CONTROL_HISTORY_ROUNDS + 1);
+  target.controlHistory = target.controlHistory.filter((entry) =>
+    entry.round >= earliestRound && entry.round <= round
+  );
+}
+
+export function controlWindowSnapshot(target: CombatUnitState): ControlWindowSnapshot {
+  const rounds = target.controlHistory
+    .map((entry) => Math.max(1, Math.floor(entry.round)))
+    .sort((a, b) => a - b);
+  const firstRound = rounds[0] ?? null;
+  return {
+    count: rounds.length,
+    triggerAt: CONTROL_IMMUNITY_TRIGGER_HITS,
+    firstRound,
+    expiresRound: firstRound === null ? null : firstRound + CONTROL_HISTORY_ROUNDS - 1
+  };
 }
 
 /** Cooldown is measured in the acting Pow's future turns. */
@@ -99,19 +129,22 @@ export class CombatControlEngine {
     sourceKey: string
   ): boolean {
     const round = Math.max(1, Math.floor(Number.isFinite(currentRound) ? currentRound : 1));
-    const earliestRound = Math.max(1, round - CONTROL_HISTORY_ROUNDS + 1);
+    pruneControlHistory(target, round);
     const normalizedSource = String(sourceKey || status).trim().toLowerCase() || status;
-    target.controlHistory = target.controlHistory.filter((entry) =>
-      entry.round >= earliestRound && entry.round <= round
-    );
     target.controlHistory.push({ status, round, sourceKey: normalizedSource });
 
-    // Three distinct CC skills are enough, even when their status names match.
-    const uniqueSkills = new Set(target.controlHistory.map((entry) => entry.sourceKey));
-    if (uniqueSkills.size < 3 || target.controlImmunityActionsRemaining > 0) return false;
+    // Every landed hard-CC counts. The fourth active hit in the rolling
+    // five-round window immediately grants Control Immunity.
+    if (
+      target.controlHistory.length < CONTROL_IMMUNITY_TRIGGER_HITS ||
+      target.controlImmunityActionsRemaining > 0
+    ) return false;
 
     target.controlImmunityActionsRemaining = CONTROL_IMMUNITY_ACTIONS;
     target.controlHistory = [];
+    // Deliberately clear only hard control. Burn, Poison, Slow and future
+    // non-control debuffs remain on the target so immunity cannot act as a
+    // free full cleanse.
     this.clearHardControl(target);
     return true;
   }

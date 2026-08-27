@@ -1,6 +1,10 @@
 import Phaser from 'phaser';
 import type { CombatPow, CombatSide } from '../data/CombatPow';
 import type { CombatUnitState } from '../systems/CombatState';
+import {
+  CONTROL_IMMUNITY_TRIGGER_HITS,
+  controlWindowSnapshot
+} from '../systems/CombatControlEngine';
 import { rageMarkerStates } from '../systems/CombatRageEngine';
 import { COMBAT_BODY_FONT, COMBAT_COLORS, COMBAT_DISPLAY_FONT } from './CombatTheme';
 
@@ -26,6 +30,7 @@ export class PowView {
   private hpText!: Phaser.GameObjects.Text;
   private readonly rageMarkers: Phaser.GameObjects.Arc[] = [];
   private controlImmunityRing!: Phaser.GameObjects.Ellipse;
+  private controlHistoryText!: Phaser.GameObjects.Text;
   private turnGlow!: Phaser.GameObjects.Rectangle;
   private targetGlow!: Phaser.GameObjects.Rectangle;
   private statusFrame!: Phaser.GameObjects.Rectangle;
@@ -75,6 +80,7 @@ export class PowView {
     this.controlImmunityRing.setVisible(
       unit.alive && unit.fieldSlot !== null && unit.controlImmunityActionsRemaining > 0
     );
+    this.updateControlHistoryBadge(unit);
 
     if (this.hasRuntimeSnapshot && unit.alive) {
       if (unit.hp > this.previousHp + 0.5) this.playResourcePulse(0x73f0aa);
@@ -90,6 +96,7 @@ export class PowView {
     if (!unit.alive) {
       this.runtimeVisualStatus = 'HẠ GỤC';
       this.container.setAlpha(0.28);
+      this.controlHistoryText.setVisible(false);
       this.statusText.setText('HẠ GỤC').setBackgroundColor('#4f2029').setVisible(true);
       this.refreshStatusFrame(this.runtimeVisualStatus);
       this.setActiveTurn(false);
@@ -212,6 +219,16 @@ export class PowView {
       0x000000,
       0
     ).setStrokeStyle(4, 0x8ef7ff, 0.92).setVisible(false);
+    this.controlHistoryText = this.scene.add.text(w / 2 - 11, top + 11, '', {
+      fontFamily: COMBAT_DISPLAY_FONT,
+      fontSize: '11px',
+      color: '#bff6ff',
+      fontStyle: 'bold',
+      backgroundColor: '#102f3bdd',
+      padding: { x: 7, y: 4 },
+      stroke: '#041018',
+      strokeThickness: 2
+    }).setOrigin(1, 0).setVisible(false);
 
     const infoY = top + artHeight + 15;
     const name = this.scene.add.text(left + 12, infoY, this.pow.name, {
@@ -251,9 +268,33 @@ export class PowView {
     this.targetHitArea.on('pointerup', () => { if (this.targetable) this.targetSelectedHandler?.(); });
 
     this.container.add([
-      this.statusFrame, this.targetGlow, this.turnGlow, card, artBack, this.portrait, this.controlImmunityRing, name, meta,
-      hpBack, this.hpBar, this.hpText, ...this.rageMarkers, this.statusText, this.targetHitArea
+      this.statusFrame, this.targetGlow, this.turnGlow, card, artBack, this.portrait, this.controlImmunityRing,
+      this.controlHistoryText, name, meta, hpBack, this.hpBar, this.hpText, ...this.rageMarkers, this.statusText,
+      this.targetHitArea
     ]);
+  }
+
+  private updateControlHistoryBadge(unit: CombatUnitState): void {
+    if (
+      !unit.alive ||
+      unit.fieldSlot === null ||
+      unit.controlImmunityActionsRemaining > 0 ||
+      unit.controlHistory.length <= 0
+    ) {
+      this.controlHistoryText.setVisible(false);
+      return;
+    }
+
+    const snapshot = controlWindowSnapshot(unit);
+    if (snapshot.count <= 0 || snapshot.firstRound === null || snapshot.expiresRound === null) {
+      this.controlHistoryText.setVisible(false);
+      return;
+    }
+
+    const count = Math.min(CONTROL_IMMUNITY_TRIGGER_HITS - 1, snapshot.count);
+    this.controlHistoryText
+      .setText(`CC ${count}/${CONTROL_IMMUNITY_TRIGGER_HITS} · V${snapshot.firstRound}→${snapshot.expiresRound}`)
+      .setVisible(true);
   }
 
   private playResourcePulse(color: number): void {
