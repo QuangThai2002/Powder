@@ -8,8 +8,33 @@ import type {
 } from './CombatPow';
 
 interface CatalogElement { name?: string; }
-interface CatalogStats { hp?: number; atk?: number; ap?: number; def?: number; speed?: number; }
-interface CatalogAbility { name?: string; power?: number; type?: string; status?: string; }
+interface CatalogStats {
+  hp?: number;
+  atk?: number;
+  ap?: number;
+  def?: number;
+  speed?: number;
+  critRate?: number;
+  critDamage?: number;
+  evasion?: number;
+  accuracy?: number;
+  critResist?: number;
+  defPen?: number;
+  healPower?: number;
+  shieldPower?: number;
+  tenacity?: number;
+  damageReduction?: number;
+}
+interface CatalogAbility {
+  name?: string;
+  power?: number;
+  type?: string;
+  status?: string;
+  target?: string;
+  area?: boolean;
+  sureHit?: boolean;
+  unavoidable?: boolean;
+}
 interface CatalogPassive { id?: string; name?: string; element?: string; }
 interface CatalogAbilities {
   basic?: CatalogAbility;
@@ -22,6 +47,8 @@ interface CatalogPow {
   name?: string;
   element?: string;
   role?: string;
+  combatRole?: string;
+  roleTags?: string[];
   rarity?: string;
   asset?: string;
   rosterOrder?: number;
@@ -53,19 +80,44 @@ const CANONICAL_SKILL_ART_PREFIX = '/assets/skills/v81/';
 export const STANDARD_POW_COUNT = 99;
 export const STANDARD_SKILLS_PER_POW = 4;
 export const STANDARD_POW_SKILL_COUNT = STANDARD_POW_COUNT * STANDARD_SKILLS_PER_POW;
+
 const HOSTILE_SUPPORT_STATUSES = new Set([
-  'stun', 'silence', 'paralysis', 'freeze', 'slow', 'burn', 'poison'
+  'stun', 'silence', 'paralysis', 'freeze', 'slow', 'burn', 'poison',
+  'anti heal', 'attack down', 'ap down', 'defense down', 'accuracy down'
 ]);
 const HARD_CONTROL_SOURCE = new Set(['stun', 'silence', 'paralysis', 'freeze']);
 const BALANCED_CONTROL_ROTATION = ['stun', 'silence', 'paralysis', 'freeze'] as const;
 type BalancedHardControl = typeof BALANCED_CONTROL_ROTATION[number];
 const hardControlBalanceBySkillIndex = new Map<number, BalancedHardControl>();
 const BENEFICIAL_STATUSES = new Set([
-  'shield', 'regeneration', 'attack up', 'defense up', 'rage gain', 'ap up'
+  'shield', 'regeneration', 'attack up', 'defense up', 'rage gain', 'ap up',
+  'speed up', 'effect resist', 'guard', 'crit up', 'evasion up'
 ]);
 const COMBAT_RARITIES = new Set<CombatRarity>([
   'common', 'rare', 'super_rare', 'epic', 'legendary', 'mythic', 'ancient'
 ]);
+
+const ROLE_CRIT_RESIST: Readonly<Record<string, number>> = Object.freeze({
+  assassin: 2, marksman: 4, mage: 4, enchanter: 6, musician: 6,
+  healer: 8, fighter: 10, knight: 15, tank: 20
+});
+const ROLE_EVASION: Readonly<Record<string, number>> = Object.freeze({
+  assassin: 10, marksman: 6, mage: 5, enchanter: 5, musician: 5,
+  healer: 4, fighter: 4, knight: 3, tank: 2
+});
+const ROLE_TENACITY: Readonly<Record<string, number>> = Object.freeze({
+  assassin: 4, marksman: 4, mage: 5, enchanter: 7, musician: 7,
+  healer: 8, fighter: 10, knight: 15, tank: 20
+});
+const ROLE_HEAL_POWER: Readonly<Record<string, number>> = Object.freeze({
+  assassin: 0, marksman: 0, mage: 0, enchanter: 8, musician: 10,
+  healer: 15, fighter: 0, knight: 0, tank: 0
+});
+const ROLE_SHIELD_POWER: Readonly<Record<string, number>> = Object.freeze({
+  assassin: 0, marksman: 0, mage: 0, enchanter: 8, musician: 5,
+  healer: 5, fighter: 4, knight: 10, tank: 15
+});
+const SPECIAL_EVA_ELEMENTS = new Set(['wind', 'storm', 'dark']);
 
 const DEFAULT_DISPLAY: PowDisplayProfile = {
   heightRatio: 0.94,
@@ -78,8 +130,49 @@ function finitePositive(value: number | undefined, fallback: number): number {
   return Number.isFinite(value) && (value as number) > 0 ? (value as number) : fallback;
 }
 
+function finiteNumber(value: number | undefined, fallback: number): number {
+  return Number.isFinite(value) ? (value as number) : fallback;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  const safe = Number.isFinite(value) ? value : min;
+  return Math.min(max, Math.max(min, safe));
+}
+
+function normalizeText(value: string | undefined): string {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+function combatRoleKey(pow: CatalogPow): string {
+  const raw = normalizeText(pow.combatRole || pow.roleTags?.[0] || pow.role);
+  if (raw.includes('sat thu') || raw.includes('assassin')) return 'assassin';
+  if (raw.includes('xa thu') || raw.includes('marksman') || raw.includes('archer')) return 'marksman';
+  if (raw.includes('phap su') || raw.includes('mage')) return 'mage';
+  if (raw.includes('thuat su') || raw.includes('enchanter')) return 'enchanter';
+  if (raw.includes('nhac cong') || raw.includes('musician')) return 'musician';
+  if (raw.includes('tri lieu') || raw.includes('healer')) return 'healer';
+  if (raw.includes('dau si') || raw.includes('fighter')) return 'fighter';
+  if (raw.includes('hiep si') || raw.includes('knight')) return 'knight';
+  if (raw.includes('do don') || raw.includes('tank')) return 'tank';
+  return 'marksman';
+}
+
 function normalizeRarity(raw: string | undefined): CombatRarity {
-  const rarity = String(raw || 'common').trim().toLowerCase() as CombatRarity;
+  const normalized = normalizeText(raw).replace(/[\s-]+/g, '_');
+  const aliases: Record<string, CombatRarity> = {
+    common: 'common', thuong: 'common',
+    rare: 'rare', hiem: 'rare',
+    super_rare: 'super_rare', sieu_hiem: 'super_rare',
+    epic: 'epic', su_thi: 'epic',
+    legendary: 'legendary', huyen_thoai: 'legendary',
+    mythic: 'mythic', than_thoai: 'mythic',
+    ancient: 'ancient', thuong_co: 'ancient'
+  };
+  const rarity = aliases[normalized] ?? 'common';
   return COMBAT_RARITIES.has(rarity) ? rarity : 'common';
 }
 
@@ -94,11 +187,31 @@ function normalizeAbilityType(
   return type;
 }
 
+/** Map legacy Core V2 status names into the canonical Combat2 vocabulary. */
 function migrateLegacyStatus(rawStatus: string | undefined): string | undefined {
   const raw = String(rawStatus || '').trim();
   if (!raw) return undefined;
-  // AP = Ability Power. It must never be converted into the Rage resource.
-  return raw;
+  const selfDirected = raw.toLowerCase().startsWith('self:');
+  const core = selfDirected ? raw.slice(5).trim() : raw;
+  const key = normalizeText(core).replace(/[_-]+/g, ' ');
+  const aliases: Record<string, string> = {
+    petrify: 'stun', sleep: 'stun', bind: 'stun',
+    frostbite: 'freeze',
+    'magma burn': 'burn',
+    'speed down': 'slow',
+    antiheal: 'anti heal', 'anti heal': 'anti heal', 'healing down': 'anti heal',
+    'attack down': 'attack down',
+    'ap down': 'ap down',
+    'defense down': 'defense down', 'def down': 'defense down',
+    'accuracy down': 'accuracy down',
+    'speed up': 'speed up',
+    'effect resist': 'effect resist', 'effect resistance': 'effect resist',
+    guard: 'guard',
+    'crit up': 'crit up', 'critical up': 'crit up',
+    'evasion up': 'evasion up'
+  };
+  const migrated = aliases[key] ?? core;
+  return selfDirected ? `self:${migrated}` : migrated;
 }
 
 export function standardSkillIndex(rosterOrder: number | undefined, offset: 0 | 1 | 2 | 3): number | undefined {
@@ -110,8 +223,7 @@ export function standardSkillIndex(rosterOrder: number | undefined, offset: 0 | 
 /**
  * Preserve the exact number of existing hard-CC skills, sort them by canonical
  * skill order, then distribute STUN -> SILENCE -> PARALYSIS -> FREEZE in a
- * strict rotation. Across the full 99-Pow roster the four counts therefore
- * differ by at most one without creating any additional hard-control skills.
+ * strict rotation. Legacy hard-CC aliases are normalized before counting.
  */
 function configureHardControlDistribution(
   pows: readonly CatalogPow[]
@@ -129,7 +241,8 @@ function configureHardControlDistribution(
     ];
 
     for (const [offset, ability] of abilities) {
-      const raw = String(ability?.status || '').trim();
+      const migrated = migrateLegacyStatus(ability?.status);
+      const raw = String(migrated || '').trim();
       const core = raw.toLowerCase().startsWith('self:') ? raw.slice(5).trim() : raw;
       if (!HARD_CONTROL_SOURCE.has(core.toLowerCase())) continue;
       const skillIndex = standardSkillIndex(pow.rosterOrder, offset);
@@ -159,7 +272,8 @@ export function balancedHardControlStatus(
   rosterOrder: number | undefined,
   abilityOffset: 0 | 1 | 2 | 3
 ): string | undefined {
-  const raw = String(rawStatus || '').trim();
+  const migrated = migrateLegacyStatus(rawStatus);
+  const raw = String(migrated || '').trim();
   if (!raw) return undefined;
   const selfDirected = raw.toLowerCase().startsWith('self:');
   const core = selfDirected ? raw.slice(5).trim() : raw;
@@ -217,6 +331,10 @@ function normalizeAbility(
     power: finitePositive(ability?.power, fallbackPower),
     type,
     ...(status ? { status } : {}),
+    ...(ability?.target ? { target: String(ability.target) } : {}),
+    ...(ability?.area ? { area: true } : {}),
+    ...(ability?.sureHit ? { sureHit: true } : {}),
+    ...(ability?.unavoidable ? { unavoidable: true } : {}),
     ...canonicalSkillVisual(standardSkillIndex(pow.rosterOrder, abilityOffset))
   };
 }
@@ -286,9 +404,12 @@ function toCombatPow(pow: CatalogPow): CombatPow {
   const hp = finitePositive(stats.hp, 300);
   const attack = finitePositive(stats.atk, 50);
   const abilityPower = finitePositive(stats.ap, attack);
+  const roleKey = combatRoleKey(pow);
   const elementKey = String(pow.element || 'unknown');
   const elementName = String(window.POWDER_DATA?.elements?.[elementKey]?.name || elementKey);
   const passive = normalizePassive(pow.abilities?.passive);
+  const roleEvasion = ROLE_EVASION[roleKey] ?? 0;
+  const elementEvasion = SPECIAL_EVA_ELEMENTS.has(elementKey) ? 12 : 0;
 
   return {
     id,
@@ -297,7 +418,7 @@ function toCombatPow(pow: CatalogPow): CombatPow {
     assetUrl: canonicalAssetUrl(pow.asset, id),
     element: elementName,
     elementKey,
-    role: String(pow.role || 'Không xác định'),
+    role: String(pow.role || pow.combatRole || 'Không xác định'),
     rarity: normalizeRarity(pow.rarity),
     level: 60,
     attack,
@@ -306,6 +427,16 @@ function toCombatPow(pow: CatalogPow): CombatPow {
     speed: finitePositive(stats.speed, 50),
     hp,
     maxHp: hp,
+    critRate: clamp(finiteNumber(stats.critRate, 0), 0, 100),
+    critDamage: clamp(finiteNumber(stats.critDamage, 150), 100, 250),
+    evasion: clamp(finiteNumber(stats.evasion, Math.max(roleEvasion, elementEvasion)), 0, SPECIAL_EVA_ELEMENTS.has(elementKey) ? 75 : 60),
+    accuracy: clamp(finiteNumber(stats.accuracy, 100), 25, 200),
+    critResist: clamp(finiteNumber(stats.critResist, ROLE_CRIT_RESIST[roleKey] ?? 0), 0, 50),
+    defPen: clamp(finiteNumber(stats.defPen, 0), 0, 0.6),
+    healPower: clamp(finiteNumber(stats.healPower, ROLE_HEAL_POWER[roleKey] ?? 0), 0, 60),
+    shieldPower: clamp(finiteNumber(stats.shieldPower, ROLE_SHIELD_POWER[roleKey] ?? 0), 0, 60),
+    tenacity: clamp(finiteNumber(stats.tenacity, ROLE_TENACITY[roleKey] ?? 0), 0, 60),
+    damageReduction: clamp(finiteNumber(stats.damageReduction, 0), 0, 0.45),
     abilities: normalizeAbilities(pow),
     ...(passive ? { passive } : {}),
     display: { ...DEFAULT_DISPLAY }
