@@ -1,6 +1,7 @@
 import type { CombatAbility, CombatRarity } from '../data/CombatPow';
-import type { CombatAbilitySlot } from './SkillActionResolver';
 import type { CombatUnitState, HardControlStatus } from './CombatState';
+
+export type CombatCooldownSlot = 0 | 1 | 'ultimate';
 
 export const CONTROL_EFFECT_CHANCE_CAP = 0.8;
 export const PARALYSIS_SKIP_CHANCE = 0.3;
@@ -55,7 +56,7 @@ export function controlChanceFor(actor: CombatUnitState): number {
 /** Cooldown is measured in the acting Pow's future turns. */
 export function cooldownForAbility(
   ability: CombatAbility,
-  slot: CombatAbilitySlot
+  slot: CombatCooldownSlot
 ): number {
   const status = normalizedStatus(ability.status);
   if (isHardControlStatus(status)) return 2;
@@ -105,8 +106,7 @@ export class CombatControlEngine {
     );
     target.controlHistory.push({ status, round, sourceKey: normalizedSource });
 
-    // The protection is based on three distinct CC skills, not three different
-    // status names. Three different Pow using three Stun skills still count.
+    // Three distinct CC skills are enough, even when their status names match.
     const uniqueSkills = new Set(target.controlHistory.map((entry) => entry.sourceKey));
     if (uniqueSkills.size < 3 || target.controlImmunityActionsRemaining > 0) return false;
 
@@ -127,17 +127,16 @@ export class CombatControlEngine {
   }
 
   applyFreezeStage(target: CombatUnitState): 'chill' | 'frostbite' | 'freeze' {
-    const baseSpeed = this.safeBaseSpeed(target);
     if (target.freezeStage <= 0) {
       target.freezeStage = 1;
       target.freezeStageActionsRemaining = FREEZE_STAGE_ACTIONS;
-      target.speed = Math.max(1, Math.min(target.speed, baseSpeed * 0.9));
+      this.applySpeedComposition(target, 0.9);
       return 'chill';
     }
     if (target.freezeStage === 1) {
       target.freezeStage = 2;
       target.freezeStageActionsRemaining = FREEZE_STAGE_ACTIONS;
-      target.speed = Math.max(1, Math.min(target.speed, baseSpeed * 0.8));
+      this.applySpeedComposition(target, 0.8);
       return 'frostbite';
     }
     target.freezeStage = 0;
@@ -155,10 +154,14 @@ export class CombatControlEngine {
   }
 
   restoreSpeedFromNonFreezeEffects(target: CombatUnitState): void {
+    this.applySpeedComposition(target, 1);
+  }
+
+  private applySpeedComposition(target: CombatUnitState, freezeMultiplier: number): void {
     const baseSpeed = this.safeBaseSpeed(target);
     const slowMultiplier = target.speedDebuffActionsRemaining > 0 ? 0.8 : 1;
     const buffMultiplier = target.speedBuffActionsRemaining > 0 ? 1.2 : 1;
-    target.speed = Math.max(1, baseSpeed * slowMultiplier * buffMultiplier);
+    target.speed = Math.max(1, baseSpeed * slowMultiplier * buffMultiplier * freezeMultiplier);
   }
 
   private safeBaseSpeed(target: CombatUnitState): number {
