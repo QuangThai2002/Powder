@@ -1,0 +1,52 @@
+/* Powder Combat Main Element FX 22.2.2 — visual identity, not just recoloring. */
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact.el-fire .cv7-vfx-frag,
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact.el-lava .cv7-vfx-frag{clip-path:polygon(50% 0,76% 35%,100% 100%,53% 70%,20% 100%,31% 42%)!important;filter:drop-shadow(0 0 7px var(--cmv-core))}
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact.el-fire .cv7-vfx-ripple,
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact.el-lava .cv7-vfx-ripple{border-radius:45% 55% 52% 48%/58% 42% 56% 44%!important;transform:translate(-50%,-50%) rotate(14deg)}
+.combat-v7-mount.cmv221-ready .cv7-attack-flow.el-fire .cv7-attack-trace:before,
+.combat-v7-mount.cmv221-ready .cv7-attack-flow.el-lava .cv7-attack-trace:before{clip-path:polygon(0 50%,42% 5%,100% 50%,42% 95%);border-radius:0!important;height:18px!important;background:linear-gradient(90deg,transparent,var(--cmv-core) 25%,#fff 72%,var(--cmv-line))!important}
+
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact.el-water .cv7-vfx-shock,
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact.el-ice .cv7-vfx-shock{border-radius:50%!important;border-style:double!important;border-width:5px!important}
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact.el-water .cv7-vfx-ripple{border-width:4px 1px 2px 1px!important;transform:translate(-50%,-50%) scaleX(1.28)!important}
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact.el-ice .cv7-vfx-frag{clip-path:polygon(50% 0,63% 35%,100% 22%,72% 50%,100% 78%,63% 65%,50% 100%,37% 65%,0 78%,28% 50%,0 22%,37% 35%)!important;width:34px!important;height:34px!important}
+.combat-v7-mount.cmv221-ready .cv7-attack-flow.el-ice .cv7-attack-trace{background:repeating-linear-gradient(90deg,transparent 0 8px,var(--cmv-line) 9px 18px,#fff 19px 22px,var(--cmv-core) 23px 34px)!important}
+
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact.el-lightning .cv7-vfx-spark,
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact.el-storm .cv7-vfx-spark{height:5px!important;clip-path:polygon(0 35%,25% 0,42% 45%,65% 8%,100% 52%,72% 100%,50% 55%,23% 92%)!important;border-radius:0!important}
+.combat-v7-mount.cmv221-ready .cv7-attack-flow.el-lightning .cv7-attack-trace,
+.combat-v7-mount.cmv221-ready .cv7-attack-flow.el-storm .cv7-attack-trace{height:7px!important;clip-path:polygon(0 40%,14% 10%,27% 62%,43% 18%,58% 69%,72% 25%,100% 48%,72% 75%,59% 31%,43% 82%,27% 38%,14% 90%,0 60%);border-radius:0!important}
+.combat-v7-mount.cmv221-ready .cv7-attack-flow.el-lightning .cv7-attack-trace:before,
+.combat-v7-mount.cmv221-ready .cv7-attack-flow.el-storm .cv7-attack-trace:before{width:48px!important;height:22px!important;clip-path:polygon(0 46%,31% 0,48% 43%,70% 10%,100% 54%,62% 100%,45% 58%,20% 92%)!important;border-radius:0!important}
+
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact.el-leaf .cv7-vfx-frag{clip-path:ellipse(42% 50% at 50% 50%)!important;transform-origin:20% 80%!important}
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact.el-poison .cv7-vfx-burst{background:radial-gradient(circle,#fff 0 4%,var(--cmv-line) 8%,transparent 11%,var(--cmv-core) 22%,transparent 48%,var(--cmv-core) 55%,transparent 68%)!important}
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact.el-poison .cv7-vfx-ripple{border-style:dotted!important;border-width:5px!important}
+.combat-v7-mount.cmv221-ready .cv7-attack-flow.el-poison .cv7-attack-trace:before{width:30px!important;height:30px!important;border-radius:50%!important;background:radial-gradient(circle at 34% 28%,#fff 0 8%,var(--cmv-line) 10% 18%,var(--cmv-core) 22% 54%,transparent 58%),radial-gradient(circle at 72% 70%,var(--cmv-core) 0 16%,transparent 18%)!important}
+
+.combat-v7-mount.cmv221-ready .cv7-vfx.cast.el-dark:after{background:conic-gradient(from 0deg,transparent 0 8%,var(--cmv-core) 12%,transparent 19% 34%,var(--cmv-line) 39%,transparent 47% 64%,var(--cmv-core) 69%,transparent 78%)!important;filter:blur(.3px)}
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact.el-dark .cv7-vfx-ripple{border-style:dashed!important;animation-duration:.78s!important}
+.combat-v7-mount.cmv221-ready .cv7-attack-flow.el-dark .cv7-attack-trace{background:linear-gradient(90deg,transparent,#251b43 9%,var(--cmv-core) 28%,#fff 51%,var(--cmv-line) 66%,transparent)!important;box-shadow:0 0 12px rgba(101,72,170,.5),0 0 26px rgba(101,72,170,.24)!important}
+
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact.el-light .cv7-vfx-frag{clip-path:polygon(50% 0,60% 38%,100% 50%,60% 62%,50% 100%,40% 62%,0 50%,40% 38%)!important;width:42px!important;height:42px!important}
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact.el-light .cv7-vfx-shock{box-shadow:0 0 18px rgba(255,246,190,.75),inset 0 0 20px rgba(255,246,190,.38)!important}
+.combat-v7-mount.cmv221-ready .cv7-attack-flow.el-light .cv7-attack-trace:before{width:38px!important;height:38px!important;border-radius:0!important;clip-path:polygon(50% 0,60% 38%,100% 50%,60% 62%,50% 100%,40% 62%,0 50%,40% 38%)!important}
+
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact.el-earth .cv7-vfx-shock,
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact.el-steel .cv7-vfx-shock{border-radius:18%!important;transform:translate(-50%,-50%) rotate(45deg)!important}
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact.el-earth .cv7-vfx-frag,
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact.el-steel .cv7-vfx-frag{clip-path:polygon(18% 8%,88% 0,100% 70%,66% 100%,0 82%)!important;width:28px!important;height:36px!important}
+.combat-v7-mount.cmv221-ready .cv7-attack-flow.el-steel .cv7-attack-trace{height:8px!important;background:linear-gradient(180deg,#fff 0 18%,var(--cmv-line) 22% 48%,#697781 50% 68%,var(--cmv-core) 72% 100%)!important}
+
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact.el-wind .cv7-vfx-ripple{border-width:1px 4px 1px 4px!important;border-style:solid!important;transform:translate(-50%,-50%) scaleX(1.32) rotate(-18deg)!important}
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact.el-wind .cv7-vfx-frag{clip-path:polygon(0 48%,65% 0,42% 43%,100% 52%,34% 100%,57% 59%)!important;width:46px!important;height:20px!important}
+.combat-v7-mount.cmv221-ready .cv7-attack-flow.el-wind .cv7-attack-trace{height:3px!important;background:repeating-linear-gradient(90deg,transparent 0 14px,var(--cmv-line) 15px 28px,transparent 29px 38px)!important;box-shadow:0 -6px 8px var(--cmv-soft),0 6px 8px var(--cmv-soft)!important}
+
+/* Role of hit type: critical and ultimate get an extra readable finishing pulse. */
+.combat-v7-mount.cmv221-ready[data-csi218-key="ultimate"] .cv7-vfx.impact:after,
+.combat-v7-mount.cmv221-ready .cv7-vfx.impact.critical:after{content:"";position:absolute;left:50%;top:50%;width:26px;height:26px;border:2px solid var(--cmv-line);border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 22px var(--cmv-soft);animation:cmv2222Finish .62s ease-out both;pointer-events:none}
+@keyframes cmv2222Finish{0%{opacity:0;transform:translate(-50%,-50%) scale(.3)}18%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(5)}}
+
+.combat-v7-mount.cmv221-ready.cv71-fx-low .cv7-vfx.impact:after,
+.combat-v7-mount.cmv221-ready.cmv221-pressure-reduced .cv7-vfx.impact:not(.el-lightning):not(.el-storm) .cv7-vfx-frag{display:none!important}
+html.reduce-motion .combat-v7-mount.cmv221-ready .cv7-vfx.impact:after{display:none!important}
