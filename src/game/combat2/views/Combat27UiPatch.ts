@@ -35,14 +35,20 @@ interface PatchablePowView {
   combat27StatusIcons?: Phaser.GameObjects.Container;
   combat27ShieldBar?: Phaser.GameObjects.Rectangle;
   combat27ShieldFrame?: Phaser.GameObjects.Rectangle;
+  combat271UltimateReadyFx?: Phaser.GameObjects.Container;
 }
 
 const PATCH_FLAG = '__powderCombat27UiInstalled';
 const STATUS_ICON_SIZE = 18;
 const STATUS_ICON_GAP = 5;
+const ULTIMATE_READY_RAGE = 4;
 
 function normalize(value: unknown): string {
   return String(value || '').replace(/^self:/i, '').trim().toLowerCase();
+}
+
+function normalizedElement(value: unknown): string {
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 }
 
 function targetLabel(ability: CombatAbility): string {
@@ -111,6 +117,102 @@ function abilityAccent(ability: CombatAbility, tag: string): number {
   return 0x4f9fca;
 }
 
+interface ElementVisual {
+  key: 'fire' | 'lava' | 'water' | 'ice' | 'lightning' | 'storm' | 'leaf' | 'poison' | 'earth' | 'wind' | 'steel' | 'light' | 'dark' | 'generic';
+  color: number;
+  secondary: number;
+}
+
+function elementVisual(pow: any): ElementVisual {
+  const key = normalizedElement(`${pow?.elementKey || ''} ${pow?.element || ''}`);
+  if (key.includes('dung nham') || key.includes('lava')) return { key: 'lava', color: 0xff4f2e, secondary: 0xffb05f };
+  if (key.includes('lua') || key.includes('fire')) return { key: 'fire', color: 0xff7043, secondary: 0xffc16f };
+  if (key.includes('nuoc') || key.includes('water')) return { key: 'water', color: 0x4db9ff, secondary: 0xa0e6ff };
+  if (key.includes('bang') || key.includes('ice')) return { key: 'ice', color: 0x8adfff, secondary: 0xe6fbff };
+  if (key.includes('set') || key.includes('lightning') || key.includes('electric')) return { key: 'lightning', color: 0xf5dd62, secondary: 0xfff6a8 };
+  if (key.includes('bao') || key.includes('storm')) return { key: 'storm', color: 0x78a9ff, secondary: 0xc9d8ff };
+  if (key.includes('la') || key.includes('leaf') || key.includes('nature')) return { key: 'leaf', color: 0x72d67f, secondary: 0xc8f6aa };
+  if (key.includes('doc') || key.includes('poison')) return { key: 'poison', color: 0xa5df66, secondary: 0xd9ff9b };
+  if (key.includes('dat') || key.includes('earth')) return { key: 'earth', color: 0xb78c5d, secondary: 0xe0bb86 };
+  if (key.includes('gio') || key.includes('wind')) return { key: 'wind', color: 0x76e4d2, secondary: 0xc9fff5 };
+  if (key.includes('thep') || key.includes('steel')) return { key: 'steel', color: 0xc3d3dc, secondary: 0xf2f7fa };
+  if (key.includes('anh sang') || key.includes('light')) return { key: 'light', color: 0xffefad, secondary: 0xffffff };
+  if (key.includes('bong toi') || key.includes('dark')) return { key: 'dark', color: 0xa88cf2, secondary: 0xdbc9ff };
+  return { key: 'generic', color: 0xd8a857, secondary: 0xffe3a0 };
+}
+
+function addElementalReadyFx(
+  scene: Phaser.Scene,
+  parent: Phaser.GameObjects.Container,
+  x: number,
+  y: number,
+  pow: any,
+  radius: number,
+  compact = false
+): Phaser.GameObjects.Container {
+  const visual = elementVisual(pow);
+  const fx = scene.add.container(x, y);
+  const ring = scene.add.circle(0, 0, radius, visual.color, compact ? 0.025 : 0.035)
+    .setStrokeStyle(compact ? 2 : 3, visual.color, compact ? 0.72 : 0.78);
+  const inner = scene.add.circle(0, 0, radius * 0.82, 0x000000, 0)
+    .setStrokeStyle(1, visual.secondary, 0.28);
+  fx.add([ring, inner]);
+
+  const count = compact ? 4 : 6;
+  for (let i = 0; i < count; i += 1) {
+    const angle = (Math.PI * 2 * i) / count;
+    const distance = radius * (0.92 + (i % 2) * 0.1);
+    let deco: Phaser.GameObjects.GameObject;
+    const dx = Math.cos(angle) * distance;
+    const dy = Math.sin(angle) * distance;
+
+    if (visual.key === 'fire' || visual.key === 'lava') {
+      deco = scene.add.triangle(dx, dy, 0, 10, 5, 0, 10, 10, i % 2 ? visual.secondary : visual.color, 0.78)
+        .setRotation(angle + Math.PI / 2).setScale(compact ? 0.7 : 0.9);
+    } else if (visual.key === 'lightning' || visual.key === 'storm') {
+      const bolt = scene.add.graphics();
+      bolt.lineStyle(compact ? 2 : 3, i % 2 ? visual.secondary : visual.color, 0.9);
+      bolt.beginPath(); bolt.moveTo(dx - 4, dy - 7); bolt.lineTo(dx + 2, dy - 1); bolt.lineTo(dx - 1, dy + 3); bolt.lineTo(dx + 6, dy + 8); bolt.strokePath();
+      deco = bolt;
+    } else if (visual.key === 'water' || visual.key === 'wind') {
+      const wave = scene.add.arc(dx, dy, compact ? 8 : 10, 205, 345, false, 0x000000, 0)
+        .setStrokeStyle(compact ? 2 : 3, i % 2 ? visual.secondary : visual.color, 0.75).setRotation(angle);
+      deco = wave;
+    } else if (visual.key === 'ice') {
+      deco = scene.add.rectangle(dx, dy, compact ? 4 : 5, compact ? 14 : 18, i % 2 ? visual.secondary : visual.color, 0.8)
+        .setRotation(angle + Math.PI / 2);
+    } else if (visual.key === 'leaf') {
+      deco = scene.add.ellipse(dx, dy, compact ? 9 : 12, compact ? 5 : 6, i % 2 ? visual.secondary : visual.color, 0.75)
+        .setRotation(angle + 0.45);
+    } else if (visual.key === 'poison') {
+      deco = scene.add.circle(dx, dy, compact ? 4 : 6, i % 2 ? visual.secondary : visual.color, 0.42)
+        .setStrokeStyle(1, visual.secondary, 0.72);
+    } else if (visual.key === 'earth') {
+      deco = scene.add.polygon(dx, dy, [0, -7, 7, -2, 5, 6, -4, 7, -8, 0], i % 2 ? visual.secondary : visual.color, 0.64)
+        .setScale(compact ? 0.75 : 1);
+    } else if (visual.key === 'steel') {
+      deco = scene.add.rectangle(dx, dy, compact ? 10 : 13, compact ? 3 : 4, i % 2 ? visual.secondary : visual.color, 0.82)
+        .setRotation(angle + Math.PI / 2);
+    } else if (visual.key === 'light') {
+      deco = scene.add.star(dx, dy, 4, compact ? 3 : 4, compact ? 7 : 9, i % 2 ? visual.secondary : visual.color, 0.82);
+    } else if (visual.key === 'dark') {
+      deco = scene.add.arc(dx, dy, compact ? 7 : 9, 55, 305, false, 0x000000, 0)
+        .setStrokeStyle(compact ? 2 : 3, i % 2 ? visual.secondary : visual.color, 0.78).setRotation(angle);
+    } else {
+      deco = scene.add.circle(dx, dy, compact ? 3 : 4, i % 2 ? visual.secondary : visual.color, 0.8);
+    }
+    fx.add(deco);
+  }
+
+  parent.add(fx);
+  scene.tweens.add({ targets: ring, alpha: compact ? 0.95 : 1, scaleX: 1.06, scaleY: 1.06, yoyo: true, repeat: -1, duration: compact ? 760 : 920, ease: 'Sine.easeInOut' });
+  scene.tweens.add({ targets: inner, alpha: 0.72, scaleX: 0.94, scaleY: 0.94, yoyo: true, repeat: -1, duration: compact ? 980 : 1180, ease: 'Sine.easeInOut' });
+  if (!scene.game.device.os.iOS || !compact) {
+    scene.tweens.add({ targets: fx, angle: visual.key === 'lightning' ? 3 : 360, duration: visual.key === 'lightning' ? 420 : visual.key === 'water' || visual.key === 'wind' ? 5200 : 6800, yoyo: visual.key === 'lightning', repeat: -1, ease: 'Linear' });
+  }
+  return fx;
+}
+
 function actionAvailability(scene: PatchableScene, actor: CombatUnitState, ability: CombatAbility, slot: 0 | 1 | 'ultimate'): boolean {
   const resourceReady = slot === 'ultimate'
     ? scene.skillActions.canUseUltimate(actor)
@@ -137,75 +239,87 @@ function createSharedSkillOverlay(this: PatchableScene, actor: CombatUnitState):
 
   const width = this.scale.width;
   const height = this.scale.height;
-  const overlayTop = Math.round(height * 0.605);
-  const overlayBottom = height - 6;
+  const overlayTop = Math.round(height * 0.625);
+  const overlayBottom = height - 8;
   const overlayHeight = overlayBottom - overlayTop;
   const centerY = overlayTop + overlayHeight / 2;
   const menu = this.add.container(0, 0).setDepth(72);
 
-  // The overlay owns the same screen band as the three player Pow. Nothing is moved.
-  const dim = this.add.rectangle(width / 2, centerY, width, overlayHeight, 0x02080e, 0.76);
-  const topFade = this.add.rectangle(width / 2, overlayTop + 9, width, 18, 0x08131d, 0.5);
-  const title = this.add.text(width / 2, overlayTop + 24, 'CHỌN KỸ NĂNG', {
-    fontFamily: COMBAT_DISPLAY_FONT, fontSize: '25px', color: '#fff1c6', fontStyle: 'bold', stroke: '#06111c', strokeThickness: 4
+  const dim = this.add.rectangle(width / 2, centerY, width, overlayHeight, 0x02080e, 0.68);
+  const topFade = this.add.rectangle(width / 2, overlayTop + 8, width, 16, 0x08131d, 0.34);
+  const title = this.add.text(width / 2, overlayTop + 21, 'CHỌN KỸ NĂNG', {
+    fontFamily: COMBAT_DISPLAY_FONT, fontSize: '21px', color: '#f8e9bd', fontStyle: 'bold', stroke: '#06111c', strokeThickness: 3
   }).setOrigin(0.5);
-  menu.add([dim, topFade, title]);
+  const ornamentLeft = this.add.rectangle(width / 2 - 118, overlayTop + 21, 76, 1, 0xd7b86c, 0.35);
+  const ornamentRight = this.add.rectangle(width / 2 + 118, overlayTop + 21, 76, 1, 0xd7b86c, 0.35);
+  menu.add([dim, topFade, title, ornamentLeft, ornamentRight]);
 
-  const margin = 36;
-  const gap = 14;
-  const cardWidth = Math.min(366, (width - margin * 2 - gap * 3) / 4);
-  const cardHeight = Math.min(278, overlayHeight - 64);
+  const margin = 62;
+  const gap = 12;
+  const cardWidth = Math.min(322, (width - margin * 2 - gap * 3) / 4);
+  const cardHeight = Math.min(236, overlayHeight - 58);
   const rowWidth = cardWidth * 4 + gap * 3;
   const startX = width / 2 - rowWidth / 2 + cardWidth / 2;
-  const cardY = overlayTop + 56 + cardHeight / 2;
+  const cardY = overlayTop + 49 + cardHeight / 2;
+  const ultimateReady = actor.ragePoints >= ULTIMATE_READY_RAGE;
+  const ultimateElement = elementVisual(actor.pow);
 
   actions.forEach((action, index) => {
     const ability = action.ability;
     const tag = action.slot === 'basic' ? 'ATK' : action.slot === 'ultimate' ? 'ULT' : this.abilityTag(ability);
-    const accent = abilityAccent(ability, tag);
+    const isUltimate = action.slot === 'ultimate';
+    const ready = isUltimate && ultimateReady;
+    const accent = ready ? ultimateElement.color : abilityAccent(ability, tag);
     const x = startX + index * (cardWidth + gap);
-    const bg = this.add.rectangle(x, cardY, cardWidth, cardHeight, 0x07131f, action.enabled ? 0.96 : 0.78)
-      .setStrokeStyle(action.enabled ? 2 : 1, action.enabled ? accent : 0x59636a, action.enabled ? 0.9 : 0.45);
-    const iconY = cardY - cardHeight / 2 + 53;
-    const iconPlate = this.add.circle(x, iconY, 38, 0x06111a, 0.94).setStrokeStyle(2, accent, action.enabled ? 0.9 : 0.35);
+
+    const bg = this.add.rectangle(x, cardY, cardWidth, cardHeight, 0x07131f, action.enabled ? 0.9 : 0.68)
+      .setStrokeStyle(action.enabled ? (ready ? 2.2 : 1.4) : 1, action.enabled ? accent : 0x59636a, action.enabled ? (ready ? 0.96 : 0.68) : 0.36);
+    const inner = this.add.rectangle(x, cardY, cardWidth - 8, cardHeight - 8, 0x0b1823, 0.11)
+      .setStrokeStyle(1, action.enabled ? accent : 0x4c5960, action.enabled ? 0.14 : 0.08);
+    const accentLine = this.add.rectangle(x, cardY - cardHeight / 2 + 4, cardWidth - 24, 2, accent, action.enabled ? 0.44 : 0.16);
+
+    const iconY = cardY - cardHeight / 2 + 45;
+    const iconPlate = this.add.circle(x, iconY, 33, 0x06111a, 0.9).setStrokeStyle(1.5, accent, action.enabled ? 0.74 : 0.28);
+    if (ready) addElementalReadyFx(this, menu, x, iconY, actor.pow, 43, true);
+
     let icon: Phaser.GameObjects.Image | Phaser.GameObjects.Text;
     if (ability.iconKey && this.textures.exists(ability.iconKey)) {
-      icon = this.add.image(x, iconY, ability.iconKey).setDisplaySize(66, 66).setAlpha(action.enabled ? 1 : 0.4);
+      icon = this.add.image(x, iconY, ability.iconKey).setDisplaySize(56, 56).setAlpha(action.enabled ? 1 : 0.38);
       if (!action.enabled && icon instanceof Phaser.GameObjects.Image) icon.setTint(0x69777f);
     } else {
-      icon = this.add.text(x, iconY, action.slot === 'ultimate' ? '✦' : action.slot === 'basic' ? '◆' : String(Number(action.slot) + 1), {
-        fontFamily: COMBAT_DISPLAY_FONT, fontSize: '30px', color: action.enabled ? '#ffffff' : '#7c878c', fontStyle: 'bold'
+      icon = this.add.text(x, iconY, isUltimate ? '✦' : action.slot === 'basic' ? '◆' : String(Number(action.slot) + 1), {
+        fontFamily: COMBAT_DISPLAY_FONT, fontSize: '26px', color: action.enabled ? '#ffffff' : '#7c878c', fontStyle: 'bold'
       }).setOrigin(0.5);
     }
 
-    const headerY = cardY - cardHeight / 2 + 96;
+    const headerY = cardY - cardHeight / 2 + 81;
     const header = this.add.text(x, headerY, `${action.label} · ${tag}`, {
-      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '16px', color: action.enabled ? '#fff5da' : '#929da2', fontStyle: 'bold', fixedWidth: cardWidth - 24, align: 'center'
+      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '14px', color: action.enabled ? '#fff0cf' : '#929da2', fontStyle: 'bold', fixedWidth: cardWidth - 22, align: 'center'
     }).setOrigin(0.5, 0);
-    const name = this.add.text(x, headerY + 27, String(ability.name || ''), {
-      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '18px', color: action.enabled ? '#d8eff5' : '#7d898e', fontStyle: 'bold', fixedWidth: cardWidth - 24, align: 'center', wordWrap: { width: cardWidth - 28 }
+    const name = this.add.text(x, headerY + 22, String(ability.name || ''), {
+      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '16px', color: action.enabled ? '#d8eff5' : '#7d898e', fontStyle: 'bold', fixedWidth: cardWidth - 22, align: 'center', wordWrap: { width: cardWidth - 26 }
     }).setOrigin(0.5, 0);
 
     const desc = abilityDescription(ability);
-    const bodyY = headerY + 62;
-    const primary = this.add.text(x - cardWidth / 2 + 14, bodyY, desc.primary, {
-      fontFamily: COMBAT_BODY_FONT, fontSize: '16px', color: action.enabled ? '#eef7f8' : '#78858b', fixedWidth: cardWidth - 28, wordWrap: { width: cardWidth - 28 }, lineSpacing: 3
+    const bodyY = headerY + 50;
+    const primary = this.add.text(x - cardWidth / 2 + 13, bodyY, desc.primary, {
+      fontFamily: COMBAT_BODY_FONT, fontSize: '14px', color: action.enabled ? '#edf6f7' : '#78858b', fixedWidth: cardWidth - 26, wordWrap: { width: cardWidth - 26 }, lineSpacing: 2
     });
-    const secondary = this.add.text(x - cardWidth / 2 + 14, bodyY + 42, desc.secondary, {
-      fontFamily: COMBAT_BODY_FONT, fontSize: '14px', color: action.enabled ? '#b9d5dc' : '#6f7b80', fixedWidth: cardWidth - 28, wordWrap: { width: cardWidth - 28 }, lineSpacing: 2
+    const secondary = this.add.text(x - cardWidth / 2 + 13, bodyY + 35, desc.secondary, {
+      fontFamily: COMBAT_BODY_FONT, fontSize: '12px', color: action.enabled ? '#afcbd3' : '#6f7b80', fixedWidth: cardWidth - 26, wordWrap: { width: cardWidth - 26 }, lineSpacing: 1
     });
-    const resource = this.add.text(x, cardY + cardHeight / 2 - 20, action.resource, {
-      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '14px', color: action.enabled ? '#7de6ff' : '#d09292', fontStyle: 'bold', fixedWidth: cardWidth - 24, align: 'center'
+    const resource = this.add.text(x, cardY + cardHeight / 2 - 17, ready ? `✦ SẴN SÀNG · ${action.resource}` : action.resource, {
+      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '12px', color: action.enabled ? (ready ? '#fff1a7' : '#7de6ff') : '#d09292', fontStyle: 'bold', fixedWidth: cardWidth - 22, align: 'center'
     }).setOrigin(0.5);
 
     const hit = this.add.rectangle(x, cardY, cardWidth, cardHeight, 0xffffff, 0.001);
     if (action.enabled) {
       hit.setInteractive({ useHandCursor: true });
-      hit.on('pointerover', () => bg.setScale(1.012).setStrokeStyle(3, accent, 1));
-      hit.on('pointerout', () => bg.setScale(1).setStrokeStyle(2, accent, 0.9));
+      hit.on('pointerover', () => bg.setScale(1.009).setStrokeStyle(ready ? 2.5 : 2, accent, 1));
+      hit.on('pointerout', () => bg.setScale(1).setStrokeStyle(ready ? 2.2 : 1.4, accent, ready ? 0.96 : 0.68));
       hit.once('pointerup', () => this.beginPlayerActionSelection(actor, action.slot));
     }
-    menu.add([bg, iconPlate, icon, header, name, primary, secondary, resource, hit]);
+    menu.add([bg, inner, accentLine, iconPlate, icon, header, name, primary, secondary, resource, hit]);
   });
 
   this.actionMenu = menu;
@@ -265,7 +379,6 @@ function installPowHudPatch(PowViewClass: any): void {
     this.combat27StatusIcons = this.scene.add.container(0, statusY);
     this.container.add(this.combat27StatusIcons);
 
-    // Shield is virtual HP around the real HP bar, never a separate status icon.
     this.combat27ShieldBar = this.scene.add.rectangle(left + 9, hpY, this.barWidth + 6, 23, 0x5ed6ff, 0.18).setOrigin(0, 0.5).setVisible(false);
     this.combat27ShieldFrame = this.scene.add.rectangle(0, hpY, this.barWidth + 8, 25, 0x000000, 0).setStrokeStyle(2, 0x7fe6ff, 0.92).setVisible(false);
     this.container.addAt(this.combat27ShieldBar, Math.max(0, this.container.getIndex(this.hpBar)));
@@ -292,6 +405,15 @@ function installPowHudPatch(PowViewClass: any): void {
     }
     this.combat27ShieldFrame?.setVisible(hasShield);
 
+    const ultimateReady = unit.alive && unit.fieldSlot !== null && unit.ragePoints >= ULTIMATE_READY_RAGE;
+    if (ultimateReady && !this.combat271UltimateReadyFx) {
+      this.combat271UltimateReadyFx = addElementalReadyFx(this.scene, this.container, 0, -6, unit.pow, Math.max(this.cardWidth, this.cardHeight) * 0.53, false);
+      this.container.sendToBack(this.combat271UltimateReadyFx);
+    } else if (!ultimateReady && this.combat271UltimateReadyFx) {
+      this.combat271UltimateReadyFx.destroy(true);
+      this.combat271UltimateReadyFx = undefined;
+    }
+
     const iconRow = this.combat27StatusIcons;
     if (!iconRow) return;
     iconRow.removeAll(true);
@@ -312,17 +434,17 @@ function installPowHudPatch(PowViewClass: any): void {
   };
 }
 
-function showPreBattleIntro270(this: PatchableScene): void {
+function showPreBattleIntro271(this: PatchableScene): void {
   const { width, height } = this.scale;
   const portrait = height > width;
-  const shade = this.add.rectangle(width / 2, height / 2, width, height, 0x02080e, 0.44);
-  const plateWidth = Math.min(portrait ? 650 : 720, width * 0.8);
-  const plate = this.add.rectangle(width / 2, height / 2, plateWidth, 118, 0x081d2a, 0.96).setStrokeStyle(2, 0xd7b86c, 0.78);
-  const title = this.add.text(width / 2, height / 2, 'POWDER COMBAT 2.7.0', {
-    fontFamily: COMBAT_DISPLAY_FONT, fontSize: portrait ? '34px' : '36px', color: '#fff6df', fontStyle: 'bold'
+  const shade = this.add.rectangle(width / 2, height / 2, width, height, 0x02080e, 0.42);
+  const plateWidth = Math.min(portrait ? 620 : 690, width * 0.77);
+  const plate = this.add.rectangle(width / 2, height / 2, plateWidth, 108, 0x081d2a, 0.94).setStrokeStyle(1.5, 0xd7b86c, 0.68);
+  const title = this.add.text(width / 2, height / 2, 'POWDER COMBAT 2.7.1', {
+    fontFamily: COMBAT_DISPLAY_FONT, fontSize: portrait ? '32px' : '34px', color: '#fff6df', fontStyle: 'bold'
   }).setOrigin(0.5);
   const intro = this.add.container(0, 0, [shade, plate, title]).setDepth(100);
-  this.tweens.add({ targets: intro, alpha: 0, delay: 1050, duration: 350, ease: 'Quad.easeOut', onComplete: () => { intro.destroy(true); this.startCombatFlow(); } });
+  this.tweens.add({ targets: intro, alpha: 0, delay: 950, duration: 320, ease: 'Quad.easeOut', onComplete: () => { intro.destroy(true); this.startCombatFlow(); } });
 }
 
 export function installCombat27UiPatch(BattleSceneClass: any, PowViewClass: any): void {
@@ -331,6 +453,6 @@ export function installCombat27UiPatch(BattleSceneClass: any, PowViewClass: any)
   root[PATCH_FLAG] = true;
   const battleProto = BattleSceneClass.prototype as any;
   battleProto.createActionMenu = createSharedSkillOverlay;
-  battleProto.showPreBattleIntro = showPreBattleIntro270;
+  battleProto.showPreBattleIntro = showPreBattleIntro271;
   installPowHudPatch(PowViewClass);
 }
