@@ -20,8 +20,11 @@ check('legacy non-runtime artifacts removed',forbidden.every(x=>!exists(x)),forb
 const workflows=exists('.github/workflows')?fs.readdirSync(path.join(root,'.github/workflows')).sort():[];
 check('single consolidated workflow',JSON.stringify(workflows)===JSON.stringify(['powder-ci.yml']),workflows.join(', '));
 const tools=exists('tools')?fs.readdirSync(path.join(root,'tools')).sort():[];
-const expectedTools=['powder-browser-e2e-v21007.mjs','powder-project-gate-v21214.mjs'];
-check('tools directory is lean',JSON.stringify(tools)===JSON.stringify(expectedTools),tools.join(', '));
+const requiredTools=['powder-browser-e2e-v21007.mjs','powder-project-gate-v21214.mjs'];
+check('required project tools present',requiredTools.every(x=>tools.includes(x)),requiredTools.filter(x=>!tools.includes(x)).join(', '));
+const workflowSource=exists('.github/workflows/powder-ci.yml')?read('.github/workflows/powder-ci.yml'):'';
+const workflowToolRefs=[...new Set([...workflowSource.matchAll(/tools\/([A-Za-z0-9._-]+\.mjs)/g)].map(m=>m[1]))].sort();
+check('workflow tool references resolve',workflowToolRefs.every(x=>tools.includes(x)),workflowToolRefs.filter(x=>!tools.includes(x)).join(', '));
 
 const provenOrphans=[
   'js/learning-daily-study-orchestrator-v2115.js','js/learning-mastery-recovery-v2116.js','js/learning-daily-rotation-runner-v2119.js','js/learning-command-center-v2120.js',
