@@ -38,6 +38,7 @@ export interface CombatPow {
   role: string;
   level: number;
   attack: number;
+  abilityPower: number;
   defense: number;
   speed: number;
   hp: number;
