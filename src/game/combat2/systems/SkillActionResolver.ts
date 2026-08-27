@@ -46,7 +46,7 @@ const SELF_STATUSES = new Set([
 export class SkillActionResolver {
   private readonly identity = new CombatIdentityRules();
 
-  /** Skill I/II are action-gated only; there is no Mana cost in Combat 2.3+. */
+  /** Skill I/II are action-gated only; there is no Mana cost in Combat 2.4. */
   canUse(actor: CombatUnitState, _slot: CombatSkillSlot): boolean {
     return actor.alive;
   }
@@ -146,11 +146,15 @@ export class SkillActionResolver {
     kind: 'skill' | 'ultimate',
     abilityType: string
   ): Pick<SkillActionResult, 'damage' | 'shieldDamage' | 'hpDamage' | 'identityMultiplier' | 'elementOutcome'> {
-    const attack = this.safeStat(actor.pow.attack, 1) * this.safeMultiplier(actor.attackMultiplier);
+    const normalizedType = String(abilityType || '').trim().toLowerCase();
+    const usesAttack = normalizedType === 'physical';
+    const offense = usesAttack
+      ? this.safeStat(actor.pow.attack, 1) * this.safeMultiplier(actor.attackMultiplier)
+      : this.safeStat(actor.pow.abilityPower, actor.pow.attack) * this.safeMultiplier(actor.abilityPowerMultiplier);
     const defense = this.safeStat(target.pow.defense, 0) * this.safeMultiplier(target.defenseMultiplier);
     const coefficient = Math.min(5, Math.max(0.1, this.safeStat(power, 100) / 100));
     const identity = this.identity.evaluateDamage(actor, target, kind, abilityType);
-    const rawDamage = Math.max(1, attack * coefficient - defense * 0.35);
+    const rawDamage = Math.max(1, offense * coefficient - defense * 0.35);
     const damage = identity.totalMultiplier <= 0 ? 0 : Math.max(1, Math.round(rawDamage * identity.totalMultiplier));
     const shieldBefore = this.safeStat(target.shield, 0);
     const shieldDamage = Math.min(shieldBefore, damage);
@@ -196,13 +200,14 @@ export class SkillActionResolver {
         actor.hp += healed;
         break;
       }
-      case 'attack up':
-      case 'ap up': {
-        // Combat2 currently has one offensive multiplier channel. AP Up uses
-        // that channel without becoming a resource effect; this preserves the
-        // canonical meaning until ATK/AP channels are split in the full model.
+      case 'attack up': {
         actor.attackMultiplier = Math.max(actor.attackMultiplier, 1.2);
         actor.attackBuffActionsRemaining = Math.max(actor.attackBuffActionsRemaining, 3 + durationBonus);
+        break;
+      }
+      case 'ap up': {
+        actor.abilityPowerMultiplier = Math.max(actor.abilityPowerMultiplier, 1.2);
+        actor.abilityPowerBuffActionsRemaining = Math.max(actor.abilityPowerBuffActionsRemaining, 3 + durationBonus);
         break;
       }
       case 'defense up': {
@@ -241,8 +246,10 @@ export class SkillActionResolver {
           target.speedBuffActionsRemaining = 0;
           target.speedDebuffActionsRemaining = 0;
           target.attackMultiplier = 1;
+          target.abilityPowerMultiplier = 1;
           target.defenseMultiplier = 1;
           target.attackBuffActionsRemaining = 0;
+          target.abilityPowerBuffActionsRemaining = 0;
           target.defenseBuffActionsRemaining = 0;
           target.controlStatus = null;
           target.controlActionsRemaining = 0;
@@ -272,7 +279,8 @@ export class SkillActionResolver {
       }
       case 'burn':
       case 'poison': {
-        const dotDamage = Math.max(1, Math.round(this.safeStat(actor.pow.attack, 1) * 0.18));
+        const abilityPower = this.safeStat(actor.pow.abilityPower, actor.pow.attack) * this.safeMultiplier(actor.abilityPowerMultiplier);
+        const dotDamage = Math.max(1, Math.round(abilityPower * 0.18));
         target.dotStatus = status as DotStatus;
         target.dotDamage = Math.max(target.dotDamage, dotDamage);
         target.dotActionsRemaining = Math.max(target.dotActionsRemaining, 2 + durationBonus);
