@@ -95,6 +95,11 @@ function startPvpUiBridge(){
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 }
 
-startPvpUiBridge();
-window.POWDER_SERVER_COMBAT_V1862=Object.freeze({version:'24.0-server-combat-rage-points',resourceSystem:'rage-points-v1',rageReady:RAGE_READY,rageMax:RAGE_MAX,hasAccount,isOnline,syncTeam,startEvent,startBoss,state,act,forfeit,domainClashBegin,domainClashAnswer,domainClashState,latestSessionId,cached,syncCore,rewardOf,skillSlot,eventId,maxEventId,eventsSince,canUse,bossPlayerReady:()=>false,bossAuthorityStatus:()=>({sessionFoundation:true,mechanicParity:false,qualificationAuthority:false,playerBridge:false,rewardFailClosed:true}),domainClashAuthorityStatus:()=>({clientProtocol:true,serverRequired:true,questionCount:10,questionMs:5000,clientSelfResolution:false}),diagnostics:()=>({sessions:st.sessions.size,actions:st.actions,syncs:st.syncs,domainClashBegins:st.domainClashBegins,domainClashAnswers:st.domainClashAnswers,lastError:st.lastError,bossPlayerReady:false,resourceSystem:'rage-points-v1',pvpCompatInstalled:pvpCompat.installed,pvpCompatResponses:pvpCompat.responses})});
+function loadProductionCombatFx2225(){
+ if(typeof document==='undefined'||window.POWDER_COMBAT_PRODUCTION_FX_V2225||document.getElementById('powderCombatProductionFx2225'))return;
+ const s=document.createElement('script');s.id='powderCombatProductionFx2225';s.src='js/combat-production-fx-v2225.js?v=2225-prod-1';s.async=true;s.dataset.powderProductionCombatFx='22.2.5';document.head?.appendChild(s);
+}
+
+startPvpUiBridge();loadProductionCombatFx2225();
+window.POWDER_SERVER_COMBAT_V1862=Object.freeze({version:'24.0-server-combat-rage-points+fx-22.2.5',resourceSystem:'rage-points-v1',rageReady:RAGE_READY,rageMax:RAGE_MAX,hasAccount,isOnline,syncTeam,startEvent,startBoss,state,act,forfeit,domainClashBegin,domainClashAnswer,domainClashState,latestSessionId,cached,syncCore,rewardOf,skillSlot,eventId,maxEventId,eventsSince,canUse,bossPlayerReady:()=>false,bossAuthorityStatus:()=>({sessionFoundation:true,mechanicParity:false,qualificationAuthority:false,playerBridge:false,rewardFailClosed:true}),domainClashAuthorityStatus:()=>({clientProtocol:true,serverRequired:true,questionCount:10,questionMs:5000,clientSelfResolution:false}),diagnostics:()=>({sessions:st.sessions.size,actions:st.actions,syncs:st.syncs,domainClashBegins:st.domainClashBegins,domainClashAnswers:st.domainClashAnswers,lastError:st.lastError,bossPlayerReady:false,resourceSystem:'rage-points-v1',pvpCompatInstalled:pvpCompat.installed,pvpCompatResponses:pvpCompat.responses,productionFx:'22.2.5'})});
 })();
