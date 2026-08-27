@@ -48,7 +48,13 @@ const ENEMY_PREFERRED_IDS = [
 
 const CANONICAL_PREFIX = 'assets/pow-beta12/';
 const CANONICAL_SKILL_ART_PREFIX = '/assets/skills/v81/';
-const STANDARD_POW_SKILL_COUNT = 384;
+// Canonical roster currently contains 99 Pow and every Pow owns exactly four
+// visual ability slots: Basic, Skill I, Skill II and Ultimate. Keep this as a
+// formula instead of the old 384 literal so Pow 97-99 use skill-385..396 rather
+// than silently falling back to generic glyphs.
+export const STANDARD_POW_COUNT = 99;
+export const STANDARD_SKILLS_PER_POW = 4;
+export const STANDARD_POW_SKILL_COUNT = STANDARD_POW_COUNT * STANDARD_SKILLS_PER_POW;
 const HOSTILE_SUPPORT_STATUSES = new Set(['stun', 'freeze', 'slow', 'burn', 'poison']);
 const BENEFICIAL_STATUSES = new Set([
   'shield', 'regeneration', 'attack up', 'defense up', 'rage gain', 'ap up'
@@ -108,9 +114,9 @@ function canonicalSkillVisual(skillIndex: number | undefined): Pick<CombatAbilit
   };
 }
 
-function standardSkillIndex(rosterOrder: number | undefined, offset: 0 | 1 | 2 | 3): number | undefined {
-  if (!Number.isInteger(rosterOrder) || (rosterOrder as number) < 1) return undefined;
-  const index = ((rosterOrder as number) - 1) * 4 + offset + 1;
+export function standardSkillIndex(rosterOrder: number | undefined, offset: 0 | 1 | 2 | 3): number | undefined {
+  if (!Number.isInteger(rosterOrder) || (rosterOrder as number) < 1 || (rosterOrder as number) > STANDARD_POW_COUNT) return undefined;
+  const index = ((rosterOrder as number) - 1) * STANDARD_SKILLS_PER_POW + offset + 1;
   return index <= STANDARD_POW_SKILL_COUNT ? index : undefined;
 }
 

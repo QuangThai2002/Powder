@@ -1,4 +1,10 @@
-import { COMBAT2_STARTER_ROSTER } from '../data/PowderDataAdapter';
+import {
+  COMBAT2_STARTER_ROSTER,
+  STANDARD_POW_COUNT,
+  STANDARD_POW_SKILL_COUNT,
+  STANDARD_SKILLS_PER_POW,
+  standardSkillIndex
+} from '../data/PowderDataAdapter';
 import { BasicAttackResolver } from './BasicAttackResolver';
 import { CombatIdentityRules } from './CombatIdentityRules';
 import {
@@ -21,6 +27,7 @@ export interface CombatRegressionReport {
   rageEconomyChecked: boolean;
   apSemanticsChecked: boolean;
   offenseChannelsChecked: boolean;
+  skillArtCoverageChecked: boolean;
 }
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -28,6 +35,15 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 const HOSTILE_STATUSES = new Set(['stun', 'freeze', 'slow', 'burn', 'poison']);
+
+function validateSkillArtCoverage(): void {
+  assert(STANDARD_POW_COUNT === 99, 'canonical Combat2 roster must expose 99 Pow');
+  assert(STANDARD_SKILLS_PER_POW === 4, 'every canonical Pow must keep four ability art slots');
+  assert(STANDARD_POW_SKILL_COUNT === 396, 'canonical skill art coverage must include all 396 slots');
+  assert(standardSkillIndex(97, 0) === 385, 'Pow 97 Basic must map to skill-385');
+  assert(standardSkillIndex(99, 3) === 396, 'Pow 99 Ultimate must map to skill-396');
+  assert(standardSkillIndex(100, 0) === undefined, 'out-of-roster Pow must not fabricate skill art URLs');
+}
 
 function validateRageEconomy(): void {
   const firstAction = applyRawRageGain(0, 2);
@@ -210,6 +226,7 @@ function validateRevivePassive(): void {
 }
 
 export function runCombat2SmokeRegression(): CombatRegressionReport {
+  validateSkillArtCoverage();
   validateRageEconomy();
   validateOffenseChannels();
   validateIdentityRules();
@@ -259,6 +276,7 @@ export function runCombat2SmokeRegression(): CombatRegressionReport {
     identityRulesChecked: true,
     rageEconomyChecked: true,
     apSemanticsChecked: true,
-    offenseChannelsChecked: true
+    offenseChannelsChecked: true,
+    skillArtCoverageChecked: true
   };
 }
