@@ -1,17 +1,20 @@
 import Phaser from 'phaser';
 import type { CombatAbility } from '../data/CombatPow';
+import { abilityHasLegalTarget } from '../systems/CombatAbilityTargeting';
 import type { CombatUnitState } from '../systems/CombatState';
-import { ACTION_BASE_RAW_GAIN, ULTIMATE_RAGE_COST } from '../systems/CombatRageEngine';
-import { COMBAT_BODY_FONT, COMBAT_COLORS, COMBAT_DISPLAY_FONT } from './CombatTheme';
+import { ACTION_BASE_RAW_GAIN } from '../systems/CombatRageEngine';
+import { COMBAT_BODY_FONT, COMBAT_DISPLAY_FONT } from './CombatTheme';
 
 interface PatchableScene extends Phaser.Scene {
   combatState: any;
   skillActions: any;
   actionMenu: Phaser.GameObjects.Container | null;
   pendingPlayerAction: unknown;
+  flowStarted: boolean;
   destroyActionMenu: () => void;
   destroyUndoMenu: () => void;
   clearTargeting: () => void;
+  startCombatFlow: () => void;
   beginPlayerActionSelection: (actor: CombatUnitState, action: 'basic' | 0 | 1 | 'ultimate') => void;
   abilityResourceText: (actor: CombatUnitState, ability: CombatAbility, slot: 0 | 1 | 'ultimate') => string;
   abilityTag: (ability: CombatAbility) => string;
@@ -75,7 +78,7 @@ function statusExplanation(ability: CombatAbility): string {
     silence: 'Câm lặng: chỉ được dùng Đòn cơ bản trong lượt bị ảnh hưởng.',
     stun: 'Choáng: có tỉ lệ theo phẩm chất, mất 1 lượt khi trúng.',
     paralysis: 'Tê liệt 2 lượt; mỗi lượt có 30% khả năng mất hành động.',
-    freeze: 'Tích Làm lạnh → Tê cóng → Đóng băng; Phá Băng nhận +30% sát thương.',
+    freeze: 'Làm lạnh → Tê cóng → Đóng băng; Phá Băng nhận +30% sát thương.',
     cleanse: 'Thanh Tẩy toàn bộ hiệu ứng xấu đang hỗ trợ.',
     purify: 'Thanh Tẩy toàn bộ hiệu ứng xấu đang hỗ trợ.',
     revive: 'Hồi sinh đồng minh đã gục với 35% HP tối đa.',
@@ -89,18 +92,18 @@ function abilityDescription(ability: CombatAbility): { primary: string; secondar
   const type = normalize(ability.type);
   const coefficient = Math.max(0, Math.round(Number(ability.power) || 0));
   let primary = '';
-  if (type === 'physical') primary = `Gây ${coefficient}% ATK sát thương vật lý · ${targetLabel(ability)}.`;
-  else if (type === 'support') primary = `Kỹ năng hỗ trợ · ${targetLabel(ability)}.`;
-  else if (type === 'debuff') primary = `Kỹ năng hiệu ứng · ${targetLabel(ability)}.`;
-  else primary = `Gây ${coefficient}% AP sát thương kỹ năng · ${targetLabel(ability)}.`;
+  if (type === 'physical') primary = `Hệ số ${coefficient}% ATK · ${targetLabel(ability)}.`;
+  else if (type === 'support') primary = `Hỗ trợ · ${targetLabel(ability)}.`;
+  else if (type === 'debuff') primary = `Hiệu ứng / Khống chế · ${targetLabel(ability)}.`;
+  else primary = `Hệ số ${coefficient}% AP · ${targetLabel(ability)}.`;
   return { primary, secondary: statusExplanation(ability) };
 }
 
 function abilityAccent(ability: CombatAbility, tag: string): number {
   const status = normalize(ability.status);
   if (tag === 'ULT') return 0xd8a857;
-  if (['burn'].includes(status)) return 0xd56843;
-  if (['poison'].includes(status)) return 0x86bb54;
+  if (status === 'burn') return 0xd56843;
+  if (status === 'poison') return 0x86bb54;
   if (['freeze', 'slow'].includes(status)) return 0x65bfe7;
   if (['stun', 'paralysis'].includes(status)) return 0xd6bd55;
   if (status === 'silence') return 0xaa80d2;
@@ -109,8 +112,10 @@ function abilityAccent(ability: CombatAbility, tag: string): number {
 }
 
 function actionAvailability(scene: PatchableScene, actor: CombatUnitState, ability: CombatAbility, slot: 0 | 1 | 'ultimate'): boolean {
-  if (slot === 'ultimate') return scene.skillActions.canUseUltimate(actor);
-  return scene.skillActions.canUse(actor, slot);
+  const resourceReady = slot === 'ultimate'
+    ? scene.skillActions.canUseUltimate(actor)
+    : scene.skillActions.canUse(actor, slot);
+  return resourceReady && abilityHasLegalTarget(ability, actor, scene.combatState.units);
 }
 
 function createSharedSkillOverlay(this: PatchableScene, actor: CombatUnitState): void {
@@ -132,29 +137,27 @@ function createSharedSkillOverlay(this: PatchableScene, actor: CombatUnitState):
 
   const width = this.scale.width;
   const height = this.scale.height;
-  const overlayTop = Math.round(height * 0.615);
-  const overlayBottom = height - 8;
+  const overlayTop = Math.round(height * 0.605);
+  const overlayBottom = height - 6;
   const overlayHeight = overlayBottom - overlayTop;
   const centerY = overlayTop + overlayHeight / 2;
   const menu = this.add.container(0, 0).setDepth(72);
 
-  // This is deliberately not a separate panel. It occupies the exact player-Pow
-  // battlefield band and disappears as soon as an action is chosen.
-  const dim = this.add.rectangle(width / 2, centerY, width, overlayHeight, 0x02080e, 0.72);
-  const topFade = this.add.rectangle(width / 2, overlayTop + 10, width, 20, 0x08131d, 0.45);
-  const title = this.add.text(width / 2, overlayTop + 25, 'CHỌN KỸ NĂNG', {
-    fontFamily: COMBAT_DISPLAY_FONT, fontSize: '24px', color: '#fff1c6', fontStyle: 'bold',
-    stroke: '#06111c', strokeThickness: 4
+  // The overlay owns the same screen band as the three player Pow. Nothing is moved.
+  const dim = this.add.rectangle(width / 2, centerY, width, overlayHeight, 0x02080e, 0.76);
+  const topFade = this.add.rectangle(width / 2, overlayTop + 9, width, 18, 0x08131d, 0.5);
+  const title = this.add.text(width / 2, overlayTop + 24, 'CHỌN KỸ NĂNG', {
+    fontFamily: COMBAT_DISPLAY_FONT, fontSize: '25px', color: '#fff1c6', fontStyle: 'bold', stroke: '#06111c', strokeThickness: 4
   }).setOrigin(0.5);
   menu.add([dim, topFade, title]);
 
-  const margin = 42;
+  const margin = 36;
   const gap = 14;
-  const cardWidth = Math.min(360, (width - margin * 2 - gap * 3) / 4);
-  const cardHeight = Math.min(238, overlayHeight - 68);
+  const cardWidth = Math.min(366, (width - margin * 2 - gap * 3) / 4);
+  const cardHeight = Math.min(278, overlayHeight - 64);
   const rowWidth = cardWidth * 4 + gap * 3;
   const startX = width / 2 - rowWidth / 2 + cardWidth / 2;
-  const cardY = overlayTop + 58 + cardHeight / 2;
+  const cardY = overlayTop + 56 + cardHeight / 2;
 
   actions.forEach((action, index) => {
     const ability = action.ability;
@@ -163,11 +166,11 @@ function createSharedSkillOverlay(this: PatchableScene, actor: CombatUnitState):
     const x = startX + index * (cardWidth + gap);
     const bg = this.add.rectangle(x, cardY, cardWidth, cardHeight, 0x07131f, action.enabled ? 0.96 : 0.78)
       .setStrokeStyle(action.enabled ? 2 : 1, action.enabled ? accent : 0x59636a, action.enabled ? 0.9 : 0.45);
-    const iconY = cardY - cardHeight / 2 + 58;
-    const iconPlate = this.add.circle(x, iconY, 40, 0x06111a, 0.94).setStrokeStyle(2, accent, action.enabled ? 0.9 : 0.35);
+    const iconY = cardY - cardHeight / 2 + 53;
+    const iconPlate = this.add.circle(x, iconY, 38, 0x06111a, 0.94).setStrokeStyle(2, accent, action.enabled ? 0.9 : 0.35);
     let icon: Phaser.GameObjects.Image | Phaser.GameObjects.Text;
     if (ability.iconKey && this.textures.exists(ability.iconKey)) {
-      icon = this.add.image(x, iconY, ability.iconKey).setDisplaySize(70, 70).setAlpha(action.enabled ? 1 : 0.4);
+      icon = this.add.image(x, iconY, ability.iconKey).setDisplaySize(66, 66).setAlpha(action.enabled ? 1 : 0.4);
       if (!action.enabled && icon instanceof Phaser.GameObjects.Image) icon.setTint(0x69777f);
     } else {
       icon = this.add.text(x, iconY, action.slot === 'ultimate' ? '✦' : action.slot === 'basic' ? '◆' : String(Number(action.slot) + 1), {
@@ -175,29 +178,24 @@ function createSharedSkillOverlay(this: PatchableScene, actor: CombatUnitState):
       }).setOrigin(0.5);
     }
 
-    const headerY = cardY - cardHeight / 2 + 108;
+    const headerY = cardY - cardHeight / 2 + 96;
     const header = this.add.text(x, headerY, `${action.label} · ${tag}`, {
-      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '16px', color: action.enabled ? '#fff5da' : '#929da2', fontStyle: 'bold',
-      fixedWidth: cardWidth - 24, align: 'center'
+      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '16px', color: action.enabled ? '#fff5da' : '#929da2', fontStyle: 'bold', fixedWidth: cardWidth - 24, align: 'center'
     }).setOrigin(0.5, 0);
-    const name = this.add.text(x, headerY + 25, String(ability.name || ''), {
-      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '17px', color: action.enabled ? '#d8eff5' : '#7d898e', fontStyle: 'bold',
-      fixedWidth: cardWidth - 24, align: 'center', wordWrap: { width: cardWidth - 28 }
+    const name = this.add.text(x, headerY + 27, String(ability.name || ''), {
+      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '18px', color: action.enabled ? '#d8eff5' : '#7d898e', fontStyle: 'bold', fixedWidth: cardWidth - 24, align: 'center', wordWrap: { width: cardWidth - 28 }
     }).setOrigin(0.5, 0);
 
     const desc = abilityDescription(ability);
-    const bodyY = headerY + 54;
+    const bodyY = headerY + 62;
     const primary = this.add.text(x - cardWidth / 2 + 14, bodyY, desc.primary, {
-      fontFamily: COMBAT_BODY_FONT, fontSize: '14px', color: action.enabled ? '#eef7f8' : '#78858b',
-      fixedWidth: cardWidth - 28, wordWrap: { width: cardWidth - 28 }, lineSpacing: 3
+      fontFamily: COMBAT_BODY_FONT, fontSize: '16px', color: action.enabled ? '#eef7f8' : '#78858b', fixedWidth: cardWidth - 28, wordWrap: { width: cardWidth - 28 }, lineSpacing: 3
     });
-    const secondary = this.add.text(x - cardWidth / 2 + 14, bodyY + 39, desc.secondary, {
-      fontFamily: COMBAT_BODY_FONT, fontSize: '13px', color: action.enabled ? '#b9d5dc' : '#6f7b80',
-      fixedWidth: cardWidth - 28, wordWrap: { width: cardWidth - 28 }, lineSpacing: 2
+    const secondary = this.add.text(x - cardWidth / 2 + 14, bodyY + 42, desc.secondary, {
+      fontFamily: COMBAT_BODY_FONT, fontSize: '14px', color: action.enabled ? '#b9d5dc' : '#6f7b80', fixedWidth: cardWidth - 28, wordWrap: { width: cardWidth - 28 }, lineSpacing: 2
     });
-    const resource = this.add.text(x, cardY + cardHeight / 2 - 22, action.resource, {
-      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '13px', color: action.enabled ? '#7de6ff' : '#d09292', fontStyle: 'bold',
-      fixedWidth: cardWidth - 24, align: 'center'
+    const resource = this.add.text(x, cardY + cardHeight / 2 - 20, action.resource, {
+      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '14px', color: action.enabled ? '#7de6ff' : '#d09292', fontStyle: 'bold', fixedWidth: cardWidth - 24, align: 'center'
     }).setOrigin(0.5);
 
     const hit = this.add.rectangle(x, cardY, cardWidth, cardHeight, 0xffffff, 0.001);
@@ -217,9 +215,7 @@ interface StatusToken { glyph: string; color: number; label: string; }
 
 function runtimeStatusTokens(unit: any): StatusToken[] {
   const tokens: StatusToken[] = [];
-  const push = (active: boolean, glyph: string, color: number, label: string): void => {
-    if (active) tokens.push({ glyph, color, label });
-  };
+  const push = (active: boolean, glyph: string, color: number, label: string): void => { if (active) tokens.push({ glyph, color, label }); };
 
   push(unit.controlImmunityActionsRemaining > 0, '◇', 0x76eaf5, 'Miễn Khống');
   push(unit.controlActionsRemaining > 0 && unit.controlStatus === 'freeze', '❄', 0x75d7ff, 'Đóng Băng');
@@ -269,11 +265,9 @@ function installPowHudPatch(PowViewClass: any): void {
     this.combat27StatusIcons = this.scene.add.container(0, statusY);
     this.container.add(this.combat27StatusIcons);
 
-    // Shield is rendered as virtual HP around the real HP bar: no shield status icon.
-    this.combat27ShieldBar = this.scene.add.rectangle(left + 9, hpY, this.barWidth + 6, 23, 0x5ed6ff, 0.18)
-      .setOrigin(0, 0.5).setVisible(false);
-    this.combat27ShieldFrame = this.scene.add.rectangle(0, hpY, this.barWidth + 8, 25, 0x000000, 0)
-      .setStrokeStyle(2, 0x7fe6ff, 0.92).setVisible(false);
+    // Shield is virtual HP around the real HP bar, never a separate status icon.
+    this.combat27ShieldBar = this.scene.add.rectangle(left + 9, hpY, this.barWidth + 6, 23, 0x5ed6ff, 0.18).setOrigin(0, 0.5).setVisible(false);
+    this.combat27ShieldFrame = this.scene.add.rectangle(0, hpY, this.barWidth + 8, 25, 0x000000, 0).setStrokeStyle(2, 0x7fe6ff, 0.92).setVisible(false);
     this.container.addAt(this.combat27ShieldBar, Math.max(0, this.container.getIndex(this.hpBar)));
     this.container.add(this.combat27ShieldFrame);
   };
@@ -318,11 +312,25 @@ function installPowHudPatch(PowViewClass: any): void {
   };
 }
 
+function showPreBattleIntro270(this: PatchableScene): void {
+  const { width, height } = this.scale;
+  const portrait = height > width;
+  const shade = this.add.rectangle(width / 2, height / 2, width, height, 0x02080e, 0.44);
+  const plateWidth = Math.min(portrait ? 650 : 720, width * 0.8);
+  const plate = this.add.rectangle(width / 2, height / 2, plateWidth, 118, 0x081d2a, 0.96).setStrokeStyle(2, 0xd7b86c, 0.78);
+  const title = this.add.text(width / 2, height / 2, 'POWDER COMBAT 2.7.0', {
+    fontFamily: COMBAT_DISPLAY_FONT, fontSize: portrait ? '34px' : '36px', color: '#fff6df', fontStyle: 'bold'
+  }).setOrigin(0.5);
+  const intro = this.add.container(0, 0, [shade, plate, title]).setDepth(100);
+  this.tweens.add({ targets: intro, alpha: 0, delay: 1050, duration: 350, ease: 'Quad.easeOut', onComplete: () => { intro.destroy(true); this.startCombatFlow(); } });
+}
+
 export function installCombat27UiPatch(BattleSceneClass: any, PowViewClass: any): void {
   const root = globalThis as any;
   if (root[PATCH_FLAG]) return;
   root[PATCH_FLAG] = true;
   const battleProto = BattleSceneClass.prototype as any;
   battleProto.createActionMenu = createSharedSkillOverlay;
+  battleProto.showPreBattleIntro = showPreBattleIntro270;
   installPowHudPatch(PowViewClass);
 }
