@@ -32,7 +32,7 @@ export class CombatGuardEngine {
     ability: CombatAbility,
     allies: readonly CombatUnitState[]
   ): GuardResolution {
-    if (!this.canBeGuarded(ability)) {
+    if (!this.canBeGuarded(attacker, ability)) {
       return { target: requestedTarget, guarded: false, protector: null, chance: 0, roll: null };
     }
 
@@ -41,8 +41,7 @@ export class CombatGuardEngine {
         unit.alive &&
         unit.fieldSlot !== null &&
         unit.instanceId !== requestedTarget.instanceId &&
-        unit.instanceId !== attacker.instanceId &&
-        !this.isHardControlled(unit) &&
+        !this.isActionLocked(unit) &&
         this.guardChance(unit) > 0
       )
       .sort((a, b) => {
@@ -66,29 +65,26 @@ export class CombatGuardEngine {
   }
 
   guardChance(unit: CombatUnitState): number {
-    const base = ROLE_GUARD_CHANCE[this.roleKey(unit)] ?? 0;
-    // The explicit Guard effect from legacy Combat strengthens interception while active.
-    const guardBonus = unit.guardActionsRemaining > 0 ? 0.15 : 0;
-    return Math.min(0.85, Math.max(0, base + guardBonus));
+    // Keep the exact legacy role chance. The explicit Guard status already has
+    // its own defensive effect in Combat2; no fabricated interception bonus.
+    return ROLE_GUARD_CHANCE[this.roleKey(unit)] ?? 0;
   }
 
-  private canBeGuarded(ability: CombatAbility): boolean {
+  private canBeGuarded(attacker: CombatUnitState, ability: CombatAbility): boolean {
     const type = String(ability.type || '').trim().toLowerCase();
     const target = String(ability.target || '').trim().toLowerCase();
     if (type === 'support') return false;
     if (ability.area) return false;
     if (['all', 'all-enemies', 'team', 'allies', 'two-enemies', 'two-allies', 'three-allies', 'front-row', 'back-row'].includes(target)) return false;
     if (ability.pierceGuard || ability.bypassGuard) return false;
+    if (this.roleKey(attacker) === 'assassin' && ability.bypassFront) return false;
     return true;
   }
 
-  private isHardControlled(unit: CombatUnitState): boolean {
-    return Boolean(
-      unit.controlActionsRemaining > 0 ||
-      unit.silenceActionsRemaining > 0 ||
-      unit.paralysisActionsRemaining > 0 ||
-      (unit.freezeStage > 0 && unit.freezeStageActionsRemaining > 0)
-    );
+  private isActionLocked(unit: CombatUnitState): boolean {
+    // Chill/Frostbite are speed/vulnerability stages, not full action locks.
+    // Silence and Paralysis also do not disable this passive interception.
+    return unit.controlActionsRemaining > 0;
   }
 
   private roleKey(unit: CombatUnitState): GuardRole {
