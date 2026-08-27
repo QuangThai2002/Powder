@@ -7,7 +7,7 @@ import type {
 } from './CombatPow';
 
 interface CatalogElement { name?: string; }
-interface CatalogStats { hp?: number; atk?: number; def?: number; speed?: number; }
+interface CatalogStats { hp?: number; atk?: number; ap?: number; def?: number; speed?: number; }
 interface CatalogAbility { name?: string; power?: number; type?: string; status?: string; }
 interface CatalogPassive { id?: string; name?: string; element?: string; }
 interface CatalogAbilities {
@@ -200,6 +200,8 @@ function toCombatPow(pow: CatalogPow): CombatPow {
   const id = String(pow.id || '').trim();
   const stats = pow.stats ?? {};
   const hp = finitePositive(stats.hp, 300);
+  const attack = finitePositive(stats.atk, 50);
+  const abilityPower = finitePositive(stats.ap, attack);
   const elementKey = String(pow.element || 'unknown');
   const elementName = String(window.POWDER_DATA?.elements?.[elementKey]?.name || elementKey);
   const passive = normalizePassive(pow.abilities?.passive);
@@ -213,7 +215,8 @@ function toCombatPow(pow: CatalogPow): CombatPow {
     elementKey,
     role: String(pow.role || 'Không xác định'),
     level: 60,
-    attack: finitePositive(stats.atk, 50),
+    attack,
+    abilityPower,
     defense: finitePositive(stats.def, 45),
     speed: finitePositive(stats.speed, 50),
     hp,
