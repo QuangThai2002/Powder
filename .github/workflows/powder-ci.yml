@@ -27,11 +27,9 @@ jobs:
           node-version: '24'
           cache: npm
       - name: Install locked dependencies
-        run: npm ci
-      - name: Typecheck Combat2 and project TypeScript
-        run: npm run typecheck
-      - name: Build Vite production bundle
-        run: npm run build
+        run: npm ci --no-audit --no-fund
+      - name: Combat2 typecheck build and canonical asset audit
+        run: npm run check
 
   admin-combat-syntax:
     runs-on: ubuntu-latest
