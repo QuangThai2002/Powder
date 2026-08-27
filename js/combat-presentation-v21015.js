@@ -1,11 +1,15 @@
 (()=>{'use strict';
 if(window.POWDER_COMBAT_PRESENTATION_V21015)return;
-const VERSION='21.0.15';
+const VERSION='21.0.15+2221';
 const state={mounts:0,handoffs:0,syncs:0,mutations:0,fxSeen:0,maxFxCluster:0,attackFlows:0,controlLocks:0,criticalUnits:0,woundedUnits:0,lastSyncAt:0,lastPressure:'calm',mounted:false};
 let mount=null,mountObserver=null,raf=0;
 const now=()=>performance?.now?.()||Date.now();
 const pressure=()=>String(window.POWDER_ADAPTIVE_PRESSURE_V21011?.level?.()||document.documentElement.dataset.resourcePressure||'calm');
 const activeByDom=n=>Boolean(n?.isConnected&&!n.closest?.('[hidden]'));
+function loadMainVisual(){
+  if(window.POWDER_MAIN_COMBAT_VISUAL_V2221||document.getElementById('powderMainCombatVisual2221'))return;
+  const s=document.createElement('script');s.id='powderMainCombatVisual2221';s.src='js/combat-main-visual-v2221.js?v=2221';s.async=true;document.head.appendChild(s);
+}
 function fxKind(n){for(const k of ['crit','damage','heal','shield-gain','shield','blocked','evade','status-control','status-dot','status-heal','break','kill','cleanse','guard'])if(n.classList.contains(k))return k;return 'other'}
 function groupKey(n){const side=n.classList.contains('enemy')?'enemy':n.classList.contains('player')?'player':'center';const s=[0,1,2].find(i=>n.classList.contains(`slot-${i}`));return `${side}:${s??'x'}`}
 function lanePosition(i){if(i===0)return{x:0,y:0,lane:0};const ring=Math.ceil(i/2),sign=i%2?-1:1;return{x:sign*(ring%2?64:32),y:sign*ring*54,lane:sign*ring}}
@@ -20,9 +24,9 @@ function handoff(root=document){const next=pickMount(root);if(next&&next!==mount
 function mutationContainsMount(m){if(m.type==='attributes'&&m.attributeName==='hidden')return true;for(const n of m.addedNodes||[])if(n.nodeType===1&&(n.matches?.('.combat-v7-mount')||n.querySelector?.('.combat-v7-mount')))return true;return false}
 const bodyObserver=new MutationObserver(ms=>{const currentActive=activeByDom(mount);if(!mount||!mount.isConnected||!currentActive||ms.some(mutationContainsMount))handoff()});
 function audit(){if(!mount)return{mounted:false,overlaps:0,fx:0,flows:0};const fx=[...mount.querySelectorAll('.cv7-fx[data-fx-id]')].filter(n=>{const r=n.getBoundingClientRect(),s=getComputedStyle(n);return s.display!=='none'&&r.width>0&&r.height>0});let overlaps=0;for(let i=0;i<fx.length;i++)for(let j=i+1;j<fx.length;j++){if(groupKey(fx[i])!==groupKey(fx[j]))continue;const a=fx[i].getBoundingClientRect(),b=fx[j].getBoundingClientRect();if(a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top)overlaps++}return{mounted:true,fx:fx.length,flows:mount.querySelectorAll('.cv7-attack-flow').length,overlaps,pressure:state.lastPressure,controlLocks:state.controlLocks,criticalUnits:state.criticalUnits,activeByDom:activeByDom(mount)}}
-function snapshot(){return{version:VERSION,...state,active:!!mount?.isConnected,activeByDom:activeByDom(mount),fxNow:mount?.querySelectorAll('.cv7-fx[data-fx-id]').length||0,flowNow:mount?.querySelectorAll('.cv7-attack-flow').length||0}}
-function start(){bodyObserver.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden']});handoff()}
+function snapshot(){return{version:VERSION,...state,active:!!mount?.isConnected,activeByDom:activeByDom(mount),fxNow:mount?.querySelectorAll('.cv7-fx[data-fx-id]').length||0,flowNow:mount?.querySelectorAll('.cv7-attack-flow').length||0,mainVisual:window.POWDER_MAIN_COMBAT_VISUAL_V2221?.snapshot?.()||null}}
+function start(){loadMainVisual();bodyObserver.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden']});handoff()}
 if(document.body)start();else document.addEventListener('DOMContentLoaded',start,{once:true});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){if(raf){cancelAnimationFrame(raf);raf=0}}else handoff()},{passive:true});window.addEventListener('powder:resource-pressure',schedule,{passive:true});
-window.POWDER_COMBAT_PRESENTATION_V21015={version:VERSION,snapshot,audit,sync:()=>handoff(),detach};
+window.POWDER_COMBAT_PRESENTATION_V21015={version:VERSION,snapshot,audit,sync:()=>handoff(),detach,loadMainVisual};
 })();
