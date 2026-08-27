@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { CombatPow, CombatSide } from '../data/CombatPow';
 import type { CombatUnitState } from '../systems/CombatState';
-import { canUseUltimate, rageMarkerStates } from '../systems/CombatRageEngine';
+import { rageMarkerStates } from '../systems/CombatRageEngine';
 import { COMBAT_BODY_FONT, COMBAT_COLORS, COMBAT_DISPLAY_FONT } from './CombatTheme';
 
 interface PowViewOptions {
@@ -24,8 +24,8 @@ export class PowView {
   private portrait!: Phaser.GameObjects.Image;
   private hpBar!: Phaser.GameObjects.Rectangle;
   private hpText!: Phaser.GameObjects.Text;
-  private rageLabel!: Phaser.GameObjects.Text;
   private readonly rageMarkers: Phaser.GameObjects.Arc[] = [];
+  private controlImmunityRing!: Phaser.GameObjects.Ellipse;
   private turnGlow!: Phaser.GameObjects.Rectangle;
   private targetGlow!: Phaser.GameObjects.Rectangle;
   private statusFrame!: Phaser.GameObjects.Rectangle;
@@ -66,16 +66,15 @@ export class PowView {
       const color = state === 'red' ? COMBAT_COLORS.rageRed : state === 'blue' ? COMBAT_COLORS.rageBlue : COMBAT_COLORS.rageEmpty;
       marker.setFillStyle(color, state === 'empty' ? 0.38 : 1);
       marker.setStrokeStyle(
-        state === 'empty' ? 2 : 3,
+        state === 'empty' ? 1 : 2,
         state === 'red' ? 0xffa0a6 : state === 'blue' ? 0xa4eaff : 0x496675,
         state === 'empty' ? 0.4 : 0.96
       );
     });
 
-    const ready = canUseUltimate(unit.ragePoints);
-    this.rageLabel
-      .setText(ready ? `NỘ ${unit.ragePoints} · ULT` : `NỘ ${unit.ragePoints}`)
-      .setColor(ready ? '#ffe28a' : '#d7edf5');
+    this.controlImmunityRing.setVisible(
+      unit.alive && unit.fieldSlot !== null && unit.controlImmunityActionsRemaining > 0
+    );
 
     if (this.hasRuntimeSnapshot && unit.alive) {
       if (unit.hp > this.previousHp + 0.5) this.playResourcePulse(0x73f0aa);
@@ -167,7 +166,12 @@ export class PowView {
   }
 
   async playStatusPulse(): Promise<void> {
-    if (this.runtimeVisualStatus === 'ĐÓNG BĂNG' || this.runtimeVisualStatus === 'CHOÁNG') {
+    if (
+      this.runtimeVisualStatus === 'ĐÓNG BĂNG' ||
+      this.runtimeVisualStatus === 'CHOÁNG' ||
+      this.runtimeVisualStatus === 'TÊ LIỆT' ||
+      this.runtimeVisualStatus === 'CÂM LẶNG'
+    ) {
       await this.playControlLock(this.runtimeVisualStatus);
       return;
     }
@@ -200,6 +204,14 @@ export class PowView {
     const source = this.portrait.texture.getSourceImage() as HTMLImageElement | HTMLCanvasElement;
     const baseScale = Math.min((artHeight * this.pow.display.heightRatio) / Math.max(1, source.height), (artWidth * 0.96) / Math.max(1, source.width));
     this.portrait.setScale(baseScale * (this.pow.display.scaleAdjust ?? 1));
+    this.controlImmunityRing = this.scene.add.ellipse(
+      0,
+      artY,
+      artWidth * 0.86,
+      artHeight * 0.82,
+      0x000000,
+      0
+    ).setStrokeStyle(4, 0x8ef7ff, 0.92).setVisible(false);
 
     const infoY = top + artHeight + 15;
     const name = this.scene.add.text(left + 12, infoY, this.pow.name, {
@@ -216,13 +228,16 @@ export class PowView {
       fontFamily: COMBAT_DISPLAY_FONT, fontSize: '15px', color: '#ffffff', fontStyle: 'bold', stroke: '#041018', strokeThickness: 4
     }).setOrigin(0.5);
 
-    const rageY = hpY + 31;
-    this.rageLabel = this.scene.add.text(left + 12, rageY, 'NỘ 0', {
-      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '14px', color: '#d7edf5', fontStyle: 'bold'
-    }).setOrigin(0, 0.5);
-    const markerStartX = left + 151;
+    const rageY = hpY + 29;
+    const markerStartX = -36;
     for (let index = 0; index < 4; index += 1) {
-      const marker = this.scene.add.circle(markerStartX + index * 34, rageY, 12, COMBAT_COLORS.rageEmpty, 0.38).setStrokeStyle(2, 0x496675, 0.4);
+      const marker = this.scene.add.circle(
+        markerStartX + index * 24,
+        rageY,
+        8.4,
+        COMBAT_COLORS.rageEmpty,
+        0.38
+      ).setStrokeStyle(1, 0x496675, 0.4);
       this.rageMarkers.push(marker);
     }
 
@@ -236,8 +251,8 @@ export class PowView {
     this.targetHitArea.on('pointerup', () => { if (this.targetable) this.targetSelectedHandler?.(); });
 
     this.container.add([
-      this.statusFrame, this.targetGlow, this.turnGlow, card, artBack, this.portrait, name, meta,
-      hpBack, this.hpBar, this.hpText, this.rageLabel, ...this.rageMarkers, this.statusText, this.targetHitArea
+      this.statusFrame, this.targetGlow, this.turnGlow, card, artBack, this.portrait, this.controlImmunityRing, name, meta,
+      hpBack, this.hpBar, this.hpText, ...this.rageMarkers, this.statusText, this.targetHitArea
     ]);
   }
 
@@ -285,7 +300,8 @@ export class PowView {
 
   private async playControlLock(status: string): Promise<void> {
     const freeze = status === 'ĐÓNG BĂNG';
-    const color = freeze ? 0x8adfff : 0xf5dd62;
+    const silence = status === 'CÂM LẶNG';
+    const color = freeze ? 0x8adfff : silence ? 0xc9a0ff : 0xf5dd62;
     const p = this.getWorldPosition();
     const fx = this.scene.add.container(p.x, p.y).setDepth(39).setScale(0.78);
     fx.add([
@@ -387,13 +403,21 @@ export class PowView {
   private refreshStatusFrame(status: string): void {
     const color = this.statusColor(status);
     if (!color) { this.statusFrame.setVisible(false); return; }
-    const strong = status === 'ĐÓNG BĂNG' || status === 'CHOÁNG';
+    const strong =
+      status === 'ĐÓNG BĂNG' ||
+      status === 'CHOÁNG' ||
+      status.startsWith('MIỄN KHỐNG');
     this.statusFrame.setStrokeStyle(strong ? 5 : 3, color, strong ? 0.92 : 0.64).setVisible(true);
   }
 
   private statusColor(status: string): number | null {
+    if (status.startsWith('MIỄN KHỐNG')) return 0x8ef7ff;
     if (status === 'ĐÓNG BĂNG') return 0x8adfff;
     if (status === 'CHOÁNG') return 0xf5dd62;
+    if (status === 'TÊ LIỆT') return 0xffdf63;
+    if (status === 'CÂM LẶNG') return 0xc9a0ff;
+    if (status === 'LÀM LẠNH') return 0xb7ecff;
+    if (status === 'TÊ CÓNG') return 0x80d8ff;
     if (status === 'NHIỄM ĐỘC') return 0xa5df66;
     if (status === 'THIÊU ĐỐT') return 0xff7043;
     if (status === 'CHẬM') return 0x78a9ff;
@@ -406,8 +430,12 @@ export class PowView {
   }
 
   private statusBackground(status: string): string {
+    if (status.startsWith('MIỄN KHỐNG')) return '#164650';
     if (status === 'ĐÓNG BĂNG') return '#1d4658';
-    if (status === 'CHOÁNG') return '#554a1d';
+    if (status === 'CHOÁNG' || status === 'TÊ LIỆT') return '#554a1d';
+    if (status === 'CÂM LẶNG') return '#462d59';
+    if (status === 'LÀM LẠNH') return '#285067';
+    if (status === 'TÊ CÓNG') return '#1e4b68';
     if (status === 'NHIỄM ĐỘC') return '#31491f';
     if (status === 'THIÊU ĐỐT') return '#552c20';
     if (status === 'CHẬM') return '#283b63';
@@ -418,7 +446,12 @@ export class PowView {
 
   private getRuntimeStatus(unit: CombatUnitState): string {
     if (unit.fieldSlot === null && unit.alive) return 'DỰ BỊ';
+    if (unit.controlImmunityActionsRemaining > 0) return `MIỄN KHỐNG · ${unit.controlImmunityActionsRemaining}`;
     if (unit.controlActionsRemaining > 0) return unit.controlStatus === 'freeze' ? 'ĐÓNG BĂNG' : 'CHOÁNG';
+    if (unit.silenceActionsRemaining > 0) return 'CÂM LẶNG';
+    if (unit.paralysisActionsRemaining > 0) return 'TÊ LIỆT';
+    if (unit.freezeStage === 2 && unit.freezeStageActionsRemaining > 0) return 'TÊ CÓNG';
+    if (unit.freezeStage === 1 && unit.freezeStageActionsRemaining > 0) return 'LÀM LẠNH';
     if (unit.dotActionsRemaining > 0) return unit.dotStatus === 'poison' ? 'NHIỄM ĐỘC' : 'THIÊU ĐỐT';
     if (unit.speedDebuffActionsRemaining > 0) return 'CHẬM';
     if (unit.attackBuffActionsRemaining > 0) return 'TĂNG CÔNG';
