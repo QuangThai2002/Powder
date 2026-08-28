@@ -10,7 +10,8 @@ const STATUS_SHEET = 'combat2144-real-status';
 const STATUS_URL = '/assets/combat/vfx/real/status-test5-12x5.webp';
 const CTX = '__combat2144ctx';
 const PERSIST = '__combat2144persist';
-
+const ACTION_FRAME = 56;
+const STATUS_FRAME = 48;
 const ELEMENT_ROWS = { fire: 0, water: 1, ice: 2, earth: 3, storm: 4, steel: 5 } as const;
 const STATUS_ROWS = { burn: 0, freeze: 1, stun: 2, heal: 3, shield: 4 } as const;
 type ElementVfx = keyof typeof ELEMENT_ROWS;
@@ -56,13 +57,13 @@ function ensureAnimations(scene: Phaser.Scene): number {
   if (scene.textures.exists(ACTION_SHEET)) {
     for (const kind of Object.keys(ELEMENT_ROWS) as ElementVfx[]) {
       const base = ELEMENT_ROWS[kind] * 12;
-      const definitions: Array<['cast' | 'travel' | 'impact' | 'loop', number, number, number, number]> = [
+      const defs: Array<['cast' | 'travel' | 'impact' | 'loop', number, number, number, number]> = [
         ['cast', 0, 4, 8, 0],
-        ['travel', 2, 7, 14, -1],
-        ['impact', 4, 11, 9, 0],
+        ['travel', 2, 7, 12, -1],
+        ['impact', 4, 11, 8, 0],
         ['loop', 0, 11, 7, -1]
       ];
-      for (const [phase, start, end, frameRate, repeat] of definitions) {
+      for (const [phase, start, end, frameRate, repeat] of defs) {
         const key = actionKey(kind, phase);
         if (!scene.anims.exists(key)) {
           scene.anims.create({ key, frames: scene.anims.generateFrameNumbers(ACTION_SHEET, { start: base + start, end: base + end }), frameRate, repeat, skipMissedFrames: true });
@@ -74,12 +75,13 @@ function ensureAnimations(scene: Phaser.Scene): number {
   if (scene.textures.exists(STATUS_SHEET)) {
     for (const kind of Object.keys(STATUS_ROWS) as StatusVfx[]) {
       const base = STATUS_ROWS[kind] * 12;
+      const frames = scene.anims.generateFrameNumbers(STATUS_SHEET, { start: base, end: base + 11 });
       const burst = statusKey(kind, 'burst');
       const loop = statusKey(kind, 'loop');
       const reverse = statusKey(kind, 'break');
-      if (!scene.anims.exists(burst)) scene.anims.create({ key: burst, frames: scene.anims.generateFrameNumbers(STATUS_SHEET, { start: base, end: base + 11 }), frameRate: 8, repeat: 0, skipMissedFrames: true });
-      if (!scene.anims.exists(loop)) scene.anims.create({ key: loop, frames: scene.anims.generateFrameNumbers(STATUS_SHEET, { start: base, end: base + 11 }), frameRate: 7, repeat: -1, skipMissedFrames: true });
-      if (!scene.anims.exists(reverse)) scene.anims.create({ key: reverse, frames: scene.anims.generateFrameNumbers(STATUS_SHEET, { start: base + 11, end: base }), frameRate: 10, repeat: 0, skipMissedFrames: true });
+      if (!scene.anims.exists(burst)) scene.anims.create({ key: burst, frames, frameRate: 8, repeat: 0, skipMissedFrames: true });
+      if (!scene.anims.exists(loop)) scene.anims.create({ key: loop, frames, frameRate: 7, repeat: -1, skipMissedFrames: true });
+      if (!scene.anims.exists(reverse)) scene.anims.create({ key: reverse, frames: [...frames].reverse(), frameRate: 10, repeat: 0, skipMissedFrames: true });
       if (scene.anims.exists(burst)) count += 1;
       if (scene.anims.exists(loop)) count += 1;
       if (scene.anims.exists(reverse)) count += 1;
@@ -103,48 +105,48 @@ function statusSprite(scene: Phaser.Scene, x: number, y: number, size: number, d
 function playOnce(scene: Phaser.Scene, fx: Phaser.GameObjects.Sprite, animationKey: string): Promise<void> {
   return new Promise((resolve) => {
     let finished = false;
+    let timeout: Phaser.Time.TimerEvent | null = null;
     const done = (): void => {
       if (finished) return;
       finished = true;
+      timeout?.remove(false);
       if (fx.scene) fx.destroy();
       resolve();
     };
     fx.once(Phaser.Animations.Events.ANIMATION_COMPLETE, done);
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, done);
     scene.events.once(Phaser.Scenes.Events.DESTROY, done);
+    timeout = scene.time.delayedCall(2200, done);
     fx.play(animationKey);
   });
 }
 
 async function actionBurst(scene: Phaser.Scene, kind: ElementVfx, phase: 'cast' | 'impact', x: number, y: number, strong = false): Promise<boolean> {
-  ensureAnimations(scene);
-  const animationKey = actionKey(kind, phase);
-  if (!scene.anims.exists(animationKey)) return false;
+  const key = actionKey(kind, phase);
+  if (!scene.anims.exists(key)) return false;
   const size = phase === 'impact' ? (strong ? 390 : 325) : (strong ? 290 : 235);
   const fx = actionSprite(scene, x, y, size, strong ? 88 : 64, phase === 'impact' ? 0.98 : 0.9);
   if (!fx) return false;
-  await playOnce(scene, fx, animationKey);
+  await playOnce(scene, fx, key);
   return true;
 }
 async function actionTravel(scene: Phaser.Scene, kind: ElementVfx, from: Phaser.Math.Vector2, x: number, y: number): Promise<boolean> {
-  ensureAnimations(scene);
-  const animationKey = actionKey(kind, 'travel');
-  if (!scene.anims.exists(animationKey)) return false;
+  const key = actionKey(kind, 'travel');
+  if (!scene.anims.exists(key)) return false;
   const fx = actionSprite(scene, from.x, from.y - 5, 180, 66, 0.98);
   if (!fx) return false;
-  fx.setRotation(Math.atan2(y - from.y, x - from.x)).play(animationKey);
-  await new Promise<void>((resolve) => scene.tweens.add({ targets: fx, x, y: y - 5, duration: 600, ease: 'Sine.easeInOut', onComplete: () => resolve() }));
-  fx.destroy();
+  fx.setRotation(Math.atan2(y - from.y, x - from.x)).play(key);
+  await new Promise<void>((resolve) => scene.tweens.add({ targets: fx, x, y: y - 5, duration: 620, ease: 'Sine.easeInOut', onComplete: () => resolve() }));
+  if (fx.scene) fx.destroy();
   await actionBurst(scene, kind, 'impact', x, y - 5);
   return true;
 }
 async function statusBurst(scene: Phaser.Scene, kind: StatusVfx, x: number, y: number, strong = false, reverse = false): Promise<boolean> {
-  ensureAnimations(scene);
-  const animationKey = statusKey(kind, reverse ? 'break' : 'burst');
-  if (!scene.anims.exists(animationKey)) return false;
+  const key = statusKey(kind, reverse ? 'break' : 'burst');
+  if (!scene.anims.exists(key)) return false;
   const fx = statusSprite(scene, x, y, strong ? 355 : 285, strong ? 92 : 76, kind === 'shield' ? 0.82 : 0.96);
   if (!fx) return false;
-  await playOnce(scene, fx, animationKey);
+  await playOnce(scene, fx, key);
   return true;
 }
 function persistentStatus(unit: any): StatusVfx | null {
@@ -160,19 +162,20 @@ export function installCombat2144RealSpriteTestPatch(BattleSceneClass: any, PowV
   const root = globalThis as any;
   if (root[FLAG]) return;
   root[FLAG] = true;
-
   const battle = BattleSceneClass.prototype as any;
   const previousPreload = battle.preload;
   battle.preload = function combat2144Preload(this: Phaser.Scene, ...args: any[]): void {
     previousPreload?.apply(this, args);
-    if (!this.textures.exists(ACTION_SHEET)) this.load.spritesheet(ACTION_SHEET, ACTION_URL, { frameWidth: 16, frameHeight: 16, endFrame: 71 });
-    if (!this.textures.exists(STATUS_SHEET)) this.load.spritesheet(STATUS_SHEET, STATUS_URL, { frameWidth: 12, frameHeight: 12, endFrame: 59 });
+    if (!this.textures.exists(ACTION_SHEET)) this.load.spritesheet(ACTION_SHEET, ACTION_URL, { frameWidth: ACTION_FRAME, frameHeight: ACTION_FRAME, endFrame: 71 });
+    if (!this.textures.exists(STATUS_SHEET)) this.load.spritesheet(STATUS_SHEET, STATUS_URL, { frameWidth: STATUS_FRAME, frameHeight: STATUS_FRAME, endFrame: 59 });
   };
 
   const previousCreate = battle.create;
   battle.create = function combat2144Create(this: any, ...args: any[]): any {
     const result = previousCreate?.apply(this, args);
-    const animations = ensureAnimations(this);
+    let animations = 0;
+    try { animations = ensureAnimations(this); }
+    catch (error) { console.error('[Combat2 2.14.4] Real Sprite VFX create failed; fallback remains active.', error); }
     if (root.POWDER_COMBAT2_BALANCED_VFX_TEST_ROSTER) {
       for (const unit of this.combatState?.units || []) unit.ragePoints = 4;
       this.refreshViews?.();
@@ -185,21 +188,18 @@ export function installCombat2144RealSpriteTestPatch(BattleSceneClass: any, PowV
   };
 
   const previousAbility = battle.performAbility;
-  if (previousAbility) {
-    battle.performAbility = async function combat2144AbilityContext(this: any, actor: any, target: any, slot: any): Promise<any> {
-      const previous = this[CTX];
-      const ability = slot === 'ultimate' ? actor.pow.abilities.ultimate : actor.pow.abilities.skills[slot];
-      this[CTX] = { ability, element: actor.pow.elementKey || actor.pow.element };
-      try { return await previousAbility.call(this, actor, target, slot); }
-      finally { if (previous === undefined) delete this[CTX]; else this[CTX] = previous; }
-    };
-  }
+  if (previousAbility) battle.performAbility = async function combat2144AbilityContext(this: any, actor: any, target: any, slot: any): Promise<any> {
+    const previous = this[CTX];
+    const ability = slot === 'ultimate' ? actor.pow.abilities.ultimate : actor.pow.abilities.skills[slot];
+    this[CTX] = { ability, element: actor.pow.elementKey || actor.pow.element };
+    try { return await previousAbility.call(this, actor, target, slot); }
+    finally { if (previous === undefined) delete this[CTX]; else this[CTX] = previous; }
+  };
 
   const view = PowViewClass.prototype as any;
   const previousCast = view.playCastSignature;
   view.playCastSignature = async function combat2144Cast(this: any, support: boolean): Promise<void> {
     const scene = this.scene as Phaser.Scene;
-    ensureAnimations(scene);
     const context = (scene as any)[CTX];
     const special = support ? abilityStatus(context?.ability) : null;
     const p = position(this);
@@ -269,8 +269,8 @@ export function installCombat2144RealSpriteTestPatch(BattleSceneClass: any, PowV
   view.playResourcePulse = function combat2144Resource(this: any, color: number): void {
     const scene = this.scene as Phaser.Scene;
     const p = position(this);
-    const special: StatusVfx = color === 0x8edfff ? 'shield' : color === 0x73f0aa ? 'heal' : 'heal';
-    if (scene.textures.exists(STATUS_SHEET)) { void statusBurst(scene, special, p.x, p.y - 4); return; }
+    if (color === 0x8edfff && scene.textures.exists(STATUS_SHEET)) { void statusBurst(scene, 'shield', p.x, p.y - 4); return; }
+    if (color === 0x73f0aa && scene.textures.exists(STATUS_SHEET)) { void statusBurst(scene, 'heal', p.x, p.y - 4); return; }
     previousResource?.call(this, color);
   };
 
@@ -294,10 +294,9 @@ export function installCombat2144RealSpriteTestPatch(BattleSceneClass: any, PowV
   const previousUpdate = view.updateRuntime;
   view.updateRuntime = function combat2144PersistentStatus(this: any, unit: any): void {
     previousUpdate?.call(this, unit);
-    ensureAnimations(this.scene);
     const kind = persistentStatus(unit);
     let fx = this[PERSIST] as Phaser.GameObjects.Sprite | undefined;
-    if (!kind || !unit?.alive || unit.fieldSlot === null) {
+    if (!kind || !unit?.alive || unit.fieldSlot === null || !this.scene.anims.exists(statusKey(kind, 'loop'))) {
       fx?.destroy();
       this[PERSIST] = null;
     } else {
@@ -328,9 +327,12 @@ export function installCombat2144RealSpriteTestPatch(BattleSceneClass: any, PowV
     frameBased: true,
     actionSheet: ACTION_SHEET,
     statusSheet: STATUS_SHEET,
+    actionFrame: ACTION_FRAME,
+    statusFrame: STATUS_FRAME,
     elements: Object.keys(ELEMENT_ROWS),
     statuses: Object.keys(STATUS_ROWS),
     expectedAnimations: 39,
-    testRage: 4
+    testRage: 4,
+    bootSafe: true
   };
 }
