@@ -17,15 +17,35 @@ type MotionProfile = {
   duration: number;
 };
 
+type EchoPoolState = {
+  idle: Phaser.GameObjects.Image[];
+  active: Set<Phaser.GameObjects.Image>;
+  created: number;
+  reused: number;
+  dropped: number;
+};
+
 interface PatchableScene extends Phaser.Scene {
   powViews?: Map<string, any>;
   performBasicAttack?: (actor: CombatUnitState, target: CombatUnitState) => Promise<void>;
   performAbility?: (actor: CombatUnitState, target: CombatUnitState, slot: 0 | 1 | 'ultimate') => Promise<void>;
 }
 
+const echoPools = new WeakMap<Phaser.Scene, EchoPoolState>();
+
 function tier(): FxTier {
   const value = String((globalThis as any).POWDER_COMBAT2_FX_TIER || 'full');
   return value === 'lite' || value === 'balanced' ? value : 'full';
+}
+
+function echoActiveCap(): number {
+  const value = tier();
+  return value === 'full' ? 8 : value === 'balanced' ? 4 : 0;
+}
+
+function echoPoolCap(): number {
+  const value = tier();
+  return value === 'full' ? 8 : value === 'balanced' ? 4 : 0;
 }
 
 function reducedMotion(): boolean {
@@ -107,36 +127,76 @@ function world(view: any): Phaser.Math.Vector2 {
   catch { return new Phaser.Math.Vector2(view?.container?.x || 0, view?.container?.y || 0); }
 }
 
-function portraitGhost(view: any, alpha: number, depth: number): Phaser.GameObjects.Image | null {
+function poolFor(scene: Phaser.Scene): EchoPoolState {
+  let state = echoPools.get(scene);
+  if (!state) {
+    state = { idle: [], active: new Set(), created: 0, reused: 0, dropped: 0 };
+    echoPools.set(scene, state);
+  }
+  return state;
+}
+
+function portraitGhost(
+  view: any,
+  alpha: number,
+  depth: number,
+  position: Phaser.Math.Vector2,
+  state: EchoPoolState
+): Phaser.GameObjects.Image | null {
   const scene = view?.scene as Phaser.Scene | undefined;
   const portrait = view?.portrait as Phaser.GameObjects.Image | undefined;
   const container = view?.container as Phaser.GameObjects.Container | undefined;
   if (!scene || !portrait || !container || !portrait.texture?.key) return null;
-  const p = world(view);
-  const ghost = scene.add.image(
-    p.x + Number(portrait.x || 0) * Number(container.scaleX || 1),
-    p.y + Number(portrait.y || 0) * Number(container.scaleY || 1),
-    portrait.texture.key,
-    portrait.frame?.name
-  );
-  ghost.setDepth(depth).setAlpha(alpha);
-  ghost.setRotation(Number(container.rotation || 0) + Number(portrait.rotation || 0));
-  ghost.setScale(
-    Number(portrait.scaleX || 1) * Number(container.scaleX || 1),
-    Number(portrait.scaleY || 1) * Number(container.scaleY || 1)
-  );
-  if (portrait.flipX) ghost.setFlipX(true);
-  if (portrait.flipY) ghost.setFlipY(true);
+  if (state.active.size >= echoActiveCap()) {
+    state.dropped += 1;
+    return null;
+  }
+
+  let ghost = state.idle.pop();
+  if (ghost) {
+    state.reused += 1;
+    ghost.setTexture(portrait.texture.key, portrait.frame?.name);
+  } else {
+    ghost = scene.add.image(0, 0, portrait.texture.key, portrait.frame?.name);
+    state.created += 1;
+  }
+
+  ghost
+    .setActive(true)
+    .setVisible(true)
+    .setPosition(
+      position.x + Number(portrait.x || 0) * Number(container.scaleX || 1),
+      position.y + Number(portrait.y || 0) * Number(container.scaleY || 1)
+    )
+    .setDepth(depth)
+    .setAlpha(alpha)
+    .setRotation(Number(container.rotation || 0) + Number(portrait.rotation || 0))
+    .setScale(
+      Number(portrait.scaleX || 1) * Number(container.scaleX || 1),
+      Number(portrait.scaleY || 1) * Number(container.scaleY || 1)
+    )
+    .setFlip(Boolean(portrait.flipX), Boolean(portrait.flipY));
+
+  state.active.add(ghost);
   return ghost;
+}
+
+function recycleGhost(scene: Phaser.Scene, ghost: Phaser.GameObjects.Image, state: EchoPoolState): void {
+  if (!state.active.delete(ghost)) return;
+  ghost.setVisible(false).setActive(false).setAlpha(0);
+  if (state.idle.length < echoPoolCap()) state.idle.push(ghost);
+  else ghost.destroy();
 }
 
 function spawnIdentityEchoes(view: any, profile: MotionProfile, identity: number): void {
   if (!profile.ghosts) return;
   const scene = view?.scene as Phaser.Scene | undefined;
   if (!scene) return;
+  const state = poolFor(scene);
+  const position = world(view);
   const side = view?.side === 'enemy' ? -1 : 1;
   for (let i = 0; i < profile.ghosts; i += 1) {
-    const ghost = portraitGhost(view, 0.15 - i * 0.025, 59 - i);
+    const ghost = portraitGhost(view, 0.15 - i * 0.025, 59 - i, position, state);
     if (!ghost) continue;
     const variance = (((identity >>> (i * 3)) & 7) - 3) * 0.8;
     ghost.x -= side * (profile.ghostSpread + i * 8);
@@ -150,7 +210,7 @@ function spawnIdentityEchoes(view: any, profile: MotionProfile, identity: number
       scaleY: ghost.scaleY * 1.025,
       duration: 130 + i * 28,
       ease: 'Quad.easeOut',
-      onComplete: () => ghost.destroy()
+      onComplete: () => recycleGhost(scene, ghost, state)
     });
   }
 }
@@ -218,15 +278,33 @@ export function installCombat2124PowSkillMotionIdentityPatch(BattleSceneClass: a
   root.POWDER_COMBAT2_POW_MOTION_IDENTITY = {
     version: '2.12.4',
     mode: 'canonical-metadata-plus-pow-art',
+    performanceRevision: '2.12.6',
     rules: [
       'real-pow-art-only',
       'role-aware-motion',
       'skill-slot-aware-motion',
       'canonical-hits-status-mechanic-aware',
       'adaptive-echo-budget',
+      'scene-local-echo-pool',
+      'concurrent-echo-cap',
       'no-procedural-element-symbols',
       'no-combat-logic-change',
       '60fps-oriented'
     ]
+  };
+
+  root.POWDER_COMBAT2_ECHO_POOL = {
+    version: '2.12.6',
+    mode: 'scene-local-reuse',
+    snapshot(scene: Phaser.Scene): { idle: number; active: number; created: number; reused: number; dropped: number } {
+      const state = poolFor(scene);
+      return {
+        idle: state.idle.length,
+        active: state.active.size,
+        created: state.created,
+        reused: state.reused,
+        dropped: state.dropped
+      };
+    }
   };
 }
