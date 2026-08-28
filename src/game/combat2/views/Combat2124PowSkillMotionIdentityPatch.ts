@@ -26,6 +26,8 @@ type EchoPoolState = {
   cleanupBound: boolean;
 };
 
+type ActiveMotion = { cancel: () => void };
+
 interface PatchableScene extends Phaser.Scene {
   powViews?: Map<string, any>;
   performBasicAttack?: (actor: CombatUnitState, target: CombatUnitState) => Promise<void>;
@@ -33,6 +35,7 @@ interface PatchableScene extends Phaser.Scene {
 }
 
 const echoPools = new WeakMap<Phaser.Scene, EchoPoolState>();
+const activeMotions = new WeakMap<Phaser.GameObjects.Container, ActiveMotion>();
 
 function tier(): FxTier {
   const value = String((globalThis as any).POWDER_COMBAT2_FX_TIER || 'full');
@@ -250,6 +253,13 @@ async function primeSkillMotion(scene: PatchableScene, actor: CombatUnitState, s
   const ability = abilityOf(actor, slot);
   const profile = profileFor(actor, ability, slot);
   if (!profile.duration) return;
+
+  // Final-regression guard: if a second presentation reaches the same Pow before the
+  // previous wind-up has settled, restore/cancel that old presentation first. This
+  // prevents two yoyo tweens from snapshotting each other's transient coordinates and
+  // slowly drifting a Pow away from its canonical formation slot.
+  activeMotions.get(container)?.cancel();
+
   const identity = hash(`${actor.pow.id}:${ability.name}:${slot}`);
   spawnIdentityEchoes(view, profile, identity);
 
@@ -261,11 +271,13 @@ async function primeSkillMotion(scene: PatchableScene, actor: CombatUnitState, s
 
   await new Promise<void>((resolve) => {
     let settled = false;
+    let current!: ActiveMotion;
     const finish = (restore: boolean): void => {
       if (settled) return;
       settled = true;
       scene.events.off(Phaser.Scenes.Events.SHUTDOWN, onSceneExit);
       scene.events.off(Phaser.Scenes.Events.DESTROY, onSceneExit);
+      if (activeMotions.get(container) === current) activeMotions.delete(container);
       if (restore && container.scene) {
         container.setPosition(baseX, baseY).setScale(baseScaleX, baseScaleY).setAngle(baseAngle);
       }
@@ -275,6 +287,14 @@ async function primeSkillMotion(scene: PatchableScene, actor: CombatUnitState, s
       scene.tweens.killTweensOf(container);
       finish(false);
     };
+
+    current = {
+      cancel: (): void => {
+        scene.tweens.killTweensOf(container);
+        finish(true);
+      }
+    };
+    activeMotions.set(container, current);
 
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, onSceneExit);
     scene.events.once(Phaser.Scenes.Events.DESTROY, onSceneExit);
@@ -319,7 +339,7 @@ export function installCombat2124PowSkillMotionIdentityPatch(BattleSceneClass: a
   root.POWDER_COMBAT2_POW_MOTION_IDENTITY = {
     version: '2.12.4',
     mode: 'canonical-metadata-plus-pow-art',
-    performanceRevision: '2.12.9',
+    performanceRevision: '2.12.10',
     rules: [
       'real-pow-art-only',
       'role-aware-motion',
@@ -330,6 +350,7 @@ export function installCombat2124PowSkillMotionIdentityPatch(BattleSceneClass: a
       'scene-shutdown-pool-cleanup',
       'paired-lifecycle-listener-cleanup',
       'shutdown-safe-motion-await',
+      'overlap-safe-motion-cancel',
       'concurrent-echo-cap',
       'no-procedural-element-symbols',
       'no-combat-logic-change',
@@ -338,8 +359,8 @@ export function installCombat2124PowSkillMotionIdentityPatch(BattleSceneClass: a
   };
 
   root.POWDER_COMBAT2_ECHO_POOL = {
-    version: '2.12.9',
-    mode: 'scene-local-reuse-with-paired-lifecycle-cleanup',
+    version: '2.12.10',
+    mode: 'scene-local-reuse-with-paired-lifecycle-cleanup-and-motion-overlap-guard',
     snapshot(scene: Phaser.Scene): { idle: number; active: number; created: number; reused: number; dropped: number } {
       const state = poolFor(scene);
       return {
