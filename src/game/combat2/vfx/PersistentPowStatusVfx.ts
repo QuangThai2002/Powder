@@ -20,7 +20,43 @@ export type PersistentStatusSheetMap = Partial<Record<PersistentPowStatusKind, P
 interface ActivePersistentStatus {
   kind: PersistentPowStatusKind;
   object: Phaser.GameObjects.GameObject;
+  badge: Phaser.GameObjects.Container;
+  tooltip: Phaser.GameObjects.Text;
 }
+
+interface StatusTooltipCopy {
+  glyph: string;
+  title: string;
+  description: string;
+  color: number;
+}
+
+const STATUS_TOOLTIP_COPY: Record<PersistentPowStatusKind, StatusTooltipCopy> = Object.freeze({
+  burn: {
+    glyph: '🔥',
+    title: 'Thiêu đốt',
+    description: 'Mất HP theo thời gian khi hiệu ứng còn hiệu lực.',
+    color: 0xff7043
+  },
+  poison: {
+    glyph: '☠',
+    title: 'Nhiễm độc',
+    description: 'Nhận sát thương độc duy trì và có thể cộng dồn.',
+    color: 0xa5df66
+  },
+  freeze: {
+    glyph: '❄',
+    title: 'Đóng băng',
+    description: 'Bị khóa hành động khi trạng thái đóng băng còn hiệu lực.',
+    color: 0x8adfff
+  },
+  stun: {
+    glyph: '✦',
+    title: 'Choáng',
+    description: 'Không thể hành động trong lượt bị khống chế.',
+    color: 0xf5dd62
+  }
+});
 
 /**
  * Owns at most ONE persistent visual per Pow.
@@ -29,6 +65,10 @@ interface ActivePersistentStatus {
  * when an art file has not been copied/preloaded yet. When a valid texture exists,
  * one Sprite plays ordered frame indices. Otherwise a lightweight vector fallback
  * communicates the state without covering the portrait or HUD.
+ *
+ * The same owner also provides one compact interactive badge for the active bad
+ * status. Hovering the badge reveals a short Tamer-facing explanation without
+ * adding permanent text over the battle field.
  */
 export class PersistentPowStatusVfx {
   private readonly scene: Phaser.Scene;
@@ -47,23 +87,82 @@ export class PersistentPowStatusVfx {
     }
 
     if (this.active?.kind === kind) {
-      this.reposition(this.active.object, kind, x, y, layout);
+      this.reposition(this.active, kind, x, y, layout);
       return;
     }
 
     this.clear();
     const object = this.createSheetSprite(kind, x, y, layout) ?? this.createFallback(kind, x, y, layout);
-    this.active = { kind, object };
+    const { badge, tooltip } = this.createStatusBadge(kind, x, y, layout);
+    this.active = { kind, object, badge, tooltip };
   }
 
   clear(): void {
     if (!this.active) return;
+    this.active.tooltip.destroy();
+    this.active.badge.destroy(true);
     this.active.object.destroy();
     this.active = null;
   }
 
   destroy(): void {
     this.clear();
+  }
+
+  private createStatusBadge(
+    kind: PersistentPowStatusKind,
+    x: number,
+    y: number,
+    layout: PowVfxLayout
+  ): { badge: Phaser.GameObjects.Container; tooltip: Phaser.GameObjects.Text } {
+    const copy = STATUS_TOOLTIP_COPY[kind];
+    const position = this.statusBadgePosition(x, y, layout);
+    const radius = Phaser.Math.Clamp(15 * layout.fieldScale, 10, 15);
+    const badge = this.scene.add.container(position.x, position.y).setDepth(powVfxDepth('foreground') + 3);
+    const hit = this.scene.add.circle(0, 0, radius + 4, 0x071723, 0.92)
+      .setStrokeStyle(2, copy.color, 0.96)
+      .setInteractive({ useHandCursor: true });
+    const glyph = this.scene.add.text(0, 0, copy.glyph, {
+      fontFamily: 'Arial, sans-serif',
+      fontSize: `${Math.max(12, Math.round(15 * layout.fieldScale))}px`,
+      color: '#ffffff',
+      fontStyle: 'bold',
+      stroke: '#041018',
+      strokeThickness: 2
+    }).setOrigin(0.5);
+    badge.add([hit, glyph]);
+
+    const tooltip = this.scene.add.text(position.x, position.y - radius - 10, `${copy.title}\n${copy.description}`, {
+      fontFamily: 'Arial, sans-serif',
+      fontSize: '13px',
+      color: '#eefaff',
+      fontStyle: 'bold',
+      backgroundColor: '#071723ee',
+      padding: { x: 10, y: 8 },
+      stroke: '#041018',
+      strokeThickness: 2,
+      wordWrap: { width: 230, useAdvancedWrap: true },
+      align: 'left'
+    })
+      .setOrigin(0.5, 1)
+      .setDepth(powVfxDepth('foreground') + 5)
+      .setVisible(false);
+
+    hit.on('pointerover', () => {
+      if (tooltip.active) tooltip.setVisible(true);
+    });
+    hit.on('pointerout', () => {
+      if (tooltip.active) tooltip.setVisible(false);
+    });
+
+    return { badge, tooltip };
+  }
+
+  private statusBadgePosition(x: number, y: number, layout: PowVfxLayout): Phaser.Math.Vector2 {
+    const head = powVfxWorldAnchor(x, y, layout, 'head');
+    const offsetX = layout.artWidth * layout.fieldScale * 0.35;
+    const offsetY = 9 * layout.fieldScale;
+    return new Phaser.Math.Vector2(head.x + offsetX, head.y - offsetY);
   }
 
   private createSheetSprite(
@@ -151,7 +250,7 @@ export class PersistentPowStatusVfx {
   }
 
   private reposition(
-    object: Phaser.GameObjects.GameObject,
+    active: ActivePersistentStatus,
     kind: PersistentPowStatusKind,
     x: number,
     y: number,
@@ -159,7 +258,14 @@ export class PersistentPowStatusVfx {
   ): void {
     const profile = NIGHT_STATUS_VFX_DEFAULTS[kind];
     const anchor = powVfxWorldAnchor(x, y, layout, profile.anchor);
-    const positioned = object as Phaser.GameObjects.Components.Transform;
+    const positioned = active.object as Phaser.GameObjects.Components.Transform;
     if (typeof positioned.setPosition === 'function') positioned.setPosition(anchor.x, anchor.y);
+
+    const badgePosition = this.statusBadgePosition(x, y, layout);
+    active.badge.setPosition(badgePosition.x, badgePosition.y);
+    active.tooltip.setPosition(
+      badgePosition.x,
+      badgePosition.y - Phaser.Math.Clamp(15 * layout.fieldScale, 10, 15) - 10
+    );
   }
 }
