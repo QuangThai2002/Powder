@@ -1,69 +1,45 @@
 {
-  "version": "Combat2 2.13.4",
-  "purpose": "Truthful runtime manifest for asset-first Combat2 VFX curated from the user-provided img and img2 libraries.",
+  "version": "Combat2 2.14.0",
+  "purpose": "Truthful runtime manifest for asset-first Combat2 VFX curated from both user-provided img and img2 libraries.",
   "runtime": {
-    "mode": "bundled-atlas-a-with-temporary-family-fallbacks",
-    "activeAtlases": ["elementsA"],
-    "deadPerFilePreviewLoader": false,
+    "mode": "exact-element-and-status-assets",
     "proceduralPrimaryFx": false,
-    "sourceImpactOwnership": "attacker-element"
+    "deadPerFilePreviewLoader": false,
+    "sourceImpactOwnership": "attacker-element",
+    "adaptiveFx": ["full", "balanced", "lite"],
+    "temporaryFamilyElementFallbacks": []
   },
-  "atlases": {
-    "elementsA": {
-      "state": "active",
-      "file": "vfx-elements-a.webp",
-      "frameWidth": 224,
-      "frameHeight": 224,
-      "frames": ["fire.impact", "steel.impact", "water.impact", "leaf.impact", "earth.impact"]
+  "baseAtlas": {
+    "file": "vfx-elements-a.webp",
+    "frameWidth": 224,
+    "frameHeight": 224,
+    "state": "active-exact",
+    "frames": ["fire.impact", "steel.impact", "water.impact", "leaf.impact", "earth.impact"]
+  },
+  "exactStandalone": {
+    "wind.impact": { "file": "wind-impact.webp", "source": "img", "sourceFile": "54667b2e-5c7f-4bc3-b6f4-de274797476a.png" },
+    "lightning.impact": { "file": "lightning-impact.webp", "source": "img", "sourceFile": "3004b388-9983-4c91-b465-11851ef7147a.png" },
+    "lava.impact": { "file": "lava-impact.webp", "source": "img", "sourceFile": "e4af7068-a4dd-4c72-8d63-199e53fce785.png" },
+    "storm.impact": { "file": "storm-impact.webp", "source": "img", "sourceFile": "abfcd592-c523-4928-a901-e13173cf845c.png" },
+    "ice.impact": { "file": "ice-impact.webp", "source": "img", "sourceFile": "09c8b135-7837-4b4a-82f7-e59800229e26.png" },
+    "poison.impact": { "file": "poison-impact.webp", "source": "img", "sourceFile": "b4fbcc5b-4b95-4a35-bbf0-b44a6d3c13d4.png" },
+    "light.impact": { "file": "light-impact.webp", "source": "img", "sourceFile": "a1f5af5e-60a3-4b53-a8e5-1fe9f9051a16.png" },
+    "dark.impact": { "file": "dark-impact.webp", "source": "img", "sourceFile": "f742e0ab-70f3-4266-8ccd-46372d271cd6.png" },
+    "status.burn": { "file": "status-burn.webp", "source": "img2", "sourceFile": "24584650-e31e-4d05-ac43-3e61fbba0d26.png" },
+    "status.freeze": { "file": "status-freeze.webp", "source": "img2", "sourceFile": "5407a8e3-756a-44f4-b61e-3531ce2bfcc2.png" },
+    "status.stun": { "file": "status-stun.webp", "source": "img2", "sourceFile": "61eadd54-9f89-4c71-98cb-25488ed9a08b.png" },
+    "status.heal": { "file": "status-heal.webp", "source": "img2", "sourceFile": "f7276732-1d70-4653-aae1-ee00cdea020f.png" },
+    "status.shield": { "file": "status-shield.webp", "source": "img2", "sourceFile": "af69005f-64ba-4590-9c01-06230fad359f.png" }
+  },
+  "coverage": {
+    "elements": {
+      "active": ["fire", "steel", "water", "leaf", "earth", "wind", "lightning", "lava", "storm", "ice", "poison", "light", "dark"],
+      "familyFallbackRemaining": []
     },
-    "elementsB": {
-      "state": "prepared-not-bundled",
-      "file": "vfx-elements-b.webp",
-      "frameWidth": 224,
-      "frameHeight": 224,
-      "frames": ["wind.impact", "lightning.impact", "lava.impact", "storm.impact", "ice.impact"]
-    },
-    "elementsC": {
-      "state": "prepared-not-bundled",
-      "file": "vfx-elements-c.webp",
-      "frameWidth": 224,
-      "frameHeight": 224,
-      "frames": ["poison.impact", "light.impact", "dark.impact"]
-    },
-    "status": {
-      "state": "prepared-not-bundled",
-      "file": "vfx-status.webp",
-      "frameWidth": 224,
-      "frameHeight": 224,
-      "frames": ["status.burn", "status.freeze", "status.stun", "status.heal", "status.shield"]
+    "statuses": {
+      "active": ["burn", "freeze", "stun", "heal", "shield"],
+      "familyFallbackRemaining": []
     }
   },
-  "temporaryFallbacks": {
-    "lava": "fire",
-    "lightning": "steel",
-    "light": "steel",
-    "ice": "water",
-    "storm": "water",
-    "poison": "leaf",
-    "wind": "leaf",
-    "dark": "earth",
-    "status.burn": "fire",
-    "status.freeze": "water",
-    "status.stun": "steel",
-    "status.heal": "leaf",
-    "status.shield": "steel"
-  },
-  "nextReplacementOrder": [
-    "lightning.impact",
-    "ice.impact",
-    "poison.impact",
-    "wind.impact",
-    "light.impact",
-    "dark.impact",
-    "status.burn",
-    "status.freeze",
-    "status.stun",
-    "status.heal",
-    "status.shield"
-  ]
+  "qualityNote": "Standalone replacements are lightweight 48x48 WebP runtime proxies derived from the original transparent img/img2 artwork for immediate testing. Their registry paths are stable, so higher-resolution replacements can overwrite the same files later without rewriting combat logic."
 }
