@@ -9,12 +9,13 @@ import { installCombat2124PowSkillMotionIdentityPatch } from './views/Combat2124
 import { installCombat2132AtlasFallbackPatch } from './views/Combat2132AtlasFallbackPatch';
 import { installCombat2133AtlasPresentationPatch } from './views/Combat2133AtlasPresentationPatch';
 import { installCombat2133PrimitiveGuardPatch } from './views/Combat2133PrimitiveGuardPatch';
+import { installCombat2134SourceImpactIdentityPatch } from './views/Combat2134SourceImpactIdentityPatch';
 import { CombatPresentationDirector } from './views/CombatPresentationDirector';
 import { PowView } from './views/PowView';
 import './main';
 
 // Procedural elemental/status presentation stays retired.
-// 2.13.3 also retires the old 2.13.0 per-file preview loader because those optional files are
+// The old 2.13.0 per-file preview loader also stays retired because those optional files are
 // not part of the bundled runtime and could otherwise create dead/404 requests every battle.
 installCombat2122CinematicMotionPatch(BattleScene, PowView);
 installCombat2123CleanDomainCinematicPatch(BattleScene);
@@ -25,3 +26,5 @@ installCombat2132AtlasFallbackPatch(BattleScene, PowView);
 installCombat2133PrimitiveGuardPatch(PowView);
 // Removes the last procedural skill/ultimate presentation shapes while preserving UI plates.
 installCombat2133AtlasPresentationPatch(CombatPresentationDirector);
+// Installed last so every target hit flash is visually owned by the Pow that actually attacked.
+installCombat2134SourceImpactIdentityPatch(BattleScene, PowView);
