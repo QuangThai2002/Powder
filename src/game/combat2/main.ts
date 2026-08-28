@@ -37,6 +37,7 @@ import { installCombat2105AudioImpactPatch } from './views/Combat2105AudioImpact
 import { installCombat2106AdaptiveFxPatch } from './views/Combat2106AdaptiveFxPatch';
 import { installCombat2109BattleEndPatch } from './views/Combat2109BattleEndPatch';
 import { installCombat2112LegacyHudBridgePatch } from './views/Combat2112LegacyHudBridgePatch';
+import { installCombat2115ReserveUiPatch } from './views/Combat2115ReserveUiPatch';
 import { PowView } from './views/PowView';
 
 const logicalWidth = 1600;
@@ -47,7 +48,7 @@ const testRosterReport = {
   enemy: COMBAT2_STARTER_ROSTER.enemy.map((pow) => pow.id),
   requested: [...COMBAT2_STARTER_ROSTER.player, ...COMBAT2_STARTER_ROSTER.enemy].map((pow) => pow.id)
 };
-(globalThis as any).POWDER_COMBAT2_TEST_ROSTER = { version: '2.11.2', mode: 'canonical-coverage-rotation+legacy-ui-bridge', ...testRosterReport };
+(globalThis as any).POWDER_COMBAT2_TEST_ROSTER = { version: '2.11.5', mode: 'canonical-coverage-rotation+legacy-ui-bridge+reserve-cleanup', ...testRosterReport };
 
 function installCombat2114DomainOwnershipPatch(BattleSceneClass: any): void {
   const proto = BattleSceneClass.prototype as any;
@@ -135,6 +136,7 @@ installCombat2105AudioImpactPatch(BattleScene, PowView);
 installCombat2106AdaptiveFxPatch(BattleScene);
 installCombat2109BattleEndPatch(BattleScene);
 installCombat2112LegacyHudBridgePatch(BattleScene);
+installCombat2115ReserveUiPatch(BattleScene);
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO, parent: 'powder-combat2', width: logicalWidth, height: logicalHeight, backgroundColor: '#08131f',
@@ -176,6 +178,7 @@ if (isLocalDev) {
         actionFx: (globalThis as any).POWDER_COMBAT2_ACTION_FX?.version ?? 'missing',
         statusFx: (globalThis as any).POWDER_COMBAT2_STATUS_FX?.version ?? 'missing',
         reserveFx: (globalThis as any).POWDER_COMBAT2_RESERVE_FX?.version ?? 'missing',
+        reserveUi: (globalThis as any).POWDER_COMBAT2_RESERVE_UI?.version ?? 'missing',
         ultimateFx: (globalThis as any).POWDER_COMBAT2_ULTIMATE_FX?.version ?? 'missing',
         arenaFocus: (globalThis as any).POWDER_COMBAT2_ARENA_FOCUS?.version ?? 'missing',
         domainStage: (globalThis as any).POWDER_COMBAT2_DOMAIN_STAGE?.version ?? 'missing',
