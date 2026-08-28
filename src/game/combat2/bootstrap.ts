@@ -7,6 +7,8 @@ import { installCombat2122CinematicMotionPatch } from './views/Combat2122Cinemat
 import { installCombat2123CleanDomainCinematicPatch } from './views/Combat2123CleanDomainCinematicPatch';
 import { installCombat2124PowSkillMotionIdentityPatch } from './views/Combat2124PowSkillMotionIdentityPatch';
 import { installCombat2130AssetVfxPatch } from './views/Combat2130AssetVfxPatch';
+import { installCombat2130PresentationVfxPatch } from './views/Combat2130PresentationVfxPatch';
+import { CombatPresentationDirector } from './views/CombatPresentationDirector';
 import { PowView } from './views/PowView';
 import './main';
 
@@ -15,6 +17,7 @@ import './main';
 installCombat2122CinematicMotionPatch(BattleScene, PowView);
 installCombat2123CleanDomainCinematicPatch(BattleScene);
 installCombat2124PowSkillMotionIdentityPatch(BattleScene);
-// Asset-first layer is installed last so it owns cast/travel/impact/status presentation
+// Asset-first layers are installed last so they own cast/travel/impact/status presentation
 // without changing damage, targeting, Rage, domains or turn logic.
 installCombat2130AssetVfxPatch(BattleScene, PowView);
+installCombat2130PresentationVfxPatch(CombatPresentationDirector);
