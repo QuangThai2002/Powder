@@ -1,0 +1,10 @@
+{
+  "version": "Combat2 2.13.1",
+  "purpose": "Bundled atlas mapping for temporary asset-first Combat2 VFX preview. Sources are curated from both user-provided img and img2 libraries.",
+  "atlases": {
+    "elementsA": { "file": "vfx-elements-a.webp", "frameWidth": 224, "frameHeight": 224, "frames": ["fire.impact","steel.impact","water.impact","leaf.impact","earth.impact"] },
+    "elementsB": { "file": "vfx-elements-b.webp", "frameWidth": 224, "frameHeight": 224, "frames": ["wind.impact","lightning.impact","lava.impact","storm.impact","ice.impact"] },
+    "elementsC": { "file": "vfx-elements-c.webp", "frameWidth": 224, "frameHeight": 224, "frames": ["poison.impact","light.impact","dark.impact"] },
+    "status": { "file": "vfx-status.webp", "frameWidth": 224, "frameHeight": 224, "frames": ["status.burn","status.freeze","status.stun","status.heal","status.shield"] }
+  }
+}
