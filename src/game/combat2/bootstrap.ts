@@ -6,16 +6,15 @@ import { BattleScene } from './scenes/BattleScene';
 import { installCombat2122CinematicMotionPatch } from './views/Combat2122CinematicMotionPatch';
 import { installCombat2123CleanDomainCinematicPatch } from './views/Combat2123CleanDomainCinematicPatch';
 import { installCombat2124PowSkillMotionIdentityPatch } from './views/Combat2124PowSkillMotionIdentityPatch';
+import { installCombat2130AssetVfxPatch } from './views/Combat2130AssetVfxPatch';
 import { PowView } from './views/PowView';
 import './main';
 
-// The 2.12.0/2.12.1 procedural elemental layers are intentionally not installed here anymore.
-// They remain in source temporarily as reference while real transparent VFX assets are being prepared.
-// 2.12.2 uses existing Pow artwork + camera/motion only, so no triangle/circle elemental icon is added.
+// The old procedural elemental/status presentation is intentionally not installed anymore.
+// 2.12.x keeps real Pow artwork + camera/motion while 2.13.0 adds the transparent asset library.
 installCombat2122CinematicMotionPatch(BattleScene, PowView);
-// 2.12.3 removes the old procedural Lãnh Địa motif from the visible stage and uses
-// camera + atmosphere + typography only until real domain assets are available.
 installCombat2123CleanDomainCinematicPatch(BattleScene);
-// 2.12.4 deepens per-Pow skill identity using canonical role/skill metadata and the
-// Pow artwork already loaded by PowView. It only primes presentation before the existing action.
 installCombat2124PowSkillMotionIdentityPatch(BattleScene);
+// Asset-first layer is installed last so it owns cast/travel/impact/status presentation
+// without changing damage, targeting, Rage, domains or turn logic.
+installCombat2130AssetVfxPatch(BattleScene, PowView);
