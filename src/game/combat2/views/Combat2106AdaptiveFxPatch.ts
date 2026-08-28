@@ -16,8 +16,12 @@ function initialTier(): FxTier {
   if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return 'lite';
   const memory = Number((navigator as any)?.deviceMemory || 0);
   const cores = Number(navigator?.hardwareConcurrency || 0);
-  if ((memory > 0 && memory <= 4) || (cores > 0 && cores <= 4)) return 'lite';
-  if ((memory > 0 && memory <= 8) || (cores > 0 && cores <= 8)) return 'balanced';
+
+  // Do not punish normal desktop/laptop hardware before a real FPS sample exists.
+  // Only clearly weak devices start reduced; everything else gets Full first and the
+  // measured-FPS loop below can still step down safely when required.
+  if ((memory > 0 && memory <= 3) || (cores > 0 && cores <= 2)) return 'lite';
+  if ((memory > 0 && memory <= 4) || (cores > 0 && cores <= 4)) return 'balanced';
   return 'full';
 }
 
@@ -78,7 +82,7 @@ export function installCombat2106AdaptiveFxPatch(BattleSceneClass: any): void {
           state.tier = state.tier === 'full' ? 'balanced' : 'lite';
           state.lowFrames = 0;
           applyTier(state.tier);
-        } else if (state.highFrames >= 4 && state.tier !== 'full') {
+        } else if (state.highFrames >= 3 && state.tier !== 'full') {
           state.tier = state.tier === 'lite' ? 'balanced' : 'full';
           state.highFrames = 0;
           applyTier(state.tier);
@@ -112,8 +116,8 @@ export function installCombat2106AdaptiveFxPatch(BattleSceneClass: any): void {
   };
 
   root.POWDER_COMBAT2_PERFORMANCE = {
-    version: '2.10.7',
-    mode: 'adaptive-fx-lifecycle-hardening',
+    version: '2.14.3',
+    mode: 'adaptive-fx-full-first-measured-downgrade',
     get tier(): FxTier { return state.tier; },
     get fps(): number { return state.fps; },
     get auto(): boolean { return state.auto; },
@@ -139,7 +143,7 @@ export function installCombat2106AdaptiveFxPatch(BattleSceneClass: any): void {
   };
 
   if (typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(location.hostname)) {
-    root.POWDER_COMBAT2_PERFORMANCE.devLabel = (scene: Phaser.Scene): Phaser.GameObjects.Text => scene.add.text(scene.scale.width - 18, scene.scale.height - 78, '2.10.7 · FRAME PACING', {
+    root.POWDER_COMBAT2_PERFORMANCE.devLabel = (scene: Phaser.Scene): Phaser.GameObjects.Text => scene.add.text(scene.scale.width - 18, scene.scale.height - 78, '2.14.3 · ADAPTIVE FULL-FIRST', {
       fontFamily: COMBAT_DISPLAY_FONT, fontSize: '10px', color: '#bfefff', backgroundColor: '#04101888', padding: { x: 6, y: 3 }
     }).setOrigin(1, 1).setDepth(98).setAlpha(0.6);
   }
