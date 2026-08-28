@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <meta name="powder-combat-version" content="2.12.6" />
+  <meta name="powder-combat-version" content="2.12.7" />
   <meta name="powder-combat-resource-system" content="rage-points-v1" />
-  <meta name="powder-combat-effects" content="legacy-core-v2+cc-2.5.1+guard-2.6.1+shared-overlay-2.7.1+legacy-multitarget-2.8.0+legacy-role-row-2.8.1+legacy-domain-v15-2.9.6+vite-launch-guard-2.9.7+action-choreography-2.9.8+status-visuals-2.9.9+varied-roster-reserve-flow-2.10.0+ultimate-cinematic-2.10.1+arena-focus-2.10.2+domain-stage-2.10.3+pow-skill-signature-2.10.4+audio-impact-sync-2.10.5+adaptive-fx-2.10.6+frame-pacing-hardening-2.10.7+final-regression-gate-2.10.8+battle-end-clean-restart-2.10.9+release-candidate-presentation-gate-2.11.0+canonical-coverage-rotation-2.11.1+legacy-turn-hud-domain-test-2.11.2+domain-field-ownership-2.11.4+reserve-ui-cleanup-2.11.5+asset-led-cinematic-motion-2.12.2+clean-domain-cinematic-2.12.3+pow-skill-motion-identity-2.12.4+contact-audio-timing-2.12.5+echo-pool-performance-hardening-2.12.6" />
+  <meta name="powder-combat-effects" content="legacy-core-v2+cc-2.5.1+guard-2.6.1+shared-overlay-2.7.1+legacy-multitarget-2.8.0+legacy-role-row-2.8.1+legacy-domain-v15-2.9.6+vite-launch-guard-2.9.7+action-choreography-2.9.8+status-visuals-2.9.9+varied-roster-reserve-flow-2.10.0+ultimate-cinematic-2.10.1+arena-focus-2.10.2+domain-stage-2.10.3+pow-skill-signature-2.10.4+audio-impact-sync-2.10.5+adaptive-fx-2.10.6+frame-pacing-hardening-2.10.7+final-regression-gate-2.10.8+battle-end-clean-restart-2.10.9+release-candidate-presentation-gate-2.11.0+canonical-coverage-rotation-2.11.1+legacy-turn-hud-domain-test-2.11.2+domain-field-ownership-2.11.4+reserve-ui-cleanup-2.11.5+asset-led-cinematic-motion-2.12.2+clean-domain-cinematic-2.12.3+pow-skill-motion-identity-2.12.4+contact-audio-timing-2.12.5+echo-pool-performance-hardening-2.12.6+echo-pool-lifecycle-hardening-2.12.7" />
   <meta name="theme-color" content="#050c15" />
-  <title>Powder Combat 2.12.6</title>
+  <title>Powder Combat 2.12.7</title>
   <style>
     * { box-sizing: border-box; }
     html, body { width:100%; height:100%; margin:0; overflow:hidden; overscroll-behavior:none; background:#050c15; touch-action:none; font-family:"Palatino Linotype","Book Antiqua",Palatino,Georgia,serif; }
@@ -33,10 +33,10 @@
 </head>
 <body>
   <div id="powder-combat2"></div>
-  <div id="combat2-launch-guard" aria-live="assertive"><div class="card"><b>POWDER COMBAT 2.12.6 · KHỞI ĐỘNG SAI SERVER</b><h1>Combat2 cần chạy bằng Vite</h1><p>Live Server chỉ phục vụ file tĩnh nên không biên dịch TypeScript và không thể nạp package Phaser.</p><code>npm run dev</code><a href="http://127.0.0.1:5173/combat2.html">Mở Combat2 bằng Vite</a></div></div>
+  <div id="combat2-launch-guard" aria-live="assertive"><div class="card"><b>POWDER COMBAT 2.12.7 · KHỞI ĐỘNG SAI SERVER</b><h1>Combat2 cần chạy bằng Vite</h1><p>Live Server chỉ phục vụ file tĩnh nên không biên dịch TypeScript và không thể nạp package Phaser.</p><code>npm run dev</code><a href="http://127.0.0.1:5173/combat2.html">Mở Combat2 bằng Vite</a></div></div>
   <div id="orientation-guard" aria-hidden="true"><div class="guard-card"><div class="phone"></div><strong>Xoay ngang điện thoại để chiến đấu</strong><span>Combat được tối ưu theo khung 16:9 để Pow, kỹ năng và thanh trạng thái không chồng lên nhau.</span></div></div>
   <script>
-    (()=>{const staticPorts=new Set(['5500','5501']);const wrongServer=staticPorts.has(location.port)||location.protocol==='file:';if(!wrongServer)return;document.getElementById('combat2-launch-guard')?.classList.add('show');document.documentElement.dataset.combat2LaunchBlocked='static-server';window.POWDER_COMBAT2_LAUNCH_GUARD={version:'2.12.6',blocked:true,reason:'vite-required',current:location.href};})();
+    (()=>{const staticPorts=new Set(['5500','5501']);const wrongServer=staticPorts.has(location.port)||location.protocol==='file:';if(!wrongServer)return;document.getElementById('combat2-launch-guard')?.classList.add('show');document.documentElement.dataset.combat2LaunchBlocked='static-server';window.POWDER_COMBAT2_LAUNCH_GUARD={version:'2.12.7',blocked:true,reason:'vite-required',current:location.href};})();
   </script>
   <script type="module">if(document.documentElement.dataset.combat2LaunchBlocked!=='static-server') import('/src/game/combat2/bootstrap.ts');</script>
 </body>
