@@ -38,6 +38,14 @@ function reducedMotion(): boolean {
   return typeof window !== 'undefined' && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
 }
 
+function sceneReady(scene: Phaser.Scene): boolean {
+  try {
+    return Boolean(scene.sys?.isActive?.() && scene.textures && scene.add && scene.tweens);
+  } catch {
+    return false;
+  }
+}
+
 function abilityText(ability: CombatAbility | undefined): string {
   if (!ability) return '';
   return plain(`${ability.name || ''} ${ability.type || ''} ${ability.status || ''} ${ability.mechanic || ''} ${ability.description || ''} ${ability.target || ''}`);
@@ -101,7 +109,7 @@ function addImage(
   sizeMultiplier = 1,
   alphaMultiplier = 1
 ): Phaser.GameObjects.Image | null {
-  if (!scene.textures.exists(spec.textureKey)) return null;
+  if (!sceneReady(scene) || !scene.textures.exists(spec.textureKey)) return null;
   const quality = tier();
   const scale = quality === 'lite' ? 0.72 : quality === 'balanced' ? 0.86 : 1;
   const alpha = quality === 'lite' ? 0.68 : quality === 'balanced' ? 0.84 : 1;
@@ -115,6 +123,11 @@ function addImage(
 
 function tween(scene: Phaser.Scene, config: Phaser.Types.Tweens.TweenBuilderConfig): Promise<void> {
   return new Promise((resolve) => {
+    if (!sceneReady(scene)) {
+      resolve();
+      return;
+    }
+
     let settled = false;
     let activeTween: Phaser.Tweens.Tween | null = null;
 
@@ -156,6 +169,8 @@ async function playDedicatedBurst(
   depth: number,
   ultimate = false
 ): Promise<boolean> {
+  if (!sceneReady(scene)) return false;
+
   const available = specs.filter((spec) => scene.textures.exists(spec.textureKey));
   if (available.length <= 0) return false;
 
@@ -321,6 +336,7 @@ export function installCombat2141SemanticVfxPatch(
       'self-ultimate-uses-ability-semantics',
       'hybrid-heal-shield-can-layer-on-full-tier',
       'shutdown-safe-dedicated-vfx-tweens',
+      'teardown-safe-dedicated-vfx-creation',
       'no-combat-logic-change'
     ]
   };
