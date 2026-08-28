@@ -7,6 +7,7 @@ import { installCombat2143ReadableCinematicVfxPatch } from './Combat2143Readable
 
 const PATCH_FLAG = '__powderCombat2142AssetVfxLiveInstalled';
 const ATLAS_KEY = 'combat-vfx-atlas-a';
+const PERSISTENT_FX_KEY = '__powderCombat2140PersistentFx';
 const VERSION = '2.14.3';
 
 type RuntimeSnapshot = {
@@ -79,6 +80,32 @@ function replaceLegacyVersionText(scene: Phaser.Scene, snapshot: RuntimeSnapshot
   }
 }
 
+function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined' && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+}
+
+function installPersistentFxIdleHardening(PowViewClass: any): void {
+  const proto = PowViewClass.prototype as any;
+  const previousUpdate = proto.updateRuntime;
+  if (typeof previousUpdate !== 'function') return;
+
+  proto.updateRuntime = function combat2143PersistentFxIdleHardening(this: any, unit: any): void {
+    previousUpdate.call(this, unit);
+
+    const fx = this[PERSISTENT_FX_KEY] as Phaser.GameObjects.Image | undefined;
+    if (!fx?.scene) return;
+
+    const unitOffField = !unit?.alive || unit?.fieldSlot === null;
+    if (!unitOffField && fx.visible && fx.active && !prefersReducedMotion()) return;
+
+    try {
+      this.scene?.tweens?.killTweensOf?.(fx);
+    } catch {
+      // Presentation cleanup must never block combat state updates.
+    }
+  };
+}
+
 export function installCombat2142AssetVfxLivePatch(BattleSceneClass: any): void {
   const root = globalThis as any;
   if (root[PATCH_FLAG]) return;
@@ -111,4 +138,7 @@ export function installCombat2142AssetVfxLivePatch(BattleSceneClass: any): void 
   // 2.14.3 is installed from here so it still runs before new Phaser.Game().
   // This keeps preload/action wiring deterministic while avoiding another bootstrap timing race.
   installCombat2143ReadableCinematicVfxPatch(BattleSceneClass, PowView, CombatPresentationDirector);
+  // Wrap the final PowView runtime hook: invisible/off-field persistent FX must not retain
+  // infinite pulse tweens and spend frame time after their presentation is no longer visible.
+  installPersistentFxIdleHardening(PowView);
 }
