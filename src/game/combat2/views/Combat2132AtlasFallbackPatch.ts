@@ -6,6 +6,8 @@ const ATLAS_URL = '/assets/combat/vfx/preview/vfx-elements-a.webp';
 
 type FxTier = 'full' | 'balanced' | 'lite';
 
+const actionFrameByScene = new WeakMap<Phaser.Scene, number>();
+
 function norm(value: unknown): string {
   return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 }
@@ -54,6 +56,10 @@ function elementFrame(view: any): number {
   return frameForElement(`${view?.pow?.elementKey || ''} ${view?.pow?.element || ''}`);
 }
 
+function actorElementFrame(actor: any): number {
+  return frameForElement(`${actor?.pow?.elementKey || ''} ${actor?.pow?.element || ''}`);
+}
+
 function duration(normal: number, lite: number): number {
   if (reducedMotion()) return Math.min(120, lite);
   return tier() === 'lite' ? lite : normal;
@@ -81,6 +87,28 @@ export function installCombat2132AtlasFallbackPatch(BattleSceneClass: any, PowVi
     if (typeof originalPreload === 'function') originalPreload.apply(this, args);
     if (!this.textures.exists(ATLAS_KEY)) this.load.spritesheet(ATLAS_KEY, ATLAS_URL, { frameWidth: 224, frameHeight: 224 });
   };
+
+  // Presentation-only action context. The target's Pow element must never recolor an incoming
+  // hit: impact feedback belongs to the attacker/skill source. Wrapping the already-installed
+  // action methods preserves every existing resolver rule and only exposes the source frame
+  // while that action is presenting.
+  const originalBasic = sceneProto.performBasicAttack;
+  if (typeof originalBasic === 'function') {
+    sceneProto.performBasicAttack = async function combat2133BasicImpactIdentity(this: Phaser.Scene, ...args: any[]): Promise<any> {
+      actionFrameByScene.set(this, actorElementFrame(args[0]));
+      try { return await originalBasic.apply(this, args); }
+      finally { actionFrameByScene.delete(this); }
+    };
+  }
+
+  const originalAbility = sceneProto.performAbility;
+  if (typeof originalAbility === 'function') {
+    sceneProto.performAbility = async function combat2133AbilityImpactIdentity(this: Phaser.Scene, ...args: any[]): Promise<any> {
+      actionFrameByScene.set(this, actorElementFrame(args[0]));
+      try { return await originalAbility.apply(this, args); }
+      finally { actionFrameByScene.delete(this); }
+    };
+  }
 
   const proto = PowViewClass.prototype as any;
 
@@ -134,10 +162,11 @@ export function installCombat2132AtlasFallbackPatch(BattleSceneClass: any, PowVi
     fx.destroy();
   };
 
-  proto.playHitFlash = function combat2132HitFlash(this: any): void {
+  proto.playHitFlash = function combat2133HitFlash(this: any): void {
     const scene = this.scene as Phaser.Scene;
     const p = this.getWorldPosition();
-    const fx = atlasImage(scene, p.x, p.y - 5, elementFrame(this), 39);
+    const impactFrame = actionFrameByScene.get(scene) ?? elementFrame(this);
+    const fx = atlasImage(scene, p.x, p.y - 5, impactFrame, 39);
     if (this.portrait?.active) {
       this.portrait.setTintFill(0xffffff);
       scene.time.delayedCall(reducedMotion() ? 50 : 82, () => { if (this.portrait?.active) this.portrait.clearTint(); });
@@ -223,13 +252,13 @@ export function installCombat2132AtlasFallbackPatch(BattleSceneClass: any, PowVi
   }
 
   root.POWDER_COMBAT2_ATLAS_FALLBACK = {
-    version: '2.13.2',
-    mode: 'bundled-atlas-replacement',
+    version: '2.13.3',
+    mode: 'bundled-atlas-replacement+attacker-impact-identity',
     atlas: ATLAS_URL,
     frames: { fire: 0, steel: 1, water: 2, leaf: 3, earth: 4 },
     temporaryElementFallbacks: {
       lava: 'fire', lightning: 'steel', light: 'steel', ice: 'water', storm: 'water', poison: 'leaf', wind: 'leaf', dark: 'earth'
     },
-    rules: ['asset-first', 'no-primary-geometric-fx', 'adaptive-full-balanced-lite', 'persistent-status-single-overlay', 'no-combat-logic-change']
+    rules: ['asset-first', 'no-primary-geometric-fx', 'attacker-owned-hit-impact', 'adaptive-full-balanced-lite', 'persistent-status-single-overlay', 'no-combat-logic-change']
   };
 }
