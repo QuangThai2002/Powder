@@ -6,11 +6,12 @@ import { PowView } from './PowView';
 import './Combat2144BalancedVfxTestRosterPatch';
 import { installCombat2143ReadableCinematicVfxPatch } from './Combat2143ReadableCinematicVfxPatch';
 import { installCombat2145ReadableProjectilePatch } from './Combat2145ReadableProjectilePatch';
+import { installCombat2146DirectionalWindProjectilePatch } from './Combat2146DirectionalWindProjectilePatch';
 
 const PATCH_FLAG = '__powderCombat2142AssetVfxLiveInstalled';
 const ATLAS_KEY = 'combat-vfx-atlas-a';
 const PERSISTENT_FX_KEY = '__powderCombat2140PersistentFx';
-const VERSION = '2.14.5';
+const VERSION = '2.14.6';
 
 type RuntimeSnapshot = {
   version: string;
@@ -52,11 +53,11 @@ function replaceLegacyVersionText(scene: Phaser.Scene, snapshot: RuntimeSnapshot
     if (!(child instanceof Phaser.GameObjects.Text)) return;
     const text = String(child.text || '');
     if (/POWDER COMBAT 2\./.test(text)) child.setText(`POWDER COMBAT ${VERSION}`);
-    if (text.includes('CONTACT-TIMED AUDIO') || text.includes('REAL SPRITE VFX')) child.setText('LARGE READABLE PROJECTILE');
+    if (text.includes('CONTACT-TIMED AUDIO') || text.includes('REAL SPRITE VFX')) child.setText('LARGE PROJECTILE + WIND DIRECTION');
     if (/CONTACT AUDIO SYNC|ASSET VFX LIVE|VFX RECOVERY|VFX MISSING|REAL SPRITE/.test(text)) runtimeBadge = child;
   });
 
-  const label = `${VERSION} · LARGE PROJECTILE · ${snapshot.loadedTextures}/${snapshot.expectedTextures} BASE ASSET`;
+  const label = `${VERSION} · LARGE PROJECTILE + WIND DIR · ${snapshot.loadedTextures}/${snapshot.expectedTextures} BASE ASSET`;
   if (runtimeBadge) runtimeBadge.setText(label).setColor('#bff7ff').setAlpha(0.76);
   else if (['localhost', '127.0.0.1'].includes(location.hostname)) {
     scene.add.text(scene.scale.width - 18, scene.scale.height - 50, label, {
@@ -78,7 +79,7 @@ function installPersistentFxIdleHardening(PowViewClass: any): void {
   const proto = PowViewClass.prototype as any;
   const previousUpdate = proto.updateRuntime;
   if (typeof previousUpdate !== 'function') return;
-  proto.updateRuntime = function combat2145PersistentFxIdleHardening(this: any, unit: any): void {
+  proto.updateRuntime = function combat2146PersistentFxIdleHardening(this: any, unit: any): void {
     previousUpdate.call(this, unit);
     const fx = this[PERSISTENT_FX_KEY] as Phaser.GameObjects.Image | undefined;
     if (!fx?.scene) return;
@@ -92,7 +93,7 @@ function installRageSemanticGuard(PowViewClass: any): void {
   const proto = PowViewClass.prototype as any;
   const previousPulse = proto.playResourcePulse;
   if (typeof previousPulse !== 'function') return;
-  proto.playResourcePulse = function combat2145ResourceSemanticGuard(this: any, color: number): void {
+  proto.playResourcePulse = function combat2146ResourceSemanticGuard(this: any, color: number): void {
     if (color === 0x4fc8ff) return;
     previousPulse.call(this, color);
   };
@@ -106,7 +107,7 @@ export function installCombat2142AssetVfxLivePatch(BattleSceneClass: any): void 
   const proto = BattleSceneClass.prototype as any;
   const originalIntro = proto.showPreBattleIntro;
   if (typeof originalIntro === 'function') {
-    proto.showPreBattleIntro = function combat2145ProjectileIntro(this: Phaser.Scene & any, ...args: any[]): any {
+    proto.showPreBattleIntro = function combat2146ProjectileIntro(this: Phaser.Scene & any, ...args: any[]): any {
       const result = originalIntro.apply(this, args);
       const snapshot = textureSnapshot(this);
       root.POWDER_COMBAT2_ASSET_VFX_LIVE = snapshot;
@@ -125,9 +126,10 @@ export function installCombat2142AssetVfxLivePatch(BattleSceneClass: any): void 
     ready: false
   } satisfies RuntimeSnapshot;
 
-  // Keep the stable asset presentation only as a fallback. The broken 2.14.4 sprite-sheet layer is intentionally disabled.
+  // Keep 2.14.5 as the stable projectile baseline. 2.14.6 wraps only Wind.
   installCombat2143ReadableCinematicVfxPatch(BattleSceneClass, PowView, CombatPresentationDirector);
   installPersistentFxIdleHardening(PowView);
   installRageSemanticGuard(PowView);
   installCombat2145ReadableProjectilePatch(BattleSceneClass, PowView);
+  installCombat2146DirectionalWindProjectilePatch(PowView);
 }
