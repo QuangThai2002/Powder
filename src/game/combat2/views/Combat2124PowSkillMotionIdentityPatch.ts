@@ -150,8 +150,13 @@ function poolFor(scene: Phaser.Scene): EchoPoolState {
   }
   if (!state.cleanupBound) {
     state.cleanupBound = true;
-    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => cleanupPool(scene, state!));
-    scene.events.once(Phaser.Scenes.Events.DESTROY, () => cleanupPool(scene, state!));
+    const cleanup = (): void => {
+      scene.events.off(Phaser.Scenes.Events.SHUTDOWN, cleanup);
+      scene.events.off(Phaser.Scenes.Events.DESTROY, cleanup);
+      cleanupPool(scene, state!);
+    };
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanup);
+    scene.events.once(Phaser.Scenes.Events.DESTROY, cleanup);
   }
   return state;
 }
@@ -314,7 +319,7 @@ export function installCombat2124PowSkillMotionIdentityPatch(BattleSceneClass: a
   root.POWDER_COMBAT2_POW_MOTION_IDENTITY = {
     version: '2.12.4',
     mode: 'canonical-metadata-plus-pow-art',
-    performanceRevision: '2.12.8',
+    performanceRevision: '2.12.9',
     rules: [
       'real-pow-art-only',
       'role-aware-motion',
@@ -323,6 +328,7 @@ export function installCombat2124PowSkillMotionIdentityPatch(BattleSceneClass: a
       'adaptive-echo-budget',
       'scene-local-echo-pool',
       'scene-shutdown-pool-cleanup',
+      'paired-lifecycle-listener-cleanup',
       'shutdown-safe-motion-await',
       'concurrent-echo-cap',
       'no-procedural-element-symbols',
@@ -332,8 +338,8 @@ export function installCombat2124PowSkillMotionIdentityPatch(BattleSceneClass: a
   };
 
   root.POWDER_COMBAT2_ECHO_POOL = {
-    version: '2.12.7',
-    mode: 'scene-local-reuse-with-lifecycle-cleanup',
+    version: '2.12.9',
+    mode: 'scene-local-reuse-with-paired-lifecycle-cleanup',
     snapshot(scene: Phaser.Scene): { idle: number; active: number; created: number; reused: number; dropped: number } {
       const state = poolFor(scene);
       return {
