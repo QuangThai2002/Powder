@@ -3,12 +3,11 @@
 // main.ts evaluates PowderDataAdapter and creates the Phaser game.
 import '../../../js/data.js';
 import { BattleScene } from './scenes/BattleScene';
-import { installCombat2120VisualActionSystemPatch } from './views/Combat2120VisualActionSystemPatch';
-import { installCombat2121ElementalMagicStagePatch } from './views/Combat2121ElementalMagicStagePatch';
+import { installCombat2122CinematicMotionPatch } from './views/Combat2122CinematicMotionPatch';
 import { PowView } from './views/PowView';
 import './main';
 
-// Install after main.ts has applied the legacy/current presentation stack so these layers wrap
-// the final action methods instead of being overwritten by older compatibility patches.
-installCombat2120VisualActionSystemPatch(BattleScene, PowView);
-installCombat2121ElementalMagicStagePatch(BattleScene, PowView);
+// The 2.12.0/2.12.1 procedural elemental layers are intentionally not installed here anymore.
+// They remain in source temporarily as reference while real transparent VFX assets are being prepared.
+// 2.12.2 uses existing Pow artwork + camera/motion only, so no triangle/circle elemental icon is added.
+installCombat2122CinematicMotionPatch(BattleScene, PowView);
