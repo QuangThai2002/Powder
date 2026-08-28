@@ -4,9 +4,11 @@
 import '../../../js/data.js';
 import { BattleScene } from './scenes/BattleScene';
 import { installCombat2120VisualActionSystemPatch } from './views/Combat2120VisualActionSystemPatch';
+import { installCombat2121ElementalMagicStagePatch } from './views/Combat2121ElementalMagicStagePatch';
 import { PowView } from './views/PowView';
 import './main';
 
-// Install after main.ts has applied the legacy/current presentation stack so this layer wraps
+// Install after main.ts has applied the legacy/current presentation stack so these layers wrap
 // the final action methods instead of being overwritten by older compatibility patches.
 installCombat2120VisualActionSystemPatch(BattleScene, PowView);
+installCombat2121ElementalMagicStagePatch(BattleScene, PowView);
