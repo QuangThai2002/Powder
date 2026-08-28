@@ -10,6 +10,7 @@ import { installCombat2132AtlasFallbackPatch } from './views/Combat2132AtlasFall
 import { installCombat2133AtlasPresentationPatch } from './views/Combat2133AtlasPresentationPatch';
 import { installCombat2133PrimitiveGuardPatch } from './views/Combat2133PrimitiveGuardPatch';
 import { installCombat2134SourceImpactIdentityPatch } from './views/Combat2134SourceImpactIdentityPatch';
+import { installCombat2140ExactVfxPatch } from './views/Combat2140ExactVfxPatch';
 import { CombatPresentationDirector } from './views/CombatPresentationDirector';
 import { PowView } from './views/PowView';
 import './main';
@@ -20,11 +21,14 @@ import './main';
 installCombat2122CinematicMotionPatch(BattleScene, PowView);
 installCombat2123CleanDomainCinematicPatch(BattleScene);
 installCombat2124PowSkillMotionIdentityPatch(BattleScene);
-// Bundled transparent atlas owns PowView cast/travel/impact/status fallbacks.
+// Atlas A remains the exact source for Fire / Steel / Water / Leaf / Earth.
 installCombat2132AtlasFallbackPatch(BattleScene, PowView);
-// Installed after the atlas override so remaining procedural status geometry cannot resurface.
+// Remaining procedural status geometry is never allowed to become primary VFX.
 installCombat2133PrimitiveGuardPatch(PowView);
-// Removes the last procedural skill/ultimate presentation shapes while preserving UI plates.
+// Atlas presentation remains the correct base presentation for the five Atlas-A elements.
 installCombat2133AtlasPresentationPatch(CombatPresentationDirector);
-// Installed last so every target hit flash is visually owned by the Pow that actually attacked.
+// Preserve stack-safe attacker ownership for target hit flashes.
 installCombat2134SourceImpactIdentityPatch(BattleScene, PowView);
+// Install last: exact img + img2 assets replace every former family-element fallback and the
+// five temporary status stand-ins without changing combat mechanics.
+installCombat2140ExactVfxPatch(BattleScene, PowView, CombatPresentationDirector);
