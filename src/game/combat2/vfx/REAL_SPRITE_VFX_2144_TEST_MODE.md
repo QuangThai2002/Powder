@@ -1,0 +1,1 @@
+Combat2 2.14.4 test gate: real frame-based VFX only. Test roster: Tidewarden/Frostmaw/Pyroon vs Terrapup/Stormeon/Gearbit; reserves Mosshorn/Voltkit vs Aquabub/Zephyroo. This file is intentionally tiny and can be removed after the real sprite gate is verified.
