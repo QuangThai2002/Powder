@@ -151,21 +151,30 @@ function powElement(view: any): unknown {
 function installPowViewAudio(PowViewClass: any): void {
   const proto = PowViewClass.prototype as any;
   const originalAttack = proto.playAttackLunge;
+  const originalTravel = proto.playElementTravel;
   const originalHit = proto.playHit;
   const originalStatus = proto.playStatusPulse;
   const originalEnter = proto.enterField;
   const originalRetire = proto.retireFromField;
 
   if (typeof originalAttack === 'function') {
-    proto.playAttackLunge = async function combat2105Attack(this: any, targetX: number, targetY: number): Promise<void> {
+    proto.playAttackLunge = async function combat2125Attack(this: any, targetX: number, targetY: number): Promise<void> {
+      // Cast audio belongs to action start. Travel audio is bound separately to the real projectile start below.
       tone('cast', powElement(this), 0.9);
-      window.setTimeout(() => tone('travel', powElement(this), 0.9), reducedMotion() ? 20 : 72);
       await originalAttack.call(this, targetX, targetY);
     };
   }
 
+  if (typeof originalTravel === 'function') {
+    proto.playElementTravel = async function combat2125Travel(this: any, targetX: number, targetY: number): Promise<void> {
+      // Bind audio to the actual visual travel phase instead of guessing with a fixed timeout.
+      tone('travel', powElement(this), 0.9);
+      await originalTravel.call(this, targetX, targetY);
+    };
+  }
+
   if (typeof originalHit === 'function') {
-    proto.playHit = async function combat2105Hit(this: any): Promise<void> {
+    proto.playHit = async function combat2125Hit(this: any): Promise<void> {
       // Fire exactly when the target's hit reaction starts so sound and motion read as one impact.
       tone('hit', powElement(this), 1.05);
       noiseHit(powElement(this), 0.85);
@@ -174,7 +183,7 @@ function installPowViewAudio(PowViewClass: any): void {
   }
 
   if (typeof originalStatus === 'function') {
-    proto.playStatusPulse = async function combat2105Status(this: any): Promise<void> {
+    proto.playStatusPulse = async function combat2125Status(this: any): Promise<void> {
       const status = norm(this.runtimeVisualStatus);
       const support = !['dong bang', 'choang', 'te liet', 'cam lang', 'freeze', 'stun', 'paralysis', 'silence'].some((key) => status.includes(key));
       tone(support ? 'support' : 'control', powElement(this), 0.72);
@@ -183,14 +192,14 @@ function installPowViewAudio(PowViewClass: any): void {
   }
 
   if (typeof originalEnter === 'function') {
-    proto.enterField = async function combat2105Enter(this: any, x: number, y: number): Promise<void> {
+    proto.enterField = async function combat2125Enter(this: any, x: number, y: number): Promise<void> {
       tone('enter', powElement(this), 0.8);
       await originalEnter.call(this, x, y);
     };
   }
 
   if (typeof originalRetire === 'function') {
-    proto.retireFromField = async function combat2105Retire(this: any, x: number, y: number): Promise<void> {
+    proto.retireFromField = async function combat2125Retire(this: any, x: number, y: number): Promise<void> {
       tone('defeat', powElement(this), 0.95);
       await originalRetire.call(this, x, y);
     };
@@ -199,20 +208,20 @@ function installPowViewAudio(PowViewClass: any): void {
 
 function installVersionIntro(BattleSceneClass: any): void {
   const proto = BattleSceneClass.prototype as any;
-  proto.showPreBattleIntro = function combat2105Intro(this: Phaser.Scene & { startCombatFlow?: () => void }): void {
+  proto.showPreBattleIntro = function combat2125Intro(this: Phaser.Scene & { startCombatFlow?: () => void }): void {
     const { width, height } = this.scale;
     const shade = this.add.rectangle(width / 2, height / 2, width, height, 0x02080e, 0.42);
     const plate = this.add.rectangle(width / 2, height / 2, Math.min(820, width * 0.84), 144, 0x081d2a, 0.96).setStrokeStyle(2, 0xd7b86c, 0.78);
-    const title = this.add.text(width / 2, height / 2 - 22, 'POWDER COMBAT 2.10.5', {
+    const title = this.add.text(width / 2, height / 2 - 22, 'POWDER COMBAT 2.12.5', {
       fontFamily: COMBAT_DISPLAY_FONT, fontSize: height > width ? '31px' : '36px', color: '#fff6df', fontStyle: 'bold'
     }).setOrigin(0.5);
-    const sub = this.add.text(width / 2, height / 2 + 24, 'IMPACT AUDIO · HIT SYNC · LIGHTWEIGHT SFX', {
+    const sub = this.add.text(width / 2, height / 2 + 24, 'CONTACT-TIMED AUDIO · CAST → TRAVEL → HIT', {
       fontFamily: COMBAT_DISPLAY_FONT, fontSize: '13px', color: '#bfefff', fontStyle: 'bold'
     }).setOrigin(0.5);
     const intro = this.add.container(0, 0, [shade, plate, title, sub]).setDepth(108);
     this.tweens.add({ targets: intro, alpha: 0, delay: 650, duration: 220, ease: 'Quad.easeOut', onComplete: () => { intro.destroy(true); this.startCombatFlow?.(); } });
     if (['localhost', '127.0.0.1'].includes(location.hostname)) {
-      this.add.text(width - 18, height - 58, '2.10.5 · AUDIO IMPACT SYNC', {
+      this.add.text(width - 18, height - 58, '2.12.5 · CONTACT AUDIO SYNC', {
         fontFamily: COMBAT_DISPLAY_FONT, fontSize: '11px', color: '#dff8ff', fontStyle: 'bold', backgroundColor: '#04101899', padding: { x: 7, y: 4 }
       }).setOrigin(1, 1).setDepth(99).setAlpha(0.72);
     }
@@ -229,8 +238,14 @@ export function installCombat2105AudioImpactPatch(BattleSceneClass: any, PowView
 
   const state = rootState();
   root.POWDER_COMBAT2_AUDIO_IMPACT = {
-    version: '2.10.5',
-    mode: 'web-audio-one-shot-hit-sync',
+    version: '2.12.5',
+    mode: 'event-bound-cast-travel-hit-sync',
+    timing: {
+      cast: 'attack-start',
+      travel: 'projectile-start',
+      hit: 'target-reaction-start'
+    },
+    performance: ['no-fixed-travel-timer', 'one-shot-web-audio', 'no-frame-loop'],
     get enabled(): boolean { return state.enabled; },
     set enabled(value: boolean) { state.enabled = Boolean(value); },
     get volume(): number { return state.volume; },
