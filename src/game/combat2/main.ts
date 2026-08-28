@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { BattleScene } from './scenes/BattleScene';
-import { installCombat2100TestRoster } from './data/Combat2100TestRoster';
+import { COMBAT2_STARTER_ROSTER } from './data/PowderDataAdapter';
 import { runCombat2SmokeRegression } from './systems/CombatRegression';
 import { runCombatFinalRegression } from './systems/CombatFinalRegression';
 import { runCombatPresentationRegression } from './systems/CombatPresentationRegression';
@@ -40,7 +40,12 @@ import { PowView } from './views/PowView';
 const logicalWidth = 1600;
 const logicalHeight = 900;
 const isLocalDev = ['localhost', '127.0.0.1'].includes(window.location.hostname);
-const testRosterReport = installCombat2100TestRoster();
+const testRosterReport = {
+  player: COMBAT2_STARTER_ROSTER.player.map((pow) => pow.id),
+  enemy: COMBAT2_STARTER_ROSTER.enemy.map((pow) => pow.id),
+  requested: [...COMBAT2_STARTER_ROSTER.player, ...COMBAT2_STARTER_ROSTER.enemy].map((pow) => pow.id)
+};
+(globalThis as any).POWDER_COMBAT2_TEST_ROSTER = { version: '2.11.1', mode: 'canonical-coverage-rotation', ...testRosterReport };
 
 installCombat27UiPatch(BattleScene, PowView);
 installCombat28MultiTargetPatch(BattleScene);
