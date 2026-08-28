@@ -1,6 +1,9 @@
 import Phaser from 'phaser';
 import { allExactCombatVfxSpecs } from '../vfx/Combat2140ExactVfxRegistry';
+import { CombatPresentationDirector } from './CombatPresentationDirector';
 import { COMBAT_DISPLAY_FONT } from './CombatTheme';
+import { PowView } from './PowView';
+import { installCombat2143ReadableCinematicVfxPatch } from './Combat2143ReadableCinematicVfxPatch';
 
 const PATCH_FLAG = '__powderCombat2142AssetVfxLiveInstalled';
 const ATLAS_KEY = 'combat-vfx-atlas-a';
@@ -104,4 +107,8 @@ export function installCombat2142AssetVfxLivePatch(BattleSceneClass: any): void 
     missingTextures: expectedTextureKeys(),
     ready: false
   } satisfies RuntimeSnapshot;
+
+  // 2.14.3 is installed from here so it still runs before new Phaser.Game().
+  // This keeps preload/action wiring deterministic while avoiding another bootstrap timing race.
+  installCombat2143ReadableCinematicVfxPatch(BattleSceneClass, PowView, CombatPresentationDirector);
 }
