@@ -32,23 +32,30 @@ function textureSnapshot(scene: Phaser.Scene): RuntimeSnapshot {
   };
 }
 
+function walkGameObjects(items: Phaser.GameObjects.GameObject[], visit: (child: Phaser.GameObjects.GameObject) => void): void {
+  for (const child of items) {
+    visit(child);
+    const nested = (child as any).list;
+    if (Array.isArray(nested) && nested.length) walkGameObjects(nested as Phaser.GameObjects.GameObject[], visit);
+  }
+}
+
 function replaceLegacyVersionText(scene: Phaser.Scene, snapshot: RuntimeSnapshot): void {
-  const list = (scene.children?.list || []) as Phaser.GameObjects.GameObject[];
   let runtimeBadge: Phaser.GameObjects.Text | null = null;
 
-  for (const child of list) {
-    if (!(child instanceof Phaser.GameObjects.Text)) continue;
+  walkGameObjects((scene.children?.list || []) as Phaser.GameObjects.GameObject[], (child) => {
+    if (!(child instanceof Phaser.GameObjects.Text)) return;
     const text = String(child.text || '');
     if (text.includes('POWDER COMBAT 2.12.5')) {
       child.setText(`POWDER COMBAT ${VERSION}`);
-      continue;
+      return;
     }
     if (text.includes('CONTACT-TIMED AUDIO')) {
       child.setText('ASSET VFX · CAST → TRAVEL → IMPACT · CONTACT AUDIO');
-      continue;
+      return;
     }
     if (text.includes('2.12.5 · CONTACT AUDIO SYNC')) runtimeBadge = child;
-  }
+  });
 
   const label = snapshot.ready
     ? `${VERSION} · ASSET VFX LIVE · ${snapshot.loadedTextures}/${snapshot.expectedTextures}`
