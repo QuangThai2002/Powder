@@ -1,10 +1,68 @@
 {
-  "version": "Combat2 2.13.1",
-  "purpose": "Bundled atlas mapping for temporary asset-first Combat2 VFX preview. Sources are curated from both user-provided img and img2 libraries.",
+  "version": "Combat2 2.13.3",
+  "purpose": "Truthful runtime manifest for asset-first Combat2 VFX curated from the user-provided img and img2 libraries.",
+  "runtime": {
+    "mode": "bundled-atlas-a-with-temporary-family-fallbacks",
+    "activeAtlases": ["elementsA"],
+    "deadPerFilePreviewLoader": false,
+    "proceduralPrimaryFx": false
+  },
   "atlases": {
-    "elementsA": { "file": "vfx-elements-a.webp", "frameWidth": 224, "frameHeight": 224, "frames": ["fire.impact","steel.impact","water.impact","leaf.impact","earth.impact"] },
-    "elementsB": { "file": "vfx-elements-b.webp", "frameWidth": 224, "frameHeight": 224, "frames": ["wind.impact","lightning.impact","lava.impact","storm.impact","ice.impact"] },
-    "elementsC": { "file": "vfx-elements-c.webp", "frameWidth": 224, "frameHeight": 224, "frames": ["poison.impact","light.impact","dark.impact"] },
-    "status": { "file": "vfx-status.webp", "frameWidth": 224, "frameHeight": 224, "frames": ["status.burn","status.freeze","status.stun","status.heal","status.shield"] }
-  }
+    "elementsA": {
+      "state": "active",
+      "file": "vfx-elements-a.webp",
+      "frameWidth": 224,
+      "frameHeight": 224,
+      "frames": ["fire.impact", "steel.impact", "water.impact", "leaf.impact", "earth.impact"]
+    },
+    "elementsB": {
+      "state": "prepared-not-bundled",
+      "file": "vfx-elements-b.webp",
+      "frameWidth": 224,
+      "frameHeight": 224,
+      "frames": ["wind.impact", "lightning.impact", "lava.impact", "storm.impact", "ice.impact"]
+    },
+    "elementsC": {
+      "state": "prepared-not-bundled",
+      "file": "vfx-elements-c.webp",
+      "frameWidth": 224,
+      "frameHeight": 224,
+      "frames": ["poison.impact", "light.impact", "dark.impact"]
+    },
+    "status": {
+      "state": "prepared-not-bundled",
+      "file": "vfx-status.webp",
+      "frameWidth": 224,
+      "frameHeight": 224,
+      "frames": ["status.burn", "status.freeze", "status.stun", "status.heal", "status.shield"]
+    }
+  },
+  "temporaryFallbacks": {
+    "lava": "fire",
+    "lightning": "steel",
+    "light": "steel",
+    "ice": "water",
+    "storm": "water",
+    "poison": "leaf",
+    "wind": "leaf",
+    "dark": "earth",
+    "status.burn": "fire",
+    "status.freeze": "water",
+    "status.stun": "steel",
+    "status.heal": "leaf",
+    "status.shield": "steel"
+  },
+  "nextReplacementOrder": [
+    "lightning.impact",
+    "ice.impact",
+    "poison.impact",
+    "wind.impact",
+    "light.impact",
+    "dark.impact",
+    "status.burn",
+    "status.freeze",
+    "status.stun",
+    "status.heal",
+    "status.shield"
+  ]
 }
