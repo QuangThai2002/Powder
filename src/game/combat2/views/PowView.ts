@@ -13,6 +13,10 @@ import {
   type PowVfxAnchor,
   type PowVfxLayer
 } from '../vfx/CombatNightVfxLayout';
+import {
+  PersistentPowStatusVfx,
+  type PersistentPowStatusKind
+} from '../vfx/PersistentPowStatusVfx';
 import { COMBAT_BODY_FONT, COMBAT_COLORS, COMBAT_DISPLAY_FONT } from './CombatTheme';
 
 interface PowViewOptions {
@@ -31,6 +35,7 @@ export class PowView {
   private readonly fieldScale: number;
   private readonly reducedMotion: boolean;
   private readonly barWidth: number;
+  private readonly persistentStatusVfx: PersistentPowStatusVfx;
 
   private portrait!: Phaser.GameObjects.Image;
   private hpBar!: Phaser.GameObjects.Rectangle;
@@ -62,6 +67,7 @@ export class PowView {
     this.fieldScale = scene.scale.height > scene.scale.width ? 0.74 : 1;
     this.reducedMotion = typeof window !== 'undefined' && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
     this.container = scene.add.container(x, y);
+    this.persistentStatusVfx = new PersistentPowStatusVfx(scene);
     this.build();
     this.container.setScale(this.fieldScale);
   }
@@ -101,6 +107,7 @@ export class PowView {
     this.hasRuntimeSnapshot = true;
 
     if (!unit.alive) {
+      this.persistentStatusVfx.clear();
       this.runtimeVisualStatus = 'HẠ GỤC';
       this.container.setAlpha(0.28);
       this.controlHistoryText.setVisible(false);
@@ -113,6 +120,7 @@ export class PowView {
     }
 
     this.container.setAlpha(unit.fieldSlot === null ? 0.78 : 1);
+    this.syncPersistentStatusVfx(unit);
     const runtimeStatus = this.getRuntimeStatus(unit);
     this.runtimeVisualStatus = runtimeStatus;
     this.statusText.setText(runtimeStatus).setBackgroundColor(this.statusBackground(runtimeStatus)).setVisible(Boolean(runtimeStatus));
@@ -151,6 +159,7 @@ export class PowView {
   }
 
   async retireFromField(x: number, y: number): Promise<void> {
+    this.persistentStatusVfx.clear();
     await this.playDefeatBurst();
     await this.tweenPromise({ targets: this.container, x, y, scaleX: 0.42, scaleY: 0.42, alpha: 0.18, duration: 290, ease: 'Quad.easeIn' });
   }
@@ -195,14 +204,37 @@ export class PowView {
 
   getWorldPosition(): Phaser.Math.Vector2 { return new Phaser.Math.Vector2(this.container.x, this.container.y); }
 
-  private getVfxAnchor(anchor: PowVfxAnchor): Phaser.Math.Vector2 {
+  private getVfxLayout() {
     const liveScale = Phaser.Math.Clamp(
       Number.isFinite(this.container.scaleX) ? Math.abs(this.container.scaleX) : this.fieldScale,
       0.35,
       1
     );
-    const layout = createPowVfxLayout(this.cardWidth, this.cardHeight, liveScale);
-    return powVfxWorldAnchor(this.container.x, this.container.y, layout, anchor);
+    return createPowVfxLayout(this.cardWidth, this.cardHeight, liveScale);
+  }
+
+  private getVfxAnchor(anchor: PowVfxAnchor): Phaser.Math.Vector2 {
+    return powVfxWorldAnchor(this.container.x, this.container.y, this.getVfxLayout(), anchor);
+  }
+
+  private syncPersistentStatusVfx(unit: CombatUnitState): void {
+    if (!unit.alive || unit.fieldSlot === null) {
+      this.persistentStatusVfx.clear();
+      return;
+    }
+
+    let kind: PersistentPowStatusKind | null = null;
+    if (unit.controlActionsRemaining > 0 && unit.controlStatus === 'freeze') kind = 'freeze';
+    else if (unit.controlActionsRemaining > 0 || unit.paralysisActionsRemaining > 0) kind = 'stun';
+    else if (unit.poisonActionsRemaining > 0) kind = 'poison';
+    else if (unit.burnActionsRemaining > 0) kind = 'burn';
+
+    this.persistentStatusVfx.setStatus(
+      kind,
+      this.container.x,
+      this.container.y,
+      this.getVfxLayout()
+    );
   }
 
   private build(): void {
