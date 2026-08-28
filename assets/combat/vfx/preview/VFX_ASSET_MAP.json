@@ -1,11 +1,12 @@
 {
-  "version": "Combat2 2.13.3",
+  "version": "Combat2 2.13.4",
   "purpose": "Truthful runtime manifest for asset-first Combat2 VFX curated from the user-provided img and img2 libraries.",
   "runtime": {
     "mode": "bundled-atlas-a-with-temporary-family-fallbacks",
     "activeAtlases": ["elementsA"],
     "deadPerFilePreviewLoader": false,
-    "proceduralPrimaryFx": false
+    "proceduralPrimaryFx": false,
+    "sourceImpactOwnership": "attacker-element"
   },
   "atlases": {
     "elementsA": {
