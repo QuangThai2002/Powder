@@ -23,6 +23,7 @@ type EchoPoolState = {
   created: number;
   reused: number;
   dropped: number;
+  cleanupBound: boolean;
 };
 
 interface PatchableScene extends Phaser.Scene {
@@ -127,11 +128,30 @@ function world(view: any): Phaser.Math.Vector2 {
   catch { return new Phaser.Math.Vector2(view?.container?.x || 0, view?.container?.y || 0); }
 }
 
+function cleanupPool(scene: Phaser.Scene, state: EchoPoolState): void {
+  for (const ghost of state.active) {
+    scene.tweens.killTweensOf(ghost);
+    if (ghost.scene) ghost.destroy();
+  }
+  for (const ghost of state.idle) {
+    scene.tweens.killTweensOf(ghost);
+    if (ghost.scene) ghost.destroy();
+  }
+  state.active.clear();
+  state.idle.length = 0;
+  echoPools.delete(scene);
+}
+
 function poolFor(scene: Phaser.Scene): EchoPoolState {
   let state = echoPools.get(scene);
   if (!state) {
-    state = { idle: [], active: new Set(), created: 0, reused: 0, dropped: 0 };
+    state = { idle: [], active: new Set(), created: 0, reused: 0, dropped: 0, cleanupBound: false };
     echoPools.set(scene, state);
+  }
+  if (!state.cleanupBound) {
+    state.cleanupBound = true;
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => cleanupPool(scene, state!));
+    scene.events.once(Phaser.Scenes.Events.DESTROY, () => cleanupPool(scene, state!));
   }
   return state;
 }
@@ -155,6 +175,7 @@ function portraitGhost(
   let ghost = state.idle.pop();
   if (ghost) {
     state.reused += 1;
+    scene.tweens.killTweensOf(ghost);
     ghost.setTexture(portrait.texture.key, portrait.frame?.name);
   } else {
     ghost = scene.add.image(0, 0, portrait.texture.key, portrait.frame?.name);
@@ -278,7 +299,7 @@ export function installCombat2124PowSkillMotionIdentityPatch(BattleSceneClass: a
   root.POWDER_COMBAT2_POW_MOTION_IDENTITY = {
     version: '2.12.4',
     mode: 'canonical-metadata-plus-pow-art',
-    performanceRevision: '2.12.6',
+    performanceRevision: '2.12.7',
     rules: [
       'real-pow-art-only',
       'role-aware-motion',
@@ -286,6 +307,7 @@ export function installCombat2124PowSkillMotionIdentityPatch(BattleSceneClass: a
       'canonical-hits-status-mechanic-aware',
       'adaptive-echo-budget',
       'scene-local-echo-pool',
+      'scene-shutdown-pool-cleanup',
       'concurrent-echo-cap',
       'no-procedural-element-symbols',
       'no-combat-logic-change',
@@ -294,8 +316,8 @@ export function installCombat2124PowSkillMotionIdentityPatch(BattleSceneClass: a
   };
 
   root.POWDER_COMBAT2_ECHO_POOL = {
-    version: '2.12.6',
-    mode: 'scene-local-reuse',
+    version: '2.12.7',
+    mode: 'scene-local-reuse-with-lifecycle-cleanup',
     snapshot(scene: Phaser.Scene): { idle: number; active: number; created: number; reused: number; dropped: number } {
       const state = poolFor(scene);
       return {
