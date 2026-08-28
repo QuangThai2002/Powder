@@ -38,10 +38,6 @@ function reducedMotion(): boolean {
   return typeof window !== 'undefined' && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
 }
 
-function ownElement(view: any): string {
-  return `${view?.pow?.elementKey || ''} ${view?.pow?.element || ''}`;
-}
-
 function abilityText(ability: CombatAbility | undefined): string {
   if (!ability) return '';
   return plain(`${ability.name || ''} ${ability.type || ''} ${ability.status || ''} ${ability.mechanic || ''} ${ability.description || ''} ${ability.target || ''}`);
@@ -243,7 +239,6 @@ export function installCombat2141SemanticVfxPatch(
     if (typeof previousStatusPulse === 'function') await previousStatusPulse.call(this);
   };
 
-  const previousSupportAura = powProto.playSupportAura;
   powProto.playSupportAura = async function combat2141SupportAura(this: any): Promise<void> {
     const scene = this.scene as Phaser.Scene;
     const action = activeAction.get(scene);
@@ -252,10 +247,13 @@ export function installCombat2141SemanticVfxPatch(
       const p = this.getWorldPosition() as Phaser.Math.Vector2;
       if (await playDedicatedBurst(scene, specs, p.x, p.y + 10, 36, false)) return;
     }
-    // Do not call the old always-Heal support aura for generic buffs.
-    if (!action && runtimeDedicatedSpec(this.runtimeVisualStatus) && typeof previousSupportAura === 'function') {
-      await previousSupportAura.call(this);
+
+    const runtimeSpec = runtimeDedicatedSpec(this.runtimeVisualStatus);
+    if (runtimeSpec) {
+      const p = this.getWorldPosition() as Phaser.Math.Vector2;
+      await playDedicatedBurst(scene, [runtimeSpec], p.x, p.y + 10, 36, false);
     }
+    // Generic support intentionally has no second pseudo-Heal layer.
   };
 
   const presentationProto = CombatPresentationDirectorClass.prototype as any;
