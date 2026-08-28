@@ -1,11 +1,12 @@
 {
-  "version": "Combat2 2.14.0",
+  "version": "Combat2 2.14.1",
   "purpose": "Truthful runtime manifest for asset-first Combat2 VFX curated from both user-provided img and img2 libraries.",
   "runtime": {
-    "mode": "exact-element-and-status-assets",
+    "mode": "exact-element-and-status-assets-with-semantic-support-routing",
     "proceduralPrimaryFx": false,
     "deadPerFilePreviewLoader": false,
     "sourceImpactOwnership": "attacker-element",
+    "supportVisualOwnership": "ability-metadata",
     "adaptiveFx": ["full", "balanced", "lite"],
     "temporaryFamilyElementFallbacks": []
   },
@@ -41,5 +42,17 @@
       "familyFallbackRemaining": []
     }
   },
-  "qualityNote": "Standalone replacements are lightweight 48x48 WebP runtime proxies derived from the original transparent img/img2 artwork for immediate testing. Their registry paths are stable, so higher-resolution replacements can overwrite the same files later without rewriting combat logic."
+  "semanticRouting": {
+    "shield": "status.shield",
+    "heal": "status.heal",
+    "reviveTemporary": "status.heal",
+    "freeze": "status.freeze",
+    "stunOrParalysis": "status.stun",
+    "burn": "status.burn",
+    "poison": "poison.impact",
+    "genericBuff": "caster-element",
+    "selfUltimate": "ability-metadata-first",
+    "hybridHealShieldFullTier": "two-layer-allowed"
+  },
+  "qualityNote": "The 8 standalone element replacements and 5 status replacements are still lightweight 48x48 WebP runtime proxies derived from the original transparent img/img2 artwork. A higher-resolution binary trial was intentionally not attached because its Git blob checksum did not match the generated source. Stable file paths are preserved so verified higher-resolution assets can overwrite them later without rewriting combat logic."
 }
