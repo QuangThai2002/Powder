@@ -35,6 +35,7 @@ import { installCombat2104PowSkillSignaturePatch } from './views/Combat2104PowSk
 import { installCombat2105AudioImpactPatch } from './views/Combat2105AudioImpactPatch';
 import { installCombat2106AdaptiveFxPatch } from './views/Combat2106AdaptiveFxPatch';
 import { installCombat2109BattleEndPatch } from './views/Combat2109BattleEndPatch';
+import { installCombat2112LegacyHudBridgePatch } from './views/Combat2112LegacyHudBridgePatch';
 import { PowView } from './views/PowView';
 
 const logicalWidth = 1600;
@@ -45,7 +46,7 @@ const testRosterReport = {
   enemy: COMBAT2_STARTER_ROSTER.enemy.map((pow) => pow.id),
   requested: [...COMBAT2_STARTER_ROSTER.player, ...COMBAT2_STARTER_ROSTER.enemy].map((pow) => pow.id)
 };
-(globalThis as any).POWDER_COMBAT2_TEST_ROSTER = { version: '2.11.1', mode: 'canonical-coverage-rotation', ...testRosterReport };
+(globalThis as any).POWDER_COMBAT2_TEST_ROSTER = { version: '2.11.2', mode: 'canonical-coverage-rotation+legacy-ui-bridge', ...testRosterReport };
 
 installCombat27UiPatch(BattleScene, PowView);
 installCombat28MultiTargetPatch(BattleScene);
@@ -68,6 +69,7 @@ installCombat2104PowSkillSignaturePatch(BattleScene);
 installCombat2105AudioImpactPatch(BattleScene, PowView);
 installCombat2106AdaptiveFxPatch(BattleScene);
 installCombat2109BattleEndPatch(BattleScene);
+installCombat2112LegacyHudBridgePatch(BattleScene);
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO, parent: 'powder-combat2', width: logicalWidth, height: logicalHeight, backgroundColor: '#08131f',
@@ -115,7 +117,8 @@ if (isLocalDev) {
         powSignature: (globalThis as any).POWDER_COMBAT2_POW_SIGNATURE?.version ?? 'missing',
         audioImpact: (globalThis as any).POWDER_COMBAT2_AUDIO_IMPACT?.version ?? 'missing',
         performance: (globalThis as any).POWDER_COMBAT2_PERFORMANCE?.version ?? 'missing',
-        battleEnd: (globalThis as any).POWDER_COMBAT2_BATTLE_END?.version ?? 'missing'
+        battleEnd: (globalThis as any).POWDER_COMBAT2_BATTLE_END?.version ?? 'missing',
+        legacyUiBridge: (globalThis as any).POWDER_COMBAT2_LEGACY_UI_BRIDGE?.version ?? 'missing'
       });
     } catch (error) { console.error('[Combat2 Regression FAIL - NON BLOCKING]', error); }
   });
