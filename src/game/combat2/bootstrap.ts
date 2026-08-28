@@ -5,6 +5,7 @@ import '../../../js/data.js';
 import { BattleScene } from './scenes/BattleScene';
 import { installCombat2122CinematicMotionPatch } from './views/Combat2122CinematicMotionPatch';
 import { installCombat2123CleanDomainCinematicPatch } from './views/Combat2123CleanDomainCinematicPatch';
+import { installCombat2124PowSkillMotionIdentityPatch } from './views/Combat2124PowSkillMotionIdentityPatch';
 import { PowView } from './views/PowView';
 import './main';
 
@@ -15,3 +16,6 @@ installCombat2122CinematicMotionPatch(BattleScene, PowView);
 // 2.12.3 removes the old procedural Lãnh Địa motif from the visible stage and uses
 // camera + atmosphere + typography only until real domain assets are available.
 installCombat2123CleanDomainCinematicPatch(BattleScene);
+// 2.12.4 deepens per-Pow skill identity using canonical role/skill metadata and the
+// Pow artwork already loaded by PowView. It only primes presentation before the existing action.
+installCombat2124PowSkillMotionIdentityPatch(BattleScene);
