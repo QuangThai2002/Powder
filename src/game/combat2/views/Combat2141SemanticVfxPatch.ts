@@ -17,8 +17,27 @@ type SemanticAction = {
   elementKey: string;
   slot: AbilitySlot;
 };
+type SemanticActionContext = {
+  action: SemanticAction;
+  previous?: SemanticActionContext;
+  closed: boolean;
+};
 
-const activeAction = new WeakMap<Phaser.Scene, SemanticAction>();
+const activeActionContext = new WeakMap<Phaser.Scene, SemanticActionContext>();
+
+function currentAction(scene: Phaser.Scene): SemanticAction | undefined {
+  let context = activeActionContext.get(scene);
+  while (context?.closed) context = context.previous;
+  return context?.action;
+}
+
+function closeActionContext(scene: Phaser.Scene, context: SemanticActionContext): void {
+  context.closed = true;
+  let top = activeActionContext.get(scene);
+  while (top?.closed) top = top.previous;
+  if (top) activeActionContext.set(scene, top);
+  else activeActionContext.delete(scene);
+}
 
 function plain(value: unknown): string {
   return String(value || '')
@@ -221,21 +240,22 @@ export function installCombat2141SemanticVfxPatch(
       target: any,
       slot: AbilitySlot
     ): Promise<void> {
-      const previous = activeAction.get(this);
       const ability: CombatAbility = slot === 'ultimate'
         ? actor.pow.abilities.ultimate
         : actor.pow.abilities.skills[slot];
-      activeAction.set(this, {
-        actorId: String(actor?.instanceId || ''),
-        ability,
-        elementKey: String(actor?.pow?.elementKey || actor?.pow?.element || ''),
-        slot
-      });
+      const context: SemanticActionContext = {
+        action: {
+          actorId: String(actor?.instanceId || ''),
+          ability,
+          elementKey: String(actor?.pow?.elementKey || actor?.pow?.element || ''),
+          slot
+        },
+        previous: activeActionContext.get(this),
+        closed: false
+      };
+      activeActionContext.set(this, context);
       try { await previousAbility.call(this, actor, target, slot); }
-      finally {
-        if (previous) activeAction.set(this, previous);
-        else activeAction.delete(this);
-      }
+      finally { closeActionContext(this, context); }
     };
   }
 
@@ -255,7 +275,7 @@ export function installCombat2141SemanticVfxPatch(
       }
     }
 
-    const action = activeAction.get(scene);
+    const action = currentAction(scene);
     const dedicated = action ? dedicatedAbilitySpecs(action.ability) : [];
     if (dedicated.length > 0) {
       const p = this.getWorldPosition() as Phaser.Math.Vector2;
@@ -278,7 +298,7 @@ export function installCombat2141SemanticVfxPatch(
 
   powProto.playSupportAura = async function combat2141SupportAura(this: any): Promise<void> {
     const scene = this.scene as Phaser.Scene;
-    const action = activeAction.get(scene);
+    const action = currentAction(scene);
     const specs = action ? dedicatedAbilitySpecs(action.ability) : [];
     if (specs.length > 0) {
       const p = this.getWorldPosition() as Phaser.Math.Vector2;
@@ -308,7 +328,7 @@ export function installCombat2141SemanticVfxPatch(
     }
 
     const scene = this.scene as Phaser.Scene;
-    const action = activeAction.get(scene);
+    const action = currentAction(scene);
     const specs = action ? dedicatedAbilitySpecs(action.ability) : [];
     const p = targetView.getWorldPosition() as Phaser.Math.Vector2;
 
@@ -337,6 +357,7 @@ export function installCombat2141SemanticVfxPatch(
       'hybrid-heal-shield-can-layer-on-full-tier',
       'shutdown-safe-dedicated-vfx-tweens',
       'teardown-safe-dedicated-vfx-creation',
+      'out-of-order-action-context-safe',
       'no-combat-logic-change'
     ]
   };
