@@ -7,7 +7,7 @@ import { installCombat2143ReadableCinematicVfxPatch } from './Combat2143Readable
 
 const PATCH_FLAG = '__powderCombat2142AssetVfxLiveInstalled';
 const ATLAS_KEY = 'combat-vfx-atlas-a';
-const VERSION = '2.14.2';
+const VERSION = '2.14.3';
 
 type RuntimeSnapshot = {
   version: string;
@@ -54,7 +54,7 @@ function replaceLegacyVersionText(scene: Phaser.Scene, snapshot: RuntimeSnapshot
       return;
     }
     if (text.includes('CONTACT-TIMED AUDIO')) {
-      child.setText('ASSET VFX · CAST → TRAVEL → IMPACT · CONTACT AUDIO');
+      child.setText('CINEMATIC ASSET VFX · CAST → TRAVEL → IMPACT → LINGER');
       return;
     }
     if (text.includes('2.12.5 · CONTACT AUDIO SYNC')) runtimeBadge = child;
@@ -62,8 +62,8 @@ function replaceLegacyVersionText(scene: Phaser.Scene, snapshot: RuntimeSnapshot
 
   const label = snapshot.ready
     ? `${VERSION} · ASSET VFX LIVE · ${snapshot.loadedTextures}/${snapshot.expectedTextures}`
-    : `${VERSION} · VFX MISSING · ${snapshot.loadedTextures}/${snapshot.expectedTextures}`;
-  const color = snapshot.ready ? '#aef7d3' : '#ffb38c';
+    : `${VERSION} · VFX RECOVERY · ${snapshot.loadedTextures}/${snapshot.expectedTextures}`;
+  const color = snapshot.ready ? '#aef7d3' : '#ffd18c';
 
   if (runtimeBadge) {
     runtimeBadge.setText(label).setColor(color).setAlpha(0.9);
@@ -92,8 +92,8 @@ export function installCombat2142AssetVfxLivePatch(BattleSceneClass: any): void 
       const snapshot = textureSnapshot(this);
       root.POWDER_COMBAT2_ASSET_VFX_LIVE = snapshot;
       replaceLegacyVersionText(this, snapshot);
-      if (!snapshot.ready) console.warn('[Combat2 2.14.2 VFX preload incomplete]', snapshot.missingTextures);
-      else console.info('[Combat2 2.14.2 Asset VFX LIVE]', snapshot);
+      if (!snapshot.ready) console.warn('[Combat2 2.14.3 VFX preload incomplete - recovery/fallback active]', snapshot.missingTextures);
+      else console.info('[Combat2 2.14.3 Asset VFX LIVE]', snapshot);
       return result;
     };
   }
