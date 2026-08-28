@@ -30,7 +30,6 @@ import { installCombat2101UltimateCinematicPatch } from './views/Combat2101Ultim
 import { installCombat2101VersionPatch } from './views/Combat2101VersionPatch';
 import { installCombat2102ArenaFocusPatch } from './views/Combat2102ArenaFocusPatch';
 import { installCombat2103DomainStagePatch } from './views/Combat2103DomainStagePatch';
-import { installCombat2104PowSkillSignaturePatch } from './views/Combat2104PowSkillSignaturePatch';
 import { installCombat2105AudioImpactPatch } from './views/Combat2105AudioImpactPatch';
 import { installCombat2106AdaptiveFxPatch } from './views/Combat2106AdaptiveFxPatch';
 import { installCombat2109BattleEndPatch } from './views/Combat2109BattleEndPatch';
@@ -121,15 +120,14 @@ installCombat293LegacyDomainTickPatch(BattleScene);
 installCombat294DomainControlsPatch(BattleScene);
 installCombat295LegacyDomainParityPatch();
 installCombat296VersionPatch(BattleScene);
-// Combat 2.9.8/2.9.9 procedural action/status shapes are intentionally retired.
-// Combat 2.13.0 installs the asset-first replacement from bootstrap after this core stack.
+// Combat 2.9.8/2.9.9 and 2.10.4 procedural action/status/role-glyph FX are intentionally retired.
+// Combat 2.12.4 supplies Pow-art motion identity; Combat 2.13.0 supplies real VFX assets.
 installCombat2100ReserveFlowPatch(BattleScene, PowView);
 installCombat2101UltimateCinematicPatch(CombatPresentationDirector);
 installCombat2101VersionPatch(BattleScene);
 installCombat2102ArenaFocusPatch(BattleScene, PowView);
 installCombat2103DomainStagePatch(BattleScene);
 installCombat2114DomainOwnershipPatch(BattleScene);
-installCombat2104PowSkillSignaturePatch(BattleScene);
 installCombat2105AudioImpactPatch(BattleScene, PowView);
 installCombat2106AdaptiveFxPatch(BattleScene);
 installCombat2109BattleEndPatch(BattleScene);
@@ -182,7 +180,7 @@ if (isLocalDev) {
         arenaFocus: (globalThis as any).POWDER_COMBAT2_ARENA_FOCUS?.version ?? 'missing',
         domainStage: (globalThis as any).POWDER_COMBAT2_DOMAIN_STAGE?.version ?? 'missing',
         domainOwnership: (globalThis as any).POWDER_COMBAT2_DOMAIN_OWNERSHIP?.version ?? 'missing',
-        powSignature: (globalThis as any).POWDER_COMBAT2_POW_SIGNATURE?.version ?? 'missing',
+        powSignature: (globalThis as any).POWDER_COMBAT2_POW_SIGNATURE?.version ?? 'retired-2.13.0',
         audioImpact: (globalThis as any).POWDER_COMBAT2_AUDIO_IMPACT?.version ?? 'missing',
         performance: (globalThis as any).POWDER_COMBAT2_PERFORMANCE?.version ?? 'missing',
         battleEnd: (globalThis as any).POWDER_COMBAT2_BATTLE_END?.version ?? 'missing',
