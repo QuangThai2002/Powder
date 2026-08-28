@@ -116,13 +116,35 @@ function addImage(
 function tween(scene: Phaser.Scene, config: Phaser.Types.Tweens.TweenBuilderConfig): Promise<void> {
   return new Promise((resolve) => {
     let settled = false;
+    let activeTween: Phaser.Tweens.Tween | null = null;
+
+    const cleanup = (): void => {
+      scene.events.off(Phaser.Scenes.Events.SHUTDOWN, abort);
+      scene.events.off(Phaser.Scenes.Events.DESTROY, abort);
+    };
     const finish = (): void => {
       if (settled) return;
       settled = true;
+      cleanup();
       resolve();
     };
-    try { scene.tweens.add({ ...config, onComplete: finish }); }
-    catch { finish(); }
+    const abort = (): void => {
+      if (settled) return;
+      try { activeTween?.stop(); } catch { /* scene teardown can already own the tween manager */ }
+      finish();
+    };
+
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, abort);
+    scene.events.once(Phaser.Scenes.Events.DESTROY, abort);
+    try {
+      activeTween = scene.tweens.add({
+        ...config,
+        onComplete: finish,
+        onStop: finish
+      });
+    } catch {
+      finish();
+    }
   });
 }
 
@@ -298,6 +320,7 @@ export function installCombat2141SemanticVfxPatch(
       'generic-buff-uses-caster-element',
       'self-ultimate-uses-ability-semantics',
       'hybrid-heal-shield-can-layer-on-full-tier',
+      'shutdown-safe-dedicated-vfx-tweens',
       'no-combat-logic-change'
     ]
   };
