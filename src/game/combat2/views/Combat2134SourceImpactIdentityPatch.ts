@@ -34,6 +34,20 @@ function frameForElement(value: unknown): number {
   return 4;
 }
 
+function setActionContext(scene: Phaser.Scene, actor: any): ActionContext | undefined {
+  const previous = actionContext.get(scene);
+  actionContext.set(scene, {
+    actorId: String(actor?.instanceId || ''),
+    elementKey: String(actor?.pow?.elementKey || actor?.pow?.element || '')
+  });
+  return previous;
+}
+
+function restoreActionContext(scene: Phaser.Scene, previous: ActionContext | undefined): void {
+  if (previous) actionContext.set(scene, previous);
+  else actionContext.delete(scene);
+}
+
 export function installCombat2134SourceImpactIdentityPatch(BattleSceneClass: any, PowViewClass: any): void {
   const root = globalThis as any;
   if (root[PATCH_FLAG]) return;
@@ -42,24 +56,24 @@ export function installCombat2134SourceImpactIdentityPatch(BattleSceneClass: any
   const sceneProto = BattleSceneClass.prototype as any;
   const originalBasic = sceneProto.performBasicAttack;
   if (typeof originalBasic === 'function') {
-    sceneProto.performBasicAttack = async function combat2134Basic(this: Phaser.Scene, actor: any, target: any): Promise<void> {
-      actionContext.set(this, { actorId: String(actor?.instanceId || ''), elementKey: String(actor?.pow?.elementKey || actor?.pow?.element || '') });
+    sceneProto.performBasicAttack = async function combat2135Basic(this: Phaser.Scene, actor: any, target: any): Promise<void> {
+      const previous = setActionContext(this, actor);
       try { await originalBasic.call(this, actor, target); }
-      finally { actionContext.delete(this); }
+      finally { restoreActionContext(this, previous); }
     };
   }
 
   const originalAbility = sceneProto.performAbility;
   if (typeof originalAbility === 'function') {
-    sceneProto.performAbility = async function combat2134Ability(this: Phaser.Scene, actor: any, target: any, slot: 0 | 1 | 'ultimate'): Promise<void> {
-      actionContext.set(this, { actorId: String(actor?.instanceId || ''), elementKey: String(actor?.pow?.elementKey || actor?.pow?.element || '') });
+    sceneProto.performAbility = async function combat2135Ability(this: Phaser.Scene, actor: any, target: any, slot: 0 | 1 | 'ultimate'): Promise<void> {
+      const previous = setActionContext(this, actor);
       try { await originalAbility.call(this, actor, target, slot); }
-      finally { actionContext.delete(this); }
+      finally { restoreActionContext(this, previous); }
     };
   }
 
   const powProto = PowViewClass.prototype as any;
-  powProto.playHitFlash = function combat2134SourceHitFlash(this: any): void {
+  powProto.playHitFlash = function combat2135SourceHitFlash(this: any): void {
     const scene = this.scene as Phaser.Scene;
     const p = this.getWorldPosition() as Phaser.Math.Vector2;
     const context = actionContext.get(scene);
@@ -93,9 +107,9 @@ export function installCombat2134SourceImpactIdentityPatch(BattleSceneClass: any
   };
 
   root.POWDER_COMBAT2_SOURCE_IMPACT_IDENTITY = {
-    version: '2.13.4',
-    mode: 'attacker-element-owned-impact',
-    rule: 'target hit VFX inherits the acting Pow element, never the target element',
+    version: '2.13.5',
+    mode: 'attacker-element-owned-impact+nested-action-context-safe',
+    rule: 'target hit VFX inherits the acting Pow element, and nested actions restore the previous source context',
     combatLogicChanged: false
   };
 }
