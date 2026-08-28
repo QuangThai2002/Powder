@@ -3,12 +3,14 @@ import { allExactCombatVfxSpecs } from '../vfx/Combat2140ExactVfxRegistry';
 import { CombatPresentationDirector } from './CombatPresentationDirector';
 import { COMBAT_DISPLAY_FONT } from './CombatTheme';
 import { PowView } from './PowView';
+import './Combat2144BalancedVfxTestRosterPatch';
 import { installCombat2143ReadableCinematicVfxPatch } from './Combat2143ReadableCinematicVfxPatch';
+import { installCombat2144RealSpriteTestPatch } from './Combat2144RealSpriteTestPatch';
 
 const PATCH_FLAG = '__powderCombat2142AssetVfxLiveInstalled';
 const ATLAS_KEY = 'combat-vfx-atlas-a';
 const PERSISTENT_FX_KEY = '__powderCombat2140PersistentFx';
-const VERSION = '2.14.3';
+const VERSION = '2.14.4';
 
 type RuntimeSnapshot = {
   version: string;
@@ -26,14 +28,7 @@ function expectedTextureKeys(): string[] {
 function textureSnapshot(scene: Phaser.Scene): RuntimeSnapshot {
   const keys = expectedTextureKeys();
   const missing = keys.filter((key) => !scene.textures.exists(key));
-  return {
-    version: VERSION,
-    mode: 'asset-vfx-live',
-    expectedTextures: keys.length,
-    loadedTextures: keys.length - missing.length,
-    missingTextures: missing,
-    ready: missing.length === 0
-  };
+  return { version: VERSION, mode: 'asset-vfx-live', expectedTextures: keys.length, loadedTextures: keys.length - missing.length, missingTextures: missing, ready: missing.length === 0 };
 }
 
 function walkGameObjects(items: Phaser.GameObjects.GameObject[], visit: (child: Phaser.GameObjects.GameObject) => void): void {
@@ -46,38 +41,17 @@ function walkGameObjects(items: Phaser.GameObjects.GameObject[], visit: (child: 
 
 function replaceLegacyVersionText(scene: Phaser.Scene, snapshot: RuntimeSnapshot): void {
   let runtimeBadge: Phaser.GameObjects.Text | null = null;
-
   walkGameObjects((scene.children?.list || []) as Phaser.GameObjects.GameObject[], (child) => {
     if (!(child instanceof Phaser.GameObjects.Text)) return;
     const text = String(child.text || '');
-    if (text.includes('POWDER COMBAT 2.12.5')) {
-      child.setText(`POWDER COMBAT ${VERSION}`);
-      return;
-    }
-    if (text.includes('CONTACT-TIMED AUDIO')) {
-      child.setText('CINEMATIC ASSET VFX · CAST → TRAVEL → IMPACT → LINGER');
-      return;
-    }
-    if (text.includes('2.12.5 · CONTACT AUDIO SYNC')) runtimeBadge = child;
+    if (/POWDER COMBAT 2\./.test(text)) child.setText(`POWDER COMBAT ${VERSION}`);
+    if (text.includes('CONTACT-TIMED AUDIO')) child.setText('REAL SPRITE VFX · FRAME-BY-FRAME');
+    if (/CONTACT AUDIO SYNC|ASSET VFX LIVE|VFX RECOVERY|VFX MISSING/.test(text)) runtimeBadge = child;
   });
-
-  const label = snapshot.ready
-    ? `${VERSION} · ASSET VFX LIVE · ${snapshot.loadedTextures}/${snapshot.expectedTextures}`
-    : `${VERSION} · VFX RECOVERY · ${snapshot.loadedTextures}/${snapshot.expectedTextures}`;
+  const label = snapshot.ready ? `${VERSION} · BASE ASSET ${snapshot.loadedTextures}/${snapshot.expectedTextures}` : `${VERSION} · BASE FALLBACK ${snapshot.loadedTextures}/${snapshot.expectedTextures}`;
   const color = snapshot.ready ? '#aef7d3' : '#ffd18c';
-
-  if (runtimeBadge) {
-    runtimeBadge.setText(label).setColor(color).setAlpha(0.9);
-  } else if (['localhost', '127.0.0.1'].includes(location.hostname)) {
-    scene.add.text(scene.scale.width - 18, scene.scale.height - 58, label, {
-      fontFamily: COMBAT_DISPLAY_FONT,
-      fontSize: '11px',
-      color,
-      fontStyle: 'bold',
-      backgroundColor: '#041018cc',
-      padding: { x: 7, y: 4 }
-    }).setOrigin(1, 1).setDepth(119).setAlpha(0.9);
-  }
+  if (runtimeBadge) runtimeBadge.setText(label).setColor(color).setAlpha(0.72);
+  else if (['localhost', '127.0.0.1'].includes(location.hostname)) scene.add.text(scene.scale.width - 18, scene.scale.height - 52, label, { fontFamily: COMBAT_DISPLAY_FONT, fontSize: '10px', color, fontStyle: 'bold', backgroundColor: '#041018aa', padding: { x: 6, y: 3 } }).setOrigin(1, 1).setDepth(118).setAlpha(0.72);
 }
 
 function prefersReducedMotion(): boolean {
@@ -88,21 +62,13 @@ function installPersistentFxIdleHardening(PowViewClass: any): void {
   const proto = PowViewClass.prototype as any;
   const previousUpdate = proto.updateRuntime;
   if (typeof previousUpdate !== 'function') return;
-
-  proto.updateRuntime = function combat2143PersistentFxIdleHardening(this: any, unit: any): void {
+  proto.updateRuntime = function combat2144PersistentFxIdleHardening(this: any, unit: any): void {
     previousUpdate.call(this, unit);
-
     const fx = this[PERSISTENT_FX_KEY] as Phaser.GameObjects.Image | undefined;
     if (!fx?.scene) return;
-
     const unitOffField = !unit?.alive || unit?.fieldSlot === null;
     if (!unitOffField && fx.visible && fx.active && !prefersReducedMotion()) return;
-
-    try {
-      this.scene?.tweens?.killTweensOf?.(fx);
-    } catch {
-      // Presentation cleanup must never block combat state updates.
-    }
+    try { this.scene?.tweens?.killTweensOf?.(fx); } catch { /* presentation cleanup only */ }
   };
 }
 
@@ -114,31 +80,20 @@ export function installCombat2142AssetVfxLivePatch(BattleSceneClass: any): void 
   const proto = BattleSceneClass.prototype as any;
   const originalIntro = proto.showPreBattleIntro;
   if (typeof originalIntro === 'function') {
-    proto.showPreBattleIntro = function combat2142AssetVfxIntro(this: Phaser.Scene & any, ...args: any[]): any {
+    proto.showPreBattleIntro = function combat2144AssetVfxIntro(this: Phaser.Scene & any, ...args: any[]): any {
       const result = originalIntro.apply(this, args);
       const snapshot = textureSnapshot(this);
       root.POWDER_COMBAT2_ASSET_VFX_LIVE = snapshot;
       replaceLegacyVersionText(this, snapshot);
-      if (!snapshot.ready) console.warn('[Combat2 2.14.3 VFX preload incomplete - recovery/fallback active]', snapshot.missingTextures);
-      else console.info('[Combat2 2.14.3 Asset VFX LIVE]', snapshot);
       return result;
     };
   }
 
   root.POWDER_COMBAT2_RUNTIME_VERSION = VERSION;
-  root.POWDER_COMBAT2_ASSET_VFX_LIVE = {
-    version: VERSION,
-    mode: 'asset-vfx-live',
-    expectedTextures: expectedTextureKeys().length,
-    loadedTextures: 0,
-    missingTextures: expectedTextureKeys(),
-    ready: false
-  } satisfies RuntimeSnapshot;
+  root.POWDER_COMBAT2_ASSET_VFX_LIVE = { version: VERSION, mode: 'asset-vfx-live', expectedTextures: expectedTextureKeys().length, loadedTextures: 0, missingTextures: expectedTextureKeys(), ready: false } satisfies RuntimeSnapshot;
 
-  // 2.14.3 is installed from here so it still runs before new Phaser.Game().
-  // This keeps preload/action wiring deterministic while avoiding another bootstrap timing race.
+  // Keep old asset layer only as fallback, then override visible combat actions with real frame animation.
   installCombat2143ReadableCinematicVfxPatch(BattleSceneClass, PowView, CombatPresentationDirector);
-  // Wrap the final PowView runtime hook: invisible/off-field persistent FX must not retain
-  // infinite pulse tweens and spend frame time after their presentation is no longer visible.
   installPersistentFxIdleHardening(PowView);
+  installCombat2144RealSpriteTestPatch(BattleSceneClass, PowView);
 }
