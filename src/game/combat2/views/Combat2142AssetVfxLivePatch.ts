@@ -24,13 +24,11 @@ type RuntimeSnapshot = {
 function expectedTextureKeys(): string[] {
   return [ATLAS_KEY, ...allExactCombatVfxSpecs().map((spec) => spec.textureKey)];
 }
-
 function textureSnapshot(scene: Phaser.Scene): RuntimeSnapshot {
   const keys = expectedTextureKeys();
   const missing = keys.filter((key) => !scene.textures.exists(key));
   return { version: VERSION, mode: 'asset-vfx-live', expectedTextures: keys.length, loadedTextures: keys.length - missing.length, missingTextures: missing, ready: missing.length === 0 };
 }
-
 function walkGameObjects(items: Phaser.GameObjects.GameObject[], visit: (child: Phaser.GameObjects.GameObject) => void): void {
   for (const child of items) {
     visit(child);
@@ -38,7 +36,6 @@ function walkGameObjects(items: Phaser.GameObjects.GameObject[], visit: (child: 
     if (Array.isArray(nested) && nested.length) walkGameObjects(nested as Phaser.GameObjects.GameObject[], visit);
   }
 }
-
 function replaceLegacyVersionText(scene: Phaser.Scene, snapshot: RuntimeSnapshot): void {
   let runtimeBadge: Phaser.GameObjects.Text | null = null;
   walkGameObjects((scene.children?.list || []) as Phaser.GameObjects.GameObject[], (child) => {
@@ -53,11 +50,9 @@ function replaceLegacyVersionText(scene: Phaser.Scene, snapshot: RuntimeSnapshot
   if (runtimeBadge) runtimeBadge.setText(label).setColor(color).setAlpha(0.72);
   else if (['localhost', '127.0.0.1'].includes(location.hostname)) scene.add.text(scene.scale.width - 18, scene.scale.height - 52, label, { fontFamily: COMBAT_DISPLAY_FONT, fontSize: '10px', color, fontStyle: 'bold', backgroundColor: '#041018aa', padding: { x: 6, y: 3 } }).setOrigin(1, 1).setDepth(118).setAlpha(0.72);
 }
-
 function prefersReducedMotion(): boolean {
   return typeof window !== 'undefined' && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
 }
-
 function installPersistentFxIdleHardening(PowViewClass: any): void {
   const proto = PowViewClass.prototype as any;
   const previousUpdate = proto.updateRuntime;
@@ -71,12 +66,21 @@ function installPersistentFxIdleHardening(PowViewClass: any): void {
     try { this.scene?.tweens?.killTweensOf?.(fx); } catch { /* presentation cleanup only */ }
   };
 }
+function installRageSemanticGuard(PowViewClass: any): void {
+  const proto = PowViewClass.prototype as any;
+  const previousPulse = proto.playResourcePulse;
+  if (typeof previousPulse !== 'function') return;
+  proto.playResourcePulse = function combat2144ResourceSemanticGuard(this: any, color: number): void {
+    // Rage gain is already readable in the four Rage markers. Do not fake a Heal VFX for it.
+    if (color === 0x4fc8ff) return;
+    previousPulse.call(this, color);
+  };
+}
 
 export function installCombat2142AssetVfxLivePatch(BattleSceneClass: any): void {
   const root = globalThis as any;
   if (root[PATCH_FLAG]) return;
   root[PATCH_FLAG] = true;
-
   const proto = BattleSceneClass.prototype as any;
   const originalIntro = proto.showPreBattleIntro;
   if (typeof originalIntro === 'function') {
@@ -88,12 +92,12 @@ export function installCombat2142AssetVfxLivePatch(BattleSceneClass: any): void 
       return result;
     };
   }
-
   root.POWDER_COMBAT2_RUNTIME_VERSION = VERSION;
   root.POWDER_COMBAT2_ASSET_VFX_LIVE = { version: VERSION, mode: 'asset-vfx-live', expectedTextures: expectedTextureKeys().length, loadedTextures: 0, missingTextures: expectedTextureKeys(), ready: false } satisfies RuntimeSnapshot;
 
-  // Keep old asset layer only as fallback, then override visible combat actions with real frame animation.
+  // Old asset presentation remains fallback only. 2.14.4 is the visible primary layer.
   installCombat2143ReadableCinematicVfxPatch(BattleSceneClass, PowView, CombatPresentationDirector);
   installPersistentFxIdleHardening(PowView);
   installCombat2144RealSpriteTestPatch(BattleSceneClass, PowView);
+  installRageSemanticGuard(PowView);
 }
