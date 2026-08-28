@@ -1,0 +1,133 @@
+/* Powder Combat 22.2.6 — Asset-first VFX bridge for the MAIN Powder combat.
+   Sources: user-provided img + img2 library, already curated under assets/combat/vfx/preview.
+   UI geometry remains intact. Element/status magic is image-led, not primitive-led. */
+
+.combat-v7-mount.cav226-ready{
+  --cav226-elements:url('../assets/combat/vfx/preview/vfx-elements-a.webp');
+  --cav226-fire:var(--cav226-elements);
+  --cav226-steel:var(--cav226-elements);
+  --cav226-water:var(--cav226-elements);
+  --cav226-leaf:var(--cav226-elements);
+  --cav226-earth:var(--cav226-elements);
+  --cav226-wind:url('../assets/combat/vfx/preview/wind-impact.webp');
+  --cav226-lightning:url('../assets/combat/vfx/preview/lightning-impact.webp');
+  --cav226-lava:url('../assets/combat/vfx/preview/lava-impact.webp');
+  --cav226-storm:url('../assets/combat/vfx/preview/storm-impact.webp');
+  --cav226-ice:url('../assets/combat/vfx/preview/ice-impact.webp');
+  --cav226-poison:url('../assets/combat/vfx/preview/poison-impact.webp');
+  --cav226-light:url('../assets/combat/vfx/preview/light-impact.webp');
+  --cav226-dark:url('../assets/combat/vfx/preview/dark-impact.webp');
+  --cav226-status-burn:url('../assets/combat/vfx/preview/status-burn.webp');
+  --cav226-status-freeze:url('../assets/combat/vfx/preview/status-freeze.webp');
+  --cav226-status-stun:url('../assets/combat/vfx/preview/status-stun.webp');
+  --cav226-status-heal:url('../assets/combat/vfx/preview/status-heal.webp');
+  --cav226-status-shield:url('../assets/combat/vfx/preview/status-shield.webp');
+}
+
+/* ----- exact element routing ----- */
+.combat-v7-mount.cav226-ready .el-fire{--cav226-img:var(--cav226-fire);--cav226-size:500% 100%;--cav226-pos:0% 50%}
+.combat-v7-mount.cav226-ready .el-steel{--cav226-img:var(--cav226-steel);--cav226-size:500% 100%;--cav226-pos:25% 50%}
+.combat-v7-mount.cav226-ready .el-water{--cav226-img:var(--cav226-water);--cav226-size:500% 100%;--cav226-pos:50% 50%}
+.combat-v7-mount.cav226-ready .el-leaf{--cav226-img:var(--cav226-leaf);--cav226-size:500% 100%;--cav226-pos:75% 50%}
+.combat-v7-mount.cav226-ready .el-earth{--cav226-img:var(--cav226-earth);--cav226-size:500% 100%;--cav226-pos:100% 50%}
+.combat-v7-mount.cav226-ready .el-wind{--cav226-img:var(--cav226-wind);--cav226-size:contain;--cav226-pos:50% 50%}
+.combat-v7-mount.cav226-ready .el-lightning{--cav226-img:var(--cav226-lightning);--cav226-size:contain;--cav226-pos:50% 50%}
+.combat-v7-mount.cav226-ready .el-lava{--cav226-img:var(--cav226-lava);--cav226-size:contain;--cav226-pos:50% 50%}
+.combat-v7-mount.cav226-ready .el-storm{--cav226-img:var(--cav226-storm);--cav226-size:contain;--cav226-pos:50% 50%}
+.combat-v7-mount.cav226-ready .el-ice{--cav226-img:var(--cav226-ice);--cav226-size:contain;--cav226-pos:50% 50%}
+.combat-v7-mount.cav226-ready .el-poison{--cav226-img:var(--cav226-poison);--cav226-size:contain;--cav226-pos:50% 50%}
+.combat-v7-mount.cav226-ready .el-light{--cav226-img:var(--cav226-light);--cav226-size:contain;--cav226-pos:50% 50%}
+.combat-v7-mount.cav226-ready .el-dark{--cav226-img:var(--cav226-dark);--cav226-size:contain;--cav226-pos:50% 50%}
+
+/* ----- cast / target impact ----- */
+.combat-v7-mount.cav226-ready .cv7-vfx.cast,
+.combat-v7-mount.cav226-ready .cv7-vfx.impact{width:152px;height:152px;overflow:visible}
+.combat-v7-mount.cav226-ready .cv7-vfx.cast::before,
+.combat-v7-mount.cav226-ready .cv7-vfx.impact::before{
+  content:'';position:absolute;inset:-12px;pointer-events:none;
+  background-image:var(--cav226-img);background-size:var(--cav226-size,contain);background-position:var(--cav226-pos,50% 50%);background-repeat:no-repeat;
+  opacity:0;filter:drop-shadow(0 0 10px rgba(185,235,255,.24));will-change:transform,opacity;
+}
+.combat-v7-mount.cav226-ready .cv7-vfx.cast::before{animation:cav226Cast .68s cubic-bezier(.16,.72,.2,1) both}
+.combat-v7-mount.cav226-ready .cv7-vfx.impact::before{animation:cav226Impact .48s cubic-bezier(.12,.78,.18,1) both}
+.combat-v7-mount.cav226-ready .cv7-vfx.impact.key-ultimate::before{inset:-38px;animation-duration:.62s;filter:drop-shadow(0 0 18px rgba(255,239,181,.3))}
+.combat-v7-mount.cav226-ready .cv7-vfx.impact.key-exclusive::before{inset:-27px;animation-duration:.56s}
+
+/* Retire primitive magic shapes once real artwork is active. */
+.combat-v7-mount.cav226-ready .cv7-vfx-core,
+.combat-v7-mount.cav226-ready .cv7-vfx-ring,
+.combat-v7-mount.cav226-ready .cv7-vfx-burst,
+.combat-v7-mount.cav226-ready .cv7-vfx-shock,
+.combat-v7-mount.cav226-ready .cv7-vfx-ripple,
+.combat-v7-mount.cav226-ready .cv7-vfx-frag,
+.combat-v7-mount.cav226-ready .cv7-vfx-spark{display:none!important}
+.combat-v7-mount.cav226-ready .cv7-vfx-label{top:122px;z-index:2;background:rgba(3,14,22,.78);backdrop-filter:blur(3px)}
+
+/* ----- source -> target travel: replace the flat line with a travelling asset ----- */
+.combat-v7-mount.cav226-ready .cv7-attack-trace,
+.combat-v7-mount.cav226-ready .cv7-attack-hit,
+.combat-v7-mount.cav226-ready .cv7-attack-hit-ring{display:none!important}
+.combat-v7-mount.cav226-ready .cv7-attack-flow::before{
+  content:'';position:absolute;left:0;top:50%;width:64px;height:64px;z-index:3;pointer-events:none;
+  background-image:var(--cav226-img);background-size:var(--cav226-size,contain);background-position:var(--cav226-pos,50% 50%);background-repeat:no-repeat;
+  filter:drop-shadow(0 0 8px rgba(195,237,255,.24));opacity:.92;
+  transform:translate(-50%,-50%) scale(.72);will-change:left,transform,opacity;
+  animation:cav226Travel var(--release,620ms) cubic-bezier(.18,.62,.2,1) both;
+}
+
+/* ----- persistent status artwork on the Pow itself ----- */
+.combat-v7-mount.cav226-ready .cv7-status-layer{
+  border-color:transparent!important;background:none!important;box-shadow:none!important;overflow:visible!important
+}
+.combat-v7-mount.cav226-ready .cv7-status-layer::before{
+  content:'';position:absolute;left:50%;top:50%;width:126px;height:126px;transform:translate(-50%,-50%);
+  background-repeat:no-repeat;background-position:center;background-size:contain;pointer-events:none;opacity:.56;
+  filter:drop-shadow(0 0 8px rgba(180,230,255,.18));animation:cav226Status 1.15s ease-in-out infinite alternate;
+}
+.combat-v7-mount.cav226-ready .cv7-status-layer.status-burn::before,
+.combat-v7-mount.cav226-ready .cv7-status-layer.status-magma-burn::before{background-image:var(--cav226-status-burn);opacity:.66}
+.combat-v7-mount.cav226-ready .cv7-status-layer.status-freeze::before,
+.combat-v7-mount.cav226-ready .cv7-status-layer.status-frostbite::before{background-image:var(--cav226-status-freeze);opacity:.65}
+.combat-v7-mount.cav226-ready .cv7-status-layer.status-stun::before,
+.combat-v7-mount.cav226-ready .cv7-status-layer.status-paralysis::before{background-image:var(--cav226-status-stun);opacity:.68}
+.combat-v7-mount.cav226-ready .cv7-status-layer.status-shield-status::before{background-image:var(--cav226-status-shield);opacity:.58}
+.combat-v7-mount.cav226-ready .cv7-status-layer.status-regeneration::before{background-image:var(--cav226-status-heal);opacity:.58}
+.combat-v7-mount.cav226-ready .cv7-status-layer.status-poison::before{background-image:var(--cav226-poison);opacity:.54}
+/* Remove old fake flame/ice geometry under exact status artwork. */
+.combat-v7-mount.cav226-ready .cv7-status-layer>i{display:none!important}
+
+/* ----- transient feedback images behind the existing readable numbers ----- */
+.combat-v7-mount.cav226-ready .cv7-fx.heal::before,
+.combat-v7-mount.cav226-ready .cv7-fx.status-heal::before,
+.combat-v7-mount.cav226-ready .cv7-fx.shield::before,
+.combat-v7-mount.cav226-ready .cv7-fx.shield-gain::before,
+.combat-v7-mount.cav226-ready .cv7-fx.break::before,
+.combat-v7-mount.cav226-ready .cv7-fx.status-control::before{
+  content:'';position:absolute;left:50%;top:50%;width:112px;height:112px;transform:translate(-50%,-50%);z-index:-1;
+  background-repeat:no-repeat;background-position:center;background-size:contain;opacity:.72;pointer-events:none;
+  animation:cav226Feedback .66s ease-out both;
+}
+.combat-v7-mount.cav226-ready .cv7-fx.heal::before,
+.combat-v7-mount.cav226-ready .cv7-fx.status-heal::before{background-image:var(--cav226-status-heal)}
+.combat-v7-mount.cav226-ready .cv7-fx.shield::before,
+.combat-v7-mount.cav226-ready .cv7-fx.shield-gain::before,
+.combat-v7-mount.cav226-ready .cv7-fx.break::before{background-image:var(--cav226-status-shield)}
+.combat-v7-mount.cav226-ready .cv7-fx.status-control::before{background-image:var(--cav226-status-stun)}
+
+/* The legacy LOW tier used to hide impact entirely. Keep one lightweight real image instead. */
+.combat-v7-mount.cav226-ready.cv71-fx-low .cv7-vfx.impact{display:block!important}
+.combat-v7-mount.cav226-ready.cv71-fx-low .cv7-vfx.impact::before{inset:10px;opacity:.62;filter:none}
+.combat-v7-mount.cav226-ready.cv71-fx-low .cv7-attack-flow::before{width:44px;height:44px;filter:none;opacity:.7}
+.combat-v7-mount.cav226-ready.cv71-fx-low .cv7-status-layer::before{width:102px;height:102px;filter:none;opacity:.42}
+
+@keyframes cav226Cast{0%{opacity:0;transform:scale(.58) rotate(-4deg)}36%{opacity:.96;transform:scale(.92) rotate(0)}100%{opacity:0;transform:scale(1.22) rotate(3deg)}}
+@keyframes cav226Impact{0%{opacity:0;transform:scale(.48)}20%{opacity:1;transform:scale(.82)}62%{opacity:.94;transform:scale(1.06)}100%{opacity:0;transform:scale(1.30)}}
+@keyframes cav226Travel{0%{left:0;opacity:.18;transform:translate(-50%,-50%) scale(.54)}14%{opacity:.94}78%{opacity:.98;transform:translate(-50%,-50%) scale(.82)}100%{left:100%;opacity:0;transform:translate(-50%,-50%) scale(1.02)}}
+@keyframes cav226Status{from{transform:translate(-50%,-50%) scale(.96);opacity:.46}to{transform:translate(-50%,-52%) scale(1.04);opacity:.70}}
+@keyframes cav226Feedback{0%{opacity:0;transform:translate(-50%,-50%) scale(.54)}32%{opacity:.82;transform:translate(-50%,-50%) scale(.9)}100%{opacity:0;transform:translate(-50%,-52%) scale(1.24)}}
+
+html.reduce-motion .combat-v7-mount.cav226-ready .cv7-vfx::before,
+html.reduce-motion .combat-v7-mount.cav226-ready .cv7-attack-flow::before,
+html.reduce-motion .combat-v7-mount.cav226-ready .cv7-status-layer::before,
+html.reduce-motion .combat-v7-mount.cav226-ready .cv7-fx::before{animation:none!important;opacity:.72!important}
+html.reduce-motion .combat-v7-mount.cav226-ready .cv7-attack-flow::before{left:100%;transform:translate(-50%,-50%) scale(.8)!important}
