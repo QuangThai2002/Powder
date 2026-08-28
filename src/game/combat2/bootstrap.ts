@@ -11,6 +11,7 @@ import { installCombat2133AtlasPresentationPatch } from './views/Combat2133Atlas
 import { installCombat2133PrimitiveGuardPatch } from './views/Combat2133PrimitiveGuardPatch';
 import { installCombat2134SourceImpactIdentityPatch } from './views/Combat2134SourceImpactIdentityPatch';
 import { installCombat2140ExactVfxPatch } from './views/Combat2140ExactVfxPatch';
+import { installCombat2141SemanticVfxPatch } from './views/Combat2141SemanticVfxPatch';
 import { CombatPresentationDirector } from './views/CombatPresentationDirector';
 import { PowView } from './views/PowView';
 import './main';
@@ -29,6 +30,9 @@ installCombat2133PrimitiveGuardPatch(PowView);
 installCombat2133AtlasPresentationPatch(CombatPresentationDirector);
 // Preserve stack-safe attacker ownership for target hit flashes.
 installCombat2134SourceImpactIdentityPatch(BattleScene, PowView);
-// Install last: exact img + img2 assets replace every former family-element fallback and the
+// Exact img + img2 assets replace every former family-element fallback and the
 // five temporary status stand-ins without changing combat mechanics.
 installCombat2140ExactVfxPatch(BattleScene, PowView, CombatPresentationDirector);
+// Install last: ability metadata owns support/self-target visuals, so generic buffs never
+// masquerade as healing and hybrid support skills can show the correct dedicated layers.
+installCombat2141SemanticVfxPatch(BattleScene, PowView, CombatPresentationDirector);
