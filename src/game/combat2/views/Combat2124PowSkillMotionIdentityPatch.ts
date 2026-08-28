@@ -255,6 +255,24 @@ async function primeSkillMotion(scene: PatchableScene, actor: CombatUnitState, s
   const baseAngle = container.angle;
 
   await new Promise<void>((resolve) => {
+    let settled = false;
+    const finish = (restore: boolean): void => {
+      if (settled) return;
+      settled = true;
+      scene.events.off(Phaser.Scenes.Events.SHUTDOWN, onSceneExit);
+      scene.events.off(Phaser.Scenes.Events.DESTROY, onSceneExit);
+      if (restore && container.scene) {
+        container.setPosition(baseX, baseY).setScale(baseScaleX, baseScaleY).setAngle(baseAngle);
+      }
+      resolve();
+    };
+    const onSceneExit = (): void => {
+      scene.tweens.killTweensOf(container);
+      finish(false);
+    };
+
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, onSceneExit);
+    scene.events.once(Phaser.Scenes.Events.DESTROY, onSceneExit);
     scene.tweens.add({
       targets: container,
       x: baseX + profile.x,
@@ -265,10 +283,7 @@ async function primeSkillMotion(scene: PatchableScene, actor: CombatUnitState, s
       duration: profile.duration,
       yoyo: true,
       ease: slot === 'ultimate' ? 'Sine.easeInOut' : 'Quad.easeOut',
-      onComplete: () => {
-        container.setPosition(baseX, baseY).setScale(baseScaleX, baseScaleY).setAngle(baseAngle);
-        resolve();
-      }
+      onComplete: () => finish(true)
     });
   });
 }
@@ -299,7 +314,7 @@ export function installCombat2124PowSkillMotionIdentityPatch(BattleSceneClass: a
   root.POWDER_COMBAT2_POW_MOTION_IDENTITY = {
     version: '2.12.4',
     mode: 'canonical-metadata-plus-pow-art',
-    performanceRevision: '2.12.7',
+    performanceRevision: '2.12.8',
     rules: [
       'real-pow-art-only',
       'role-aware-motion',
@@ -308,6 +323,7 @@ export function installCombat2124PowSkillMotionIdentityPatch(BattleSceneClass: a
       'adaptive-echo-budget',
       'scene-local-echo-pool',
       'scene-shutdown-pool-cleanup',
+      'shutdown-safe-motion-await',
       'concurrent-echo-cap',
       'no-procedural-element-symbols',
       'no-combat-logic-change',
