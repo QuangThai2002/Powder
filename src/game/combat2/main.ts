@@ -24,8 +24,6 @@ import { installCombat293LegacyDomainTickPatch } from './views/Combat293LegacyDo
 import { installCombat294DomainControlsPatch } from './views/Combat294DomainControlsPatch';
 import { installCombat295LegacyDomainParityPatch } from './views/Combat295LegacyDomainParityPatch';
 import { installCombat296VersionPatch } from './views/Combat296VersionPatch';
-import { installCombat298ActionChoreographyPatch } from './views/Combat298ActionChoreographyPatch';
-import { installCombat299StatusVisualPatch } from './views/Combat299StatusVisualPatch';
 import { installCombat2100ReserveFlowPatch } from './views/Combat2100ReserveFlowPatch';
 import { CombatPresentationDirector } from './views/CombatPresentationDirector';
 import { installCombat2101UltimateCinematicPatch } from './views/Combat2101UltimateCinematicPatch';
@@ -48,7 +46,7 @@ const testRosterReport = {
   enemy: COMBAT2_STARTER_ROSTER.enemy.map((pow) => pow.id),
   requested: [...COMBAT2_STARTER_ROSTER.player, ...COMBAT2_STARTER_ROSTER.enemy].map((pow) => pow.id)
 };
-(globalThis as any).POWDER_COMBAT2_TEST_ROSTER = { version: '2.11.5', mode: 'canonical-coverage-rotation+legacy-ui-bridge+reserve-cleanup', ...testRosterReport };
+(globalThis as any).POWDER_COMBAT2_TEST_ROSTER = { version: '2.13.0', mode: 'canonical-coverage-rotation+asset-first-vfx-preview', ...testRosterReport };
 
 function installCombat2114DomainOwnershipPatch(BattleSceneClass: any): void {
   const proto = BattleSceneClass.prototype as any;
@@ -123,8 +121,8 @@ installCombat293LegacyDomainTickPatch(BattleScene);
 installCombat294DomainControlsPatch(BattleScene);
 installCombat295LegacyDomainParityPatch();
 installCombat296VersionPatch(BattleScene);
-installCombat298ActionChoreographyPatch(BattleScene, PowView);
-installCombat299StatusVisualPatch(BattleScene, PowView);
+// Combat 2.9.8/2.9.9 procedural action/status shapes are intentionally retired.
+// Combat 2.13.0 installs the asset-first replacement from bootstrap after this core stack.
 installCombat2100ReserveFlowPatch(BattleScene, PowView);
 installCombat2101UltimateCinematicPatch(CombatPresentationDirector);
 installCombat2101VersionPatch(BattleScene);
@@ -177,6 +175,7 @@ if (isLocalDev) {
         roster: testRosterReport,
         actionFx: (globalThis as any).POWDER_COMBAT2_ACTION_FX?.version ?? 'missing',
         statusFx: (globalThis as any).POWDER_COMBAT2_STATUS_FX?.version ?? 'missing',
+        assetVfx: (globalThis as any).POWDER_COMBAT2_ASSET_VFX?.version ?? 'missing',
         reserveFx: (globalThis as any).POWDER_COMBAT2_RESERVE_FX?.version ?? 'missing',
         reserveUi: (globalThis as any).POWDER_COMBAT2_RESERVE_UI?.version ?? 'missing',
         ultimateFx: (globalThis as any).POWDER_COMBAT2_ULTIMATE_FX?.version ?? 'missing',
