@@ -8,6 +8,7 @@ import { installCombat2123CleanDomainCinematicPatch } from './views/Combat2123Cl
 import { installCombat2124PowSkillMotionIdentityPatch } from './views/Combat2124PowSkillMotionIdentityPatch';
 import { installCombat2132AtlasFallbackPatch } from './views/Combat2132AtlasFallbackPatch';
 import { installCombat2133AtlasPresentationPatch } from './views/Combat2133AtlasPresentationPatch';
+import { installCombat2133PrimitiveGuardPatch } from './views/Combat2133PrimitiveGuardPatch';
 import { CombatPresentationDirector } from './views/CombatPresentationDirector';
 import { PowView } from './views/PowView';
 import './main';
@@ -20,5 +21,7 @@ installCombat2123CleanDomainCinematicPatch(BattleScene);
 installCombat2124PowSkillMotionIdentityPatch(BattleScene);
 // Bundled transparent atlas owns PowView cast/travel/impact/status fallbacks.
 installCombat2132AtlasFallbackPatch(BattleScene, PowView);
-// Installed after main + director definition: removes the last procedural skill/ultimate presentation shapes.
+// Installed after the atlas override so remaining procedural status geometry cannot resurface.
+installCombat2133PrimitiveGuardPatch(PowView);
+// Removes the last procedural skill/ultimate presentation shapes while preserving UI plates.
 installCombat2133AtlasPresentationPatch(CombatPresentationDirector);
