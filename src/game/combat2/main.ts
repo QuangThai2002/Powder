@@ -9,6 +9,7 @@ import { runCombatGuardRegression } from './systems/CombatGuardRegression';
 import { runCombatLegacyDomainParityRegression } from './systems/CombatLegacyDomainParityRegression';
 import { runCombatLegacyDomainRegression } from './systems/CombatLegacyDomainRegression';
 import { runCombatLegacyDomainSpecialRegression } from './systems/CombatLegacyDomainSpecialRegression';
+import { LEGACY_EXPANSION_DOMAINS, LEGACY_SIMPLE_DOMAINS } from './systems/CombatLegacyDomainEngine';
 import { runCombatLegacyRoleRegression } from './systems/CombatLegacyRoleRegression';
 import { runCombatMultiTargetRegression } from './systems/CombatMultiTargetRegression';
 import { runCombatRageRegression } from './systems/CombatRageRegression';
@@ -48,6 +49,69 @@ const testRosterReport = {
 };
 (globalThis as any).POWDER_COMBAT2_TEST_ROSTER = { version: '2.11.2', mode: 'canonical-coverage-rotation+legacy-ui-bridge', ...testRosterReport };
 
+function installCombat2114DomainOwnershipPatch(BattleSceneClass: any): void {
+  const proto = BattleSceneClass.prototype as any;
+  const originalRefresh = proto.refreshViews;
+  if (typeof originalRefresh !== 'function') return;
+
+  const palette = {
+    fire: { line: 0xff8b54, text: '#ffd8b0' },
+    water: { line: 0x62c8ff, text: '#c7efff' },
+    leaf: { line: 0x78df91, text: '#d2ffd6' }
+  } as const;
+
+  proto.refreshViews = function combat2114DomainOwnershipRefresh(this: Phaser.Scene & any, ...args: any[]): void {
+    originalRefresh.apply(this, args);
+    const api = (globalThis as any).POWDER_COMBAT2_DOMAIN;
+    if (!api || typeof api.snapshot !== 'function') return;
+
+    const describe = (side: 'player' | 'enemy') => {
+      try {
+        const state = api.snapshot(side);
+        if (state?.expansion) {
+          const cfg = (LEGACY_EXPANSION_DOMAINS as any)[state.expansion.id];
+          return cfg ? { key: `e:${state.expansion.id}`, name: cfg.short, branch: cfg.branch, expansion: true } : null;
+        }
+        if (state?.simpleActive) {
+          const cfg = (LEGACY_SIMPLE_DOMAINS as any)[state.simpleActive.id];
+          return cfg ? { key: `s:${state.simpleActive.id}:${state.simpleActive.level}`, name: cfg.short, branch: cfg.branch, expansion: false } : null;
+        }
+      } catch { /* presentation must never block combat */ }
+      return null;
+    };
+
+    const enemy = describe('enemy');
+    const player = describe('player');
+    const nextSignature = `${enemy?.key ?? 'none'}|${player?.key ?? 'none'}`;
+    if (this.__domainOwnership2114Signature === nextSignature) return;
+    this.__domainOwnership2114Signature = nextSignature;
+    this.__domainOwnership2114?.destroy(true);
+    this.__domainOwnership2114 = this.add.container(0, 0).setDepth(27);
+
+    const addOwnerMark = (side: 'player' | 'enemy', row: NonNullable<ReturnType<typeof describe>>) => {
+      const colors = palette[row.branch as keyof typeof palette] ?? palette.water;
+      const y = side === 'enemy' ? 8 : this.scale.height - 8;
+      const bar = this.add.rectangle(this.scale.width / 2, y, Math.min(this.scale.width * 0.72, 1080), row.expansion ? 4 : 2, colors.line, row.expansion ? 0.76 : 0.42);
+      const owner = side === 'enemy' ? 'ĐỐI THỦ' : 'TAMER';
+      const textY = side === 'enemy' ? 15 : this.scale.height - 15;
+      const label = this.add.text(18, textY, `${owner} · ${row.name}`, {
+        fontFamily: 'Arial, sans-serif', fontSize: row.expansion ? '11px' : '10px', color: colors.text,
+        fontStyle: 'bold', backgroundColor: '#031019cc', padding: { x: 7, y: 4 }
+      }).setOrigin(0, side === 'enemy' ? 0 : 1);
+      this.__domainOwnership2114.add([bar, label]);
+    };
+
+    if (enemy) addOwnerMark('enemy', enemy);
+    if (player) addOwnerMark('player', player);
+  };
+
+  (globalThis as any).POWDER_COMBAT2_DOMAIN_OWNERSHIP = {
+    version: '2.11.4',
+    mode: 'static-edge-ownership',
+    rules: ['identity-change-only', 'no-particles', 'no-combat-logic-change', 'field-readable']
+  };
+}
+
 installCombat27UiPatch(BattleScene, PowView);
 installCombat28MultiTargetPatch(BattleScene);
 installCombat281LegacyRolePatch(BattleScene, CombatGuardEngine);
@@ -65,6 +129,7 @@ installCombat2101UltimateCinematicPatch(CombatPresentationDirector);
 installCombat2101VersionPatch(BattleScene);
 installCombat2102ArenaFocusPatch(BattleScene, PowView);
 installCombat2103DomainStagePatch(BattleScene);
+installCombat2114DomainOwnershipPatch(BattleScene);
 installCombat2104PowSkillSignaturePatch(BattleScene);
 installCombat2105AudioImpactPatch(BattleScene, PowView);
 installCombat2106AdaptiveFxPatch(BattleScene);
@@ -114,6 +179,7 @@ if (isLocalDev) {
         ultimateFx: (globalThis as any).POWDER_COMBAT2_ULTIMATE_FX?.version ?? 'missing',
         arenaFocus: (globalThis as any).POWDER_COMBAT2_ARENA_FOCUS?.version ?? 'missing',
         domainStage: (globalThis as any).POWDER_COMBAT2_DOMAIN_STAGE?.version ?? 'missing',
+        domainOwnership: (globalThis as any).POWDER_COMBAT2_DOMAIN_OWNERSHIP?.version ?? 'missing',
         powSignature: (globalThis as any).POWDER_COMBAT2_POW_SIGNATURE?.version ?? 'missing',
         audioImpact: (globalThis as any).POWDER_COMBAT2_AUDIO_IMPACT?.version ?? 'missing',
         performance: (globalThis as any).POWDER_COMBAT2_PERFORMANCE?.version ?? 'missing',
