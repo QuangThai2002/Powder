@@ -35,6 +35,16 @@ import { installCombat2106AdaptiveFxPatch } from './views/Combat2106AdaptiveFxPa
 import { installCombat2109BattleEndPatch } from './views/Combat2109BattleEndPatch';
 import { installCombat2112LegacyHudBridgePatch } from './views/Combat2112LegacyHudBridgePatch';
 import { installCombat2115ReserveUiPatch } from './views/Combat2115ReserveUiPatch';
+import { installCombat2122CinematicMotionPatch } from './views/Combat2122CinematicMotionPatch';
+import { installCombat2123CleanDomainCinematicPatch } from './views/Combat2123CleanDomainCinematicPatch';
+import { installCombat2124PowSkillMotionIdentityPatch } from './views/Combat2124PowSkillMotionIdentityPatch';
+import { installCombat2132AtlasFallbackPatch } from './views/Combat2132AtlasFallbackPatch';
+import { installCombat2133AtlasPresentationPatch } from './views/Combat2133AtlasPresentationPatch';
+import { installCombat2133PrimitiveGuardPatch } from './views/Combat2133PrimitiveGuardPatch';
+import { installCombat2134SourceImpactIdentityPatch } from './views/Combat2134SourceImpactIdentityPatch';
+import { installCombat2140ExactVfxPatch } from './views/Combat2140ExactVfxPatch';
+import { installCombat2141SemanticVfxPatch } from './views/Combat2141SemanticVfxPatch';
+import { installCombat2142AssetVfxLivePatch } from './views/Combat2142AssetVfxLivePatch';
 import { PowView } from './views/PowView';
 
 const logicalWidth = 1600;
@@ -45,7 +55,7 @@ const testRosterReport = {
   enemy: COMBAT2_STARTER_ROSTER.enemy.map((pow) => pow.id),
   requested: [...COMBAT2_STARTER_ROSTER.player, ...COMBAT2_STARTER_ROSTER.enemy].map((pow) => pow.id)
 };
-(globalThis as any).POWDER_COMBAT2_TEST_ROSTER = { version: '2.13.0', mode: 'canonical-coverage-rotation+asset-first-vfx-preview', ...testRosterReport };
+(globalThis as any).POWDER_COMBAT2_TEST_ROSTER = { version: '2.14.2', mode: 'canonical-coverage-rotation+asset-first-vfx-live', ...testRosterReport };
 
 function installCombat2114DomainOwnershipPatch(BattleSceneClass: any): void {
   const proto = BattleSceneClass.prototype as any;
@@ -121,7 +131,8 @@ installCombat294DomainControlsPatch(BattleScene);
 installCombat295LegacyDomainParityPatch();
 installCombat296VersionPatch(BattleScene);
 // Combat 2.9.8/2.9.9 and 2.10.4 procedural action/status/role-glyph FX are intentionally retired.
-// Combat 2.12.4 supplies Pow-art motion identity; Combat 2.13.0 supplies real VFX assets.
+// All presentation patches are installed before Phaser.Game is created so the very first
+// BattleScene.preload() includes the bundled img + img2 VFX textures.
 installCombat2100ReserveFlowPatch(BattleScene, PowView);
 installCombat2101UltimateCinematicPatch(CombatPresentationDirector);
 installCombat2101VersionPatch(BattleScene);
@@ -133,6 +144,16 @@ installCombat2106AdaptiveFxPatch(BattleScene);
 installCombat2109BattleEndPatch(BattleScene);
 installCombat2112LegacyHudBridgePatch(BattleScene);
 installCombat2115ReserveUiPatch(BattleScene);
+installCombat2122CinematicMotionPatch(BattleScene, PowView);
+installCombat2123CleanDomainCinematicPatch(BattleScene);
+installCombat2124PowSkillMotionIdentityPatch(BattleScene);
+installCombat2132AtlasFallbackPatch(BattleScene, PowView);
+installCombat2133PrimitiveGuardPatch(PowView);
+installCombat2133AtlasPresentationPatch(CombatPresentationDirector);
+installCombat2134SourceImpactIdentityPatch(BattleScene, PowView);
+installCombat2140ExactVfxPatch(BattleScene, PowView, CombatPresentationDirector);
+installCombat2141SemanticVfxPatch(BattleScene, PowView, CombatPresentationDirector);
+installCombat2142AssetVfxLivePatch(BattleScene);
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO, parent: 'powder-combat2', width: logicalWidth, height: logicalHeight, backgroundColor: '#08131f',
@@ -173,7 +194,8 @@ if (isLocalDev) {
         roster: testRosterReport,
         actionFx: (globalThis as any).POWDER_COMBAT2_ACTION_FX?.version ?? 'missing',
         statusFx: (globalThis as any).POWDER_COMBAT2_STATUS_FX?.version ?? 'missing',
-        assetVfx: (globalThis as any).POWDER_COMBAT2_ASSET_VFX?.version ?? 'missing',
+        assetVfx: (globalThis as any).POWDER_COMBAT2_EXACT_VFX?.version ?? 'missing',
+        assetVfxLive: (globalThis as any).POWDER_COMBAT2_ASSET_VFX_LIVE ?? 'missing',
         reserveFx: (globalThis as any).POWDER_COMBAT2_RESERVE_FX?.version ?? 'missing',
         reserveUi: (globalThis as any).POWDER_COMBAT2_RESERVE_UI?.version ?? 'missing',
         ultimateFx: (globalThis as any).POWDER_COMBAT2_ULTIMATE_FX?.version ?? 'missing',
