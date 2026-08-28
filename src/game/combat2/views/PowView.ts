@@ -6,6 +6,13 @@ import {
   controlWindowSnapshot
 } from '../systems/CombatControlEngine';
 import { rageMarkerStates } from '../systems/CombatRageEngine';
+import {
+  createPowVfxLayout,
+  powVfxDepth,
+  powVfxWorldAnchor,
+  type PowVfxAnchor,
+  type PowVfxLayer
+} from '../vfx/CombatNightVfxLayout';
 import { COMBAT_BODY_FONT, COMBAT_COLORS, COMBAT_DISPLAY_FONT } from './CombatTheme';
 
 interface PowViewOptions {
@@ -83,10 +90,10 @@ export class PowView {
     this.updateControlHistoryBadge(unit);
 
     if (this.hasRuntimeSnapshot && unit.alive) {
-      if (unit.hp > this.previousHp + 0.5) this.playResourcePulse(0x73f0aa);
-      if (unit.shield > this.previousShield + 0.5) this.playResourcePulse(0x8edfff);
+      if (unit.hp > this.previousHp + 0.5) this.playResourcePulse(0x73f0aa, 'body', 'foreground');
+      if (unit.shield > this.previousShield + 0.5) this.playResourcePulse(0x8edfff, 'body', 'status');
       else if (this.previousShield > 0 && unit.shield <= 0) this.playShieldBreak();
-      if (unit.ragePoints > this.previousRage) this.playResourcePulse(0x4fc8ff);
+      if (unit.ragePoints > this.previousRage) this.playResourcePulse(0x4fc8ff, 'head', 'foreground');
     }
     this.previousHp = unit.hp;
     this.previousShield = unit.shield;
@@ -188,6 +195,16 @@ export class PowView {
 
   getWorldPosition(): Phaser.Math.Vector2 { return new Phaser.Math.Vector2(this.container.x, this.container.y); }
 
+  private getVfxAnchor(anchor: PowVfxAnchor): Phaser.Math.Vector2 {
+    const liveScale = Phaser.Math.Clamp(
+      Number.isFinite(this.container.scaleX) ? Math.abs(this.container.scaleX) : this.fieldScale,
+      0.35,
+      1
+    );
+    const layout = createPowVfxLayout(this.cardWidth, this.cardHeight, liveScale);
+    return powVfxWorldAnchor(this.container.x, this.container.y, layout, anchor);
+  }
+
   private build(): void {
     const w = this.cardWidth;
     const h = this.cardHeight;
@@ -268,15 +285,22 @@ export class PowView {
     this.controlHistoryText.setText(`CC ${count}/${CONTROL_IMMUNITY_TRIGGER_HITS} · V${snapshot.firstRound}→${snapshot.expiresRound}`).setVisible(true);
   }
 
-  private playResourcePulse(color: number): void {
-    const p = this.getWorldPosition();
-    const ring = this.scene.add.circle(p.x, p.y, 48, color, 0.055).setStrokeStyle(3, color, 0.68).setDepth(40).setScale(0.78);
+  private playResourcePulse(
+    color: number,
+    anchor: PowVfxAnchor = 'body',
+    layer: PowVfxLayer = 'foreground'
+  ): void {
+    const p = this.getVfxAnchor(anchor);
+    const ring = this.scene.add.circle(p.x, p.y, 48, color, 0.055)
+      .setStrokeStyle(3, color, 0.68)
+      .setDepth(powVfxDepth(layer))
+      .setScale(0.78);
     this.scene.tweens.add({ targets: ring, scaleX: 1.5, scaleY: 1.5, alpha: 0, duration: this.reducedMotion ? 140 : 240, ease: 'Quad.easeOut', onComplete: () => ring.destroy() });
   }
 
   private playShieldBreak(): void {
-    const p = this.getWorldPosition();
-    const burst = this.scene.add.container(p.x, p.y).setDepth(41).setScale(0.76);
+    const p = this.getVfxAnchor('body');
+    const burst = this.scene.add.container(p.x, p.y).setDepth(powVfxDepth('status')).setScale(0.76);
     const ring = this.scene.add.circle(0, 0, 50, 0x000000, 0).setStrokeStyle(4, 0x8edfff, 0.82);
     burst.add(ring);
     const count = this.reducedMotion ? 4 : 7;
@@ -288,9 +312,9 @@ export class PowView {
   }
 
   private async playDefeatBurst(): Promise<void> {
-    const p = this.getWorldPosition();
+    const p = this.getVfxAnchor('body');
     const color = this.side === 'player' ? 0x70dced : 0xff9b68;
-    const burst = this.scene.add.container(p.x, p.y).setDepth(44).setScale(0.72);
+    const burst = this.scene.add.container(p.x, p.y).setDepth(powVfxDepth('foreground')).setScale(0.72);
     burst.add([
       this.scene.add.circle(0, 0, 55, 0x000000, 0).setStrokeStyle(4, color, 0.76),
       this.scene.add.rectangle(0, 0, 92, 5, color, 0.62).setRotation(0.72),
@@ -302,9 +326,9 @@ export class PowView {
   }
 
   private playHitFlash(): void {
-    const p = this.getWorldPosition();
+    const p = this.getVfxAnchor('body');
     const color = this.elementColor();
-    const flash = this.scene.add.circle(p.x, p.y - 4, 46, 0xffffff, 0.16).setStrokeStyle(3, color, 0.8).setDepth(38).setScale(0.82);
+    const flash = this.scene.add.circle(p.x, p.y - 4, 46, 0xffffff, 0.16).setStrokeStyle(3, color, 0.8).setDepth(powVfxDepth('body')).setScale(0.82);
     this.portrait.setTintFill(0xffffff);
     this.scene.time.delayedCall(this.reducedMotion ? 55 : 85, () => { if (this.portrait.active) this.portrait.clearTint(); });
     this.scene.tweens.add({ targets: flash, scaleX: 1.38, scaleY: 1.38, alpha: 0, duration: this.reducedMotion ? 110 : 180, ease: 'Quad.easeOut', onComplete: () => flash.destroy() });
@@ -314,8 +338,8 @@ export class PowView {
     const freeze = status === 'ĐÓNG BĂNG';
     const silence = status === 'CÂM LẶNG';
     const color = freeze ? 0x8adfff : silence ? 0xc9a0ff : 0xf5dd62;
-    const p = this.getWorldPosition();
-    const fx = this.scene.add.container(p.x, p.y).setDepth(39).setScale(0.78);
+    const p = this.getVfxAnchor(freeze ? 'body' : 'head');
+    const fx = this.scene.add.container(p.x, p.y).setDepth(powVfxDepth('status')).setScale(0.78);
     fx.add([
       this.scene.add.circle(0, 0, 56, 0x000000, 0).setStrokeStyle(4, color, 0.9),
       this.scene.add.circle(0, 0, 38, color, 0.07).setStrokeStyle(2, color, 0.55),
@@ -376,9 +400,9 @@ export class PowView {
   }
 
   private async playSupportAura(): Promise<void> {
-    const p = this.getWorldPosition();
+    const p = this.getVfxAnchor('body');
     const color = this.elementColor();
-    const aura = this.scene.add.container(p.x, p.y).setDepth(33).setScale(0.72);
+    const aura = this.scene.add.container(p.x, p.y).setDepth(powVfxDepth('foreground')).setScale(0.72);
     aura.add(this.scene.add.circle(0, 0, 45, color, 0.08).setStrokeStyle(4, color, 0.66));
     await this.tweenPromise({ targets: aura, y: p.y - 10, scaleX: 1.58, scaleY: 1.58, alpha: 0, duration: this.reducedMotion ? 170 : 270, ease: 'Sine.easeOut' });
     aura.destroy(true);
