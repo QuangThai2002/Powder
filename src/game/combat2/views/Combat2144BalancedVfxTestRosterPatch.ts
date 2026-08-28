@@ -1,7 +1,9 @@
 import { ALL_COMBAT2_STARTER_POWS, COMBAT2_STARTER_ROSTER } from '../data/PowderDataAdapter';
 import type { CombatAbility, CombatPow } from '../data/CombatPow';
+import { CombatState } from '../systems/CombatState';
 
 const PATCH_FLAG = '__powderCombat2144BalancedVfxTestRosterInstalled';
+const RAGE_PATCH_FLAG = '__powderCombat2144BalancedVfxTestRageInstalled';
 const VERSION = '2.14.4-test-roster';
 
 function byId(id: string): CombatPow {
@@ -135,6 +137,22 @@ function configureGearbit(pow: CombatPow): void {
   });
 }
 
+function installFourRageTestStart(): void {
+  const root = globalThis as any;
+  if (root[RAGE_PATCH_FLAG]) return;
+  root[RAGE_PATCH_FLAG] = true;
+
+  const proto = CombatState.prototype as any;
+  const originalMakeUnits = proto.makeUnits;
+  if (typeof originalMakeUnits !== 'function') return;
+
+  proto.makeUnits = function combat2144MakeUnitsWithTestRage(...args: unknown[]): any[] {
+    const units = originalMakeUnits.apply(this, args) as any[];
+    units.forEach((unit) => { unit.ragePoints = 4; });
+    return units;
+  };
+}
+
 export function installCombat2144BalancedVfxTestRoster(): void {
   const root = globalThis as any;
   if (root[PATCH_FLAG]) return;
@@ -162,9 +180,11 @@ export function installCombat2144BalancedVfxTestRoster(): void {
   configureStormeon(byId('stormeon'));
   configurePyroon(byId('pyroon'));
   configureGearbit(byId('gearbit'));
+  installFourRageTestStart();
 
   root.POWDER_COMBAT2_BALANCED_VFX_TEST_ROSTER = {
     version: VERSION,
+    initialRage: 4,
     player: player.map((pow) => pow.id),
     enemy: enemy.map((pow) => pow.id),
     activePairs: [
