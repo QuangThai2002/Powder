@@ -47,6 +47,10 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
   const domain = root.POWDER_COMBAT2_NIGHT_DOMAIN;
   const support = root.POWDER_COMBAT2_NIGHT_SUPPORT_ASSETS;
   const budget = root.POWDER_COMBAT2_NIGHT_FX_BUDGET;
+  const teardown = root.POWDER_COMBAT2_NIGHT_TEARDOWN;
+  const leakAudit = typeof teardown?.getSceneLeakAuditSnapshot === 'function'
+    ? teardown.getSceneLeakAuditSnapshot()
+    : null;
   const coreTooltipCoverage = [
     'burn', 'poison', 'freeze', 'stun', 'regeneration', 'shield', 'dual-dot'
   ] as const;
@@ -96,8 +100,12 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
       'core-status-tooltips',
       Boolean(tooltip)
         && includesAll(tooltip.covered, coreTooltipCoverage)
+        && tooltip.refreshStable === true
+        && tooltip.hoverStatePreserved === true
+        && tooltip.recreateOnStatusChangeOnly === true
+        && Number(tooltip.sceneObjectPerHoveredPowMax) <= 1
         && tooltip.combatLogicChanged === false,
-      `version=${tooltip?.version ?? 'missing'};covered=${Array.isArray(tooltip?.covered) ? tooltip.covered.join(',') : 'missing'}`
+      `version=${tooltip?.version ?? 'missing'};covered=${Array.isArray(tooltip?.covered) ? tooltip.covered.join(',') : 'missing'};stable=${String(tooltip?.refreshStable)}`
     ),
     check(
       'persistent-heal-shield-lifecycle',
@@ -116,20 +124,41 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
         && domain?.particles === false
         && domain?.tweenLoops === false
         && domain?.depth === -11
+        && domain?.sceneShutdownCleanup === true
+        && domain?.emptyFieldAvoided === true
+        && Number(domain?.maxFieldContainersPerScene) <= 1
         && domain?.combatLogicChanged === false,
-      `version=${domain?.version ?? 'missing'};depth=${domain?.depth ?? 'missing'};particles=${String(domain?.particles)};loops=${String(domain?.tweenLoops)}`
+      `version=${domain?.version ?? 'missing'};depth=${domain?.depth ?? 'missing'};cleanup=${String(domain?.sceneShutdownCleanup)};emptyAvoided=${String(domain?.emptyFieldAvoided)}`
     ),
     check(
-      'adaptive-fps-source',
+      'adaptive-fps-burst-guard',
       Boolean(root.POWDER_COMBAT2_PERFORMANCE)
         && Boolean(budget)
-        && budget?.source === 'POWDER_COMBAT2_FX_TIER',
-      `performance=${root.POWDER_COMBAT2_PERFORMANCE?.version ?? 'missing'};night=${budget?.version ?? 'missing'};source=${budget?.source ?? 'missing'}`
+        && budget?.source === 'POWDER_COMBAT2_FX_TIER'
+        && budget?.burstGuard === true
+        && Number(budget?.balancedBurstThreshold) === 2
+        && budget?.fullTierPreserved === true
+        && budget?.counterFinallySafe === true
+        && budget?.combatLogicChanged === false,
+      `performance=${root.POWDER_COMBAT2_PERFORMANCE?.version ?? 'missing'};night=${budget?.version ?? 'missing'};burst=${String(budget?.burstGuard)};threshold=${budget?.balancedBurstThreshold ?? 'missing'}`
     ),
     check(
       'scene-teardown-cleanup',
-      Boolean(root.POWDER_COMBAT2_NIGHT_TEARDOWN?.sceneShutdownSafe),
-      `version=${root.POWDER_COMBAT2_NIGHT_TEARDOWN?.version ?? 'missing'}`
+      Boolean(teardown?.sceneShutdownSafe)
+        && teardown?.lifecycleCounters === true
+        && teardown?.sceneScopedLeakAudit === true
+        && typeof teardown?.getLifecycleSnapshot === 'function'
+        && typeof teardown?.getSceneLeakAuditSnapshot === 'function'
+        && Number(teardown?.expectedActiveAfterShutdown) === 0
+        && teardown?.perFramePolling === false
+        && teardown?.combatLogicChanged === false,
+      `version=${teardown?.version ?? 'missing'};sceneAudit=${String(teardown?.sceneScopedLeakAudit)};polling=${String(teardown?.perFramePolling)}`
+    ),
+    check(
+      'scene-leak-last-audit',
+      Boolean(leakAudit)
+        && (Number(leakAudit?.runs || 0) === 0 || Number(leakAudit?.lastActiveAfterShutdown || 0) === 0),
+      `runs=${leakAudit?.runs ?? 'missing'};failures=${leakAudit?.failures ?? 'missing'};lastActive=${leakAudit?.lastActiveAfterShutdown ?? 'missing'};scene=${leakAudit?.lastSceneKey ?? 'missing'}`
     ),
     check(
       'heal-shield-img2-assets',
@@ -139,7 +168,7 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
   ];
 
   const report: CombatNightRegressionReport = {
-    version: 'night-22',
+    version: 'night-28',
     pass: checks.every((entry) => entry.pass),
     checks
   };
