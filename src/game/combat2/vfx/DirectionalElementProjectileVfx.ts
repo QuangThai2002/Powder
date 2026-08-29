@@ -210,6 +210,76 @@ export class DirectionalElementProjectileVfx {
       return true;
     }
 
+    if (element === 'ice') {
+      const shardCount = reducedMotion ? 3 : 5;
+      for (let index = 0; index < shardCount; index += 1) {
+        const angle = Math.PI * 2 * index / shardCount - Math.PI / 2;
+        const distance = radius * 0.62;
+        impact.add(
+          scene.add.triangle(
+            Math.cos(angle) * distance,
+            Math.sin(angle) * distance,
+            -4,
+            6,
+            4,
+            6,
+            0,
+            -radius * 0.58,
+            index % 2 === 0 ? coreColor : color,
+            0.82
+          ).setRotation(angle + Math.PI / 2)
+        );
+      }
+      impact.add(scene.add.polygon(0, 0, [0, -radius * 0.62, radius * 0.24, -4, 0, radius * 0.5, -radius * 0.24, -4], coreColor, 0.48));
+      return true;
+    }
+
+    if (element === 'lightning') {
+      const bolt = scene.add.graphics();
+      bolt.lineStyle(reducedMotion ? 3 : 4, coreColor, 0.92);
+      bolt.beginPath();
+      bolt.moveTo(-radius * 0.9, -radius * 0.12);
+      bolt.lineTo(-radius * 0.28, -radius * 0.36);
+      bolt.lineTo(-radius * 0.06, radius * 0.1);
+      bolt.lineTo(radius * 0.32, -radius * 0.2);
+      bolt.lineTo(radius * 0.88, radius * 0.14);
+      bolt.strokePath();
+      impact.add(bolt);
+      if (!reducedMotion) {
+        impact.add([
+          scene.add.rectangle(0, 0, 3, radius * 1.65, color, 0.62).setRotation(0.46),
+          scene.add.rectangle(0, 0, 3, radius * 1.4, coreColor, 0.54).setRotation(-0.72)
+        ]);
+      }
+      return true;
+    }
+
+    if (element === 'storm') {
+      impact.add([
+        scene.add.arc(0, 0, radius * 0.88, 205, 18, false, color, 0.03).setStrokeStyle(5, color, 0.82),
+        scene.add.arc(0, 0, radius * 0.58, 28, 220, false, coreColor, 0.03).setStrokeStyle(3, coreColor, 0.7)
+      ]);
+      if (!reducedMotion) {
+        impact.add([
+          scene.add.circle(-radius * 0.54, -radius * 0.24, 4, coreColor, 0.64),
+          scene.add.circle(radius * 0.48, radius * 0.18, 3, color, 0.68),
+          scene.add.rectangle(radius * 0.05, -radius * 0.52, 3, radius * 0.72, coreColor, 0.66).setRotation(0.34)
+        ]);
+      }
+      return true;
+    }
+
+    if (element === 'wind') {
+      impact.add([
+        scene.add.arc(0, radius * 0.02, radius * 0.9, 200, 338, false, color, 0.02).setStrokeStyle(4, color, 0.82),
+        scene.add.arc(-radius * 0.08, -radius * 0.06, radius * 0.62, 188, 330, false, coreColor, 0.02).setStrokeStyle(3, coreColor, 0.72)
+      ]);
+      if (!reducedMotion) {
+        impact.add(scene.add.arc(radius * 0.08, radius * 0.08, radius * 0.38, 205, 345, false, color, 0.02).setStrokeStyle(2, color, 0.58));
+      }
+      return true;
+    }
+
     if (element === 'leaf') {
       const count = reducedMotion ? 3 : 5;
       for (let index = 0; index < count; index += 1) {
@@ -235,6 +305,51 @@ export class DirectionalElementProjectileVfx {
         scene.add.circle(radius * 0.26, radius * 0.24, 4, color, 0.78)
       ]);
       if (!reducedMotion) impact.add(scene.add.circle(radius * 0.46, -radius * 0.16, 3, coreColor, 0.62));
+      return true;
+    }
+
+    if (element === 'earth') {
+      const crack = scene.add.graphics();
+      crack.lineStyle(reducedMotion ? 3 : 4, coreColor, 0.76);
+      crack.beginPath();
+      crack.moveTo(0, radius * 0.08);
+      crack.lineTo(-radius * 0.28, radius * 0.44);
+      crack.lineTo(-radius * 0.62, radius * 0.62);
+      crack.moveTo(0, radius * 0.08);
+      crack.lineTo(radius * 0.24, radius * 0.42);
+      crack.lineTo(radius * 0.7, radius * 0.56);
+      crack.strokePath();
+      impact.add(crack);
+      const rockCount = reducedMotion ? 2 : 4;
+      for (let index = 0; index < rockCount; index += 1) {
+        const angle = Math.PI + (Math.PI * index / Math.max(1, rockCount - 1));
+        impact.add(scene.add.polygon(
+          Math.cos(angle) * radius * 0.58,
+          radius * 0.32 + Math.sin(angle) * radius * 0.18,
+          [-6, -4, 1, -8, 7, -2, 5, 6, -5, 7],
+          index % 2 === 0 ? color : coreColor,
+          0.76
+        ));
+      }
+      return true;
+    }
+
+    if (element === 'steel') {
+      const bladeCount = reducedMotion ? 3 : 5;
+      for (let index = 0; index < bladeCount; index += 1) {
+        const angle = Math.PI * 2 * index / bladeCount;
+        impact.add(
+          scene.add.rectangle(
+            Math.cos(angle) * radius * 0.62,
+            Math.sin(angle) * radius * 0.62,
+            radius * 0.72,
+            4,
+            index % 2 === 0 ? coreColor : color,
+            0.8
+          ).setRotation(angle)
+        );
+      }
+      impact.add(scene.add.circle(0, 0, radius * 0.3, 0x000000, 0).setStrokeStyle(3, coreColor, 0.72));
       return true;
     }
 
@@ -281,15 +396,15 @@ export class DirectionalElementProjectileVfx {
 
     const hasDistinctMotif = this.addImpactMotif(impact, scene, element, profile, reducedMotion);
     if (!reducedMotion && !hasDistinctMotif) {
-      const shardCount = element === 'earth' ? 5 : element === 'lightning' ? 7 : 6;
+      const shardCount = 6;
       for (let index = 0; index < shardCount; index += 1) {
         const angle = Math.PI * 2 * index / shardCount;
         impact.add(
           scene.add.rectangle(
             Math.cos(angle) * profile.impactRadius * 0.8,
             Math.sin(angle) * profile.impactRadius * 0.8,
-            element === 'wind' ? 18 : 13,
-            element === 'earth' ? 6 : 3,
+            13,
+            3,
             profile.color,
             0.78
           ).setRotation(angle)
