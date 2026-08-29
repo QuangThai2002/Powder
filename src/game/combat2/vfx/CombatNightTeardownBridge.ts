@@ -6,11 +6,33 @@ const FLAG = '__powderCombatNightTeardownBridgeInstalled';
 
 type TweenPromise = (config: Phaser.Types.Tweens.TweenBuilderConfig) => Promise<void>;
 
+let activeSafeTweens = 0;
+let peakSafeTweens = 0;
+let shutdownAborts = 0;
+let settledSafeTweens = 0;
+
+function lifecycleSnapshot(): Readonly<{
+  activeSafeTweens: number;
+  peakSafeTweens: number;
+  shutdownAborts: number;
+  settledSafeTweens: number;
+}> {
+  return {
+    activeSafeTweens,
+    peakSafeTweens,
+    shutdownAborts,
+    settledSafeTweens
+  };
+}
+
 function safeTween(
   scene: Phaser.Scene,
   config: Phaser.Types.Tweens.TweenBuilderConfig,
   fallbackDuration = 180
 ): Promise<void> {
+  activeSafeTweens += 1;
+  peakSafeTweens = Math.max(peakSafeTweens, activeSafeTweens);
+
   return new Promise((resolve) => {
     let settled = false;
     let tween: Phaser.Tweens.Tween | null = null;
@@ -28,10 +50,13 @@ function safeTween(
       if (settled) return;
       settled = true;
       cleanup();
+      activeSafeTweens = Math.max(0, activeSafeTweens - 1);
+      settledSafeTweens += 1;
       resolve();
     };
     const abort = (): void => {
       if (settled) return;
+      shutdownAborts += 1;
       try { tween?.stop(); } catch { /* scene teardown may already own tween cleanup */ }
       finish();
     };
@@ -86,10 +111,14 @@ export function installCombatNightTeardownBridge(): void {
   installProjectileTweenCleanup();
 
   root.POWDER_COMBAT2_NIGHT_TEARDOWN = {
-    version: 'night-15',
+    version: 'night-24',
     sceneShutdownSafe: true,
     powTweens: true,
     projectileTweens: true,
+    lifecycleCounters: true,
+    getLifecycleSnapshot: lifecycleSnapshot,
+    expectedActiveAfterShutdown: 0,
+    perFramePolling: false,
     combatLogicChanged: false
   };
 }
