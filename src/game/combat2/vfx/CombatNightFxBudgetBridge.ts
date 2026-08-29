@@ -123,7 +123,7 @@ async function playReadableGuide(
     .setDepth(powVfxDepth('foreground') + 2)
     .setRotation(angle);
 
-  // Short moving tail + bright head: the eye follows the projectile itself instead of a full-path line.
+  // Short moving tail + bright head: the eye follows the projectile itself instead of relying on the legacy path line.
   guide.add(scene.add.rectangle(-length * 0.18, 0, length, thickness, color, reducedDetail ? 0.38 : 0.52));
   if (!reducedDetail) {
     guide.add(scene.add.rectangle(length * 0.02, 0, length * 0.52, 2.5, 0xffffff, 0.78));
@@ -189,7 +189,7 @@ export function installCombatNightFxBudgetBridge(): void {
   };
 
   root.POWDER_COMBAT2_NIGHT_FX_BUDGET = {
-    version: 'night-26',
+    version: 'night-33',
     source: 'POWDER_COMBAT2_FX_TIER',
     full: 'readable-moving-core-with-native-element-vfx',
     balanced: 'readable-moving-core-with-burst-reduced-motion',
@@ -197,9 +197,10 @@ export function installCombatNightFxBudgetBridge(): void {
     balancedBurstThreshold: BALANCED_BURST_THRESHOLD,
     burstGuard: true,
     movingProjectileGuide: true,
-    fullPathGuideLineReplacedByMovingFocus: true,
+    movingFocusOverLegacyPathLine: true,
     readableTravelMs: { full: '250-360', balanced: '235-295', lite: '185-220' },
     sceneShutdownSafeGuide: true,
+    fullTierPreserved: true,
     counterFinallySafe: true,
     combatLogicChanged: false
   };
