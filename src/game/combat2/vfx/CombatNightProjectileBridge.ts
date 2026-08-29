@@ -6,8 +6,11 @@ interface PowViewProjectileRuntime {
   scene: Phaser.Scene;
   pow: { elementKey?: string; element?: string };
   reducedMotion: boolean;
+  container: Phaser.GameObjects.Container;
   getVfxAnchor?: (anchor: 'body') => Phaser.Math.Vector2;
   getWorldPosition: () => Phaser.Math.Vector2;
+  playCastSignature?: (support: boolean) => Promise<void>;
+  tweenPromise?: (config: Phaser.Types.Tweens.TweenBuilderConfig) => Promise<void>;
 }
 
 function normalize(value: string): string {
@@ -32,33 +35,104 @@ function resolveElement(pow: PowViewProjectileRuntime['pow']): CombatProjectileE
   return 'neutral';
 }
 
+async function playNightProjectile(
+  view: PowViewProjectileRuntime,
+  targetX: number,
+  targetY: number
+): Promise<void> {
+  const source = typeof view.getVfxAnchor === 'function'
+    ? view.getVfxAnchor('body')
+    : view.getWorldPosition();
+  const target = new Phaser.Math.Vector2(targetX, targetY);
+
+  await DirectionalElementProjectileVfx.play({
+    scene: view.scene,
+    source,
+    target,
+    element: resolveElement(view.pow),
+    reducedMotion: view.reducedMotion
+  });
+}
+
 /**
- * Night Upgrade runtime bridge.
- * Replaces only PowView's presentation-only travel method; no combat state or damage logic changes.
+ * Final Night projectile owner.
+ *
+ * The previous bridge only replaced playElementTravel. That was too indirect: older
+ * presentation patches can still make it difficult to prove that the live attack entry
+ * point actually reaches the Night projectile. Night 34 therefore owns playAttackLunge
+ * itself and calls DirectionalElementProjectileVfx directly from the method BattleScene
+ * invokes for basic attacks and offensive skills.
+ *
+ * Presentation only: no damage, targeting, turn order or combat-state mutations.
  */
 export function installCombatNightProjectileBridge(): void {
   const prototype = PowView.prototype as unknown as {
     playElementTravel?: (targetX: number, targetY: number) => Promise<void>;
+    playAttackLunge?: (targetX: number, targetY: number) => Promise<void>;
     __nightProjectileBridgeInstalled?: boolean;
+    __nightProjectileAttackOwnerInstalled?: boolean;
   };
-  if (prototype.__nightProjectileBridgeInstalled) return;
 
-  prototype.playElementTravel = async function (this: PowViewProjectileRuntime, targetX: number, targetY: number): Promise<void> {
-    const source = typeof this.getVfxAnchor === 'function'
-      ? this.getVfxAnchor('body')
-      : this.getWorldPosition();
-    const target = new Phaser.Math.Vector2(targetX, targetY);
+  // A previous Night version may already have installed the travel bridge. Upgrade it
+  // in-place instead of returning early so hot reloads / branch refreshes pick up Night 34.
+  prototype.playElementTravel = async function (
+    this: PowViewProjectileRuntime,
+    targetX: number,
+    targetY: number
+  ): Promise<void> {
+    await playNightProjectile(this, targetX, targetY);
+  };
 
-    await DirectionalElementProjectileVfx.play({
-      scene: this.scene,
-      source,
-      target,
-      element: resolveElement(this.pow),
-      reducedMotion: this.reducedMotion
-    });
+  prototype.playAttackLunge = async function (
+    this: PowViewProjectileRuntime,
+    targetX: number,
+    targetY: number
+  ): Promise<void> {
+    const startX = this.container.x;
+    const startY = this.container.y;
+    const dx = targetX - startX;
+    const dy = targetY - startY;
+    const distance = Math.max(1, Math.hypot(dx, dy));
+    const attackX = startX + (dx / distance) * 34;
+    const attackY = startY + (dy / distance) * 34;
+
+    if (typeof this.playCastSignature === 'function') {
+      await this.playCastSignature(false);
+    }
+
+    const lunge = typeof this.tweenPromise === 'function'
+      ? this.tweenPromise({
+          targets: this.container,
+          x: attackX,
+          y: attackY,
+          duration: this.reducedMotion ? 80 : 140,
+          ease: 'Quad.easeOut',
+          yoyo: true
+        })
+      : Promise.resolve();
+
+    try {
+      await Promise.all([
+        playNightProjectile(this, targetX, targetY),
+        lunge
+      ]);
+    } finally {
+      this.container.setPosition(startX, startY);
+    }
   };
 
   prototype.__nightProjectileBridgeInstalled = true;
+  prototype.__nightProjectileAttackOwnerInstalled = true;
+
+  const root = globalThis as any;
+  root.POWDER_COMBAT2_NIGHT_PROJECTILE = {
+    version: 'night-34',
+    runtimeEntryPoint: 'PowView.playAttackLunge',
+    directTravelOwner: true,
+    attackLungeOwner: true,
+    sourceToTarget: true,
+    combatLogicChanged: false
+  };
 }
 
 installCombatNightProjectileBridge();
