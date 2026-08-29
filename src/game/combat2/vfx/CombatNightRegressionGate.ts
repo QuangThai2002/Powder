@@ -1,6 +1,7 @@
 import { LEGACY_EXPANSION_DOMAINS } from '../systems/CombatLegacyDomainEngine';
 import { PowView } from '../views/PowView';
 import './CombatNightTeardownBridge';
+import './CombatNightSupportAssetBridge';
 import { PersistentPowStatusVfx } from './PersistentPowStatusVfx';
 import {
   NIGHT_STATUS_VFX_DEFAULTS,
@@ -96,11 +97,16 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
       'scene-teardown-cleanup',
       Boolean(root.POWDER_COMBAT2_NIGHT_TEARDOWN?.sceneShutdownSafe),
       `version=${root.POWDER_COMBAT2_NIGHT_TEARDOWN?.version ?? 'missing'}`
+    ),
+    check(
+      'heal-shield-img2-assets',
+      Boolean(root.POWDER_COMBAT2_NIGHT_SUPPORT_ASSETS?.hudSafeScale && root.POWDER_COMBAT2_NIGHT_SUPPORT_ASSETS?.ragePulsePreserved),
+      `version=${root.POWDER_COMBAT2_NIGHT_SUPPORT_ASSETS?.version ?? 'missing'}`
     )
   ];
 
   const report: CombatNightRegressionReport = {
-    version: 'night-15',
+    version: 'night-16',
     pass: checks.every((entry) => entry.pass),
     checks
   };
