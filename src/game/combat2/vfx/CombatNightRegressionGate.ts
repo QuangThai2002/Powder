@@ -25,6 +25,12 @@ function check(name: string, pass: boolean, detail: string): NightRegressionChec
   return { name, pass, detail };
 }
 
+function includesAll(values: unknown, required: readonly string[]): boolean {
+  if (!Array.isArray(values)) return false;
+  const normalized = new Set(values.map((value) => String(value)));
+  return required.every((value) => normalized.has(value));
+}
+
 export function runCombatNightRegressionGate(): CombatNightRegressionReport {
   const root = globalThis as any;
   const frames = orderedFrameNumbers({ startFrame: 0, endFrame: 11 });
@@ -37,6 +43,14 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
   ];
   const prototype = PowView.prototype as any;
   const persistentPrototype = PersistentPowStatusVfx.prototype as any;
+  const tooltip = root.POWDER_COMBAT2_NIGHT_STATUS_TOOLTIPS;
+  const domain = root.POWDER_COMBAT2_NIGHT_DOMAIN;
+  const support = root.POWDER_COMBAT2_NIGHT_SUPPORT_ASSETS;
+  const budget = root.POWDER_COMBAT2_NIGHT_FX_BUDGET;
+  const coreTooltipCoverage = [
+    'burn', 'poison', 'freeze', 'stun', 'regeneration', 'shield', 'dual-dot'
+  ] as const;
+
   const checks: NightRegressionCheck[] = [
     check(
       'sprite-frame-order',
@@ -79,19 +93,38 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
       `installed=${String(prototype.__nightPersistentDedupInstalled === true)}`
     ),
     check(
-      'debuff-tooltips',
-      Boolean(root.POWDER_COMBAT2_NIGHT_STATUS_TOOLTIPS),
-      `version=${root.POWDER_COMBAT2_NIGHT_STATUS_TOOLTIPS?.version ?? 'missing'}`
+      'core-status-tooltips',
+      Boolean(tooltip)
+        && includesAll(tooltip.covered, coreTooltipCoverage)
+        && tooltip.combatLogicChanged === false,
+      `version=${tooltip?.version ?? 'missing'};covered=${Array.isArray(tooltip?.covered) ? tooltip.covered.join(',') : 'missing'}`
     ),
     check(
-      'domain-ground-identity',
-      Boolean(root.POWDER_COMBAT2_NIGHT_DOMAIN),
-      `version=${root.POWDER_COMBAT2_NIGHT_DOMAIN?.version ?? 'missing'}`
+      'persistent-heal-shield-lifecycle',
+      Boolean(support?.persistentShield)
+        && Boolean(support?.persistentRegeneration)
+        && Number(support?.maxPersistentImagesPerPow) <= 2
+        && support?.persistentLoopTweens === false
+        && Boolean(support?.sceneShutdownCleanup)
+        && support?.combatLogicChanged === false,
+      `version=${support?.version ?? 'missing'};max=${support?.maxPersistentImagesPerPow ?? 'missing'};loops=${String(support?.persistentLoopTweens)}`
+    ),
+    check(
+      'domain-ground-ownership-safety',
+      Boolean(domain?.ownerBoundary)
+        && Boolean(domain?.clashSeam)
+        && domain?.particles === false
+        && domain?.tweenLoops === false
+        && domain?.depth === -11
+        && domain?.combatLogicChanged === false,
+      `version=${domain?.version ?? 'missing'};depth=${domain?.depth ?? 'missing'};particles=${String(domain?.particles)};loops=${String(domain?.tweenLoops)}`
     ),
     check(
       'adaptive-fps-source',
-      Boolean(root.POWDER_COMBAT2_PERFORMANCE && root.POWDER_COMBAT2_NIGHT_FX_BUDGET),
-      `performance=${root.POWDER_COMBAT2_PERFORMANCE?.version ?? 'missing'};night=${root.POWDER_COMBAT2_NIGHT_FX_BUDGET?.version ?? 'missing'}`
+      Boolean(root.POWDER_COMBAT2_PERFORMANCE)
+        && Boolean(budget)
+        && budget?.source === 'POWDER_COMBAT2_FX_TIER',
+      `performance=${root.POWDER_COMBAT2_PERFORMANCE?.version ?? 'missing'};night=${budget?.version ?? 'missing'};source=${budget?.source ?? 'missing'}`
     ),
     check(
       'scene-teardown-cleanup',
@@ -100,13 +133,13 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
     ),
     check(
       'heal-shield-img2-assets',
-      Boolean(root.POWDER_COMBAT2_NIGHT_SUPPORT_ASSETS?.hudSafeScale && root.POWDER_COMBAT2_NIGHT_SUPPORT_ASSETS?.ragePulsePreserved),
-      `version=${root.POWDER_COMBAT2_NIGHT_SUPPORT_ASSETS?.version ?? 'missing'}`
+      Boolean(support?.hudSafeScale && support?.ragePulsePreserved),
+      `version=${support?.version ?? 'missing'}`
     )
   ];
 
   const report: CombatNightRegressionReport = {
-    version: 'night-16',
+    version: 'night-22',
     pass: checks.every((entry) => entry.pass),
     checks
   };
