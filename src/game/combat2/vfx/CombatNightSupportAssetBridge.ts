@@ -25,16 +25,50 @@ function pulseAsset(view: any, spec: ExactCombatVfxSpec, kind: 'heal' | 'shield'
 
   if (kind === 'heal') image.setBlendMode(Phaser.BlendModes.ADD);
   const reducedMotion = Boolean(view.reducedMotion);
-  scene.tweens.add({
+  const config: Phaser.Types.Tweens.TweenBuilderConfig = {
     targets: image,
     y: kind === 'heal' ? p.y - 10 : p.y,
     scaleX: kind === 'shield' ? 1.08 : 1.12,
     scaleY: kind === 'shield' ? 1.08 : 1.12,
     alpha: 0,
     duration: reducedMotion ? 150 : kind === 'shield' ? 260 : 240,
-    ease: 'Quad.easeOut',
-    onComplete: () => image.destroy()
-  });
+    ease: 'Quad.easeOut'
+  };
+
+  const destroyImage = (): void => {
+    if (image.active) image.destroy();
+  };
+
+  // Night teardown replaces PowView.tweenPromise with a scene-shutdown-safe owner.
+  // Prefer that path so a Heal/Shield pulse cannot leave a live tween/image behind
+  // when the player exits or restarts Combat2 in the middle of the pulse.
+  if (typeof view.tweenPromise === 'function') {
+    try {
+      void Promise.resolve(view.tweenPromise(config)).then(destroyImage, destroyImage);
+      return true;
+    } catch {
+      destroyImage();
+      return true;
+    }
+  }
+
+  let cleaned = false;
+  let tween: Phaser.Tweens.Tween | null = null;
+  const cleanup = (): void => {
+    if (cleaned) return;
+    cleaned = true;
+    scene.events.off(Phaser.Scenes.Events.SHUTDOWN, cleanup);
+    scene.events.off(Phaser.Scenes.Events.DESTROY, cleanup);
+    try { tween?.stop(); } catch { /* scene teardown may already own tween cleanup */ }
+    destroyImage();
+  };
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanup);
+  scene.events.once(Phaser.Scenes.Events.DESTROY, cleanup);
+  try {
+    tween = scene.tweens.add({ ...config, onComplete: cleanup, onStop: cleanup });
+  } catch {
+    cleanup();
+  }
   return true;
 }
 
@@ -167,7 +201,7 @@ export function installCombatNightSupportAssetBridge(): void {
 
   proto.__nightSupportAssetInstalled = true;
   root.POWDER_COMBAT2_NIGHT_SUPPORT_ASSETS = {
-    version: 'night-17',
+    version: 'night-29',
     source: 'img2-curated-preview',
     heal: EXACT_STATUS_VFX.heal.textureKey,
     shield: EXACT_STATUS_VFX.shield.textureKey,
@@ -180,6 +214,8 @@ export function installCombatNightSupportAssetBridge(): void {
     maxPersistentImagesPerPow: 2,
     persistentLoopTweens: false,
     sceneShutdownCleanup: true,
+    pulseTweenShutdownSafe: true,
+    pulseImageGuaranteedDestroy: true,
     fallback: 'procedural-pulse-when-texture-missing',
     combatLogicChanged: false
   };
