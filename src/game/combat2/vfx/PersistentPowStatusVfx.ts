@@ -39,7 +39,7 @@ const STATUS_TOOLTIP_COPY: Record<PersistentPowStatusKind, StatusTooltipCopy> = 
     color: 0xff7043
   },
   poison: {
-    glyph: '☠',
+    glyph: '☣',
     title: 'Nhiễm độc',
     description: 'Nhận sát thương độc duy trì và có thể cộng dồn.',
     color: 0xa5df66
@@ -74,6 +74,7 @@ export class PersistentPowStatusVfx {
   private readonly scene: Phaser.Scene;
   private readonly sheetSpecs: PersistentStatusSheetMap;
   private active: ActivePersistentStatus | null = null;
+  private cleanupRegistered = false;
 
   constructor(scene: Phaser.Scene, sheetSpecs: PersistentStatusSheetMap = {}) {
     this.scene = scene;
@@ -86,6 +87,7 @@ export class PersistentPowStatusVfx {
       return;
     }
 
+    this.ensureSceneCleanup();
     if (this.active?.kind === kind) {
       this.reposition(this.active, kind, x, y, layout);
       return;
@@ -107,6 +109,24 @@ export class PersistentPowStatusVfx {
 
   destroy(): void {
     this.clear();
+  }
+
+  private ensureSceneCleanup(): void {
+    if (this.cleanupRegistered || !this.scene?.events) return;
+    this.cleanupRegistered = true;
+    let cleaned = false;
+
+    const cleanup = (): void => {
+      if (cleaned) return;
+      cleaned = true;
+      this.scene.events.off(Phaser.Scenes.Events.SHUTDOWN, cleanup);
+      this.scene.events.off(Phaser.Scenes.Events.DESTROY, cleanup);
+      this.cleanupRegistered = false;
+      this.clear();
+    };
+
+    this.scene.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanup);
+    this.scene.events.once(Phaser.Scenes.Events.DESTROY, cleanup);
   }
 
   private createStatusBadge(
@@ -269,3 +289,12 @@ export class PersistentPowStatusVfx {
     );
   }
 }
+
+(globalThis as any).POWDER_COMBAT2_NIGHT_PERSISTENT_STATUS = {
+  version: 'night-30',
+  ownerPerPowMax: 1,
+  sceneShutdownCleanup: true,
+  poisonBadgeGlyph: 'hazard-no-skull',
+  fullSheetPriority: true,
+  combatLogicChanged: false
+};
