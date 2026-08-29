@@ -8,7 +8,7 @@
 //
 // Night Domain installs before main.ts so the existing domain-stage patches wrap it
 // instead of being bypassed. Runtime Night finalizers install after main.ts so they
-// remain the last presentation owners for status/projectile methods.
+// remain the last presentation owners for status/projectile methods. Regression runs last.
 //
 // Presentation/VFX patches themselves remain installed inside main.ts BEFORE
 // new Phaser.Game() so BattleScene.preload/create sees every registered texture.
@@ -20,3 +20,4 @@ import './vfx/CombatNightProjectileBridge';
 import './vfx/CombatNightCuratedStatusAssetBridge';
 import './vfx/CombatNightStatusTooltipBridge';
 import './vfx/CombatNightFxBudgetBridge';
+import './vfx/CombatNightRegressionGate';
