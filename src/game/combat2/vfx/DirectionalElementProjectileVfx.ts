@@ -158,6 +158,113 @@ export class DirectionalElementProjectileVfx {
     ]);
   }
 
+  private static addImpactMotif(
+    impact: Phaser.GameObjects.Container,
+    scene: Phaser.Scene,
+    element: CombatProjectileElement,
+    profile: ElementVisualProfile,
+    reducedMotion: boolean
+  ): boolean {
+    const radius = profile.impactRadius;
+    const { color, coreColor } = profile;
+
+    if (element === 'fire' || element === 'lava') {
+      const flameCount = reducedMotion ? 2 : element === 'lava' ? 4 : 3;
+      for (let index = 0; index < flameCount; index += 1) {
+        const spread = flameCount <= 1 ? 0 : (index / (flameCount - 1) - 0.5) * radius * 1.05;
+        impact.add(
+          scene.add.triangle(
+            spread,
+            -radius * 0.14,
+            -6,
+            radius * 0.45,
+            6,
+            radius * 0.45,
+            0,
+            -radius * (element === 'lava' ? 0.75 : 0.95),
+            index % 2 === 0 ? coreColor : color,
+            element === 'lava' ? 0.78 : 0.7
+          )
+        );
+      }
+      if (element === 'lava' && !reducedMotion) {
+        impact.add([
+          scene.add.polygon(-radius * 0.62, radius * 0.2, [-7, -4, 2, -7, 8, 1, 2, 7, -6, 5], color, 0.82),
+          scene.add.polygon(radius * 0.58, radius * 0.26, [-6, -4, 3, -6, 7, 2, 1, 7, -7, 3], coreColor, 0.7)
+        ]);
+      }
+      return true;
+    }
+
+    if (element === 'water') {
+      impact.add([
+        scene.add.ellipse(0, radius * 0.28, radius * 1.65, radius * 0.48, color, 0.06).setStrokeStyle(3, color, 0.84),
+        scene.add.ellipse(0, radius * 0.28, radius * 1.05, radius * 0.3, coreColor, 0.04).setStrokeStyle(2, coreColor, 0.72)
+      ]);
+      if (!reducedMotion) {
+        impact.add([
+          scene.add.ellipse(-radius * 0.42, -radius * 0.34, 7, 13, coreColor, 0.76).setRotation(-0.35),
+          scene.add.ellipse(radius * 0.38, -radius * 0.48, 6, 11, color, 0.72).setRotation(0.3)
+        ]);
+      }
+      return true;
+    }
+
+    if (element === 'leaf') {
+      const count = reducedMotion ? 3 : 5;
+      for (let index = 0; index < count; index += 1) {
+        const angle = Math.PI * 2 * index / count;
+        impact.add(
+          scene.add.ellipse(
+            Math.cos(angle) * radius * 0.72,
+            Math.sin(angle) * radius * 0.72,
+            8,
+            16,
+            index % 2 === 0 ? color : coreColor,
+            0.78
+          ).setRotation(angle + 0.65)
+        );
+      }
+      return true;
+    }
+
+    if (element === 'poison') {
+      impact.add([
+        scene.add.ellipse(0, radius * 0.28, radius * 1.7, radius * 0.58, color, 0.16),
+        scene.add.circle(-radius * 0.38, radius * 0.12, 5, coreColor, 0.68),
+        scene.add.circle(radius * 0.26, radius * 0.24, 4, color, 0.78)
+      ]);
+      if (!reducedMotion) impact.add(scene.add.circle(radius * 0.46, -radius * 0.16, 3, coreColor, 0.62));
+      return true;
+    }
+
+    if (element === 'light') {
+      impact.add([
+        scene.add.rectangle(0, 0, radius * 1.9, 5, coreColor, 0.82),
+        scene.add.rectangle(0, 0, 5, radius * 1.9, coreColor, 0.82),
+        scene.add.rectangle(0, 0, radius * 1.25, 3, color, 0.66).setRotation(Math.PI / 4),
+        scene.add.rectangle(0, 0, radius * 1.25, 3, color, 0.66).setRotation(-Math.PI / 4)
+      ]);
+      return true;
+    }
+
+    if (element === 'dark') {
+      impact.add([
+        scene.add.circle(0, 0, radius * 0.58, 0x120b22, 0.72).setStrokeStyle(3, color, 0.78),
+        scene.add.arc(radius * 0.14, 0, radius * 0.55, 52, 308, false, color, 0.04).setStrokeStyle(5, coreColor, 0.66)
+      ]);
+      if (!reducedMotion) {
+        impact.add([
+          scene.add.circle(-radius * 0.55, -radius * 0.18, 3, coreColor, 0.64),
+          scene.add.circle(radius * 0.48, radius * 0.34, 2.5, color, 0.72)
+        ]);
+      }
+      return true;
+    }
+
+    return false;
+  }
+
   private static async playImpact(
     scene: Phaser.Scene,
     target: Phaser.Math.Vector2,
@@ -172,7 +279,8 @@ export class DirectionalElementProjectileVfx {
       scene.add.circle(0, 0, profile.impactRadius * 0.32, profile.coreColor, 0.42)
     ]);
 
-    if (!reducedMotion) {
+    const hasDistinctMotif = this.addImpactMotif(impact, scene, element, profile, reducedMotion);
+    if (!reducedMotion && !hasDistinctMotif) {
       const shardCount = element === 'earth' ? 5 : element === 'lightning' ? 7 : 6;
       for (let index = 0; index < shardCount; index += 1) {
         const angle = Math.PI * 2 * index / shardCount;
