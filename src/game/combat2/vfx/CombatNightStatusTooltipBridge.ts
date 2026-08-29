@@ -14,6 +14,43 @@ function plain(value: unknown): string {
 function infoFor(status: unknown): TooltipInfo | null {
   const text = plain(status);
   if (!text) return null;
+
+  if (text.includes('song dot')) return {
+    glyph: '✹',
+    title: 'Thiêu đốt + Nhiễm độc',
+    description: 'Hai hiệu ứng sát thương duy trì đang cùng tồn tại trên Pow.'
+  };
+  if (text.includes('nhiem doc')) return {
+    glyph: '☣',
+    title: 'Nhiễm độc',
+    description: 'Nhận sát thương Độc duy trì; số × cho biết số cộng dồn hiện tại.'
+  };
+  if (text.includes('thieu dot')) return {
+    glyph: '🔥',
+    title: 'Thiêu đốt',
+    description: 'Mất HP theo thời gian khi Thiêu đốt còn hiệu lực.'
+  };
+  if (text.includes('dong bang')) return {
+    glyph: '❄',
+    title: 'Đóng băng',
+    description: 'Không thể hành động khi trạng thái Đóng băng còn hiệu lực.'
+  };
+  if (text.includes('choang')) return {
+    glyph: '✦',
+    title: 'Choáng',
+    description: 'Không thể hành động trong lượt đang bị Choáng.'
+  };
+  if (text.includes('hoi phuc')) return {
+    glyph: '✚',
+    title: 'Hồi phục',
+    description: 'Tự hồi HP trong các lượt còn hiệu lực.'
+  };
+  if (text.startsWith('khien')) return {
+    glyph: '◇',
+    title: 'Khiên',
+    description: 'Hấp thụ sát thương trước HP; số hiển thị là lượng Khiên còn lại.'
+  };
+
   if (text.includes('cam lang')) return { glyph: '⛔', title: 'Câm lặng', description: 'Không thể dùng kỹ năng bị giới hạn bởi Câm lặng.' };
   if (text.includes('te liet')) return { glyph: '⚡', title: 'Tê liệt', description: 'Bị khống chế và có thể mất quyền hành động.' };
   if (text.includes('lam lanh')) return { glyph: '❄', title: 'Làm lạnh', description: 'Tích tụ hiệu ứng Băng và tiến gần trạng thái Đóng băng.' };
@@ -87,9 +124,14 @@ export function installCombatNightStatusTooltipBridge(): void {
   };
 
   root.POWDER_COMBAT2_NIGHT_STATUS_TOOLTIPS = {
-    version: 'night-11',
-    covered: ['silence', 'paralysis', 'chill', 'frostbite', 'anti-heal', 'attack-down', 'ap-down', 'defense-down', 'accuracy-down', 'slow'],
-    hoverOnly: true
+    version: 'night-18',
+    covered: [
+      'burn', 'poison', 'freeze', 'stun', 'regeneration', 'shield', 'dual-dot',
+      'silence', 'paralysis', 'chill', 'frostbite', 'anti-heal', 'attack-down',
+      'ap-down', 'defense-down', 'accuracy-down', 'slow'
+    ],
+    hoverOnly: true,
+    combatLogicChanged: false
   };
 }
 
