@@ -18,3 +18,4 @@ import './vfx/CombatNightDomainFieldBridge';
 import './main';
 import './vfx/CombatNightProjectileBridge';
 import './vfx/CombatNightCuratedStatusAssetBridge';
+import './vfx/CombatNightStatusTooltipBridge';
