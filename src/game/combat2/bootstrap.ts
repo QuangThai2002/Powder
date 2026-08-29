@@ -6,10 +6,10 @@
 // snapshots COMBAT2_STARTER_ROSTER. This patch only mutates the isolated Combat2
 // test objects; it does not write back to the canonical main-game catalog.
 //
-// Night Upgrade projectile bridge intentionally installs AFTER main.ts. Existing
-// 2.14.x presentation patches replace PowView.playElementTravel during main.ts
-// evaluation; installing the Night bridge last makes the canonical directional
-// source -> target adapter the final presentation owner without touching combat state.
+// Night Upgrade finalizers intentionally install AFTER main.ts. Existing 2.14.x
+// presentation patches replace PowView methods during main.ts evaluation; installing
+// Night bridges last makes the canonical anchor/status/projectile presentation the
+// final visual owner without touching combat state.
 //
 // Presentation/VFX patches themselves remain installed inside main.ts BEFORE
 // new Phaser.Game() so BattleScene.preload/create sees every registered texture.
@@ -17,3 +17,4 @@ import '../../../js/data.js';
 import './views/Combat2144BalancedVfxTestRosterPatch';
 import './main';
 import './vfx/CombatNightProjectileBridge';
+import './vfx/CombatNightCuratedStatusAssetBridge';
