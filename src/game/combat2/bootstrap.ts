@@ -19,3 +19,4 @@ import './main';
 import './vfx/CombatNightProjectileBridge';
 import './vfx/CombatNightCuratedStatusAssetBridge';
 import './vfx/CombatNightStatusTooltipBridge';
+import './vfx/CombatNightFxBudgetBridge';
