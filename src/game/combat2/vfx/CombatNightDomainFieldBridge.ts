@@ -12,6 +12,7 @@ interface NightDomainScene extends Phaser.Scene {
   refreshViews?: (...args: any[]) => void;
   __nightDomainField?: Phaser.GameObjects.Container | null;
   __nightDomainSignature?: string;
+  __nightDomainCleanupRegistered?: boolean;
 }
 
 function snapshot(side: DomainSide): { id: LegacyExpansionDomainId } | null {
@@ -205,15 +206,43 @@ function drawClashSeam(
   return g;
 }
 
+function destroyDomainField(scene: NightDomainScene): void {
+  scene.__nightDomainField?.destroy(true);
+  scene.__nightDomainField = null;
+  scene.__nightDomainSignature = undefined;
+}
+
+function ensureDomainCleanup(scene: NightDomainScene): void {
+  if (scene.__nightDomainCleanupRegistered) return;
+  scene.__nightDomainCleanupRegistered = true;
+  let cleaned = false;
+
+  const cleanup = (): void => {
+    if (cleaned) return;
+    cleaned = true;
+    scene.events.off(Phaser.Scenes.Events.SHUTDOWN, cleanup);
+    scene.events.off(Phaser.Scenes.Events.DESTROY, cleanup);
+    scene.__nightDomainCleanupRegistered = false;
+    destroyDomainField(scene);
+  };
+
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanup);
+  scene.events.once(Phaser.Scenes.Events.DESTROY, cleanup);
+}
+
 function sync(scene: NightDomainScene): void {
+  ensureDomainCleanup(scene);
   const next = domainSignature();
   if (scene.__nightDomainSignature === next) return;
   scene.__nightDomainSignature = next;
   scene.__nightDomainField?.destroy(true);
-  scene.__nightDomainField = scene.add.container(0, 0).setDepth(-11);
+  scene.__nightDomainField = null;
 
   const enemy = snapshot('enemy');
   const player = snapshot('player');
+  if (!enemy && !player) return;
+
+  scene.__nightDomainField = scene.add.container(0, 0).setDepth(-11);
   if (enemy) scene.__nightDomainField.add(drawMotif(scene, enemy.id, 'enemy'));
   if (player) scene.__nightDomainField.add(drawMotif(scene, player.id, 'player'));
   if (enemy && player) scene.__nightDomainField.add(drawClashSeam(scene, enemy.id, player.id));
@@ -233,7 +262,7 @@ export function installCombatNightDomainFieldBridge(): void {
   };
 
   root.POWDER_COMBAT2_NIGHT_DOMAIN = {
-    version: 'night-21',
+    version: 'night-27',
     mode: 'nine-expansion-ground-motifs-owner-boundary-clash-seam',
     particles: false,
     tweenLoops: false,
@@ -241,6 +270,9 @@ export function installCombatNightDomainFieldBridge(): void {
     ownerBoundary: true,
     clashSeam: true,
     identityRebuildOnly: true,
+    sceneShutdownCleanup: true,
+    emptyFieldAvoided: true,
+    maxFieldContainersPerScene: 1,
     combatLogicChanged: false
   };
 }
