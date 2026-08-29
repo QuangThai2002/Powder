@@ -7,6 +7,146 @@ const FLAG = '__powderCombatNightSupportAssetBridgeInstalled';
 const SHIELD_IMAGE_KEY = '__nightPersistentShieldImage';
 const REGEN_IMAGE_KEY = '__nightPersistentRegenImage';
 const CLEANUP_KEY = '__nightPersistentSupportCleanupInstalled';
+const MOTION_STATE_KEY = '__nightPersistentSupportMotionState';
+
+type PersistentSupportKind = 'shield' | 'regen';
+
+type SupportMotionState = {
+  image: Phaser.GameObjects.Image;
+  kind: PersistentSupportKind;
+  baseX: number;
+  baseY: number;
+  baseScaleX: number;
+  baseScaleY: number;
+  baseAlpha: number;
+  phase: number;
+};
+
+type SupportTickerState = {
+  scene: Phaser.Scene;
+  items: Set<SupportMotionState>;
+  lastTick: number;
+  onUpdate: (time: number) => void;
+  onExit: () => void;
+};
+
+const supportTickers = new WeakMap<Phaser.Scene, SupportTickerState>();
+
+function motionIntervalMs(): number {
+  const tier = String((globalThis as any).POWDER_COMBAT2_FX_TIER || 'full');
+  const reducedMotion = typeof window !== 'undefined'
+    && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+  if (reducedMotion) return 150;
+  if (tier === 'lite') return 125;
+  if (tier === 'balanced') return 100;
+  return 80;
+}
+
+function applySupportMotion(state: SupportMotionState, time: number): void {
+  const image = state.image;
+  if (!image.active || !image.scene) return;
+  const wave = Math.sin(time * 0.0065 + state.phase);
+
+  if (state.kind === 'shield') {
+    const pulse = 1 + wave * 0.024;
+    image
+      .setPosition(state.baseX, state.baseY)
+      .setScale(state.baseScaleX * pulse, state.baseScaleY * pulse)
+      .setAlpha(Phaser.Math.Clamp(state.baseAlpha * (0.94 + wave * 0.08), 0.05, 0.42))
+      .setRotation(wave * 0.008);
+    return;
+  }
+
+  const rise = (wave + 1) * 1.8;
+  image
+    .setPosition(state.baseX, state.baseY - rise)
+    .setScale(
+      state.baseScaleX * (1 + wave * 0.018),
+      state.baseScaleY * (1 - wave * 0.012)
+    )
+    .setAlpha(Phaser.Math.Clamp(state.baseAlpha * (0.92 + wave * 0.12), 0.05, 0.48))
+    .setRotation(wave * 0.006);
+}
+
+function detachSupportTicker(state: SupportTickerState): void {
+  state.scene.events.off(Phaser.Scenes.Events.UPDATE, state.onUpdate);
+  state.scene.events.off(Phaser.Scenes.Events.SHUTDOWN, state.onExit);
+  state.scene.events.off(Phaser.Scenes.Events.DESTROY, state.onExit);
+  for (const item of state.items) {
+    if ((item.image as any)[MOTION_STATE_KEY] === item) (item.image as any)[MOTION_STATE_KEY] = null;
+  }
+  state.items.clear();
+  supportTickers.delete(state.scene);
+}
+
+function tickerFor(scene: Phaser.Scene): SupportTickerState {
+  const existing = supportTickers.get(scene);
+  if (existing) return existing;
+
+  const state = {} as SupportTickerState;
+  state.scene = scene;
+  state.items = new Set<SupportMotionState>();
+  state.lastTick = -Infinity;
+  state.onUpdate = (time: number): void => {
+    if (time - state.lastTick < motionIntervalMs()) return;
+    state.lastTick = time;
+    for (const item of [...state.items]) {
+      if (!item.image.active || !item.image.scene) {
+        state.items.delete(item);
+        continue;
+      }
+      applySupportMotion(item, time);
+    }
+  };
+  state.onExit = (): void => detachSupportTicker(state);
+  scene.events.on(Phaser.Scenes.Events.UPDATE, state.onUpdate);
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, state.onExit);
+  scene.events.once(Phaser.Scenes.Events.DESTROY, state.onExit);
+  supportTickers.set(scene, state);
+  return state;
+}
+
+function syncSupportMotion(
+  scene: Phaser.Scene,
+  image: Phaser.GameObjects.Image,
+  kind: PersistentSupportKind,
+  baseX: number,
+  baseY: number,
+  baseAlpha: number
+): void {
+  let state = (image as any)[MOTION_STATE_KEY] as SupportMotionState | null | undefined;
+  if (!state) {
+    state = {
+      image,
+      kind,
+      baseX,
+      baseY,
+      baseScaleX: image.scaleX,
+      baseScaleY: image.scaleY,
+      baseAlpha,
+      phase: kind === 'shield' ? 0 : Math.PI * 0.5
+    };
+    (image as any)[MOTION_STATE_KEY] = state;
+    tickerFor(scene).items.add(state);
+    image.once('destroy', () => unregisterSupportMotion(image));
+  } else {
+    state.kind = kind;
+    state.baseX = baseX;
+    state.baseY = baseY;
+    state.baseScaleX = image.scaleX;
+    state.baseScaleY = image.scaleY;
+    state.baseAlpha = baseAlpha;
+  }
+}
+
+function unregisterSupportMotion(image: Phaser.GameObjects.Image): void {
+  const state = (image as any)[MOTION_STATE_KEY] as SupportMotionState | null | undefined;
+  if (!state) return;
+  const ticker = image.scene ? supportTickers.get(image.scene) : undefined;
+  ticker?.items.delete(state);
+  (image as any)[MOTION_STATE_KEY] = null;
+  if (ticker && ticker.items.size === 0) detachSupportTicker(ticker);
+}
 
 function pulseAsset(view: any, spec: ExactCombatVfxSpec, kind: 'heal' | 'shield'): boolean {
   const scene = view.scene as Phaser.Scene | undefined;
@@ -39,9 +179,6 @@ function pulseAsset(view: any, spec: ExactCombatVfxSpec, kind: 'heal' | 'shield'
     if (image.active) image.destroy();
   };
 
-  // Night teardown replaces PowView.tweenPromise with a scene-shutdown-safe owner.
-  // Prefer that path so a Heal/Shield pulse cannot leave a live tween/image behind
-  // when the player exits or restarts Combat2 in the middle of the pulse.
   if (typeof view.tweenPromise === 'function') {
     try {
       void Promise.resolve(view.tweenPromise(config)).then(destroyImage, destroyImage);
@@ -74,7 +211,10 @@ function pulseAsset(view: any, spec: ExactCombatVfxSpec, kind: 'heal' | 'shield'
 
 function clearImage(view: any, key: string): void {
   const image = view[key] as Phaser.GameObjects.Image | undefined;
-  if (image?.active) image.destroy();
+  if (image?.active) {
+    unregisterSupportMotion(image);
+    image.destroy();
+  }
   view[key] = null;
 }
 
@@ -121,7 +261,7 @@ function syncPersistentImage(
   view: any,
   key: string,
   spec: ExactCombatVfxSpec,
-  kind: 'shield' | 'regen'
+  kind: PersistentSupportKind
 ): void {
   const scene = view.scene as Phaser.Scene | undefined;
   if (!scene?.add || !scene.textures.exists(spec.textureKey)) {
@@ -139,7 +279,10 @@ function syncPersistentImage(
 
   let image = view[key] as Phaser.GameObjects.Image | undefined;
   if (!image?.active || image.texture.key !== spec.textureKey) {
-    if (image?.active) image.destroy();
+    if (image?.active) {
+      unregisterSupportMotion(image);
+      image.destroy();
+    }
     image = scene.add.image(p.x, y, spec.textureKey);
     view[key] = image;
   }
@@ -151,6 +294,8 @@ function syncPersistentImage(
     .setDepth(kind === 'shield' ? powVfxDepth('status') - 1 : powVfxDepth('status') + 1)
     .setBlendMode(kind === 'regen' ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL)
     .setVisible(true);
+
+  syncSupportMotion(scene, image, kind, p.x, y, alpha);
 }
 
 function syncPersistentSupport(view: any, unit: any): void {
@@ -201,16 +346,19 @@ export function installCombatNightSupportAssetBridge(): void {
 
   proto.__nightSupportAssetInstalled = true;
   root.POWDER_COMBAT2_NIGHT_SUPPORT_ASSETS = {
-    version: 'night-29',
+    version: 'night-36',
     source: 'img2-curated-preview',
     heal: EXACT_STATUS_VFX.heal.textureKey,
     shield: EXACT_STATUS_VFX.shield.textureKey,
     anchor: 'body',
-    frameMode: 'single-curated-frame',
+    frameMode: 'single-curated-frame-with-live-motion',
     hudSafeScale: true,
     ragePulsePreserved: true,
     persistentShield: true,
     persistentRegeneration: true,
+    persistentSupportMotion: true,
+    sharedSceneTicker: true,
+    motionTickThrottledByFxTier: true,
     maxPersistentImagesPerPow: 2,
     persistentLoopTweens: false,
     sceneShutdownCleanup: true,
