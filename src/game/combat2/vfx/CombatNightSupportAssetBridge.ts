@@ -4,10 +4,13 @@ import { EXACT_STATUS_VFX, type ExactCombatVfxSpec } from './Combat2140ExactVfxR
 import { powVfxDepth } from './CombatNightVfxLayout';
 
 const FLAG = '__powderCombatNightSupportAssetBridgeInstalled';
+const SHIELD_IMAGE_KEY = '__nightPersistentShieldImage';
+const REGEN_IMAGE_KEY = '__nightPersistentRegenImage';
+const CLEANUP_KEY = '__nightPersistentSupportCleanupInstalled';
 
-function pulseAsset(view: any, spec: ExactCombatVfxSpec, kind: 'heal' | 'shield'): void {
+function pulseAsset(view: any, spec: ExactCombatVfxSpec, kind: 'heal' | 'shield'): boolean {
   const scene = view.scene as Phaser.Scene | undefined;
-  if (!scene?.add || !scene.textures.exists(spec.textureKey)) return;
+  if (!scene?.add || !scene.textures.exists(spec.textureKey)) return false;
   const p = typeof view.getVfxAnchor === 'function'
     ? view.getVfxAnchor('body') as Phaser.Math.Vector2
     : view.getWorldPosition() as Phaser.Math.Vector2;
@@ -32,6 +35,107 @@ function pulseAsset(view: any, spec: ExactCombatVfxSpec, kind: 'heal' | 'shield'
     ease: 'Quad.easeOut',
     onComplete: () => image.destroy()
   });
+  return true;
+}
+
+function clearImage(view: any, key: string): void {
+  const image = view[key] as Phaser.GameObjects.Image | undefined;
+  if (image?.active) image.destroy();
+  view[key] = null;
+}
+
+function clearPersistentSupport(view: any): void {
+  clearImage(view, SHIELD_IMAGE_KEY);
+  clearImage(view, REGEN_IMAGE_KEY);
+}
+
+function persistentLayout(view: any): {
+  p: Phaser.Math.Vector2;
+  artWidth: number;
+  artHeight: number;
+} {
+  const p = typeof view.getVfxAnchor === 'function'
+    ? view.getVfxAnchor('body') as Phaser.Math.Vector2
+    : view.getWorldPosition() as Phaser.Math.Vector2;
+  const layout = typeof view.getVfxLayout === 'function' ? view.getVfxLayout() : null;
+  const fieldScale = Number(layout?.fieldScale || 1);
+  return {
+    p,
+    artWidth: Number(layout?.artWidth || 210) * fieldScale,
+    artHeight: Number(layout?.artHeight || 190) * fieldScale
+  };
+}
+
+function ensurePersistentCleanup(view: any): void {
+  if (view[CLEANUP_KEY]) return;
+  const scene = view.scene as Phaser.Scene | undefined;
+  if (!scene?.events) return;
+
+  const cleanup = (): void => {
+    clearPersistentSupport(view);
+    scene.events.off(Phaser.Scenes.Events.SHUTDOWN, cleanup);
+    scene.events.off(Phaser.Scenes.Events.DESTROY, cleanup);
+    view[CLEANUP_KEY] = false;
+  };
+
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanup);
+  scene.events.once(Phaser.Scenes.Events.DESTROY, cleanup);
+  view[CLEANUP_KEY] = true;
+}
+
+function syncPersistentImage(
+  view: any,
+  key: string,
+  spec: ExactCombatVfxSpec,
+  kind: 'shield' | 'regen'
+): void {
+  const scene = view.scene as Phaser.Scene | undefined;
+  if (!scene?.add || !scene.textures.exists(spec.textureKey)) {
+    clearImage(view, key);
+    return;
+  }
+
+  ensurePersistentCleanup(view);
+  const { p, artWidth, artHeight } = persistentLayout(view);
+  const size = kind === 'shield'
+    ? Math.max(72, Math.min(artWidth * 0.72, artHeight * 0.82, 184))
+    : Math.max(52, Math.min(artWidth * 0.34, artHeight * 0.38, 92));
+  const y = kind === 'regen' ? p.y + artHeight * 0.18 : p.y;
+  const alpha = kind === 'shield' ? spec.alpha * 0.18 : spec.alpha * 0.24;
+
+  let image = view[key] as Phaser.GameObjects.Image | undefined;
+  if (!image?.active || image.texture.key !== spec.textureKey) {
+    if (image?.active) image.destroy();
+    image = scene.add.image(p.x, y, spec.textureKey);
+    view[key] = image;
+  }
+
+  image
+    .setPosition(p.x, y)
+    .setDisplaySize(size, size)
+    .setAlpha(alpha)
+    .setDepth(kind === 'shield' ? powVfxDepth('status') - 1 : powVfxDepth('status') + 1)
+    .setBlendMode(kind === 'regen' ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL)
+    .setVisible(true);
+}
+
+function syncPersistentSupport(view: any, unit: any): void {
+  if (!unit?.alive || unit?.fieldSlot === null) {
+    clearPersistentSupport(view);
+    return;
+  }
+
+  if (Number(unit.shield || 0) > 0) {
+    syncPersistentImage(view, SHIELD_IMAGE_KEY, EXACT_STATUS_VFX.shield, 'shield');
+  } else {
+    clearImage(view, SHIELD_IMAGE_KEY);
+  }
+
+  if (Number(unit.regenerationActionsRemaining || 0) > 0) {
+    syncPersistentImage(view, REGEN_IMAGE_KEY, EXACT_STATUS_VFX.heal, 'regen');
+  } else {
+    clearImage(view, REGEN_IMAGE_KEY);
+  }
 }
 
 export function installCombatNightSupportAssetBridge(): void {
@@ -42,7 +146,8 @@ export function installCombatNightSupportAssetBridge(): void {
   const proto = PowView.prototype as any;
   if (proto.__nightSupportAssetInstalled) return;
   const previousPulse = proto.playResourcePulse;
-  if (typeof previousPulse !== 'function') return;
+  const previousUpdate = proto.updateRuntime;
+  if (typeof previousPulse !== 'function' || typeof previousUpdate !== 'function') return;
 
   proto.playResourcePulse = function combatNightSupportAssetPulse(
     this: any,
@@ -50,26 +155,32 @@ export function installCombatNightSupportAssetBridge(): void {
     anchor?: unknown,
     layer?: unknown
   ): void {
-    if (color === 0x73f0aa) {
-      pulseAsset(this, EXACT_STATUS_VFX.heal, 'heal');
-      return;
-    }
-    if (color === 0x8edfff) {
-      pulseAsset(this, EXACT_STATUS_VFX.shield, 'shield');
-      return;
-    }
+    if (color === 0x73f0aa && pulseAsset(this, EXACT_STATUS_VFX.heal, 'heal')) return;
+    if (color === 0x8edfff && pulseAsset(this, EXACT_STATUS_VFX.shield, 'shield')) return;
     previousPulse.call(this, color, anchor, layer);
+  };
+
+  proto.updateRuntime = function combatNightPersistentSupportUpdate(this: any, unit: any): void {
+    previousUpdate.call(this, unit);
+    syncPersistentSupport(this, unit);
   };
 
   proto.__nightSupportAssetInstalled = true;
   root.POWDER_COMBAT2_NIGHT_SUPPORT_ASSETS = {
-    version: 'night-16',
-    source: 'img2',
+    version: 'night-17',
+    source: 'img2-curated-preview',
     heal: EXACT_STATUS_VFX.heal.textureKey,
     shield: EXACT_STATUS_VFX.shield.textureKey,
     anchor: 'body',
+    frameMode: 'single-curated-frame',
     hudSafeScale: true,
     ragePulsePreserved: true,
+    persistentShield: true,
+    persistentRegeneration: true,
+    maxPersistentImagesPerPow: 2,
+    persistentLoopTweens: false,
+    sceneShutdownCleanup: true,
+    fallback: 'procedural-pulse-when-texture-missing',
     combatLogicChanged: false
   };
 }
