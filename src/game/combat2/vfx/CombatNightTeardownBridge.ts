@@ -10,6 +10,13 @@ let activeSafeTweens = 0;
 let peakSafeTweens = 0;
 let shutdownAborts = 0;
 let settledSafeTweens = 0;
+let sceneLeakAuditRuns = 0;
+let sceneLeakFailures = 0;
+let lastSceneLeakActive = 0;
+let lastSceneLeakKey = '';
+
+const sceneActiveTweens = new WeakMap<Phaser.Scene, number>();
+const sceneAuditRegistered = new WeakSet<Phaser.Scene>();
 
 function lifecycleSnapshot(): Readonly<{
   activeSafeTweens: number;
@@ -25,13 +32,65 @@ function lifecycleSnapshot(): Readonly<{
   };
 }
 
+function sceneLeakAuditSnapshot(): Readonly<{
+  runs: number;
+  failures: number;
+  lastSceneKey: string;
+  lastActiveAfterShutdown: number;
+}> {
+  return {
+    runs: sceneLeakAuditRuns,
+    failures: sceneLeakFailures,
+    lastSceneKey: lastSceneLeakKey,
+    lastActiveAfterShutdown: lastSceneLeakActive
+  };
+}
+
+function sceneTweenCount(scene: Phaser.Scene): number {
+  return Math.max(0, Number(sceneActiveTweens.get(scene) || 0));
+}
+
+function adjustSceneTweenCount(scene: Phaser.Scene, delta: number): void {
+  const next = Math.max(0, sceneTweenCount(scene) + delta);
+  if (next > 0) sceneActiveTweens.set(scene, next);
+  else sceneActiveTweens.delete(scene);
+}
+
+function ensureSceneLeakAudit(scene: Phaser.Scene): void {
+  if (sceneAuditRegistered.has(scene)) return;
+  sceneAuditRegistered.add(scene);
+
+  let scheduled = false;
+  const audit = (): void => {
+    if (scheduled) return;
+    scheduled = true;
+    scene.events.off(Phaser.Scenes.Events.SHUTDOWN, audit);
+    scene.events.off(Phaser.Scenes.Events.DESTROY, audit);
+    sceneAuditRegistered.delete(scene);
+
+    // Defer one task so every safeTween shutdown listener can settle first.
+    window.setTimeout(() => {
+      const active = sceneTweenCount(scene);
+      sceneLeakAuditRuns += 1;
+      lastSceneLeakActive = active;
+      lastSceneLeakKey = String(scene.scene?.key || 'unknown');
+      if (active > 0) sceneLeakFailures += 1;
+    }, 0);
+  };
+
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, audit);
+  scene.events.once(Phaser.Scenes.Events.DESTROY, audit);
+}
+
 function safeTween(
   scene: Phaser.Scene,
   config: Phaser.Types.Tweens.TweenBuilderConfig,
   fallbackDuration = 180
 ): Promise<void> {
+  ensureSceneLeakAudit(scene);
   activeSafeTweens += 1;
   peakSafeTweens = Math.max(peakSafeTweens, activeSafeTweens);
+  adjustSceneTweenCount(scene, 1);
 
   return new Promise((resolve) => {
     let settled = false;
@@ -51,6 +110,7 @@ function safeTween(
       settled = true;
       cleanup();
       activeSafeTweens = Math.max(0, activeSafeTweens - 1);
+      adjustSceneTweenCount(scene, -1);
       settledSafeTweens += 1;
       resolve();
     };
@@ -111,13 +171,16 @@ export function installCombatNightTeardownBridge(): void {
   installProjectileTweenCleanup();
 
   root.POWDER_COMBAT2_NIGHT_TEARDOWN = {
-    version: 'night-24',
+    version: 'night-25',
     sceneShutdownSafe: true,
     powTweens: true,
     projectileTweens: true,
     lifecycleCounters: true,
     getLifecycleSnapshot: lifecycleSnapshot,
+    sceneScopedLeakAudit: true,
+    getSceneLeakAuditSnapshot: sceneLeakAuditSnapshot,
     expectedActiveAfterShutdown: 0,
+    auditDelayTasks: 1,
     perFramePolling: false,
     combatLogicChanged: false
   };
