@@ -16,14 +16,17 @@ import { PowView } from '../views/PowView';
 const FLAG = '__powderCombatNightCuratedStatusAssetBridgeInstalled';
 const LEGACY_PERSISTENT_KEY = '__powderCombat2140PersistentFx';
 const STATUS_PHASES = 12;
+const PREFERS_REDUCED_MOTION = typeof window !== 'undefined'
+  && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
 
 type StatusAnimator = {
-  update: (time: number) => void;
+  update: (step: number) => void;
 };
 
 type SceneTickerState = {
   scene: Phaser.Scene;
   animators: Set<StatusAnimator>;
+  lastStep: number;
   onUpdate: (time: number, delta: number) => void;
   onSceneExit: () => void;
 };
@@ -46,10 +49,8 @@ function assetAlpha(kind: PersistentPowStatusKind): number {
 }
 
 function animationIntervalMs(): number {
+  if (PREFERS_REDUCED_MOTION) return 150;
   const currentTier = String((globalThis as any).POWDER_COMBAT2_FX_TIER || 'full');
-  const reducedMotion = typeof window !== 'undefined'
-    && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
-  if (reducedMotion) return 150;
   if (currentTier === 'lite') return 125;
   if (currentTier === 'balanced') return 100;
   return 80;
@@ -70,8 +71,12 @@ function tickerFor(scene: Phaser.Scene): SceneTickerState {
   const state = {} as SceneTickerState;
   state.scene = scene;
   state.animators = new Set<StatusAnimator>();
+  state.lastStep = -1;
   state.onUpdate = (time: number): void => {
-    for (const animator of state.animators) animator.update(time);
+    const step = Math.floor(time / animationIntervalMs()) % STATUS_PHASES;
+    if (step === state.lastStep) return;
+    state.lastStep = step;
+    for (const animator of state.animators) animator.update(step);
   };
   state.onSceneExit = (): void => detachTicker(state);
 
@@ -82,7 +87,7 @@ function tickerFor(scene: Phaser.Scene): SceneTickerState {
   return state;
 }
 
-function registerAnimator(scene: Phaser.Scene, update: (time: number) => void): () => void {
+function registerAnimator(scene: Phaser.Scene, update: (step: number) => void): () => void {
   const state = tickerFor(scene);
   const animator: StatusAnimator = { update };
   state.animators.add(animator);
@@ -271,6 +276,7 @@ function buildFreezeAnimation(
     scene.add.triangle(-size * 0.12, -size * 0.19, -3, 6, 3, 6, 0, -size * 0.14, 0xe8fcff, 0.56),
     scene.add.triangle(size * 0.14, -size * 0.24, -3, 6, 3, 6, 0, -size * 0.13, 0xb8efff, 0.54)
   ];
+  const baseY = shards.map((shard) => shard.y);
   fx.add([frost, ...shards]);
 
   return (step: number): void => {
@@ -279,7 +285,7 @@ function buildFreezeAnimation(
       const shardWave = wave(step, index * 2);
       shard
         .setRotation((index % 2 === 0 ? -0.14 : 0.14) + shardWave * 0.07)
-        .setY(shard.y - shardWave * 0.35)
+        .setY(baseY[index] - shardWave * size * 0.012)
         .setScale(0.92 + (shardWave + 1) * 0.06)
         .setAlpha(0.46 + (shardWave + 1) * 0.12);
     });
@@ -312,12 +318,8 @@ function createAnimatedFallback(
         ? buildFreezeAnimation(scene, fx, size)
         : buildStunAnimation(scene, fx, size);
 
-  let lastStep = -1;
-  const unregister = registerAnimator(scene, (time: number): void => {
-    const interval = animationIntervalMs();
-    const step = Math.floor(time / interval) % STATUS_PHASES;
-    if (step === lastStep || !fx.active || !fx.visible) return;
-    lastStep = step;
+  const unregister = registerAnimator(scene, (step: number): void => {
+    if (!fx.active || !fx.visible) return;
     animatePhase(step);
   });
 
@@ -328,7 +330,7 @@ function createAnimatedFallback(
 
 /**
  * Full sprite-sheet playback inside PersistentPowStatusVfx remains first priority.
- * Current Git assets are representative preview frames, so Night 35 turns the fallback
+ * Current Git assets are representative preview frames, so Night 36 turns the fallback
  * into a live, bounded status animation without pretending those previews are full sheets.
  */
 function installCuratedFallback(): void {
@@ -378,7 +380,7 @@ export function installCombatNightCuratedStatusAssetBridge(): void {
   installLegacyPersistentDedup();
 
   root.POWDER_COMBAT2_NIGHT_STATUS_ASSETS = {
-    version: 'night-35',
+    version: 'night-36',
     mode: 'curated-preview-plus-live-status-animation',
     fullSheetPriority: true,
     representativePreviewFrames: true,
@@ -388,23 +390,30 @@ export function installCombatNightCuratedStatusAssetBridge(): void {
     animatedStunElectric: true,
     animatedFreeze: true,
     sharedSceneTicker: true,
+    sceneLevelPhaseThrottle: true,
     phases: STATUS_PHASES,
+    fullIntervalMs: 80,
+    balancedIntervalMs: 100,
+    liteIntervalMs: 125,
+    reducedMotionIntervalMs: 150,
     perFrameObjectCreation: false,
     particleEmitters: false,
     tweenLoops: false,
+    freezeAbsoluteAnchorPhases: true,
     duplicateLegacyPersistentHidden: true,
     combatLogicChanged: false
   };
 
   root.POWDER_COMBAT2_NIGHT_PERSISTENT_STATUS = {
     ...(root.POWDER_COMBAT2_NIGHT_PERSISTENT_STATUS || {}),
-    version: 'night-35',
+    version: 'night-36',
     ownerPerPowMax: 1,
     sceneShutdownCleanup: true,
     poisonBadgeGlyph: 'hazard-no-skull',
     fullSheetPriority: true,
     animatedFallback: true,
     sharedSceneTicker: true,
+    sceneLevelPhaseThrottle: true,
     particleEmitters: false,
     tweenLoops: false,
     combatLogicChanged: false
