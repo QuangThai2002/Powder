@@ -4,6 +4,8 @@ import { powVfxDepth } from './CombatNightVfxLayout';
 
 const FLAG = '__powderCombatNightStatusTooltipBridgeInstalled';
 const TOOLTIP_KEY = '__nightStatusHoverTooltip';
+const TOOLTIP_STATUS_KEY = '__nightStatusHoverTooltipStatus';
+const HOVER_KEY = '__nightStatusHoverActive';
 
 type TooltipInfo = { glyph: string; title: string; description: string };
 
@@ -64,20 +66,34 @@ function infoFor(status: unknown): TooltipInfo | null {
   return null;
 }
 
-function clearTooltip(view: any): void {
+function clearTooltip(view: any, resetHover = false): void {
   const tooltip = view[TOOLTIP_KEY] as Phaser.GameObjects.Text | undefined;
   if (tooltip?.scene) tooltip.destroy();
   view[TOOLTIP_KEY] = null;
+  view[TOOLTIP_STATUS_KEY] = '';
+  if (resetHover) view[HOVER_KEY] = false;
 }
 
 function showTooltip(view: any): void {
-  clearTooltip(view);
   const info = infoFor(view.runtimeVisualStatus);
-  if (!info || !view.scene?.add) return;
+  if (!info || !view.scene?.add) {
+    clearTooltip(view, false);
+    return;
+  }
+
   const scene = view.scene as Phaser.Scene;
+  const statusKey = plain(view.runtimeVisualStatus);
   const p = typeof view.getVfxAnchor === 'function'
     ? view.getVfxAnchor('head') as Phaser.Math.Vector2
     : view.getWorldPosition() as Phaser.Math.Vector2;
+  const existing = view[TOOLTIP_KEY] as Phaser.GameObjects.Text | undefined;
+
+  if (existing?.active && view[TOOLTIP_STATUS_KEY] === statusKey) {
+    existing.setPosition(p.x, p.y - 42);
+    return;
+  }
+
+  clearTooltip(view, false);
   const tooltip = scene.add.text(p.x, p.y - 42, `${info.title}\n${info.description}`, {
     fontFamily: 'Arial, sans-serif',
     fontSize: '13px',
@@ -91,6 +107,7 @@ function showTooltip(view: any): void {
     align: 'left'
   }).setOrigin(0.5, 1).setDepth(powVfxDepth('foreground') + 7);
   view[TOOLTIP_KEY] = tooltip;
+  view[TOOLTIP_STATUS_KEY] = statusKey;
 }
 
 export function installCombatNightStatusTooltipBridge(): void {
@@ -104,33 +121,48 @@ export function installCombatNightStatusTooltipBridge(): void {
 
   proto.updateRuntime = function combatNightStatusTooltipUpdate(this: any, unit: any): void {
     previousUpdate.call(this, unit);
-    clearTooltip(this);
     const statusText = this.statusText as Phaser.GameObjects.Text | undefined;
     const info = infoFor(this.runtimeVisualStatus);
     if (!statusText?.active || !info || !unit?.alive || unit?.fieldSlot === null) {
       statusText?.disableInteractive?.();
+      clearTooltip(this, true);
       return;
     }
 
     statusText.setText(`${info.glyph} ${this.runtimeVisualStatus}`);
     if (!(statusText as any).__nightTooltipInteractive) {
       statusText.setInteractive({ useHandCursor: true });
-      statusText.on('pointerover', () => showTooltip(this));
-      statusText.on('pointerout', () => clearTooltip(this));
+      statusText.on('pointerover', () => {
+        this[HOVER_KEY] = true;
+        showTooltip(this);
+      });
+      statusText.on('pointerout', () => {
+        this[HOVER_KEY] = false;
+        clearTooltip(this, false);
+      });
       (statusText as any).__nightTooltipInteractive = true;
     } else {
       statusText.setInteractive({ useHandCursor: true });
     }
+
+    // Runtime refresh can happen while the pointer remains over the same status label.
+    // Keep one tooltip alive and only recreate it when the semantic status changes.
+    if (this[HOVER_KEY]) showTooltip(this);
+    else if (this[TOOLTIP_KEY]) clearTooltip(this, false);
   };
 
   root.POWDER_COMBAT2_NIGHT_STATUS_TOOLTIPS = {
-    version: 'night-18',
+    version: 'night-26',
     covered: [
       'burn', 'poison', 'freeze', 'stun', 'regeneration', 'shield', 'dual-dot',
       'silence', 'paralysis', 'chill', 'frostbite', 'anti-heal', 'attack-down',
       'ap-down', 'defense-down', 'accuracy-down', 'slow'
     ],
     hoverOnly: true,
+    refreshStable: true,
+    hoverStatePreserved: true,
+    recreateOnStatusChangeOnly: true,
+    sceneObjectPerHoveredPowMax: 1,
     combatLogicChanged: false
   };
 }
