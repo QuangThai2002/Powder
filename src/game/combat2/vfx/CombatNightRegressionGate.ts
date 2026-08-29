@@ -46,6 +46,7 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
   const tooltip = root.POWDER_COMBAT2_NIGHT_STATUS_TOOLTIPS;
   const domain = root.POWDER_COMBAT2_NIGHT_DOMAIN;
   const support = root.POWDER_COMBAT2_NIGHT_SUPPORT_ASSETS;
+  const persistentStatus = root.POWDER_COMBAT2_NIGHT_PERSISTENT_STATUS;
   const budget = root.POWDER_COMBAT2_NIGHT_FX_BUDGET;
   const teardown = root.POWDER_COMBAT2_NIGHT_TEARDOWN;
   const leakAudit = typeof teardown?.getSceneLeakAuditSnapshot === 'function'
@@ -97,6 +98,16 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
       `installed=${String(prototype.__nightPersistentDedupInstalled === true)}`
     ),
     check(
+      'persistent-status-owner-lifecycle',
+      Boolean(persistentStatus)
+        && Number(persistentStatus?.ownerPerPowMax) <= 1
+        && persistentStatus?.sceneShutdownCleanup === true
+        && persistentStatus?.poisonBadgeGlyph === 'hazard-no-skull'
+        && persistentStatus?.fullSheetPriority === true
+        && persistentStatus?.combatLogicChanged === false,
+      `version=${persistentStatus?.version ?? 'missing'};max=${persistentStatus?.ownerPerPowMax ?? 'missing'};cleanup=${String(persistentStatus?.sceneShutdownCleanup)};poison=${persistentStatus?.poisonBadgeGlyph ?? 'missing'}`
+    ),
+    check(
       'core-status-tooltips',
       Boolean(tooltip)
         && includesAll(tooltip.covered, coreTooltipCoverage)
@@ -104,8 +115,9 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
         && tooltip.hoverStatePreserved === true
         && tooltip.recreateOnStatusChangeOnly === true
         && Number(tooltip.sceneObjectPerHoveredPowMax) <= 1
+        && tooltip.sceneShutdownCleanup === true
         && tooltip.combatLogicChanged === false,
-      `version=${tooltip?.version ?? 'missing'};covered=${Array.isArray(tooltip?.covered) ? tooltip.covered.join(',') : 'missing'};stable=${String(tooltip?.refreshStable)}`
+      `version=${tooltip?.version ?? 'missing'};covered=${Array.isArray(tooltip?.covered) ? tooltip.covered.join(',') : 'missing'};stable=${String(tooltip?.refreshStable)};cleanup=${String(tooltip?.sceneShutdownCleanup)}`
     ),
     check(
       'persistent-heal-shield-lifecycle',
@@ -113,9 +125,11 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
         && Boolean(support?.persistentRegeneration)
         && Number(support?.maxPersistentImagesPerPow) <= 2
         && support?.persistentLoopTweens === false
-        && Boolean(support?.sceneShutdownCleanup)
+        && support?.sceneShutdownCleanup === true
+        && support?.pulseTweenShutdownSafe === true
+        && support?.pulseImageGuaranteedDestroy === true
         && support?.combatLogicChanged === false,
-      `version=${support?.version ?? 'missing'};max=${support?.maxPersistentImagesPerPow ?? 'missing'};loops=${String(support?.persistentLoopTweens)}`
+      `version=${support?.version ?? 'missing'};max=${support?.maxPersistentImagesPerPow ?? 'missing'};loops=${String(support?.persistentLoopTweens)};pulseSafe=${String(support?.pulseTweenShutdownSafe)}`
     ),
     check(
       'domain-ground-ownership-safety',
@@ -168,11 +182,18 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
   ];
 
   const report: CombatNightRegressionReport = {
-    version: 'night-28',
+    version: 'night-32',
     pass: checks.every((entry) => entry.pass),
     checks
   };
   root.POWDER_COMBAT2_NIGHT_REGRESSION = report;
+  root.POWDER_COMBAT2_NIGHT_COMPLETION = {
+    version: 'night-32',
+    scope: 'frame-anchor-layer-status-tooltip-projectile-impact-domain-fps-lifecycle-regression',
+    staticGatePass: report.pass,
+    branchOnly: true,
+    combatLogicChanged: false
+  };
 
   if (typeof location !== 'undefined' && ['localhost', '127.0.0.1'].includes(location.hostname)) {
     if (report.pass) console.info('[Combat2 Night Regression PASS]', report);
