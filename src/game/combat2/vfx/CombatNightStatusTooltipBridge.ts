@@ -6,6 +6,7 @@ const FLAG = '__powderCombatNightStatusTooltipBridgeInstalled';
 const TOOLTIP_KEY = '__nightStatusHoverTooltip';
 const TOOLTIP_STATUS_KEY = '__nightStatusHoverTooltipStatus';
 const HOVER_KEY = '__nightStatusHoverActive';
+const CLEANUP_KEY = '__nightStatusTooltipCleanupInstalled';
 
 type TooltipInfo = { glyph: string; title: string; description: string };
 
@@ -74,6 +75,26 @@ function clearTooltip(view: any, resetHover = false): void {
   if (resetHover) view[HOVER_KEY] = false;
 }
 
+function ensureTooltipCleanup(view: any): void {
+  if (view[CLEANUP_KEY]) return;
+  const scene = view.scene as Phaser.Scene | undefined;
+  if (!scene?.events) return;
+  let cleaned = false;
+
+  const cleanup = (): void => {
+    if (cleaned) return;
+    cleaned = true;
+    scene.events.off(Phaser.Scenes.Events.SHUTDOWN, cleanup);
+    scene.events.off(Phaser.Scenes.Events.DESTROY, cleanup);
+    clearTooltip(view, true);
+    view[CLEANUP_KEY] = false;
+  };
+
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanup);
+  scene.events.once(Phaser.Scenes.Events.DESTROY, cleanup);
+  view[CLEANUP_KEY] = true;
+}
+
 function showTooltip(view: any): void {
   const info = infoFor(view.runtimeVisualStatus);
   if (!info || !view.scene?.add) {
@@ -129,6 +150,7 @@ export function installCombatNightStatusTooltipBridge(): void {
       return;
     }
 
+    ensureTooltipCleanup(this);
     statusText.setText(`${info.glyph} ${this.runtimeVisualStatus}`);
     if (!(statusText as any).__nightTooltipInteractive) {
       statusText.setInteractive({ useHandCursor: true });
@@ -152,7 +174,7 @@ export function installCombatNightStatusTooltipBridge(): void {
   };
 
   root.POWDER_COMBAT2_NIGHT_STATUS_TOOLTIPS = {
-    version: 'night-26',
+    version: 'night-31',
     covered: [
       'burn', 'poison', 'freeze', 'stun', 'regeneration', 'shield', 'dual-dot',
       'silence', 'paralysis', 'chill', 'frostbite', 'anti-heal', 'attack-down',
@@ -163,6 +185,7 @@ export function installCombatNightStatusTooltipBridge(): void {
     hoverStatePreserved: true,
     recreateOnStatusChangeOnly: true,
     sceneObjectPerHoveredPowMax: 1,
+    sceneShutdownCleanup: true,
     combatLogicChanged: false
   };
 }
