@@ -1,5 +1,6 @@
 import { LEGACY_EXPANSION_DOMAINS } from '../systems/CombatLegacyDomainEngine';
 import { PowView } from '../views/PowView';
+import './CombatNightTeardownBridge';
 import { PersistentPowStatusVfx } from './PersistentPowStatusVfx';
 import {
   NIGHT_STATUS_VFX_DEFAULTS,
@@ -90,11 +91,16 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
       'adaptive-fps-source',
       Boolean(root.POWDER_COMBAT2_PERFORMANCE && root.POWDER_COMBAT2_NIGHT_FX_BUDGET),
       `performance=${root.POWDER_COMBAT2_PERFORMANCE?.version ?? 'missing'};night=${root.POWDER_COMBAT2_NIGHT_FX_BUDGET?.version ?? 'missing'}`
+    ),
+    check(
+      'scene-teardown-cleanup',
+      Boolean(root.POWDER_COMBAT2_NIGHT_TEARDOWN?.sceneShutdownSafe),
+      `version=${root.POWDER_COMBAT2_NIGHT_TEARDOWN?.version ?? 'missing'}`
     )
   ];
 
   const report: CombatNightRegressionReport = {
-    version: 'night-13',
+    version: 'night-15',
     pass: checks.every((entry) => entry.pass),
     checks
   };
