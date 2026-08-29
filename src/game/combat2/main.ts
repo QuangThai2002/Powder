@@ -155,6 +155,15 @@ installCombat2140ExactVfxPatch(BattleScene, PowView, CombatPresentationDirector)
 installCombat2141SemanticVfxPatch(BattleScene, PowView, CombatPresentationDirector);
 installCombat2142AssetVfxLivePatch(BattleScene);
 
+// Night Upgrade finalizers must become the last PowView presentation owners before
+// Phaser.Game can instantiate BattleScene. Sequential dynamic imports avoid the boot
+// race created by importing these bridges after ./main from bootstrap.ts.
+await import('./vfx/CombatNightProjectileBridge');
+await import('./vfx/CombatNightCuratedStatusAssetBridge');
+await import('./vfx/CombatNightStatusTooltipBridge');
+await import('./vfx/CombatNightFxBudgetBridge');
+await import('./vfx/CombatNightRegressionGate');
+
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO, parent: 'powder-combat2', width: logicalWidth, height: logicalHeight, backgroundColor: '#08131f',
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: logicalWidth, height: logicalHeight },
