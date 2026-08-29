@@ -14,6 +14,7 @@ import { PersistentPowStatusVfx, type PersistentPowStatusKind } from './Persiste
 import { PowView } from '../views/PowView';
 
 const FLAG = '__powderCombatNightCuratedStatusAssetBridgeInstalled';
+const INSTALL_VERSION = 'night-37';
 const LEGACY_PERSISTENT_KEY = '__powderCombat2140PersistentFx';
 const STATUS_PHASES = 12;
 const PREFERS_REDUCED_MOTION = typeof window !== 'undefined'
@@ -330,12 +331,12 @@ function createAnimatedFallback(
 
 /**
  * Full sprite-sheet playback inside PersistentPowStatusVfx remains first priority.
- * Current Git assets are representative preview frames, so Night 36 turns the fallback
+ * Current Git assets are representative preview frames, so Night 37 turns the fallback
  * into a live, bounded status animation without pretending those previews are full sheets.
  */
 function installCuratedFallback(): void {
   const proto = PersistentPowStatusVfx.prototype as any;
-  if (proto.__nightCuratedFallbackInstalled) return;
+  if (proto.__nightCuratedFallbackVersion === INSTALL_VERSION) return;
   const previousFallback = proto.createFallback;
   if (typeof previousFallback !== 'function') return;
 
@@ -354,6 +355,7 @@ function installCuratedFallback(): void {
   };
 
   proto.__nightCuratedFallbackInstalled = true;
+  proto.__nightCuratedFallbackVersion = INSTALL_VERSION;
 }
 
 /** Prevent the old 2.14.0 persistent image from drawing on top of the Night owner. */
@@ -374,13 +376,13 @@ function installLegacyPersistentDedup(): void {
 
 export function installCombatNightCuratedStatusAssetBridge(): void {
   const root = globalThis as any;
-  if (root[FLAG]) return;
-  root[FLAG] = true;
+  if (root[FLAG] === INSTALL_VERSION) return;
+  root[FLAG] = INSTALL_VERSION;
   installCuratedFallback();
   installLegacyPersistentDedup();
 
   root.POWDER_COMBAT2_NIGHT_STATUS_ASSETS = {
-    version: 'night-36',
+    version: INSTALL_VERSION,
     mode: 'curated-preview-plus-live-status-animation',
     fullSheetPriority: true,
     representativePreviewFrames: true,
@@ -400,13 +402,14 @@ export function installCombatNightCuratedStatusAssetBridge(): void {
     particleEmitters: false,
     tweenLoops: false,
     freezeAbsoluteAnchorPhases: true,
+    hotUpgradeSafe: true,
     duplicateLegacyPersistentHidden: true,
     combatLogicChanged: false
   };
 
   root.POWDER_COMBAT2_NIGHT_PERSISTENT_STATUS = {
     ...(root.POWDER_COMBAT2_NIGHT_PERSISTENT_STATUS || {}),
-    version: 'night-36',
+    version: INSTALL_VERSION,
     ownerPerPowMax: 1,
     sceneShutdownCleanup: true,
     poisonBadgeGlyph: 'hazard-no-skull',
@@ -414,6 +417,7 @@ export function installCombatNightCuratedStatusAssetBridge(): void {
     animatedFallback: true,
     sharedSceneTicker: true,
     sceneLevelPhaseThrottle: true,
+    hotUpgradeSafe: true,
     particleEmitters: false,
     tweenLoops: false,
     combatLogicChanged: false
