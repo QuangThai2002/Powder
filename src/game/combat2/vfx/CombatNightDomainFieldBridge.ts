@@ -43,6 +43,35 @@ function palette(id: LegacyExpansionDomainId): { core: number; accent: number } 
   return { core: 0xd9e6ef, accent: 0xffffff };
 }
 
+function drawOwnershipEdge(
+  g: Phaser.GameObjects.Graphics,
+  side: DomainSide,
+  w: number,
+  h: number,
+  color: number
+): void {
+  const frontY = side === 'enemy' ? h * 0.35 : -h * 0.35;
+  const pointDirection = side === 'enemy' ? 1 : -1;
+  const segmentWidth = w * 0.09;
+  const gap = w * 0.035;
+  const startX = -(segmentWidth * 2.5 + gap * 2);
+
+  g.lineStyle(3, color, 0.24);
+  for (let index = 0; index < 5; index += 1) {
+    const x = startX + index * (segmentWidth + gap);
+    g.lineBetween(x, frontY, x + segmentWidth, frontY);
+  }
+
+  g.lineStyle(2, color, 0.22);
+  for (let index = -2; index <= 2; index += 1) {
+    const x = index * w * 0.11;
+    const tipY = frontY + pointDirection * 9;
+    const backY = frontY - pointDirection * 4;
+    g.lineBetween(x - 7, backY, x, tipY);
+    g.lineBetween(x + 7, backY, x, tipY);
+  }
+}
+
 function drawMotif(scene: Phaser.Scene, id: LegacyExpansionDomainId, side: DomainSide): Phaser.GameObjects.Container {
   const w = Math.min(scene.scale.width * 0.72, 1120);
   const h = Math.min(scene.scale.height * 0.2, 170);
@@ -56,6 +85,7 @@ function drawMotif(scene: Phaser.Scene, id: LegacyExpansionDomainId, side: Domai
   g.fillEllipse(0, 0, w, h);
   g.lineStyle(2, c.core, 0.18);
   g.strokeEllipse(0, 0, w, h);
+  drawOwnershipEdge(g, side, w, h, c.accent);
 
   if (id === 'nine_suns') {
     for (let i = 0; i < 9; i += 1) {
@@ -149,6 +179,32 @@ function drawMotif(scene: Phaser.Scene, id: LegacyExpansionDomainId, side: Domai
   return container;
 }
 
+function drawClashSeam(
+  scene: Phaser.Scene,
+  enemyId: LegacyExpansionDomainId,
+  playerId: LegacyExpansionDomainId
+): Phaser.GameObjects.Graphics {
+  const g = scene.add.graphics().setDepth(-10.8);
+  const width = Math.min(scene.scale.width * 0.64, 980);
+  const centerX = scene.scale.width / 2;
+  const y = scene.scale.height * 0.5;
+  const enemy = palette(enemyId);
+  const player = palette(playerId);
+  const half = width / 2;
+
+  g.lineStyle(2, enemy.accent, 0.2);
+  g.lineBetween(centerX - half, y - 3, centerX - 12, y - 3);
+  g.lineStyle(2, player.accent, 0.2);
+  g.lineBetween(centerX + 12, y + 3, centerX + half, y + 3);
+
+  // Small crossed center marks communicate two active territories without a large UI banner.
+  g.lineStyle(3, enemy.core, 0.24);
+  g.lineBetween(centerX - 18, y - 10, centerX + 6, y + 10);
+  g.lineStyle(3, player.core, 0.24);
+  g.lineBetween(centerX - 6, y + 10, centerX + 18, y - 10);
+  return g;
+}
+
 function sync(scene: NightDomainScene): void {
   const next = domainSignature();
   if (scene.__nightDomainSignature === next) return;
@@ -156,10 +212,11 @@ function sync(scene: NightDomainScene): void {
   scene.__nightDomainField?.destroy(true);
   scene.__nightDomainField = scene.add.container(0, 0).setDepth(-11);
 
-  for (const side of ['enemy', 'player'] as const) {
-    const row = snapshot(side);
-    if (row) scene.__nightDomainField.add(drawMotif(scene, row.id, side));
-  }
+  const enemy = snapshot('enemy');
+  const player = snapshot('player');
+  if (enemy) scene.__nightDomainField.add(drawMotif(scene, enemy.id, 'enemy'));
+  if (player) scene.__nightDomainField.add(drawMotif(scene, player.id, 'player'));
+  if (enemy && player) scene.__nightDomainField.add(drawClashSeam(scene, enemy.id, player.id));
 }
 
 export function installCombatNightDomainFieldBridge(): void {
@@ -176,11 +233,15 @@ export function installCombatNightDomainFieldBridge(): void {
   };
 
   root.POWDER_COMBAT2_NIGHT_DOMAIN = {
-    version: 'night-10',
-    mode: 'nine-expansion-ground-motifs',
+    version: 'night-21',
+    mode: 'nine-expansion-ground-motifs-owner-boundary-clash-seam',
     particles: false,
+    tweenLoops: false,
     depth: -11,
-    identityRebuildOnly: true
+    ownerBoundary: true,
+    clashSeam: true,
+    identityRebuildOnly: true,
+    combatLogicChanged: false
   };
 }
 
