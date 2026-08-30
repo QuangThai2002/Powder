@@ -8,6 +8,8 @@ import { powVfxDepth } from './CombatNightVfxLayout';
 
 const FLAG = '__powderCombatNightFxBudgetInstalled';
 const BALANCED_BURST_THRESHOLD = 2;
+const PROJECTILE_SCALE = 1.5;
+const PROJECTILE_DURATION_SCALE = 1.5;
 
 const PROJECTILE_COLOR: Readonly<Record<CombatProjectileElement, number>> = Object.freeze({
   fire: 0xff7043,
@@ -44,14 +46,23 @@ function readableDuration(options: DirectionalProjectileOptions, current: FxTier
     options.target.y
   ));
 
-  if (current === 'lite') return Phaser.Math.Clamp(requested > 0 ? requested : 195, 175, 215);
-  if (current === 'balanced') {
+  let baseDuration: number;
+  if (current === 'lite') {
+    baseDuration = Phaser.Math.Clamp(requested > 0 ? requested : 195, 175, 215);
+  } else if (current === 'balanced') {
     const natural = burstReducedMotion ? 215 : Math.round(225 + Math.min(35, distance * 0.035));
-    return Phaser.Math.Clamp(requested > 0 ? requested : natural, burstReducedMotion ? 195 : 215, burstReducedMotion ? 235 : 275);
+    baseDuration = Phaser.Math.Clamp(
+      requested > 0 ? requested : natural,
+      burstReducedMotion ? 195 : 215,
+      burstReducedMotion ? 235 : 275
+    );
+  } else {
+    const natural = Math.round(240 + Math.min(55, distance * 0.05));
+    baseDuration = Phaser.Math.Clamp(requested > 0 ? requested : natural, 230, 310);
   }
 
-  const natural = Math.round(240 + Math.min(55, distance * 0.05));
-  return Phaser.Math.Clamp(requested > 0 ? requested : natural, 230, 310);
+  // Night43: 50% longer travel time than Night42 so the enlarged shot is easier to follow.
+  return Math.round(baseDuration * PROJECTILE_DURATION_SCALE);
 }
 
 function tweenObject(
@@ -124,11 +135,12 @@ async function playSimpleProjectile(
   const tailLength = reducedDetail ? 20 : 30;
   const tailThickness = reducedDetail ? 4 : 5;
 
-  // Night 42 intentionally uses ONE projectile object only.
-  // There is no full source-to-target beam and no second guide layered on top.
+  // One simple projectile only. Night43 enlarges this same object to 150%; it does
+  // not add another guide, beam, trail object or duplicate projectile layer.
   const projectile = scene.add.container(source.x, source.y)
     .setDepth(powVfxDepth('foreground') + 2)
-    .setRotation(angle);
+    .setRotation(angle)
+    .setScale(PROJECTILE_SCALE);
 
   projectile.add([
     scene.add.rectangle(-tailLength * 0.56, 0, tailLength, tailThickness, color, reducedDetail ? 0.28 : 0.4),
@@ -161,7 +173,7 @@ export function installCombatNightFxBudgetBridge(): void {
 
   // Final Night owner. Do not invoke the legacy projectile implementation here:
   // it draws a full path line and element-specific geometry which made attacks read
-  // as multiple overlapping projectiles. Night42 intentionally replaces that stack.
+  // as multiple overlapping projectiles.
   owner.play = async (options: DirectionalProjectileOptions): Promise<void> => {
     const current = tier();
     const concurrency = activeProjectiles + 1;
@@ -178,18 +190,20 @@ export function installCombatNightFxBudgetBridge(): void {
   };
 
   root.POWDER_COMBAT2_NIGHT_FX_BUDGET = {
-    version: 'night-42',
+    version: 'night-43',
     source: 'POWDER_COMBAT2_FX_TIER',
-    full: 'single-colored-shot-short-attached-tail-small-impact',
-    balanced: 'single-colored-shot-short-tail-small-impact',
-    lite: 'single-minimal-shot-small-impact',
+    full: 'single-150pct-shot-short-attached-tail-small-impact',
+    balanced: 'single-150pct-shot-short-tail-small-impact',
+    lite: 'single-150pct-minimal-shot-small-impact',
     balancedBurstThreshold: BALANCED_BURST_THRESHOLD,
     burstGuard: true,
     singleProjectileOwner: true,
+    projectileScale: PROJECTILE_SCALE,
+    projectileTravelDurationScale: PROJECTILE_DURATION_SCALE,
     legacyFullPathLineDisabled: true,
     duplicateMovingGuideDisabled: true,
     attachedShortTailOnly: true,
-    readableTravelMs: { full: '230-310', balanced: '215-275', lite: '175-215' },
+    readableTravelMs: { full: '345-465', balanced: '323-413', lite: '263-323' },
     sceneShutdownSafeGuide: true,
     fullTierPreserved: true,
     counterFinallySafe: true,
