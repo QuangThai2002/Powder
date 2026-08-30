@@ -98,8 +98,12 @@ export function orderedFrameNumbers(spec: Pick<SpriteSheetPlaybackSpec, 'startFr
 }
 
 export const NIGHT_STATUS_VFX_DEFAULTS = Object.freeze({
-  burn: { anchor: 'body' as PowVfxAnchor, layer: 'status' as PowVfxLayer, widthRatio: 0.62, heightRatio: 0.68 },
-  poison: { anchor: 'ground' as PowVfxAnchor, layer: 'status' as PowVfxLayer, widthRatio: 0.68, heightRatio: 0.48 },
+  // Night 39: real sprite frames stay unchanged; only their fit/anchor is enlarged.
+  // Burn should read as flames wrapping the portrait rather than a small badge on it.
+  burn: { anchor: 'body' as PowVfxAnchor, layer: 'status' as PowVfxLayer, widthRatio: 0.74, heightRatio: 0.80 },
+  // Poison is body-centred but PersistentPowStatusVfx keeps it on the ground depth,
+  // so the cloud/puddle surrounds the Pow without covering the portrait HUD.
+  poison: { anchor: 'body' as PowVfxAnchor, layer: 'status' as PowVfxLayer, widthRatio: 0.82, heightRatio: 0.68 },
   freeze: { anchor: 'body' as PowVfxAnchor, layer: 'status' as PowVfxLayer, widthRatio: 0.78, heightRatio: 0.78 },
   stun: { anchor: 'head' as PowVfxAnchor, layer: 'status' as PowVfxLayer, widthRatio: 0.54, heightRatio: 0.42 },
   heal: { anchor: 'body' as PowVfxAnchor, layer: 'foreground' as PowVfxLayer, widthRatio: 0.68, heightRatio: 0.72 },
