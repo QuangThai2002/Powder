@@ -98,14 +98,17 @@ export function orderedFrameNumbers(spec: Pick<SpriteSheetPlaybackSpec, 'startFr
 }
 
 export const NIGHT_STATUS_VFX_DEFAULTS = Object.freeze({
-  // Burn is intentionally larger so the flame silhouette wraps the Pow body.
-  burn: { anchor: 'body' as PowVfxAnchor, layer: 'status' as PowVfxLayer, widthRatio: 0.74, heightRatio: 0.80 },
-  // Poison remains a ground-owned status. PersistentPowStatusVfx lifts the artwork
-  // slightly upward while preserving this semantic anchor, so gas surrounds the
-  // lower body without becoming a green body overlay or covering the HUD.
-  poison: { anchor: 'ground' as PowVfxAnchor, layer: 'status' as PowVfxLayer, widthRatio: 0.82, heightRatio: 0.68 },
-  freeze: { anchor: 'body' as PowVfxAnchor, layer: 'status' as PowVfxLayer, widthRatio: 0.78, heightRatio: 0.78 },
-  stun: { anchor: 'head' as PowVfxAnchor, layer: 'status' as PowVfxLayer, widthRatio: 0.54, heightRatio: 0.42 },
-  heal: { anchor: 'body' as PowVfxAnchor, layer: 'foreground' as PowVfxLayer, widthRatio: 0.68, heightRatio: 0.72 },
-  shield: { anchor: 'body' as PowVfxAnchor, layer: 'status' as PowVfxLayer, widthRatio: 0.82, heightRatio: 0.82 }
+  // Night 41: dedicated real status art should visually wrap the affected Pow.
+  // Ratios may slightly exceed portrait height because the supplied sprite frames
+  // contain transparent margins; the actual visible pixels remain HUD-safe.
+  burn: { anchor: 'body' as PowVfxAnchor, layer: 'status' as PowVfxLayer, widthRatio: 0.96, heightRatio: 1.05 },
+  // Poison remains ground-owned, then PersistentPowStatusVfx lifts the sheet so
+  // puddle + gas climb around the lower body while staying behind the Pow/HUD.
+  poison: { anchor: 'ground' as PowVfxAnchor, layer: 'status' as PowVfxLayer, widthRatio: 0.98, heightRatio: 0.88 },
+  freeze: { anchor: 'body' as PowVfxAnchor, layer: 'status' as PowVfxLayer, widthRatio: 0.96, heightRatio: 1.04 },
+  // Stun keeps its semantic head anchor; the Night41 portrait envelope supplies
+  // full-body ownership while the real electrical sheet remains head-readable.
+  stun: { anchor: 'head' as PowVfxAnchor, layer: 'status' as PowVfxLayer, widthRatio: 0.78, heightRatio: 0.72 },
+  heal: { anchor: 'body' as PowVfxAnchor, layer: 'foreground' as PowVfxLayer, widthRatio: 0.88, heightRatio: 0.94 },
+  shield: { anchor: 'body' as PowVfxAnchor, layer: 'status' as PowVfxLayer, widthRatio: 0.96, heightRatio: 1.04 }
 });
