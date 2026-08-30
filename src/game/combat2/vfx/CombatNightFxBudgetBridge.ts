@@ -8,8 +8,9 @@ import { powVfxDepth } from './CombatNightVfxLayout';
 
 const FLAG = '__powderCombatNightFxBudgetInstalled';
 const BALANCED_BURST_THRESHOLD = 2;
-const PROJECTILE_SCALE = 1.5;
-const PROJECTILE_DURATION_SCALE = 1.5;
+const NIGHT43_PROJECTILE_SCALE = 1.5;
+const PROJECTILE_HEAD_SCALE_VS_NIGHT43 = 10;
+const PROJECTILE_DURATION_SCALE = 2.25;
 
 const PROJECTILE_COLOR: Readonly<Record<CombatProjectileElement, number>> = Object.freeze({
   fire: 0xff7043,
@@ -61,7 +62,8 @@ function readableDuration(options: DirectionalProjectileOptions, current: FxTier
     baseDuration = Phaser.Math.Clamp(requested > 0 ? requested : natural, 230, 310);
   }
 
-  // Night43: 50% longer travel time than Night42 so the enlarged shot is easier to follow.
+  // Night44 is another 50% slower than Night43. Night43 already used 1.5x Night42,
+  // so the final duration is 2.25x the Night42 baseline.
   return Math.round(baseDuration * PROJECTILE_DURATION_SCALE);
 }
 
@@ -101,21 +103,22 @@ function tweenObject(
 async function playSimpleImpact(options: DirectionalProjectileOptions, reducedDetail: boolean): Promise<void> {
   const { scene, target, element } = options;
   const color = PROJECTILE_COLOR[element] ?? PROJECTILE_COLOR.neutral;
-  const radius = reducedDetail ? 14 : 19;
+  const radius = reducedDetail ? 18 : 24;
   const impact = scene.add.container(target.x, target.y).setDepth(powVfxDepth('foreground') + 1);
   impact.add([
-    scene.add.circle(0, 0, radius * 0.48, color, 0.34),
-    scene.add.circle(0, 0, radius, 0x000000, 0).setStrokeStyle(reducedDetail ? 2 : 3, color, 0.88)
+    scene.add.circle(0, 0, radius * 0.5, color, 0.38),
+    scene.add.circle(0, 0, radius, 0x000000, 0).setStrokeStyle(reducedDetail ? 2 : 3, color, 0.9),
+    scene.add.circle(0, 0, radius * 0.2, 0xffffff, 0.72)
   ]);
 
   try {
     await tweenObject(scene, impact, {
-      scaleX: reducedDetail ? 1.28 : 1.48,
-      scaleY: reducedDetail ? 1.28 : 1.48,
+      scaleX: reducedDetail ? 1.3 : 1.55,
+      scaleY: reducedDetail ? 1.3 : 1.55,
       alpha: 0,
-      duration: reducedDetail ? 115 : 155,
+      duration: reducedDetail ? 130 : 175,
       ease: 'Quad.easeOut'
-    }, reducedDetail ? 300 : 360);
+    }, reducedDetail ? 320 : 390);
   } finally {
     impact.destroy(true);
   }
@@ -131,22 +134,42 @@ async function playSimpleProjectile(
   const dx = target.x - source.x;
   const dy = target.y - source.y;
   const angle = Math.atan2(dy, dx);
-  const headRadius = reducedDetail ? 6 : 8;
-  const tailLength = reducedDetail ? 20 : 30;
-  const tailThickness = reducedDetail ? 4 : 5;
 
-  // One simple projectile only. Night43 enlarges this same object to 150%; it does
-  // not add another guide, beam, trail object or duplicate projectile layer.
+  // Night43 rendered the head as baseRadius * 1.5. Night44 makes the visible projectile
+  // head/body exactly 10x that current Night43 size. The tail is intentionally capped
+  // instead of also becoming 10x longer, otherwise it would turn back into a screen-wide beam.
+  const night43HeadRadius = (reducedDetail ? 6 : 8) * NIGHT43_PROJECTILE_SCALE;
+  const headRadius = night43HeadRadius * PROJECTILE_HEAD_SCALE_VS_NIGHT43;
+  const auraRadius = headRadius * 1.16;
+  const tailLength = reducedDetail ? 92 : 126;
+  const tailThickness = reducedDetail ? 18 : 24;
+  const noseLength = reducedDetail ? 32 : 42;
+
   const projectile = scene.add.container(source.x, source.y)
     .setDepth(powVfxDepth('foreground') + 2)
-    .setRotation(angle)
-    .setScale(PROJECTILE_SCALE);
+    .setRotation(angle);
 
+  // One energy-comet projectile: short attached tail, soft outer aura, saturated core,
+  // bright white centre and a small directional nose. No second guide and no path beam.
   projectile.add([
-    scene.add.rectangle(-tailLength * 0.56, 0, tailLength, tailThickness, color, reducedDetail ? 0.28 : 0.4),
-    scene.add.circle(1, 0, headRadius + 3, color, reducedDetail ? 0.18 : 0.24),
-    scene.add.circle(3, 0, headRadius, color, 0.96),
-    scene.add.circle(5, 0, Math.max(2.5, headRadius * 0.42), 0xffffff, 0.9)
+    scene.add.rectangle(-tailLength * 0.58, 0, tailLength, tailThickness, color, reducedDetail ? 0.22 : 0.3),
+    scene.add.rectangle(-tailLength * 0.4, 0, tailLength * 0.72, Math.max(6, tailThickness * 0.38), 0xffffff, reducedDetail ? 0.18 : 0.28),
+    scene.add.circle(0, 0, auraRadius, color, reducedDetail ? 0.08 : 0.12),
+    scene.add.circle(0, 0, headRadius, color, 0.76),
+    scene.add.circle(headRadius * 0.08, 0, headRadius * 0.58, color, 0.96),
+    scene.add.circle(headRadius * 0.16, 0, headRadius * 0.28, 0xffffff, 0.92),
+    scene.add.triangle(
+      headRadius * 0.9,
+      0,
+      -noseLength * 0.46,
+      -noseLength * 0.36,
+      -noseLength * 0.46,
+      noseLength * 0.36,
+      noseLength * 0.54,
+      0,
+      0xffffff,
+      reducedDetail ? 0.68 : 0.82
+    )
   ]);
 
   try {
@@ -154,8 +177,8 @@ async function playSimpleProjectile(
       x: target.x,
       y: target.y,
       duration: durationMs,
-      ease: element === 'lightning' ? 'Cubic.easeIn' : 'Sine.easeInOut'
-    }, durationMs + 260);
+      ease: element === 'lightning' ? 'Quad.easeInOut' : 'Sine.easeInOut'
+    }, durationMs + 320);
   } finally {
     projectile.destroy(true);
   }
@@ -190,20 +213,21 @@ export function installCombatNightFxBudgetBridge(): void {
   };
 
   root.POWDER_COMBAT2_NIGHT_FX_BUDGET = {
-    version: 'night-43',
+    version: 'night-44',
     source: 'POWDER_COMBAT2_FX_TIER',
-    full: 'single-150pct-shot-short-attached-tail-small-impact',
-    balanced: 'single-150pct-shot-short-tail-small-impact',
-    lite: 'single-150pct-minimal-shot-small-impact',
+    full: 'single-large-energy-comet-short-tail-small-impact',
+    balanced: 'single-large-energy-comet-short-tail-small-impact',
+    lite: 'single-large-energy-comet-minimal-tail-small-impact',
     balancedBurstThreshold: BALANCED_BURST_THRESHOLD,
     burstGuard: true,
     singleProjectileOwner: true,
-    projectileScale: PROJECTILE_SCALE,
-    projectileTravelDurationScale: PROJECTILE_DURATION_SCALE,
+    projectileHeadScaleVsNight43: PROJECTILE_HEAD_SCALE_VS_NIGHT43,
+    projectileTravelDurationScaleVsNight42: PROJECTILE_DURATION_SCALE,
+    projectileTravelSlowerVsNight43: 1.5,
     legacyFullPathLineDisabled: true,
     duplicateMovingGuideDisabled: true,
     attachedShortTailOnly: true,
-    readableTravelMs: { full: '345-465', balanced: '323-413', lite: '263-323' },
+    readableTravelMs: { full: '518-698', balanced: '484-619', lite: '394-484' },
     sceneShutdownSafeGuide: true,
     fullTierPreserved: true,
     counterFinallySafe: true,
