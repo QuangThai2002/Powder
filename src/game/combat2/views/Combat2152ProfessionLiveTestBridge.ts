@@ -3,17 +3,20 @@ import { BattleScene } from '../scenes/BattleScene';
 import { PowView } from './PowView';
 
 const FLAG = '__powderCombat2152ProfessionLiveTestInstalled';
+const SCENE_FLAG = '__powderCombat2152ProfessionLiveTestAttached';
 const ROLE_ORDER = [
   'marksman', 'mage', 'fighter', 'knight', 'enchanter',
   'healer', 'musician', 'assassin', 'tank'
 ] as const;
 
 type RoleKey = typeof ROLE_ORDER[number];
-
 type RuntimePowView = PowView & {
   pow?: { id?: string; name?: string; role?: string; element?: string; elementKey?: string };
-  side?: 'player' | 'enemy';
   playAttackLunge?: (targetX: number, targetY: number) => Promise<void>;
+};
+type RuntimeScene = BattleScene & {
+  powViews?: Map<string, RuntimePowView>;
+  [SCENE_FLAG]?: boolean;
 };
 
 function isLocalDev(): boolean {
@@ -60,6 +63,147 @@ function clearAutoDemoQuery(): void {
   window.history.replaceState({}, '', next.toString());
 }
 
+function attachScene(scene: RuntimeScene): boolean {
+  const root = globalThis as any;
+  const map = scene.powViews;
+  if (!(map instanceof Map) || map.size === 0) return false;
+  if ((scene as any)[SCENE_FLAG]) return true;
+  (scene as any)[SCENE_FLAG] = true;
+
+  const views = (): Array<{
+    instanceId: string;
+    view: RuntimePowView;
+    role: RoleKey | null;
+    side: 'player' | 'enemy' | null;
+  }> => Array.from((scene.powViews ?? new Map()).entries()).map(([instanceId, view]) => {
+    const runtime = view as any;
+    return {
+      instanceId,
+      view,
+      role: resolveRole(runtime.pow?.role),
+      side: instanceId.startsWith('player-') ? 'player' : instanceId.startsWith('enemy-') ? 'enemy' : null
+    };
+  });
+
+  const snapshot = () => views().map(({ instanceId, view, role, side }) => {
+    const runtime = view as any;
+    return {
+      instanceId,
+      side,
+      role,
+      powId: runtime.pow?.id ?? null,
+      powName: runtime.pow?.name ?? null,
+      roleLabel: runtime.pow?.role ?? null,
+      element: runtime.pow?.elementKey ?? runtime.pow?.element ?? null,
+      x: Math.round(view.container.x),
+      y: Math.round(view.container.y),
+      scaleX: Number(view.container.scaleX.toFixed(3)),
+      visible: view.container.visible,
+      alpha: Number(view.container.alpha.toFixed(2))
+    };
+  });
+
+  const pickSource = (role?: RoleKey | null) => {
+    const rows = views();
+    const wanted = role ?? requestedRole();
+    if (wanted) {
+      const player = rows.find((row) => row.role === wanted && row.side === 'player');
+      if (player) return player;
+      const any = rows.find((row) => row.role === wanted);
+      if (any) return any;
+    }
+    return rows.find((row) => row.side === 'player') ?? rows[0] ?? null;
+  };
+
+  const pickTarget = (sourceSide: 'player' | 'enemy' | null) => {
+    const targetSide = sourceSide === 'enemy' ? 'player' : 'enemy';
+    const rows = views().filter((row) =>
+      row.side === targetSide
+      && row.view.container.alpha > 0.45
+      && row.view.container.visible
+    );
+    return rows.find((row) => row.view.container.scaleX >= 0.7) ?? rows[0] ?? null;
+  };
+
+  let playing = false;
+  const play = async (requested?: string | null) => {
+    if (playing) return { ok: false, reason: 'busy', snapshot: snapshot() };
+    const role = resolveRole(requested) ?? requestedRole();
+    const source = pickSource(role);
+    if (!source) return { ok: false, reason: 'source-not-found', role, snapshot: snapshot() };
+    const target = pickTarget(source.side);
+    if (!target) return { ok: false, reason: 'target-not-found', role, source: source.instanceId, snapshot: snapshot() };
+    const attack = (source.view as any).playAttackLunge;
+    if (typeof attack !== 'function') {
+      return { ok: false, reason: 'playAttackLunge-missing', role, source: source.instanceId, target: target.instanceId };
+    }
+
+    playing = true;
+    try {
+      await attack.call(source.view, target.view.container.x, target.view.container.y);
+      return {
+        ok: true,
+        role: source.role,
+        source: source.instanceId,
+        target: target.instanceId,
+        presentationOnly: true,
+        damageApplied: false,
+        turnAdvanced: false
+      };
+    } finally {
+      playing = false;
+    }
+  };
+
+  root.POWDER_COMBAT2_PROFESSION_LIVE_TEST = {
+    version: '2.15.2',
+    ready: true,
+    devOnly: true,
+    roles: [...ROLE_ORDER],
+    focusRole: requestedRole(),
+    play,
+    snapshot,
+    usesLivePowViewPlayAttackLunge: true,
+    presentationOnly: true,
+    damageApplied: false,
+    turnAdvanced: false,
+    combatLogicChanged: false
+  };
+
+  if (requestedAutoDemo()) {
+    clearAutoDemoQuery();
+    scene.time.delayedCall(1650, () => {
+      void play(requestedRole()).then((result: any) => {
+        root.POWDER_COMBAT2_PROFESSION_LIVE_TEST_LAST = result;
+      });
+    });
+  }
+
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    if (root.POWDER_COMBAT2_PROFESSION_LIVE_TEST?.play === play) {
+      root.POWDER_COMBAT2_PROFESSION_LIVE_TEST = {
+        version: '2.15.2',
+        ready: false,
+        devOnly: true,
+        reason: 'scene-shutdown',
+        combatLogicChanged: false
+      };
+    }
+  });
+  return true;
+}
+
+function attachRunningBattleScene(): boolean {
+  const games = ((Phaser as any).GAMES ?? []) as Phaser.Game[];
+  for (const game of games) {
+    try {
+      const scene = game.scene.getScene('BattleScene') as RuntimeScene | null;
+      if (scene && attachScene(scene)) return true;
+    } catch { /* game may not have registered BattleScene yet */ }
+  }
+  return false;
+}
+
 function installCombat2152ProfessionLiveTestBridge(): void {
   const root = globalThis as any;
   if (root[FLAG]) return;
@@ -78,135 +222,26 @@ function installCombat2152ProfessionLiveTestBridge(): void {
 
   const proto = BattleScene.prototype as any;
   const originalCreate = proto.create;
-  if (typeof originalCreate !== 'function') return;
-
-  proto.create = function combat2152ProfessionLiveTestCreate(this: BattleScene & any, ...args: any[]): void {
-    originalCreate.apply(this, args);
-
-    const scene = this;
-    const views = (): Array<{ instanceId: string; view: RuntimePowView; role: RoleKey | null; side: 'player' | 'enemy' | null }> => {
-      const map = scene.powViews as Map<string, RuntimePowView> | undefined;
-      if (!(map instanceof Map)) return [];
-      return Array.from(map.entries()).map(([instanceId, view]) => {
-        const runtime = view as any;
-        return {
-          instanceId,
-          view,
-          role: resolveRole(runtime.pow?.role),
-          side: instanceId.startsWith('player-') ? 'player' : instanceId.startsWith('enemy-') ? 'enemy' : null
-        };
-      });
+  if (typeof originalCreate === 'function') {
+    proto.create = function combat2152ProfessionLiveTestCreate(this: RuntimeScene, ...args: any[]): void {
+      originalCreate.apply(this, args);
+      attachScene(this);
     };
+  }
 
-    const snapshot = () => views().map(({ instanceId, view, role, side }) => {
-      const runtime = view as any;
-      return {
-        instanceId,
-        side,
-        role,
-        powId: runtime.pow?.id ?? null,
-        powName: runtime.pow?.name ?? null,
-        roleLabel: runtime.pow?.role ?? null,
-        element: runtime.pow?.elementKey ?? runtime.pow?.element ?? null,
-        x: Math.round(view.container.x),
-        y: Math.round(view.container.y),
-        scaleX: Number(view.container.scaleX.toFixed(3)),
-        visible: view.container.visible,
-        alpha: Number(view.container.alpha.toFixed(2))
-      };
-    });
-
-    const pickSource = (role?: RoleKey | null) => {
-      const rows = views();
-      const wanted = role ?? requestedRole();
-      if (wanted) {
-        const player = rows.find((row) => row.role === wanted && row.side === 'player');
-        if (player) return player;
-        const any = rows.find((row) => row.role === wanted);
-        if (any) return any;
-      }
-      return rows.find((row) => row.side === 'player') ?? rows[0] ?? null;
-    };
-
-    const pickTarget = (sourceSide: 'player' | 'enemy' | null) => {
-      const targetSide = sourceSide === 'enemy' ? 'player' : 'enemy';
-      const rows = views().filter((row) => row.side === targetSide && row.view.container.alpha > 0.45 && row.view.container.visible);
-      const activeLooking = rows.find((row) => row.view.container.scaleX >= 0.7);
-      return activeLooking ?? rows[0] ?? null;
-    };
-
-    let playing = false;
-    const play = async (requested?: string | null) => {
-      if (playing) return { ok: false, reason: 'busy', snapshot: snapshot() };
-      const role = resolveRole(requested) ?? requestedRole();
-      const source = pickSource(role);
-      if (!source) return { ok: false, reason: 'source-not-found', role, snapshot: snapshot() };
-      const target = pickTarget(source.side);
-      if (!target) return { ok: false, reason: 'target-not-found', role, source: source.instanceId, snapshot: snapshot() };
-      const attack = (source.view as any).playAttackLunge;
-      if (typeof attack !== 'function') {
-        return { ok: false, reason: 'playAttackLunge-missing', role, source: source.instanceId, target: target.instanceId };
-      }
-
-      playing = true;
-      try {
-        await attack.call(source.view, target.view.container.x, target.view.container.y);
-        return {
-          ok: true,
-          role: source.role,
-          source: source.instanceId,
-          target: target.instanceId,
-          presentationOnly: true,
-          damageApplied: false,
-          turnAdvanced: false
-        };
-      } finally {
-        playing = false;
-      }
-    };
-
-    root.POWDER_COMBAT2_PROFESSION_LIVE_TEST = {
-      version: '2.15.2',
-      ready: true,
-      devOnly: true,
-      roles: [...ROLE_ORDER],
-      focusRole: requestedRole(),
-      play,
-      snapshot,
-      usesLivePowViewPlayAttackLunge: true,
-      presentationOnly: true,
-      damageApplied: false,
-      turnAdvanced: false,
-      combatLogicChanged: false
-    };
-
-    if (requestedAutoDemo()) {
-      clearAutoDemoQuery();
-      scene.time.delayedCall(1850, () => {
-        void play(requestedRole()).then((result: any) => {
-          root.POWDER_COMBAT2_PROFESSION_LIVE_TEST_LAST = result;
-        });
-      });
-    }
-
-    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      if (root.POWDER_COMBAT2_PROFESSION_LIVE_TEST?.play === play) {
-        root.POWDER_COMBAT2_PROFESSION_LIVE_TEST = {
-          version: '2.15.2',
-          ready: false,
-          devOnly: true,
-          reason: 'scene-shutdown',
-          combatLogicChanged: false
-        };
-      }
-    });
-  };
+  const attachedImmediately = attachRunningBattleScene();
+  if (!attachedImmediately && typeof window !== 'undefined') {
+    // Bounded boot retries only; this is not a polling loop.
+    [80, 240, 600].forEach((delay) => window.setTimeout(attachRunningBattleScene, delay));
+  }
 
   root.POWDER_COMBAT2_PROFESSION_LIVE_TEST_BRIDGE = {
     version: '2.15.2',
     devOnly: true,
     installed: true,
-    patchesBattleSceneCreate: true,
+    patchesFutureBattleSceneCreate: true,
+    attachesAlreadyRunningBattleScene: true,
+    boundedBootRetries: [80, 240, 600],
     livePowViewLookup: true,
     livePlayAttackLunge: true,
     autoDemoQuery: 'professionDemo=1',
