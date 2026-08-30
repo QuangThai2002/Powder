@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
 import { BattleScene } from '../scenes/BattleScene';
-import { PowView } from './PowView';
 
 const FLAG = '__powderCombat2152ProfessionLiveTestInstalled';
 const SCENE_FLAG = '__powderCombat2152ProfessionLiveTestAttached';
@@ -10,10 +9,7 @@ const ROLE_ORDER = [
 ] as const;
 
 type RoleKey = typeof ROLE_ORDER[number];
-type RuntimePowView = PowView & {
-  pow?: { id?: string; name?: string; role?: string; element?: string; elementKey?: string };
-  playAttackLunge?: (targetX: number, targetY: number) => Promise<void>;
-};
+type RuntimePowView = any;
 type RuntimeScene = any;
 
 function isLocalDev(): boolean {
@@ -49,8 +45,8 @@ function requestedRole(): RoleKey | null {
 }
 
 function requestedAutoDemo(): boolean {
-  if (typeof window === 'undefined') return false;
-  return new URLSearchParams(window.location.search).get('professionDemo') === '1';
+  return typeof window !== 'undefined'
+    && new URLSearchParams(window.location.search).get('professionDemo') === '1';
 }
 
 function clearAutoDemoQuery(): void {
@@ -60,70 +56,64 @@ function clearAutoDemoQuery(): void {
   window.history.replaceState({}, '', next.toString());
 }
 
+function runtimeRows(scene: RuntimeScene): Array<{
+  instanceId: string;
+  view: RuntimePowView;
+  role: RoleKey | null;
+  side: 'player' | 'enemy' | null;
+}> {
+  const map = scene?.powViews as Map<string, RuntimePowView> | undefined;
+  if (!(map instanceof Map)) return [];
+  return Array.from(map.entries()).map(([instanceId, view]) => ({
+    instanceId,
+    view,
+    role: resolveRole(view?.pow?.role),
+    side: instanceId.startsWith('player-') ? 'player' : instanceId.startsWith('enemy-') ? 'enemy' : null
+  }));
+}
+
 function attachScene(scene: RuntimeScene): boolean {
   const root = globalThis as any;
-  const map = scene?.powViews as Map<string, RuntimePowView> | undefined;
-  if (!(map instanceof Map) || map.size === 0) return false;
+  const rowsNow = runtimeRows(scene);
+  if (rowsNow.length === 0) return false;
   if (scene[SCENE_FLAG]) return true;
   scene[SCENE_FLAG] = true;
 
-  const views = (): Array<{
-    instanceId: string;
-    view: RuntimePowView;
-    role: RoleKey | null;
-    side: 'player' | 'enemy' | null;
-  }> => {
-    const current = scene.powViews as Map<string, RuntimePowView> | undefined;
-    if (!(current instanceof Map)) return [];
-    return Array.from(current.entries()).map(([instanceId, view]) => {
-      const runtime = view as any;
-      return {
-        instanceId,
-        view,
-        role: resolveRole(runtime.pow?.role),
-        side: instanceId.startsWith('player-') ? 'player' : instanceId.startsWith('enemy-') ? 'enemy' : null
-      };
-    });
-  };
-
-  const snapshot = () => views().map(({ instanceId, view, role, side }) => {
-    const runtime = view as any;
-    return {
-      instanceId,
-      side,
-      role,
-      powId: runtime.pow?.id ?? null,
-      powName: runtime.pow?.name ?? null,
-      roleLabel: runtime.pow?.role ?? null,
-      element: runtime.pow?.elementKey ?? runtime.pow?.element ?? null,
-      x: Math.round(view.container.x),
-      y: Math.round(view.container.y),
-      scaleX: Number(view.container.scaleX.toFixed(3)),
-      visible: view.container.visible,
-      alpha: Number(view.container.alpha.toFixed(2))
-    };
-  });
+  const snapshot = () => runtimeRows(scene).map(({ instanceId, view, role, side }) => ({
+    instanceId,
+    side,
+    role,
+    powId: view?.pow?.id ?? null,
+    powName: view?.pow?.name ?? null,
+    roleLabel: view?.pow?.role ?? null,
+    element: view?.pow?.elementKey ?? view?.pow?.element ?? null,
+    x: Math.round(Number(view?.container?.x || 0)),
+    y: Math.round(Number(view?.container?.y || 0)),
+    scaleX: Number(Number(view?.container?.scaleX || 0).toFixed(3)),
+    visible: Boolean(view?.container?.visible),
+    alpha: Number(Number(view?.container?.alpha || 0).toFixed(2))
+  }));
 
   const pickSource = (role?: RoleKey | null) => {
-    const rows = views();
+    const rows = runtimeRows(scene);
     const wanted = role ?? requestedRole();
     if (wanted) {
       const player = rows.find((row) => row.role === wanted && row.side === 'player');
       if (player) return player;
-      const any = rows.find((row) => row.role === wanted);
-      if (any) return any;
+      const anySide = rows.find((row) => row.role === wanted);
+      if (anySide) return anySide;
     }
     return rows.find((row) => row.side === 'player') ?? rows[0] ?? null;
   };
 
   const pickTarget = (sourceSide: 'player' | 'enemy' | null) => {
     const targetSide = sourceSide === 'enemy' ? 'player' : 'enemy';
-    const rows = views().filter((row) =>
+    const rows = runtimeRows(scene).filter((row) =>
       row.side === targetSide
-      && row.view.container.alpha > 0.45
-      && row.view.container.visible
+      && Number(row.view?.container?.alpha || 0) > 0.45
+      && Boolean(row.view?.container?.visible)
     );
-    return rows.find((row) => row.view.container.scaleX >= 0.7) ?? rows[0] ?? null;
+    return rows.find((row) => Number(row.view?.container?.scaleX || 0) >= 0.7) ?? rows[0] ?? null;
   };
 
   let playing = false;
@@ -134,7 +124,7 @@ function attachScene(scene: RuntimeScene): boolean {
     if (!source) return { ok: false, reason: 'source-not-found', role, snapshot: snapshot() };
     const target = pickTarget(source.side);
     if (!target) return { ok: false, reason: 'target-not-found', role, source: source.instanceId, snapshot: snapshot() };
-    const attack = (source.view as any).playAttackLunge;
+    const attack = source.view?.playAttackLunge;
     if (typeof attack !== 'function') {
       return { ok: false, reason: 'playAttackLunge-missing', role, source: source.instanceId, target: target.instanceId };
     }
@@ -200,7 +190,7 @@ function attachRunningBattleScene(): boolean {
     try {
       const scene = game.scene.getScene('BattleScene') as RuntimeScene | null;
       if (scene && attachScene(scene)) return true;
-    } catch { /* game may not have registered BattleScene yet */ }
+    } catch { /* BattleScene may not be registered yet */ }
   }
   return false;
 }
@@ -212,11 +202,8 @@ function installCombat2152ProfessionLiveTestBridge(): void {
 
   if (!isLocalDev()) {
     root.POWDER_COMBAT2_PROFESSION_LIVE_TEST_BRIDGE = {
-      version: '2.15.2',
-      devOnly: true,
-      installed: false,
-      reason: 'non-localhost',
-      combatLogicChanged: false
+      version: '2.15.2', devOnly: true, installed: false,
+      reason: 'non-localhost', combatLogicChanged: false
     };
     return;
   }
@@ -232,7 +219,6 @@ function installCombat2152ProfessionLiveTestBridge(): void {
 
   const attachedImmediately = attachRunningBattleScene();
   if (!attachedImmediately && typeof window !== 'undefined') {
-    // Bounded boot retries only; this is not a polling loop.
     [80, 240, 600].forEach((delay) => window.setTimeout(attachRunningBattleScene, delay));
   }
 
