@@ -37,8 +37,6 @@ function rangeMatches(value: unknown, start: number, end: number): boolean {
     && Number(value[1]) === end;
 }
 
-// SupportAssetBridge is imported above for side effects first. Install the final
-// affected-Pow wrapper afterwards so it can expand persistent Heal/Shield images too.
 installCombatNightAffectedPowEnvelopeBridge();
 
 export function runCombatNightRegressionGate(): CombatNightRegressionReport {
@@ -59,6 +57,8 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
   const persistentStatus = root.POWDER_COMBAT2_NIGHT_PERSISTENT_STATUS;
   const envelope = root.POWDER_COMBAT2_NIGHT_AFFECTED_POW_ENVELOPE;
   const budget = root.POWDER_COMBAT2_NIGHT_FX_BUDGET;
+  const projectileBridge = root.POWDER_COMBAT2_NIGHT_PROJECTILE;
+  const roleAttacks = root.POWDER_COMBAT2_NIGHT_ROLE_ATTACKS;
   const teardown = root.POWDER_COMBAT2_NIGHT_TEARDOWN;
   const leakAudit = typeof teardown?.getSceneLeakAuditSnapshot === 'function'
     ? teardown.getSceneLeakAuditSnapshot()
@@ -141,8 +141,34 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
     ),
     check(
       'projectile-final-owner',
-      prototype.__nightProjectileBridgeInstalled === true,
-      `installed=${String(prototype.__nightProjectileBridgeInstalled === true)}`
+      prototype.__nightProjectileBridgeInstalled === true
+        && projectileBridge?.version === 'night-46'
+        && projectileBridge?.roleForwarding === true
+        && projectileBridge?.elementForwarding === true,
+      `installed=${String(prototype.__nightProjectileBridgeInstalled === true)};version=${projectileBridge?.version ?? 'missing'};role=${String(projectileBridge?.roleForwarding)}`
+    ),
+    check(
+      'profession-attack-routing',
+      Boolean(roleAttacks)
+        && roleAttacks?.version === 'night-46'
+        && roleAttacks?.routes?.marksman === 'element-arrow'
+        && roleAttacks?.routes?.mage === 'energy-orb'
+        && roleAttacks?.routes?.enchanter === 'energy-orb'
+        && roleAttacks?.routes?.healer === 'energy-orb-80pct-mage'
+        && roleAttacks?.routes?.musician === 'music-note'
+        && roleAttacks?.routes?.fighter === 'fist-no-projectile'
+        && roleAttacks?.routes?.knight === 'single-heavy-slash-no-projectile'
+        && roleAttacks?.routes?.assassin === 'dual-critical-slash-80pct-knight-no-projectile'
+        && includesAll(roleAttacks?.rangedRoles, ['marksman', 'mage', 'enchanter', 'healer', 'musician'])
+        && includesAll(roleAttacks?.noProjectileRoles, ['fighter', 'knight', 'assassin'])
+        && Number(roleAttacks?.healerScaleVsMage) === 0.8
+        && Number(roleAttacks?.assassinSlashScaleVsKnight) === 0.8
+        && roleAttacks?.elementColorPreserved === true
+        && roleAttacks?.oneAttackObjectFamilyPerAction === true
+        && roleAttacks?.particleEmitters === false
+        && roleAttacks?.tweenLoops === false
+        && roleAttacks?.combatLogicChanged === false,
+      `version=${roleAttacks?.version ?? 'missing'};healer=${roleAttacks?.healerScaleVsMage ?? 'missing'};assassin=${roleAttacks?.assassinSlashScaleVsKnight ?? 'missing'};noProjectile=${Array.isArray(roleAttacks?.noProjectileRoles) ? roleAttacks.noProjectileRoles.join(',') : 'missing'}`
     ),
     check(
       'persistent-status-dedup',
@@ -205,9 +231,13 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
       'adaptive-fps-burst-guard',
       Boolean(root.POWDER_COMBAT2_PERFORMANCE)
         && Boolean(budget)
+        && budget?.version === 'night-46'
         && budget?.source === 'POWDER_COMBAT2_FX_TIER'
         && budget?.burstGuard === true
         && Number(budget?.balancedBurstThreshold) === 2
+        && budget?.singleProjectileOwner === true
+        && budget?.particleEmitters === false
+        && budget?.tweenLoops === false
         && budget?.fullTierPreserved === true
         && budget?.counterFinallySafe === true
         && budget?.combatLogicChanged === false,
@@ -240,14 +270,14 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
   ];
 
   const report: CombatNightRegressionReport = {
-    version: 'night-41',
+    version: 'night-46',
     pass: checks.every((entry) => entry.pass),
     checks
   };
   root.POWDER_COMBAT2_NIGHT_REGRESSION = report;
   root.POWDER_COMBAT2_NIGHT_COMPLETION = {
-    version: 'night-41',
-    scope: 'all-affected-pow-status-envelope-real-status-spritesheet-frame-anchor-layer-tooltip-projectile-impact-domain-fps-lifecycle-regression',
+    version: 'night-46',
+    scope: 'profession-routed-attack-vfx-all-affected-pow-status-envelope-real-status-spritesheet-frame-anchor-layer-tooltip-domain-fps-lifecycle-regression',
     staticGatePass: report.pass,
     branchOnly: true,
     combatLogicChanged: false
