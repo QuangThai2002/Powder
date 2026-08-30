@@ -6,6 +6,8 @@ interface PatchableScene extends Phaser.Scene { startCombatFlow?: () => void; }
 const PATCH_FLAG = '__powderCombat2102ArenaFocusInstalled';
 const ACTIVE_SCALE = 0.86;
 const BENCH_SCALE = 0.44;
+const LANDSCAPE_COLUMNS = [0.17, 0.5, 0.83] as const;
+const PORTRAIT_COLUMNS = [0.22, 0.5, 0.78] as const;
 
 function reducedMotion(): boolean {
   return typeof window !== 'undefined' && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
@@ -18,17 +20,33 @@ export function installCombat2102ArenaFocusPatch(BattleSceneClass: any, PowViewC
 
   const sceneProto = BattleSceneClass.prototype as any;
   sceneProto.activePosition = function combat2102ActivePosition(this: Phaser.Scene, side: 'player' | 'enemy', fieldSlot: number): Phaser.Math.Vector2 {
-    const portrait = this.scale.height > this.scale.width;
-    const spacing = portrait ? Math.min(290, this.scale.width * 0.25) : Math.min(325, this.scale.width * 0.215);
-    const edgeY = portrait ? 190 : 148;
-    return new Phaser.Math.Vector2(this.scale.width / 2 + (fieldSlot - 1) * spacing, side === 'enemy' ? edgeY : this.scale.height - edgeY);
+    const width = Number(this.scale.width || 1600);
+    const height = Number(this.scale.height || 900);
+    const portrait = height > width;
+    const slot = Phaser.Math.Clamp(Math.floor(Number(fieldSlot) || 0), 0, 2);
+    const columns = portrait ? PORTRAIT_COLUMNS : LANDSCAPE_COLUMNS;
+    const x = width * columns[slot];
+    const edgeY = portrait
+      ? Phaser.Math.Clamp(height * 0.195, 174, 210)
+      : Phaser.Math.Clamp(height * 0.185, 158, 172);
+    const y = side === 'enemy' ? edgeY : height - edgeY;
+    return new Phaser.Math.Vector2(x, y);
   };
 
   sceneProto.reservePosition = function combat2102ReservePosition(this: Phaser.Scene, side: 'player' | 'enemy', reserveIndex: number): Phaser.Math.Vector2 {
-    const portrait = this.scale.height > this.scale.width;
-    const inset = Math.max(82, this.scale.width * 0.067);
-    const edgeY = portrait ? 108 : 88;
-    return new Phaser.Math.Vector2(reserveIndex <= 0 ? inset : this.scale.width - inset, side === 'enemy' ? edgeY : this.scale.height - edgeY);
+    const width = Number(this.scale.width || 1600);
+    const height = Number(this.scale.height || 900);
+    const portrait = height > width;
+    const index = Phaser.Math.Clamp(Math.floor(Number(reserveIndex) || 0), 0, 1);
+    const inset = portrait
+      ? Phaser.Math.Clamp(width * 0.14, 76, 112)
+      : Phaser.Math.Clamp(width * 0.072, 96, 116);
+    const edgeY = portrait
+      ? Phaser.Math.Clamp(height * 0.12, 108, 132)
+      : Phaser.Math.Clamp(height * 0.112, 96, 108);
+    const x = index === 0 ? inset : width - inset;
+    const y = side === 'enemy' ? edgeY : height - edgeY;
+    return new Phaser.Math.Vector2(x, y);
   };
 
   const powProto = PowViewClass.prototype as any;
@@ -96,5 +114,12 @@ export function installCombat2102ArenaFocusPatch(BattleSceneClass: any, PowViewC
     }
   };
 
-  root.POWDER_COMBAT2_ARENA_FOCUS = { version: '2.10.2', activeScale: ACTIVE_SCALE, benchScale: BENCH_SCALE };
+  root.POWDER_COMBAT2_ARENA_FOCUS = {
+    version: 'night-39-even-grid',
+    activeScale: ACTIVE_SCALE,
+    benchScale: BENCH_SCALE,
+    landscapeColumns: [...LANDSCAPE_COLUMNS],
+    symmetricRows: true,
+    reserveInsetsSafe: true
+  };
 }
