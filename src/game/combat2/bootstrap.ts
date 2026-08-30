@@ -2,17 +2,18 @@
 // Import order is intentional: data.js populates window.POWDER_DATA before
 // PowderDataAdapter builds the Combat2 roster.
 //
-// 2.14.4 test roster: install a balanced visual/mechanic showcase BEFORE main.ts
-// snapshots COMBAT2_STARTER_ROSTER. This patch only mutates the isolated Combat2
-// test objects; it does not write back to the canonical main-game catalog.
+// 2.14.4 keeps the existing status/mechanic showcase data and Rage test hooks.
+// 2.15.0 then becomes the final Combat2 test-roster owner, replacing the visible
+// lineup with canonical coverage for all nine professions. It only mutates isolated
+// Combat2 test objects; it never writes back to the main-game POWDER_DATA catalog.
 //
-// Night Domain installs before main.ts so the existing domain-stage patches wrap it
-// instead of being bypassed. Runtime Night finalizers are installed deterministically
-// inside main.ts after 2.14.x presentation patches and before Phaser.Game boots.
+// Legacy compatibility VFX bridges still install before main.ts so the existing
+// presentation patches can wrap them safely. New releases are versioned as Combat2.
 //
 // Presentation/VFX patches themselves remain installed before new Phaser.Game() so
 // BattleScene.preload/create sees every registered texture and final method owner.
 import '../../../js/data.js';
 import './views/Combat2144BalancedVfxTestRosterPatch';
+import './views/Combat2150ProfessionTestRosterPatch';
 import './vfx/CombatNightDomainFieldBridge';
 import './main';
