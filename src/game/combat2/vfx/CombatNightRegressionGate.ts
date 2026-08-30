@@ -2,6 +2,7 @@ import { LEGACY_EXPANSION_DOMAINS } from '../systems/CombatLegacyDomainEngine';
 import { PowView } from '../views/PowView';
 import './CombatNightTeardownBridge';
 import './CombatNightSupportAssetBridge';
+import { installCombatNightAffectedPowEnvelopeBridge } from './CombatNightAffectedPowEnvelopeBridge';
 import {
   NIGHT_STATUS_VFX_DEFAULTS,
   orderedFrameNumbers,
@@ -36,6 +37,10 @@ function rangeMatches(value: unknown, start: number, end: number): boolean {
     && Number(value[1]) === end;
 }
 
+// SupportAssetBridge is imported above for side effects first. Install the final
+// affected-Pow wrapper afterwards so it can expand persistent Heal/Shield images too.
+installCombatNightAffectedPowEnvelopeBridge();
+
 export function runCombatNightRegressionGate(): CombatNightRegressionReport {
   const root = globalThis as any;
   const frames = orderedFrameNumbers({ startFrame: 0, endFrame: 11 });
@@ -52,6 +57,7 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
   const support = root.POWDER_COMBAT2_NIGHT_SUPPORT_ASSETS;
   const statusAssets = root.POWDER_COMBAT2_NIGHT_STATUS_ASSETS;
   const persistentStatus = root.POWDER_COMBAT2_NIGHT_PERSISTENT_STATUS;
+  const envelope = root.POWDER_COMBAT2_NIGHT_AFFECTED_POW_ENVELOPE;
   const budget = root.POWDER_COMBAT2_NIGHT_FX_BUDGET;
   const teardown = root.POWDER_COMBAT2_NIGHT_TEARDOWN;
   const leakAudit = typeof teardown?.getSceneLeakAuditSnapshot === 'function'
@@ -59,6 +65,12 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
     : null;
   const coreTooltipCoverage = [
     'burn', 'poison', 'freeze', 'stun', 'regeneration', 'shield', 'dual-dot'
+  ] as const;
+  const allEnvelopeCoverage = [
+    'control-immunity', 'freeze', 'stun', 'silence', 'paralysis', 'frostbite', 'chill',
+    'anti-heal', 'attack-down', 'ap-down', 'defense-down', 'accuracy-down', 'slow',
+    'burn', 'poison', 'regeneration', 'guard', 'tenacity-up', 'crit-up', 'evasion-up',
+    'attack-up', 'ap-up', 'defense-up', 'speed-up', 'shield', 'revive-marker'
   ] as const;
 
   const checks: NightRegressionCheck[] = [
@@ -106,6 +118,21 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
       NIGHT_STATUS_VFX_DEFAULTS.freeze.anchor === 'body'
         && NIGHT_STATUS_VFX_DEFAULTS.stun.anchor === 'head',
       `freeze=${NIGHT_STATUS_VFX_DEFAULTS.freeze.anchor};stun=${NIGHT_STATUS_VFX_DEFAULTS.stun.anchor}`
+    ),
+    check(
+      'all-affected-pow-status-envelope',
+      Boolean(envelope)
+        && envelope?.version === 'night-41'
+        && envelope?.simultaneousStatusesVisible === true
+        && envelope?.oneGraphicsPerAffectedPow === true
+        && envelope?.cardWideStatusFrameRetired === true
+        && envelope?.dedicatedStatusSpriteSheetsPreserved === true
+        && envelope?.supportAssetsExpandedAroundPow === true
+        && envelope?.particleEmitters === false
+        && envelope?.tweenLoops === false
+        && includesAll(envelope?.covered, allEnvelopeCoverage)
+        && envelope?.combatLogicChanged === false,
+      `version=${envelope?.version ?? 'missing'};covered=${Array.isArray(envelope?.covered) ? envelope.covered.length : 'missing'};simultaneous=${String(envelope?.simultaneousStatusesVisible)};graphics=${String(envelope?.oneGraphicsPerAffectedPow)}`
     ),
     check(
       'nine-expansion-domains',
@@ -213,14 +240,14 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
   ];
 
   const report: CombatNightRegressionReport = {
-    version: 'night-38',
+    version: 'night-41',
     pass: checks.every((entry) => entry.pass),
     checks
   };
   root.POWDER_COMBAT2_NIGHT_REGRESSION = report;
   root.POWDER_COMBAT2_NIGHT_COMPLETION = {
-    version: 'night-38',
-    scope: 'real-status-spritesheet-frame-anchor-layer-tooltip-projectile-impact-domain-fps-lifecycle-regression',
+    version: 'night-41',
+    scope: 'all-affected-pow-status-envelope-real-status-spritesheet-frame-anchor-layer-tooltip-projectile-impact-domain-fps-lifecycle-regression',
     staticGatePass: report.pass,
     branchOnly: true,
     combatLogicChanged: false
