@@ -1,10 +1,14 @@
 import Phaser from 'phaser';
-import { DirectionalElementProjectileVfx, type CombatProjectileElement } from './DirectionalElementProjectileVfx';
+import {
+  DirectionalElementProjectileVfx,
+  type CombatProjectileElement,
+  type DirectionalProjectileOptions
+} from './DirectionalElementProjectileVfx';
 import { PowView } from '../views/PowView';
 
 interface PowViewProjectileRuntime {
   scene: Phaser.Scene;
-  pow: { elementKey?: string; element?: string };
+  pow: { elementKey?: string; element?: string; role?: string };
   reducedMotion: boolean;
   container: Phaser.GameObjects.Container;
   getVfxAnchor?: (anchor: 'body') => Phaser.Math.Vector2;
@@ -12,6 +16,8 @@ interface PowViewProjectileRuntime {
   playCastSignature?: (support: boolean) => Promise<void>;
   tweenPromise?: (config: Phaser.Types.Tweens.TweenBuilderConfig) => Promise<void>;
 }
+
+type RoleAwareProjectileOptions = DirectionalProjectileOptions & { role?: string };
 
 function normalize(value: string): string {
   return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
@@ -44,26 +50,26 @@ async function playNightProjectile(
     ? view.getVfxAnchor('body')
     : view.getWorldPosition();
   const target = new Phaser.Math.Vector2(targetX, targetY);
-
-  await DirectionalElementProjectileVfx.play({
+  const options: RoleAwareProjectileOptions = {
     scene: view.scene,
     source,
     target,
     element: resolveElement(view.pow),
-    reducedMotion: view.reducedMotion
-  });
+    reducedMotion: view.reducedMotion,
+    role: view.pow.role
+  };
+
+  const roleAwarePlay = DirectionalElementProjectileVfx.play as unknown as
+    (runtimeOptions: RoleAwareProjectileOptions) => Promise<void>;
+  await roleAwarePlay(options);
 }
 
 /**
- * Final Night projectile owner.
+ * Final Night attack-travel owner.
  *
- * The previous bridge only replaced playElementTravel. That was too indirect: older
- * presentation patches can still make it difficult to prove that the live attack entry
- * point actually reaches the Night projectile. Night 34 therefore owns playAttackLunge
- * itself and calls DirectionalElementProjectileVfx directly from the method BattleScene
- * invokes for basic attacks and offensive skills.
- *
- * Presentation only: no damage, targeting, turn order or combat-state mutations.
+ * Night46 keeps the same proven Combat2 entry point but now forwards canonical Pow.role
+ * to the final VFX owner. That lets presentation route by profession without touching
+ * damage, targeting, turn order or any CombatState mechanic.
  */
 export function installCombatNightProjectileBridge(): void {
   const prototype = PowView.prototype as unknown as {
@@ -73,8 +79,6 @@ export function installCombatNightProjectileBridge(): void {
     __nightProjectileAttackOwnerInstalled?: boolean;
   };
 
-  // A previous Night version may already have installed the travel bridge. Upgrade it
-  // in-place instead of returning early so hot reloads / branch refreshes pick up Night 34.
   prototype.playElementTravel = async function (
     this: PowViewProjectileRuntime,
     targetX: number,
@@ -126,10 +130,12 @@ export function installCombatNightProjectileBridge(): void {
 
   const root = globalThis as any;
   root.POWDER_COMBAT2_NIGHT_PROJECTILE = {
-    version: 'night-34',
+    version: 'night-46',
     runtimeEntryPoint: 'PowView.playAttackLunge',
     directTravelOwner: true,
     attackLungeOwner: true,
+    roleForwarding: true,
+    elementForwarding: true,
     sourceToTarget: true,
     combatLogicChanged: false
   };
