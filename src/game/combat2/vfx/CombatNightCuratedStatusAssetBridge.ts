@@ -1,408 +1,189 @@
 import Phaser from 'phaser';
-import {
-  EXACT_STATUS_VFX,
-  exactElementVfx,
-  type ExactCombatVfxSpec
-} from './Combat2140ExactVfxRegistry';
-import {
-  NIGHT_STATUS_VFX_DEFAULTS,
-  powVfxDepth,
-  powVfxWorldAnchor,
-  type PowVfxLayout
-} from './CombatNightVfxLayout';
-import { PersistentPowStatusVfx, type PersistentPowStatusKind } from './PersistentPowStatusVfx';
+import { BattleScene } from '../scenes/BattleScene';
 import { PowView } from '../views/PowView';
+import {
+  PersistentPowStatusVfx,
+  type PersistentPowStatusKind,
+  type PersistentStatusSheetMap
+} from './PersistentPowStatusVfx';
+import part00 from './statusAtlasData/part00';
+import part01 from './statusAtlasData/part01';
+import part02 from './statusAtlasData/part02';
+import part03 from './statusAtlasData/part03';
+import part04 from './statusAtlasData/part04';
+import part05 from './statusAtlasData/part05';
+import part06 from './statusAtlasData/part06';
+import part07 from './statusAtlasData/part07';
+import part08 from './statusAtlasData/part08';
+import part09 from './statusAtlasData/part09';
+import part10 from './statusAtlasData/part10';
+import part11 from './statusAtlasData/part11';
+import part12 from './statusAtlasData/part12';
 
 const FLAG = '__powderCombatNightCuratedStatusAssetBridgeInstalled';
-const INSTALL_VERSION = 'night-37';
+const PRELOAD_FLAG = '__powderCombatNight38RealStatusPreloadInstalled';
+const OWNER_FLAG = '__powderCombatNight38RealStatusOwnerInstalled';
+const DEDUP_FLAG = '__powderCombatNight38LegacyPersistentDedupInstalled';
+const INSTALL_VERSION = 'night-38';
 const LEGACY_PERSISTENT_KEY = '__powderCombat2140PersistentFx';
-const STATUS_PHASES = 12;
-const PREFERS_REDUCED_MOTION = typeof window !== 'undefined'
-  && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+const ATLAS_TEXTURE_KEY = 'combat2-night-status-atlas-real';
+const FRAME_SIZE = 80;
+const TOTAL_FRAMES = 52;
+const ATLAS_WIDTH = FRAME_SIZE * 4;
+const ATLAS_HEIGHT = FRAME_SIZE * 13;
 
-type StatusAnimator = {
-  update: (step: number) => void;
-};
+const ATLAS_DATA_URI = `data:image/avif;base64,${[
+  part00,
+  part01,
+  part02,
+  part03,
+  part04,
+  part05,
+  part06,
+  part07,
+  part08,
+  part09,
+  part10,
+  part11,
+  part12
+].join('')}`;
 
-type SceneTickerState = {
-  scene: Phaser.Scene;
-  animators: Set<StatusAnimator>;
-  lastStep: number;
-  onUpdate: (time: number, delta: number) => void;
-  onSceneExit: () => void;
-};
+const STATUS_SHEETS: PersistentStatusSheetMap = Object.freeze({
+  burn: Object.freeze({
+    textureKey: ATLAS_TEXTURE_KEY,
+    frameWidth: FRAME_SIZE,
+    frameHeight: FRAME_SIZE,
+    startFrame: 0,
+    endFrame: 11,
+    frameRate: 12,
+    repeat: -1
+  }),
+  poison: Object.freeze({
+    textureKey: ATLAS_TEXTURE_KEY,
+    frameWidth: FRAME_SIZE,
+    frameHeight: FRAME_SIZE,
+    startFrame: 12,
+    endFrame: 23,
+    frameRate: 10,
+    repeat: -1
+  }),
+  stun: Object.freeze({
+    textureKey: ATLAS_TEXTURE_KEY,
+    frameWidth: FRAME_SIZE,
+    frameHeight: FRAME_SIZE,
+    startFrame: 24,
+    endFrame: 35,
+    frameRate: 14,
+    repeat: -1
+  }),
+  freeze: Object.freeze({
+    textureKey: ATLAS_TEXTURE_KEY,
+    frameWidth: FRAME_SIZE,
+    frameHeight: FRAME_SIZE,
+    startFrame: 36,
+    endFrame: 51,
+    frameRate: 10,
+    repeat: 0
+  })
+});
 
-const sceneTickers = new WeakMap<Phaser.Scene, SceneTickerState>();
+function installRealStatusPreload(): void {
+  const sceneProto = BattleScene.prototype as any;
+  if (sceneProto[PRELOAD_FLAG] === INSTALL_VERSION) return;
 
-function specFor(kind: PersistentPowStatusKind): ExactCombatVfxSpec | null {
-  if (kind === 'burn') return EXACT_STATUS_VFX.burn;
-  if (kind === 'freeze') return EXACT_STATUS_VFX.freeze;
-  if (kind === 'stun') return EXACT_STATUS_VFX.stun;
-  if (kind === 'poison') return exactElementVfx('poison');
-  return null;
-}
+  const previousPreload = sceneProto.preload;
+  sceneProto.preload = function combatNight38RealStatusPreload(
+    this: Phaser.Scene,
+    ...args: any[]
+  ): void {
+    if (typeof previousPreload === 'function') previousPreload.apply(this, args);
+    if (this.textures.exists(ATLAS_TEXTURE_KEY)) return;
 
-function assetAlpha(kind: PersistentPowStatusKind): number {
-  if (kind === 'poison') return 0.24;
-  if (kind === 'freeze') return 0.32;
-  if (kind === 'stun') return 0.3;
-  return 0.28;
-}
-
-function animationIntervalMs(): number {
-  if (PREFERS_REDUCED_MOTION) return 150;
-  const currentTier = String((globalThis as any).POWDER_COMBAT2_FX_TIER || 'full');
-  if (currentTier === 'lite') return 125;
-  if (currentTier === 'balanced') return 100;
-  return 80;
-}
-
-function detachTicker(state: SceneTickerState): void {
-  state.scene.events.off(Phaser.Scenes.Events.UPDATE, state.onUpdate);
-  state.scene.events.off(Phaser.Scenes.Events.SHUTDOWN, state.onSceneExit);
-  state.scene.events.off(Phaser.Scenes.Events.DESTROY, state.onSceneExit);
-  state.animators.clear();
-  sceneTickers.delete(state.scene);
-}
-
-function tickerFor(scene: Phaser.Scene): SceneTickerState {
-  const existing = sceneTickers.get(scene);
-  if (existing) return existing;
-
-  const state = {} as SceneTickerState;
-  state.scene = scene;
-  state.animators = new Set<StatusAnimator>();
-  state.lastStep = -1;
-  state.onUpdate = (time: number): void => {
-    const step = Math.floor(time / animationIntervalMs()) % STATUS_PHASES;
-    if (step === state.lastStep) return;
-    state.lastStep = step;
-    for (const animator of state.animators) animator.update(step);
-  };
-  state.onSceneExit = (): void => detachTicker(state);
-
-  scene.events.on(Phaser.Scenes.Events.UPDATE, state.onUpdate);
-  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, state.onSceneExit);
-  scene.events.once(Phaser.Scenes.Events.DESTROY, state.onSceneExit);
-  sceneTickers.set(scene, state);
-  return state;
-}
-
-function registerAnimator(scene: Phaser.Scene, update: (step: number) => void): () => void {
-  const state = tickerFor(scene);
-  const animator: StatusAnimator = { update };
-  state.animators.add(animator);
-  let removed = false;
-
-  return (): void => {
-    if (removed) return;
-    removed = true;
-    state.animators.delete(animator);
-    if (state.animators.size === 0 && sceneTickers.get(scene) === state) detachTicker(state);
-  };
-}
-
-function previewImage(
-  scene: Phaser.Scene,
-  kind: PersistentPowStatusKind,
-  size: number
-): Phaser.GameObjects.Image | null {
-  const spec = specFor(kind);
-  if (!spec || !scene.textures.exists(spec.textureKey)) return null;
-
-  const image = scene.add.image(0, 0, spec.textureKey)
-    .setDisplaySize(size, size)
-    .setAlpha(spec.alpha * assetAlpha(kind));
-  if (kind !== 'poison') image.setBlendMode(Phaser.BlendModes.ADD);
-  return image;
-}
-
-function wave(step: number, offset = 0): number {
-  return Math.sin((((step + offset) % STATUS_PHASES) / STATUS_PHASES) * Math.PI * 2);
-}
-
-function buildBurnAnimation(
-  scene: Phaser.Scene,
-  fx: Phaser.GameObjects.Container,
-  size: number
-): (step: number) => void {
-  const glow = scene.add.ellipse(0, size * 0.08, size * 0.58, size * 0.74, 0xff5a32, 0.045)
-    .setStrokeStyle(2, 0xff7043, 0.34);
-  const flameLeft = scene.add.triangle(
-    -size * 0.18, size * 0.14,
-    -size * 0.08, size * 0.16,
-    size * 0.08, size * 0.16,
-    0, -size * 0.22,
-    0xff7a32, 0.72
-  );
-  const flameCenter = scene.add.triangle(
-    0, size * 0.1,
-    -size * 0.1, size * 0.2,
-    size * 0.1, size * 0.2,
-    0, -size * 0.3,
-    0xffc34a, 0.78
-  );
-  const flameRight = scene.add.triangle(
-    size * 0.18, size * 0.15,
-    -size * 0.075, size * 0.15,
-    size * 0.075, size * 0.15,
-    0, -size * 0.2,
-    0xff5a32, 0.68
-  );
-  fx.add([glow, flameLeft, flameCenter, flameRight]);
-
-  return (step: number): void => {
-    const leftWave = wave(step, 0);
-    const centerWave = wave(step, 3);
-    const rightWave = wave(step, 6);
-    glow.setAlpha(0.035 + (wave(step, 2) + 1) * 0.018).setScale(1 + wave(step, 1) * 0.035);
-    flameLeft
-      .setY(size * 0.14 - leftWave * size * 0.035)
-      .setScale(0.92 + (leftWave + 1) * 0.07, 0.9 + (leftWave + 1) * 0.12)
-      .setRotation(-0.08 + leftWave * 0.08)
-      .setAlpha(0.58 + (leftWave + 1) * 0.11);
-    flameCenter
-      .setY(size * 0.1 - centerWave * size * 0.045)
-      .setScale(0.94 + (centerWave + 1) * 0.06, 0.92 + (centerWave + 1) * 0.14)
-      .setRotation(centerWave * 0.05)
-      .setAlpha(0.64 + (centerWave + 1) * 0.1);
-    flameRight
-      .setY(size * 0.15 - rightWave * size * 0.032)
-      .setScale(0.92 + (rightWave + 1) * 0.065, 0.9 + (rightWave + 1) * 0.11)
-      .setRotation(0.08 + rightWave * 0.08)
-      .setAlpha(0.56 + (rightWave + 1) * 0.1);
-  };
-}
-
-function buildPoisonAnimation(
-  scene: Phaser.Scene,
-  fx: Phaser.GameObjects.Container,
-  size: number
-): (step: number) => void {
-  const puddle = scene.add.graphics();
-  puddle.fillStyle(0x674195, 0.18);
-  puddle.fillEllipse(0, size * 0.12, size * 0.86, size * 0.22);
-  puddle.fillEllipse(-size * 0.24, size * 0.09, size * 0.34, size * 0.15);
-  puddle.fillEllipse(size * 0.27, size * 0.15, size * 0.28, size * 0.13);
-  puddle.lineStyle(2, 0x9bdc72, 0.36);
-  puddle.strokeEllipse(-size * 0.05, size * 0.11, size * 0.78, size * 0.2);
-
-  const bubbleA = scene.add.circle(-size * 0.23, size * 0.08, Math.max(3, size * 0.045), 0xa5df66, 0.56);
-  const bubbleB = scene.add.circle(size * 0.05, size * 0.12, Math.max(2.5, size * 0.036), 0x8e64c5, 0.52);
-  const bubbleC = scene.add.circle(size * 0.27, size * 0.1, Math.max(2.5, size * 0.032), 0xc4f58e, 0.48);
-  fx.add([puddle, bubbleA, bubbleB, bubbleC]);
-
-  const bubbles = [bubbleA, bubbleB, bubbleC];
-  const baseX = [-size * 0.23, size * 0.05, size * 0.27];
-  const offsets = [0, 4, 8];
-
-  return (step: number): void => {
-    puddle.setScale(1 + wave(step, 1) * 0.018, 1 + wave(step, 5) * 0.025).setAlpha(0.84 + wave(step, 3) * 0.1);
-    bubbles.forEach((bubble, index) => {
-      const phase = ((step + offsets[index]) % STATUS_PHASES) / (STATUS_PHASES - 1);
-      bubble
-        .setPosition(
-          baseX[index] + wave(step, index * 2) * size * 0.018,
-          size * 0.1 - phase * size * 0.28
-        )
-        .setScale(0.72 + phase * 0.48)
-        .setAlpha(Math.max(0.08, 0.64 * (1 - phase)));
+    this.load.spritesheet(ATLAS_TEXTURE_KEY, ATLAS_DATA_URI, {
+      frameWidth: FRAME_SIZE,
+      frameHeight: FRAME_SIZE,
+      startFrame: 0,
+      endFrame: TOTAL_FRAMES - 1
     });
   };
+
+  sceneProto[PRELOAD_FLAG] = INSTALL_VERSION;
 }
 
-function redrawElectricArc(
-  graphics: Phaser.GameObjects.Graphics,
-  side: -1 | 1,
-  step: number,
-  size: number
-): void {
-  const jitter = ((step % 3) - 1) * size * 0.025;
-  const flash = step % 4 === 0 ? 1 : 0.68;
-  graphics.clear();
-  graphics.lineStyle(Math.max(2, size * 0.024), 0xffef77, flash);
-  graphics.beginPath();
-  graphics.moveTo(side * size * 0.08, -size * 0.06);
-  graphics.lineTo(side * size * 0.2, -size * 0.16 + jitter);
-  graphics.lineTo(side * size * 0.15, -size * 0.27 - jitter);
-  graphics.lineTo(side * size * 0.32, -size * 0.34 + jitter);
-  graphics.strokePath();
-  graphics.lineStyle(Math.max(1, size * 0.012), 0xffffff, 0.82);
-  graphics.beginPath();
-  graphics.moveTo(side * size * 0.1, -size * 0.08);
-  graphics.lineTo(side * size * 0.21, -size * 0.17 + jitter);
-  graphics.lineTo(side * size * 0.17, -size * 0.26 - jitter);
-  graphics.strokePath();
-}
-
-function buildStunAnimation(
-  scene: Phaser.Scene,
-  fx: Phaser.GameObjects.Container,
-  size: number
-): (step: number) => void {
-  const ring = scene.add.ellipse(0, -size * 0.1, size * 0.62, size * 0.2, 0xf5dd62, 0.025)
-    .setStrokeStyle(Math.max(2, size * 0.018), 0xf5dd62, 0.72);
-  const arcLeft = scene.add.graphics();
-  const arcRight = scene.add.graphics();
-  const sparkA = scene.add.circle(-size * 0.3, -size * 0.22, Math.max(2, size * 0.025), 0xffffff, 0.78);
-  const sparkB = scene.add.circle(size * 0.28, -size * 0.3, Math.max(2, size * 0.022), 0xffef77, 0.72);
-  fx.add([ring, arcLeft, arcRight, sparkA, sparkB]);
-
-  return (step: number): void => {
-    redrawElectricArc(arcLeft, -1, step, size);
-    redrawElectricArc(arcRight, 1, step + 2, size);
-    ring
-      .setRotation((step / STATUS_PHASES) * Math.PI * 0.7)
-      .setScale(0.96 + wave(step, 1) * 0.045)
-      .setAlpha(0.62 + (wave(step, 4) + 1) * 0.12);
-    sparkA
-      .setPosition(-size * 0.3 + wave(step, 1) * size * 0.035, -size * 0.22 + wave(step, 5) * size * 0.025)
-      .setAlpha(step % 3 === 0 ? 0.96 : 0.42);
-    sparkB
-      .setPosition(size * 0.28 + wave(step, 6) * size * 0.03, -size * 0.3 + wave(step, 2) * size * 0.03)
-      .setAlpha(step % 4 === 1 ? 0.96 : 0.38);
-  };
-}
-
-function buildFreezeAnimation(
-  scene: Phaser.Scene,
-  fx: Phaser.GameObjects.Container,
-  size: number
-): (step: number) => void {
-  const frost = scene.add.ellipse(0, 0, size * 0.64, size * 0.9, 0x8adfff, 0.025)
-    .setStrokeStyle(2, 0x9ee9ff, 0.52);
-  const shards = [
-    scene.add.triangle(-size * 0.24, size * 0.17, -4, 8, 4, 8, 0, -size * 0.2, 0xc9f5ff, 0.66),
-    scene.add.triangle(size * 0.23, size * 0.12, -4, 8, 4, 8, 0, -size * 0.18, 0x8adfff, 0.62),
-    scene.add.triangle(-size * 0.12, -size * 0.19, -3, 6, 3, 6, 0, -size * 0.14, 0xe8fcff, 0.56),
-    scene.add.triangle(size * 0.14, -size * 0.24, -3, 6, 3, 6, 0, -size * 0.13, 0xb8efff, 0.54)
-  ];
-  const baseY = shards.map((shard) => shard.y);
-  fx.add([frost, ...shards]);
-
-  return (step: number): void => {
-    frost.setAlpha(0.42 + (wave(step, 2) + 1) * 0.08).setScale(0.98 + wave(step, 4) * 0.025);
-    shards.forEach((shard, index) => {
-      const shardWave = wave(step, index * 2);
-      shard
-        .setRotation((index % 2 === 0 ? -0.14 : 0.14) + shardWave * 0.07)
-        .setY(baseY[index] - shardWave * size * 0.012)
-        .setScale(0.92 + (shardWave + 1) * 0.06)
-        .setAlpha(0.46 + (shardWave + 1) * 0.12);
-    });
-  };
-}
-
-function createAnimatedFallback(
-  scene: Phaser.Scene,
-  kind: PersistentPowStatusKind,
-  x: number,
-  y: number,
-  layout: PowVfxLayout
-): Phaser.GameObjects.Container {
-  const profile = NIGHT_STATUS_VFX_DEFAULTS[kind];
-  const anchor = powVfxWorldAnchor(x, y, layout, profile.anchor);
-  const maxWidth = layout.artWidth * layout.fieldScale * profile.widthRatio;
-  const maxHeight = layout.artHeight * layout.fieldScale * profile.heightRatio;
-  const size = Math.max(32, Math.min(maxWidth, maxHeight));
-  const fx = scene.add.container(anchor.x, anchor.y)
-    .setDepth(powVfxDepth(kind === 'poison' ? 'ground' : profile.layer));
-
-  const preview = previewImage(scene, kind, size);
-  if (preview) fx.add(preview);
-
-  const animatePhase = kind === 'burn'
-    ? buildBurnAnimation(scene, fx, size)
-    : kind === 'poison'
-      ? buildPoisonAnimation(scene, fx, size)
-      : kind === 'freeze'
-        ? buildFreezeAnimation(scene, fx, size)
-        : buildStunAnimation(scene, fx, size);
-
-  const unregister = registerAnimator(scene, (step: number): void => {
-    if (!fx.active || !fx.visible) return;
-    animatePhase(step);
-  });
-
-  animatePhase(0);
-  fx.once('destroy', unregister);
-  return fx;
-}
-
-/**
- * Full sprite-sheet playback inside PersistentPowStatusVfx remains first priority.
- * Current Git assets are representative preview frames, so Night 37 turns the fallback
- * into a live, bounded status animation without pretending those previews are full sheets.
- */
-function installCuratedFallback(): void {
+function installRealStatusOwner(): void {
   const proto = PersistentPowStatusVfx.prototype as any;
-  if (proto.__nightCuratedFallbackVersion === INSTALL_VERSION) return;
-  const previousFallback = proto.createFallback;
-  if (typeof previousFallback !== 'function') return;
+  if (proto[OWNER_FLAG] === INSTALL_VERSION) return;
 
-  proto.createFallback = function combatNightCuratedStatusFallback(
-    this: { scene: Phaser.Scene },
-    kind: PersistentPowStatusKind,
-    x: number,
-    y: number,
-    layout: PowVfxLayout
-  ): Phaser.GameObjects.GameObject {
-    try {
-      return createAnimatedFallback(this.scene, kind, x, y, layout);
-    } catch {
-      return previousFallback.call(this, kind, x, y, layout);
-    }
+  const previousSetStatus = proto.setStatus;
+  if (typeof previousSetStatus !== 'function') return;
+
+  proto.setStatus = function combatNight38RealStatusSet(
+    this: any,
+    kind: PersistentPowStatusKind | null,
+    ...args: any[]
+  ): void {
+    // The original owner already knows how to play ONE Sprite through ordered
+    // frame numbers. Night38 only supplies the verified real-sheet map here.
+    this.sheetSpecs = STATUS_SHEETS;
+    previousSetStatus.call(this, kind, ...args);
   };
 
-  proto.__nightCuratedFallbackInstalled = true;
-  proto.__nightCuratedFallbackVersion = INSTALL_VERSION;
+  proto[OWNER_FLAG] = INSTALL_VERSION;
 }
 
-/** Prevent the old 2.14.0 persistent image from drawing on top of the Night owner. */
 function installLegacyPersistentDedup(): void {
   const proto = PowView.prototype as any;
-  if (proto.__nightPersistentDedupInstalled) return;
+  if (proto[DEDUP_FLAG] === INSTALL_VERSION) return;
+
   const previousUpdate = proto.updateRuntime;
   if (typeof previousUpdate !== 'function') return;
 
-  proto.updateRuntime = function combatNightPersistentDedup(this: any, unit: any): void {
-    previousUpdate.call(this, unit);
+  proto.updateRuntime = function combatNight38LegacyPersistentDedup(this: any, ...args: any[]): void {
+    previousUpdate.apply(this, args);
     const legacy = this[LEGACY_PERSISTENT_KEY] as Phaser.GameObjects.Image | undefined;
-    if (legacy?.scene && this.persistentStatusVfx) legacy.setVisible(false);
+    if (legacy?.active) legacy.setVisible(false);
   };
 
-  proto.__nightPersistentDedupInstalled = true;
+  proto[DEDUP_FLAG] = INSTALL_VERSION;
 }
 
 export function installCombatNightCuratedStatusAssetBridge(): void {
   const root = globalThis as any;
   if (root[FLAG] === INSTALL_VERSION) return;
-  root[FLAG] = INSTALL_VERSION;
-  installCuratedFallback();
+
+  installRealStatusPreload();
+  installRealStatusOwner();
   installLegacyPersistentDedup();
+  root[FLAG] = INSTALL_VERSION;
+
+  const ranges = Object.freeze({
+    burn: Object.freeze([0, 11]),
+    poison: Object.freeze([12, 23]),
+    stun: Object.freeze([24, 35]),
+    freeze: Object.freeze([36, 51])
+  });
 
   root.POWDER_COMBAT2_NIGHT_STATUS_ASSETS = {
     version: INSTALL_VERSION,
-    mode: 'curated-preview-plus-live-status-animation',
-    fullSheetPriority: true,
-    representativePreviewFrames: true,
-    animatedFallback: true,
-    animatedBurn: true,
-    animatedPoison: true,
-    animatedStunElectric: true,
-    animatedFreeze: true,
-    sharedSceneTicker: true,
-    sceneLevelPhaseThrottle: true,
-    phases: STATUS_PHASES,
-    fullIntervalMs: 80,
-    balancedIntervalMs: 100,
-    liteIntervalMs: 125,
-    reducedMotionIntervalMs: 150,
-    perFrameObjectCreation: false,
+    mode: 'real-spritesheet-ordered-frames',
+    textureKey: ATLAS_TEXTURE_KEY,
+    format: 'avif-data-uri-qa',
+    atlasWidth: ATLAS_WIDTH,
+    atlasHeight: ATLAS_HEIGHT,
+    frameWidth: FRAME_SIZE,
+    frameHeight: FRAME_SIZE,
+    totalFrames: TOTAL_FRAMES,
+    ranges,
+    burnLoop: true,
+    poisonLoop: true,
+    stunLoop: true,
+    freezeBuildThenHold: true,
+    oneSpritePerPow: true,
+    orderedFrames: true,
+    realArtworkFrames: true,
+    proceduralStatusAnimation: false,
     particleEmitters: false,
     tweenLoops: false,
-    freezeAbsoluteAnchorPhases: true,
-    hotUpgradeSafe: true,
     duplicateLegacyPersistentHidden: true,
     combatLogicChanged: false
   };
@@ -411,13 +192,12 @@ export function installCombatNightCuratedStatusAssetBridge(): void {
     ...(root.POWDER_COMBAT2_NIGHT_PERSISTENT_STATUS || {}),
     version: INSTALL_VERSION,
     ownerPerPowMax: 1,
-    sceneShutdownCleanup: true,
-    poisonBadgeGlyph: 'hazard-no-skull',
     fullSheetPriority: true,
-    animatedFallback: true,
-    sharedSceneTicker: true,
-    sceneLevelPhaseThrottle: true,
-    hotUpgradeSafe: true,
+    realSpriteSheetPlayback: true,
+    atlasFrames: TOTAL_FRAMES,
+    oneSpritePerPow: true,
+    orderedFrames: true,
+    proceduralStatusAnimation: false,
     particleEmitters: false,
     tweenLoops: false,
     combatLogicChanged: false
