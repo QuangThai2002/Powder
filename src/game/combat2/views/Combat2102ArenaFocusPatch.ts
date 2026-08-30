@@ -6,8 +6,6 @@ interface PatchableScene extends Phaser.Scene { startCombatFlow?: () => void; }
 const PATCH_FLAG = '__powderCombat2102ArenaFocusInstalled';
 const ACTIVE_SCALE = 0.86;
 const BENCH_SCALE = 0.44;
-const LANDSCAPE_COLUMNS = [0.17, 0.5, 0.83] as const;
-const PORTRAIT_COLUMNS = [0.22, 0.5, 0.78] as const;
 
 function reducedMotion(): boolean {
   return typeof window !== 'undefined' && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
@@ -24,8 +22,13 @@ export function installCombat2102ArenaFocusPatch(BattleSceneClass: any, PowViewC
     const height = Number(this.scale.height || 900);
     const portrait = height > width;
     const slot = Phaser.Math.Clamp(Math.floor(Number(fieldSlot) || 0), 0, 2);
-    const columns = portrait ? PORTRAIT_COLUMNS : LANDSCAPE_COLUMNS;
-    const x = width * columns[slot];
+
+    // Keep the three active cards in one readable centre cluster. Percentage columns
+    // pushed the outer cards too close to the screen edges on 1600x900 displays.
+    const spacing = portrait
+      ? Phaser.Math.Clamp(width * 0.235, 205, 265)
+      : Phaser.Math.Clamp(width * 0.205, 300, 345);
+    const x = width / 2 + (slot - 1) * spacing;
     const edgeY = portrait
       ? Phaser.Math.Clamp(height * 0.195, 174, 210)
       : Phaser.Math.Clamp(height * 0.185, 158, 172);
@@ -39,8 +42,8 @@ export function installCombat2102ArenaFocusPatch(BattleSceneClass: any, PowViewC
     const portrait = height > width;
     const index = Phaser.Math.Clamp(Math.floor(Number(reserveIndex) || 0), 0, 1);
     const inset = portrait
-      ? Phaser.Math.Clamp(width * 0.14, 76, 112)
-      : Phaser.Math.Clamp(width * 0.072, 96, 116);
+      ? Phaser.Math.Clamp(width * 0.15, 82, 122)
+      : Phaser.Math.Clamp(width * 0.105, 138, 180);
     const edgeY = portrait
       ? Phaser.Math.Clamp(height * 0.12, 108, 132)
       : Phaser.Math.Clamp(height * 0.112, 96, 108);
@@ -115,10 +118,10 @@ export function installCombat2102ArenaFocusPatch(BattleSceneClass: any, PowViewC
   };
 
   root.POWDER_COMBAT2_ARENA_FOCUS = {
-    version: 'night-39-even-grid',
+    version: 'night-40-centered-cluster',
     activeScale: ACTIVE_SCALE,
     benchScale: BENCH_SCALE,
-    landscapeColumns: [...LANDSCAPE_COLUMNS],
+    landscapeSpacing: '20.5%-clamped-300-345',
     symmetricRows: true,
     reserveInsetsSafe: true
   };
