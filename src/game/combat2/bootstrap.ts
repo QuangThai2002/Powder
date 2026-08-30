@@ -1,24 +1,26 @@
 // Keep Combat 2.0 on the exact same canonical Pow catalog as the main game.
 // Import order is intentional: data.js populates window.POWDER_DATA before
-// PowderDataAdapter builds the Combat2 roster.
+// PowderDataAdapter builds the isolated Combat2 test roster.
 //
-// 2.14.4 keeps the existing status/mechanic showcase data and Rage test hooks.
-// 2.15.0 then becomes the final Combat2 test-roster owner, replacing the visible
-// lineup with canonical coverage for all nine professions. It only mutates isolated
-// Combat2 test objects; it never writes back to the main-game POWDER_DATA catalog.
-// The local-only switcher provides one-click profession focus without changing combat logic.
+// 2.15.0 owns the nine-profession roster and localhost profession switcher.
+// main.ts then installs all legacy compatibility owners plus the 2.15.1 ranged owner.
+// After main.ts completes, 2.15.2 deliberately becomes the FINAL ranged projectile owner.
+// This guarantees the magic-arrow/trail work cannot be overwritten by 2.15.1.
 //
-// Legacy compatibility VFX bridges still install before main.ts so the existing
-// presentation patches can wrap them safely. New releases are versioned as Combat2.
-// 2.15.1 publishes the final ranged-profession VFX metadata after main.ts completes.
-//
-// Presentation/VFX patches themselves remain installed before new Phaser.Game() so
-// BattleScene.preload/create sees every registered texture and final method owner.
+// The live profession tester attaches to the already-running BattleScene when needed,
+// so TEST NGHỀ can replay presentation VFX without damage or turn changes.
 import '../../../js/data.js';
 import './views/Combat2144BalancedVfxTestRosterPatch';
 import './views/Combat2150ProfessionTestRosterPatch';
 import './views/Combat2150ProfessionTestSwitcher';
 import './vfx/CombatNightDomainFieldBridge';
 import './main';
-import './views/Combat2150VersionBridge';
-import './views/Combat2151VersionBridge';
+
+// Preserve the previous release gates before 2.15.2 overwrites the public VFX metadata.
+await import('./views/Combat2150VersionBridge');
+await import('./views/Combat2151VersionBridge');
+
+// Combat2 2.15.2 final owners.
+await import('./vfx/Combat2152ProjectileTrailVfxPatch');
+await import('./views/Combat2152ProfessionLiveTestBridge');
+await import('./views/Combat2152VersionBridge');
