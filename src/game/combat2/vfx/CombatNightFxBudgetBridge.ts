@@ -9,7 +9,9 @@ import { powVfxDepth } from './CombatNightVfxLayout';
 const FLAG = '__powderCombatNightFxBudgetInstalled';
 const BALANCED_BURST_THRESHOLD = 2;
 const NIGHT43_PROJECTILE_SCALE = 1.5;
-const PROJECTILE_HEAD_SCALE_VS_NIGHT43 = 10;
+const NIGHT44_HEAD_SCALE_VS_NIGHT43 = 10;
+const PROJECTILE_SIZE_VS_NIGHT44 = 0.4;
+const PROJECTILE_HEAD_SCALE_VS_NIGHT43 = NIGHT44_HEAD_SCALE_VS_NIGHT43 * PROJECTILE_SIZE_VS_NIGHT44;
 const PROJECTILE_DURATION_SCALE = 2.25;
 
 const PROJECTILE_COLOR: Readonly<Record<CombatProjectileElement, number>> = Object.freeze({
@@ -30,7 +32,6 @@ const PROJECTILE_COLOR: Readonly<Record<CombatProjectileElement, number>> = Obje
 });
 
 type FxTier = 'full' | 'balanced' | 'lite';
-
 let activeProjectiles = 0;
 
 function tier(): FxTier {
@@ -38,7 +39,11 @@ function tier(): FxTier {
   return value === 'lite' || value === 'balanced' ? value : 'full';
 }
 
-function readableDuration(options: DirectionalProjectileOptions, current: FxTier, burstReducedMotion: boolean): number {
+function readableDuration(
+  options: DirectionalProjectileOptions,
+  current: FxTier,
+  burstReducedMotion: boolean
+): number {
   const requested = Number(options.durationMs || 0);
   const distance = Math.max(1, Phaser.Math.Distance.Between(
     options.source.x,
@@ -62,8 +67,7 @@ function readableDuration(options: DirectionalProjectileOptions, current: FxTier
     baseDuration = Phaser.Math.Clamp(requested > 0 ? requested : natural, 230, 310);
   }
 
-  // Night44 is another 50% slower than Night43. Night43 already used 1.5x Night42,
-  // so the final duration is 2.25x the Night42 baseline.
+  // Night45 keeps Night44 travel speed unchanged; only projectile size is reduced.
   return Math.round(baseDuration * PROJECTILE_DURATION_SCALE);
 }
 
@@ -76,6 +80,7 @@ function tweenObject(
   return new Promise((resolve) => {
     let settled = false;
     let tween: Phaser.Tweens.Tween | null = null;
+
     const finish = (): void => {
       if (settled) return;
       settled = true;
@@ -84,14 +89,17 @@ function tweenObject(
       scene.events.off(Phaser.Scenes.Events.DESTROY, abort);
       resolve();
     };
+
     const abort = (): void => {
       if (settled) return;
       try { tween?.stop(); } catch { /* scene teardown owns the tween manager */ }
       finish();
     };
+
     const timer = window.setTimeout(finish, fallbackMs);
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, abort);
     scene.events.once(Phaser.Scenes.Events.DESTROY, abort);
+
     try {
       tween = scene.tweens.add({ ...config, targets: target, onComplete: finish, onStop: finish });
     } catch {
@@ -100,11 +108,15 @@ function tweenObject(
   });
 }
 
-async function playSimpleImpact(options: DirectionalProjectileOptions, reducedDetail: boolean): Promise<void> {
+async function playSimpleImpact(
+  options: DirectionalProjectileOptions,
+  reducedDetail: boolean
+): Promise<void> {
   const { scene, target, element } = options;
   const color = PROJECTILE_COLOR[element] ?? PROJECTILE_COLOR.neutral;
   const radius = reducedDetail ? 18 : 24;
   const impact = scene.add.container(target.x, target.y).setDepth(powVfxDepth('foreground') + 1);
+
   impact.add([
     scene.add.circle(0, 0, radius * 0.5, color, 0.38),
     scene.add.circle(0, 0, radius, 0x000000, 0).setStrokeStyle(reducedDetail ? 2 : 3, color, 0.9),
@@ -131,29 +143,31 @@ async function playSimpleProjectile(
 ): Promise<void> {
   const { scene, source, target, element } = options;
   const color = PROJECTILE_COLOR[element] ?? PROJECTILE_COLOR.neutral;
-  const dx = target.x - source.x;
-  const dy = target.y - source.y;
-  const angle = Math.atan2(dy, dx);
+  const angle = Math.atan2(target.y - source.y, target.x - source.x);
 
-  // Night43 rendered the head as baseRadius * 1.5. Night44 makes the visible projectile
-  // head/body exactly 10x that current Night43 size. The tail is intentionally capped
-  // instead of also becoming 10x longer, otherwise it would turn back into a screen-wide beam.
+  // Night45 = exactly 40% of Night44 projectile geometry.
+  // Head/body becomes 4x Night43 instead of Night44's 10x.
   const night43HeadRadius = (reducedDetail ? 6 : 8) * NIGHT43_PROJECTILE_SCALE;
   const headRadius = night43HeadRadius * PROJECTILE_HEAD_SCALE_VS_NIGHT43;
   const auraRadius = headRadius * 1.16;
-  const tailLength = reducedDetail ? 92 : 126;
-  const tailThickness = reducedDetail ? 18 : 24;
-  const noseLength = reducedDetail ? 32 : 42;
+  const tailLength = (reducedDetail ? 92 : 126) * PROJECTILE_SIZE_VS_NIGHT44;
+  const tailThickness = (reducedDetail ? 18 : 24) * PROJECTILE_SIZE_VS_NIGHT44;
+  const noseLength = (reducedDetail ? 32 : 42) * PROJECTILE_SIZE_VS_NIGHT44;
 
   const projectile = scene.add.container(source.x, source.y)
     .setDepth(powVfxDepth('foreground') + 2)
     .setRotation(angle);
 
-  // One energy-comet projectile: short attached tail, soft outer aura, saturated core,
-  // bright white centre and a small directional nose. No second guide and no path beam.
   projectile.add([
     scene.add.rectangle(-tailLength * 0.58, 0, tailLength, tailThickness, color, reducedDetail ? 0.22 : 0.3),
-    scene.add.rectangle(-tailLength * 0.4, 0, tailLength * 0.72, Math.max(6, tailThickness * 0.38), 0xffffff, reducedDetail ? 0.18 : 0.28),
+    scene.add.rectangle(
+      -tailLength * 0.4,
+      0,
+      tailLength * 0.72,
+      Math.max(2.5, tailThickness * 0.38),
+      0xffffff,
+      reducedDetail ? 0.18 : 0.28
+    ),
     scene.add.circle(0, 0, auraRadius, color, reducedDetail ? 0.08 : 0.12),
     scene.add.circle(0, 0, headRadius, color, 0.76),
     scene.add.circle(headRadius * 0.08, 0, headRadius * 0.58, color, 0.96),
@@ -194,9 +208,6 @@ export function installCombatNightFxBudgetBridge(): void {
   const owner = DirectionalElementProjectileVfx as any;
   if (typeof owner.play !== 'function') return;
 
-  // Final Night owner. Do not invoke the legacy projectile implementation here:
-  // it draws a full path line and element-specific geometry which made attacks read
-  // as multiple overlapping projectiles.
   owner.play = async (options: DirectionalProjectileOptions): Promise<void> => {
     const current = tier();
     const concurrency = activeProjectiles + 1;
@@ -213,17 +224,18 @@ export function installCombatNightFxBudgetBridge(): void {
   };
 
   root.POWDER_COMBAT2_NIGHT_FX_BUDGET = {
-    version: 'night-44',
+    version: 'night-45',
     source: 'POWDER_COMBAT2_FX_TIER',
-    full: 'single-large-energy-comet-short-tail-small-impact',
-    balanced: 'single-large-energy-comet-short-tail-small-impact',
-    lite: 'single-large-energy-comet-minimal-tail-small-impact',
+    full: 'single-energy-comet-40pct-of-night44',
+    balanced: 'single-energy-comet-40pct-of-night44',
+    lite: 'single-energy-comet-40pct-of-night44-minimal-detail',
     balancedBurstThreshold: BALANCED_BURST_THRESHOLD,
     burstGuard: true,
     singleProjectileOwner: true,
+    projectileSizeVsNight44: PROJECTILE_SIZE_VS_NIGHT44,
     projectileHeadScaleVsNight43: PROJECTILE_HEAD_SCALE_VS_NIGHT43,
     projectileTravelDurationScaleVsNight42: PROJECTILE_DURATION_SCALE,
-    projectileTravelSlowerVsNight43: 1.5,
+    projectileTravelSpeedUnchangedVsNight44: true,
     legacyFullPathLineDisabled: true,
     duplicateMovingGuideDisabled: true,
     attachedShortTailOnly: true,
