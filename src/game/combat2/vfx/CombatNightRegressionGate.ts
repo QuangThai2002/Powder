@@ -2,7 +2,6 @@ import { LEGACY_EXPANSION_DOMAINS } from '../systems/CombatLegacyDomainEngine';
 import { PowView } from '../views/PowView';
 import './CombatNightTeardownBridge';
 import './CombatNightSupportAssetBridge';
-import { PersistentPowStatusVfx } from './PersistentPowStatusVfx';
 import {
   NIGHT_STATUS_VFX_DEFAULTS,
   orderedFrameNumbers,
@@ -31,6 +30,12 @@ function includesAll(values: unknown, required: readonly string[]): boolean {
   return required.every((value) => normalized.has(value));
 }
 
+function rangeMatches(value: unknown, start: number, end: number): boolean {
+  return Array.isArray(value)
+    && Number(value[0]) === start
+    && Number(value[1]) === end;
+}
+
 export function runCombatNightRegressionGate(): CombatNightRegressionReport {
   const root = globalThis as any;
   const frames = orderedFrameNumbers({ startFrame: 0, endFrame: 11 });
@@ -42,10 +47,10 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
     powVfxDepth('foreground')
   ];
   const prototype = PowView.prototype as any;
-  const persistentPrototype = PersistentPowStatusVfx.prototype as any;
   const tooltip = root.POWDER_COMBAT2_NIGHT_STATUS_TOOLTIPS;
   const domain = root.POWDER_COMBAT2_NIGHT_DOMAIN;
   const support = root.POWDER_COMBAT2_NIGHT_SUPPORT_ASSETS;
+  const statusAssets = root.POWDER_COMBAT2_NIGHT_STATUS_ASSETS;
   const persistentStatus = root.POWDER_COMBAT2_NIGHT_PERSISTENT_STATUS;
   const budget = root.POWDER_COMBAT2_NIGHT_FX_BUDGET;
   const teardown = root.POWDER_COMBAT2_NIGHT_TEARDOWN;
@@ -63,6 +68,30 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
       `frames=${frames.join(',')}`
     ),
     check(
+      'real-status-atlas-contract',
+      Boolean(statusAssets)
+        && statusAssets?.version === 'night-38'
+        && statusAssets?.mode === 'real-spritesheet-ordered-frames'
+        && Number(statusAssets?.totalFrames) === 52
+        && Number(statusAssets?.frameWidth) === 80
+        && Number(statusAssets?.frameHeight) === 80
+        && statusAssets?.oneSpritePerPow === true
+        && statusAssets?.orderedFrames === true
+        && statusAssets?.realArtworkFrames === true
+        && statusAssets?.proceduralStatusAnimation === false
+        && statusAssets?.particleEmitters === false
+        && statusAssets?.tweenLoops === false,
+      `version=${statusAssets?.version ?? 'missing'};mode=${statusAssets?.mode ?? 'missing'};frames=${statusAssets?.totalFrames ?? 'missing'};real=${String(statusAssets?.realArtworkFrames)};procedural=${String(statusAssets?.proceduralStatusAnimation)}`
+    ),
+    check(
+      'real-status-frame-ranges',
+      rangeMatches(statusAssets?.ranges?.burn, 0, 11)
+        && rangeMatches(statusAssets?.ranges?.poison, 12, 23)
+        && rangeMatches(statusAssets?.ranges?.stun, 24, 35)
+        && rangeMatches(statusAssets?.ranges?.freeze, 36, 51),
+      `burn=${statusAssets?.ranges?.burn ?? 'missing'};poison=${statusAssets?.ranges?.poison ?? 'missing'};stun=${statusAssets?.ranges?.stun ?? 'missing'};freeze=${statusAssets?.ranges?.freeze ?? 'missing'}`
+    ),
+    check(
       'vfx-depth-order',
       depths.every((value, index) => index === 0 || value > depths[index - 1]),
       `depths=${depths.join('<')}`
@@ -74,7 +103,8 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
     ),
     check(
       'freeze-body-stun-head',
-      NIGHT_STATUS_VFX_DEFAULTS.freeze.anchor === 'body' && NIGHT_STATUS_VFX_DEFAULTS.stun.anchor === 'head',
+      NIGHT_STATUS_VFX_DEFAULTS.freeze.anchor === 'body'
+        && NIGHT_STATUS_VFX_DEFAULTS.stun.anchor === 'head',
       `freeze=${NIGHT_STATUS_VFX_DEFAULTS.freeze.anchor};stun=${NIGHT_STATUS_VFX_DEFAULTS.stun.anchor}`
     ),
     check(
@@ -88,14 +118,9 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
       `installed=${String(prototype.__nightProjectileBridgeInstalled === true)}`
     ),
     check(
-      'curated-status-fallback',
-      persistentPrototype.__nightCuratedFallbackInstalled === true,
-      `installed=${String(persistentPrototype.__nightCuratedFallbackInstalled === true)}`
-    ),
-    check(
       'persistent-status-dedup',
-      prototype.__nightPersistentDedupInstalled === true,
-      `installed=${String(prototype.__nightPersistentDedupInstalled === true)}`
+      statusAssets?.duplicateLegacyPersistentHidden === true,
+      `hidden=${String(statusAssets?.duplicateLegacyPersistentHidden)}`
     ),
     check(
       'persistent-status-owner-lifecycle',
@@ -104,8 +129,13 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
         && persistentStatus?.sceneShutdownCleanup === true
         && persistentStatus?.poisonBadgeGlyph === 'hazard-no-skull'
         && persistentStatus?.fullSheetPriority === true
+        && persistentStatus?.realSpriteSheetPlayback === true
+        && Number(persistentStatus?.atlasFrames) === 52
+        && persistentStatus?.oneSpritePerPow === true
+        && persistentStatus?.orderedFrames === true
+        && persistentStatus?.proceduralStatusAnimation === false
         && persistentStatus?.combatLogicChanged === false,
-      `version=${persistentStatus?.version ?? 'missing'};max=${persistentStatus?.ownerPerPowMax ?? 'missing'};cleanup=${String(persistentStatus?.sceneShutdownCleanup)};poison=${persistentStatus?.poisonBadgeGlyph ?? 'missing'}`
+      `version=${persistentStatus?.version ?? 'missing'};max=${persistentStatus?.ownerPerPowMax ?? 'missing'};cleanup=${String(persistentStatus?.sceneShutdownCleanup)};sheet=${String(persistentStatus?.realSpriteSheetPlayback)};frames=${persistentStatus?.atlasFrames ?? 'missing'}`
     ),
     check(
       'core-status-tooltips',
@@ -171,7 +201,8 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
     check(
       'scene-leak-last-audit',
       Boolean(leakAudit)
-        && (Number(leakAudit?.runs || 0) === 0 || Number(leakAudit?.lastActiveAfterShutdown || 0) === 0),
+        && (Number(leakAudit?.runs || 0) === 0
+          || Number(leakAudit?.lastActiveAfterShutdown || 0) === 0),
       `runs=${leakAudit?.runs ?? 'missing'};failures=${leakAudit?.failures ?? 'missing'};lastActive=${leakAudit?.lastActiveAfterShutdown ?? 'missing'};scene=${leakAudit?.lastSceneKey ?? 'missing'}`
     ),
     check(
@@ -182,14 +213,14 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
   ];
 
   const report: CombatNightRegressionReport = {
-    version: 'night-32',
+    version: 'night-38',
     pass: checks.every((entry) => entry.pass),
     checks
   };
   root.POWDER_COMBAT2_NIGHT_REGRESSION = report;
   root.POWDER_COMBAT2_NIGHT_COMPLETION = {
-    version: 'night-32',
-    scope: 'frame-anchor-layer-status-tooltip-projectile-impact-domain-fps-lifecycle-regression',
+    version: 'night-38',
+    scope: 'real-status-spritesheet-frame-anchor-layer-tooltip-projectile-impact-domain-fps-lifecycle-regression',
     staticGatePass: report.pass,
     branchOnly: true,
     combatLogicChanged: false
