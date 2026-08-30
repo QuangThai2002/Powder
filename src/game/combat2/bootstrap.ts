@@ -10,6 +10,7 @@
 //
 // Legacy compatibility VFX bridges still install before main.ts so the existing
 // presentation patches can wrap them safely. New releases are versioned as Combat2.
+// The 2.15.0 version bridge runs after main.ts to publish the final Combat2 release metadata.
 //
 // Presentation/VFX patches themselves remain installed before new Phaser.Game() so
 // BattleScene.preload/create sees every registered texture and final method owner.
@@ -19,3 +20,4 @@ import './views/Combat2150ProfessionTestRosterPatch';
 import './views/Combat2150ProfessionTestSwitcher';
 import './vfx/CombatNightDomainFieldBridge';
 import './main';
+import './views/Combat2150VersionBridge';
