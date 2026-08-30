@@ -1,7 +1,12 @@
 import Phaser from 'phaser';
 import type { CombatUnitState } from '../systems/CombatState';
 import { PowView } from '../views/PowView';
-import { powVfxDepth } from './CombatNightVfxLayout';
+import {
+  NIGHT_STATUS_VFX_DEFAULTS,
+  fitVfxFrameToPow,
+  powVfxDepth,
+  type PowVfxAnchor
+} from './CombatNightVfxLayout';
 
 const FLAG = '__powderCombatNightAffectedPowEnvelopeInstalled';
 const AURA_KEY = '__nightAffectedPowEnvelope';
@@ -16,6 +21,8 @@ type StatusBand = {
   color: number;
   strong?: boolean;
 };
+
+type CoreStatusKind = 'burn' | 'poison' | 'freeze' | 'stun';
 
 function addBand(list: StatusBand[], key: string, color: number, strong = false): void {
   if (list.some((entry) => entry.key === key)) return;
@@ -132,6 +139,33 @@ function drawAllStatusBands(view: any, unit: CombatUnitState): void {
   });
 }
 
+function refitDedicatedStatusSprite(view: any): void {
+  const owner = view.persistentStatusVfx as any;
+  const active = owner?.active as { kind?: CoreStatusKind; object?: Phaser.GameObjects.GameObject } | undefined;
+  const kind = active?.kind;
+  const sprite = active?.object;
+  if (!kind || !(sprite instanceof Phaser.GameObjects.Sprite) || !sprite.active) return;
+
+  const layout = typeof view.getVfxLayout === 'function' ? view.getVfxLayout() : null;
+  const getAnchor = typeof view.getVfxAnchor === 'function' ? view.getVfxAnchor.bind(view) : null;
+  if (!layout || !getAnchor) return;
+  const profile = NIGHT_STATUS_VFX_DEFAULTS[kind];
+  const anchor = getAnchor(profile.anchor as PowVfxAnchor) as Phaser.Math.Vector2;
+  if (kind === 'poison') anchor.y -= Number(layout.artHeight || 190) * Number(layout.fieldScale || 1) * 0.24;
+
+  const frameWidth = Math.max(1, Number(sprite.frame?.width || 80));
+  const frameHeight = Math.max(1, Number(sprite.frame?.height || 80));
+  sprite
+    .setPosition(anchor.x, anchor.y)
+    .setScale(fitVfxFrameToPow(
+      frameWidth,
+      frameHeight,
+      layout,
+      profile.widthRatio,
+      profile.heightRatio
+    ));
+}
+
 function expandSupportAsset(view: any, imageKey: string, kind: 'shield' | 'regen'): void {
   const image = view[imageKey] as Phaser.GameObjects.Image | undefined;
   if (!image?.active || !image.scene) return;
@@ -169,6 +203,7 @@ export function installCombatNightAffectedPowEnvelopeBridge(): void {
   proto.updateRuntime = function combatNightAffectedPowEnvelopeUpdate(this: any, unit: CombatUnitState): void {
     previousUpdate.call(this, unit);
     drawAllStatusBands(this, unit);
+    refitDedicatedStatusSprite(this);
     expandSupportAsset(this, SHIELD_IMAGE_KEY, 'shield');
     expandSupportAsset(this, REGEN_IMAGE_KEY, 'regen');
   };
@@ -181,6 +216,7 @@ export function installCombatNightAffectedPowEnvelopeBridge(): void {
     oneGraphicsPerAffectedPow: true,
     cardWideStatusFrameRetired: true,
     dedicatedStatusSpriteSheetsPreserved: true,
+    liveRefitDedicatedStatusSprites: true,
     supportAssetsExpandedAroundPow: true,
     particleEmitters: false,
     tweenLoops: false,
