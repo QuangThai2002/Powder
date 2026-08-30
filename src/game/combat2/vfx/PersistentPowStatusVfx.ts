@@ -185,6 +185,22 @@ export class PersistentPowStatusVfx {
     return new Phaser.Math.Vector2(head.x + offsetX, head.y - offsetY);
   }
 
+  private statusVisualAnchor(
+    kind: PersistentPowStatusKind,
+    x: number,
+    y: number,
+    layout: PowVfxLayout
+  ): Phaser.Math.Vector2 {
+    const profile = NIGHT_STATUS_VFX_DEFAULTS[kind];
+    const anchor = powVfxWorldAnchor(x, y, layout, profile.anchor);
+    if (kind === 'poison') {
+      // Keep semantic ownership at the feet/ground, but let the gas rise around
+      // roughly the lower half of the Pow instead of sitting as a tiny puddle.
+      anchor.y -= layout.artHeight * layout.fieldScale * 0.18;
+    }
+    return anchor;
+  }
+
   private createSheetSprite(
     kind: PersistentPowStatusKind,
     x: number,
@@ -208,7 +224,7 @@ export class PersistentPowStatusVfx {
     }
 
     const profile = NIGHT_STATUS_VFX_DEFAULTS[kind];
-    const anchor = powVfxWorldAnchor(x, y, layout, profile.anchor);
+    const anchor = this.statusVisualAnchor(kind, x, y, layout);
     const sprite = this.scene.add.sprite(anchor.x, anchor.y, spec.textureKey, frames[0]);
     sprite
       .setDepth(powVfxDepth(kind === 'poison' ? 'ground' : profile.layer))
@@ -233,7 +249,7 @@ export class PersistentPowStatusVfx {
     layout: PowVfxLayout
   ): Phaser.GameObjects.Container {
     const profile = NIGHT_STATUS_VFX_DEFAULTS[kind];
-    const anchor = powVfxWorldAnchor(x, y, layout, profile.anchor);
+    const anchor = this.statusVisualAnchor(kind, x, y, layout);
     const depth = powVfxDepth(kind === 'poison' ? 'ground' : profile.layer);
     const fx = this.scene.add.container(anchor.x, anchor.y).setDepth(depth);
 
@@ -244,7 +260,7 @@ export class PersistentPowStatusVfx {
         this.scene.add.ellipse(17, 18, 13, 36, 0xff7043, 0.12).setRotation(0.28)
       ]);
     } else if (kind === 'poison') {
-      // Poison must read as ground contamination, not a green overlay on the Pow.
+      // Poison must read as low ground contamination with rising gas, not a green body tint.
       fx.add([
         this.scene.add.ellipse(0, 8, 92, 28, 0x6f42a8, 0.10).setStrokeStyle(2, 0x91d66a, 0.46),
         this.scene.add.circle(-27, 1, 6, 0xa5df66, 0.16),
@@ -276,8 +292,7 @@ export class PersistentPowStatusVfx {
     y: number,
     layout: PowVfxLayout
   ): void {
-    const profile = NIGHT_STATUS_VFX_DEFAULTS[kind];
-    const anchor = powVfxWorldAnchor(x, y, layout, profile.anchor);
+    const anchor = this.statusVisualAnchor(kind, x, y, layout);
     const positioned = active.object as Phaser.GameObjects.Components.Transform;
     if (typeof positioned.setPosition === 'function') positioned.setPosition(anchor.x, anchor.y);
 
