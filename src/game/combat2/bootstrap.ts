@@ -6,6 +6,7 @@
 // 2.15.0 then becomes the final Combat2 test-roster owner, replacing the visible
 // lineup with canonical coverage for all nine professions. It only mutates isolated
 // Combat2 test objects; it never writes back to the main-game POWDER_DATA catalog.
+// The local-only switcher provides one-click profession focus without changing combat logic.
 //
 // Legacy compatibility VFX bridges still install before main.ts so the existing
 // presentation patches can wrap them safely. New releases are versioned as Combat2.
@@ -15,5 +16,6 @@
 import '../../../js/data.js';
 import './views/Combat2144BalancedVfxTestRosterPatch';
 import './views/Combat2150ProfessionTestRosterPatch';
+import './views/Combat2150ProfessionTestSwitcher';
 import './vfx/CombatNightDomainFieldBridge';
 import './main';
