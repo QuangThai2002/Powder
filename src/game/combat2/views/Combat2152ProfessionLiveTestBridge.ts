@@ -14,10 +14,7 @@ type RuntimePowView = PowView & {
   pow?: { id?: string; name?: string; role?: string; element?: string; elementKey?: string };
   playAttackLunge?: (targetX: number, targetY: number) => Promise<void>;
 };
-type RuntimeScene = BattleScene & {
-  powViews?: Map<string, RuntimePowView>;
-  [SCENE_FLAG]?: boolean;
-};
+type RuntimeScene = any;
 
 function isLocalDev(): boolean {
   return typeof window !== 'undefined'
@@ -65,25 +62,29 @@ function clearAutoDemoQuery(): void {
 
 function attachScene(scene: RuntimeScene): boolean {
   const root = globalThis as any;
-  const map = scene.powViews;
+  const map = scene?.powViews as Map<string, RuntimePowView> | undefined;
   if (!(map instanceof Map) || map.size === 0) return false;
-  if ((scene as any)[SCENE_FLAG]) return true;
-  (scene as any)[SCENE_FLAG] = true;
+  if (scene[SCENE_FLAG]) return true;
+  scene[SCENE_FLAG] = true;
 
   const views = (): Array<{
     instanceId: string;
     view: RuntimePowView;
     role: RoleKey | null;
     side: 'player' | 'enemy' | null;
-  }> => Array.from((scene.powViews ?? new Map()).entries()).map(([instanceId, view]) => {
-    const runtime = view as any;
-    return {
-      instanceId,
-      view,
-      role: resolveRole(runtime.pow?.role),
-      side: instanceId.startsWith('player-') ? 'player' : instanceId.startsWith('enemy-') ? 'enemy' : null
-    };
-  });
+  }> => {
+    const current = scene.powViews as Map<string, RuntimePowView> | undefined;
+    if (!(current instanceof Map)) return [];
+    return Array.from(current.entries()).map(([instanceId, view]) => {
+      const runtime = view as any;
+      return {
+        instanceId,
+        view,
+        role: resolveRole(runtime.pow?.role),
+        side: instanceId.startsWith('player-') ? 'player' : instanceId.startsWith('enemy-') ? 'enemy' : null
+      };
+    });
+  };
 
   const snapshot = () => views().map(({ instanceId, view, role, side }) => {
     const runtime = view as any;
