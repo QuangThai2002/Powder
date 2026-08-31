@@ -31,16 +31,18 @@ function installCombat2156VersionBridge(): void {
     noFullScreenBeam: fix?.noFullPathBeam === true,
     noParticleEmitters: fix?.particleEmitters === false,
     noRepeatingTweenLoops: fix?.repeatingTweenLoops === false,
-    liveRandomUiRetired: quickUi?.version === VERSION
+    quickUiCompatibleWhenMounted: !quickUi || (
+      quickUi?.version === VERSION
       && quickUi?.randomButtonsRemoved === true
-      && quickUi?.preBattleRandomizerOwnsRandom === true,
+      && quickUi?.preBattleRandomizerOwnsRandom === true
+      && quickUi?.combatLogicChanged === false
+    ),
     supportTravelPreserved: support?.version === '2.15.5'
       && Array.isArray(support?.roles)
       && support.roles.includes('healer')
       && support.roles.includes('tank'),
     combatLogicUnchanged: setup?.combatLogicChanged === false
       && fix?.combatLogicChanged === false
-      && quickUi?.combatLogicChanged === false
       && support?.combatLogicChanged === false
   };
   const pass = Object.values(checks).every(Boolean);
