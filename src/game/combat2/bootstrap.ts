@@ -8,6 +8,8 @@
 //
 // 2.15.7 is intentionally narrow: Marksman only. It replaces the old arrow-like
 // shape with an axis-locked spiral magic bolt. Every other profession delegates.
+// 2.15.8 stays Marksman-only and becomes the FINAL owner with layered additive glow,
+// front/back rifling depth, lifetime-shaped trail falloff and a premium drill impact.
 import '../../../js/data.js';
 import './views/Combat2144BalancedVfxTestRosterPatch';
 import './views/Combat2150ProfessionTestRosterPatch';
@@ -43,6 +45,10 @@ await import('./views/Combat2155VersionBridge');
 await import('./vfx/Combat2156MarksmanHealerTankFixVfxPatch');
 await import('./views/Combat2156VersionBridge');
 
-// Combat2 2.15.7 FINAL owner for Marksman only.
+// Combat2 2.15.7 previous Marksman-only owner.
 await import('./vfx/Combat2157MarksmanSpiralBoltVfxPatch');
 await import('./views/Combat2157VersionBridge');
+
+// Combat2 2.15.8 FINAL owner for Marksman only.
+await import('./vfx/Combat2158MarksmanPremiumRifledBoltVfxPatch');
+await import('./views/Combat2158VersionBridge');
