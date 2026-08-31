@@ -19,8 +19,10 @@ function installCombat2160VersionBridge(): void {
     twoStrandRifling: Number(marksman?.rifling?.strands) === 2
       && Number(marksman?.rifling?.fullTurns) === 2.25,
     directRealCombat: projectile?.marksmanDirectRuntime === true
-      && projectile?.marksmanDirectVersion === VERSION
-      && projectile?.marksmanForm === 'spiral-rail-bolt',
+      && (
+        (projectile?.marksmanDirectVersion === VERSION && projectile?.marksmanForm === 'spiral-rail-bolt')
+        || (projectile?.marksmanDirectVersion === '2.16.4' && projectile?.marksmanTierContext === true)
+      ),
     realCombatEntryPointPreserved: projectile?.runtimeEntryPoint === 'PowView.playAttackLunge'
       && projectile?.attackLungeOwner === true,
     boundedTrail: Number(marksman?.trail?.points?.full) === 16
@@ -37,8 +39,8 @@ function installCombat2160VersionBridge(): void {
   root.POWDER_COMBAT2_2160_REGRESSION = { version: VERSION, pass, checks, qaVersionIndependent: true };
 
   if (typeof location !== 'undefined' && ['localhost', '127.0.0.1'].includes(location.hostname)) {
-    if (pass) console.info('[Combat2 2.16.0 Real Combat Regression PASS]', { marksman, projectile, checks });
-    else console.error('[Combat2 2.16.0 Real Combat Regression FAIL - branch only]', { marksman, projectile, checks });
+    if (pass) console.info('[Combat2 2.16.0 Historical Base Regression PASS]', { marksman, projectile, checks });
+    else console.error('[Combat2 2.16.0 Historical Base Regression FAIL - branch only]', { marksman, projectile, checks });
   }
 }
 
