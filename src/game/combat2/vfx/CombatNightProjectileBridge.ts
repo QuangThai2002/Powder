@@ -28,6 +28,12 @@ import {
   playCombat2167FighterDistinctTierVfx,
   type Combat2167FighterTier
 } from './Combat2167FighterDistinctTierVfx';
+import {
+  COMBAT2168_KNIGHT_VERSION,
+  isCombat2168KnightRole,
+  playCombat2168KnightDistinctTierVfx,
+  type Combat2168KnightTier
+} from './Combat2168KnightDistinctTierVfx';
 import { PowView } from '../views/PowView';
 
 interface PowViewProjectileRuntime {
@@ -144,6 +150,20 @@ async function playNightProjectile(view: PowViewProjectileRuntime, targetX: numb
     return;
   }
 
+  if (isCombat2168KnightRole(view.pow.role)) {
+    const tier = resolveActionTier(view) as Combat2168KnightTier;
+    await playCombat2168KnightDistinctTierVfx(options, tier);
+    (globalThis as any).POWDER_COMBAT2_KNIGHT_PROJECTILE_LAST = {
+      version: COMBAT2168_KNIGHT_VERSION,
+      tier,
+      role: view.pow.role,
+      element: options.element,
+      at: Date.now(),
+      realCombatRoute: true
+    };
+    return;
+  }
+
   const roleAwarePlay = DirectionalElementProjectileVfx.play as unknown as
     (runtimeOptions: RoleAwareProjectileOptions) => Promise<void>;
   await roleAwarePlay(options);
@@ -188,7 +208,7 @@ export function installCombatNightProjectileBridge(): void {
 
   const root = globalThis as any;
   root.POWDER_COMBAT2_NIGHT_PROJECTILE = {
-    version: `combat2-${COMBAT2167_FIGHTER_VERSION}`,
+    version: `combat2-${COMBAT2168_KNIGHT_VERSION}`,
     runtimeEntryPoint: 'PowView.playAttackLunge',
     directTravelOwner: true,
     attackLungeOwner: true,
@@ -211,6 +231,10 @@ export function installCombatNightProjectileBridge(): void {
     fighterDirectVersion: COMBAT2167_FIGHTER_VERSION,
     fighterTierContext: true,
     fighterForms: { normal: 'impact-fist', skill: 'cross-break-rush', ultimate: 'meteor-breaker-drive' },
+    knightDirectRuntime: true,
+    knightDirectVersion: COMBAT2168_KNIGHT_VERSION,
+    knightTierContext: true,
+    knightForms: { normal: 'valor-blade-thrust', skill: 'crossguard-double-cleave', ultimate: 'royal-judgment-greatblade' },
     otherRolesCompatibilityOwnerStack: true,
     combatLogicChanged: false
   };
