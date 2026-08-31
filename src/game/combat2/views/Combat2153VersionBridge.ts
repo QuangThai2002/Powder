@@ -49,9 +49,11 @@ function installCombat2153VersionBridge(): void {
       && budget?.finiteTweensOnly === true,
     meleeDelegated: clarity?.delegatesNonRangedToPreviousOwner === true
       && budget?.delegatesMelee === true,
-    liveProfessionTestPreserved: liveBridge?.version === '2.15.2'
+    liveProfessionTestPreserved: Boolean(liveBridge)
       && liveBridge?.installed === true
-      && liveBridge?.presentationOnly === true,
+      && liveBridge?.presentationOnly === true
+      && liveBridge?.damageApplied === false
+      && liveBridge?.turnAdvanced === false,
     combatLogicUnchanged: clarity?.combatLogicChanged === false
       && trail?.combatLogicChanged === false
       && ranged?.combatLogicChanged === false
