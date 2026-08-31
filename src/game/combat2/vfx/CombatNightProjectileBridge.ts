@@ -34,6 +34,12 @@ import {
   playCombat2168KnightDistinctTierVfx,
   type Combat2168KnightTier
 } from './Combat2168KnightDistinctTierVfx';
+import {
+  COMBAT2169_ENCHANTER_VERSION,
+  isCombat2169EnchanterRole,
+  playCombat2169EnchanterDistinctTierVfx,
+  type Combat2169EnchanterTier
+} from './Combat2169EnchanterDistinctTierVfx';
 import { PowView } from '../views/PowView';
 
 interface PowViewProjectileRuntime {
@@ -97,75 +103,46 @@ async function playNightProjectile(view: PowViewProjectileRuntime, targetX: numb
   if (isCombat2160MarksmanRole(view.pow.role)) {
     const tier = resolveActionTier(view);
     await playCombat2163MarksmanDistinctTierVfx(options, tier);
-    (globalThis as any).POWDER_COMBAT2_MARKSMAN_PROJECTILE_LAST = {
-      version: COMBAT2164_MARKSMAN_RUNTIME_VERSION,
-      tier,
-      role: view.pow.role,
-      element: options.element,
-      at: Date.now(),
-      realCombatRoute: true
-    };
+    (globalThis as any).POWDER_COMBAT2_MARKSMAN_PROJECTILE_LAST = { version: COMBAT2164_MARKSMAN_RUNTIME_VERSION, tier, role: view.pow.role, element: options.element, at: Date.now(), realCombatRoute: true };
     return;
   }
 
   if (isCombat2165MageRole(view.pow.role)) {
     const tier = resolveActionTier(view) as Combat2165MageTier;
     await playCombat2165MageDistinctTierVfx(options, tier);
-    (globalThis as any).POWDER_COMBAT2_MAGE_PROJECTILE_LAST = {
-      version: COMBAT2165_MAGE_VERSION,
-      tier,
-      role: view.pow.role,
-      element: options.element,
-      at: Date.now(),
-      realCombatRoute: true
-    };
+    (globalThis as any).POWDER_COMBAT2_MAGE_PROJECTILE_LAST = { version: COMBAT2165_MAGE_VERSION, tier, role: view.pow.role, element: options.element, at: Date.now(), realCombatRoute: true };
     return;
   }
 
   if (isCombat2166TankRole(view.pow.role)) {
     const tier = resolveActionTier(view) as Combat2166TankTier;
     await playCombat2166TankDistinctTierVfx(options, tier);
-    (globalThis as any).POWDER_COMBAT2_TANK_PROJECTILE_LAST = {
-      version: COMBAT2166_TANK_VERSION,
-      tier,
-      role: view.pow.role,
-      element: options.element,
-      at: Date.now(),
-      realCombatRoute: true
-    };
+    (globalThis as any).POWDER_COMBAT2_TANK_PROJECTILE_LAST = { version: COMBAT2166_TANK_VERSION, tier, role: view.pow.role, element: options.element, at: Date.now(), realCombatRoute: true };
     return;
   }
 
   if (isCombat2167FighterRole(view.pow.role)) {
     const tier = resolveActionTier(view) as Combat2167FighterTier;
     await playCombat2167FighterDistinctTierVfx(options, tier);
-    (globalThis as any).POWDER_COMBAT2_FIGHTER_PROJECTILE_LAST = {
-      version: COMBAT2167_FIGHTER_VERSION,
-      tier,
-      role: view.pow.role,
-      element: options.element,
-      at: Date.now(),
-      realCombatRoute: true
-    };
+    (globalThis as any).POWDER_COMBAT2_FIGHTER_PROJECTILE_LAST = { version: COMBAT2167_FIGHTER_VERSION, tier, role: view.pow.role, element: options.element, at: Date.now(), realCombatRoute: true };
     return;
   }
 
   if (isCombat2168KnightRole(view.pow.role)) {
     const tier = resolveActionTier(view) as Combat2168KnightTier;
     await playCombat2168KnightDistinctTierVfx(options, tier);
-    (globalThis as any).POWDER_COMBAT2_KNIGHT_PROJECTILE_LAST = {
-      version: COMBAT2168_KNIGHT_VERSION,
-      tier,
-      role: view.pow.role,
-      element: options.element,
-      at: Date.now(),
-      realCombatRoute: true
-    };
+    (globalThis as any).POWDER_COMBAT2_KNIGHT_PROJECTILE_LAST = { version: COMBAT2168_KNIGHT_VERSION, tier, role: view.pow.role, element: options.element, at: Date.now(), realCombatRoute: true };
     return;
   }
 
-  const roleAwarePlay = DirectionalElementProjectileVfx.play as unknown as
-    (runtimeOptions: RoleAwareProjectileOptions) => Promise<void>;
+  if (isCombat2169EnchanterRole(view.pow.role)) {
+    const tier = resolveActionTier(view) as Combat2169EnchanterTier;
+    await playCombat2169EnchanterDistinctTierVfx(options, tier);
+    (globalThis as any).POWDER_COMBAT2_ENCHANTER_PROJECTILE_LAST = { version: COMBAT2169_ENCHANTER_VERSION, tier, role: view.pow.role, element: options.element, at: Date.now(), realCombatRoute: true };
+    return;
+  }
+
+  const roleAwarePlay = DirectionalElementProjectileVfx.play as unknown as (runtimeOptions: RoleAwareProjectileOptions) => Promise<void>;
   await roleAwarePlay(options);
 }
 
@@ -208,7 +185,7 @@ export function installCombatNightProjectileBridge(): void {
 
   const root = globalThis as any;
   root.POWDER_COMBAT2_NIGHT_PROJECTILE = {
-    version: `combat2-${COMBAT2168_KNIGHT_VERSION}`,
+    version: `combat2-${COMBAT2169_ENCHANTER_VERSION}`,
     runtimeEntryPoint: 'PowView.playAttackLunge',
     directTravelOwner: true,
     attackLungeOwner: true,
@@ -235,6 +212,10 @@ export function installCombatNightProjectileBridge(): void {
     knightDirectVersion: COMBAT2168_KNIGHT_VERSION,
     knightTierContext: true,
     knightForms: { normal: 'valor-blade-thrust', skill: 'crossguard-double-cleave', ultimate: 'royal-judgment-greatblade' },
+    enchanterDirectRuntime: true,
+    enchanterDirectVersion: COMBAT2169_ENCHANTER_VERSION,
+    enchanterTierContext: true,
+    enchanterForms: { normal: 'hex-needle', skill: 'binding-twin-sigil', ultimate: 'abyssal-seal-lance' },
     otherRolesCompatibilityOwnerStack: true,
     combatLogicChanged: false
   };
