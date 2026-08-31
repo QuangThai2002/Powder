@@ -50,7 +50,10 @@ function installCombat2160VersionBridge(): void {
     premiumImpact: marksman?.impact === 'pierce-lance+finite-rifled-arcs',
     noParticlesOrLoops: marksman?.particleEmitters === false
       && marksman?.repeatingTweenLoops === false,
-    visibleQaVersionIfMounted: !ui || (ui?.version === VERSION && ui?.marksmanSpiralRailLabel === true),
+    visibleQaVersionIfMounted: !ui || (
+      (ui?.version === VERSION || ui?.version === '2.16.1')
+      && ui?.marksmanSpiralRailLabel === true
+    ),
     combatLogicUnchanged: marksman?.combatLogicChanged === false
       && projectile?.combatLogicChanged === false
       && lab?.combatLogicChanged === false
