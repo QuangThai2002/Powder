@@ -1,4 +1,4 @@
-const VERSION = '2.15.9';
+const VERSION = '2.16.0';
 const ROLE_BUTTONS = [
   ['marksman', 'Xạ thủ'],
   ['mage', 'Pháp sư'],
@@ -51,7 +51,7 @@ function installSwitcher(): void {
   ].join(';');
 
   const status = document.createElement('div');
-  status.textContent = 'Bấm nghề để phát VFX ngay. Xạ thủ 2.15.9 dùng đường runtime direct riêng.';
+  status.textContent = 'Bấm nghề để phát VFX ngay. Xạ thủ 2.16.0 dùng Spiral Rail Bolt direct.';
   status.style.cssText = [
     'margin:2px 2px 8px', 'padding:7px', 'border-radius:6px',
     'background:rgba(95,201,255,.09)', 'color:#bdeeff', 'line-height:1.4',
@@ -82,13 +82,13 @@ function installSwitcher(): void {
         (globalThis as any).POWDER_COMBAT2_PROFESSION_LIVE_TEST_LAST = result;
         const element = result?.element ? String(result.element).toUpperCase() : 'HỆ HIỆN TẠI';
         const direct = result?.directMarksmanRuntime === true
-          ? ` · DIRECT ${result?.directVersion ?? '2.15.9'}`
+          ? ` · DIRECT ${result?.directVersion ?? VERSION}${result?.marksmanForm === 'spiral-rail-bolt' ? ' · SPIRAL RAIL' : ''}`
           : '';
         status.textContent = result?.ok
           ? `ĐÃ PHÁT · ${roleLabel(result.role ?? role)} · ${element}${direct}`
           : `${label}: ${result?.reason ?? 'không phát được'}`;
       } catch (error) {
-        console.error('[Combat2 2.15.9 Quick VFX]', error);
+        console.error('[Combat2 2.16.0 Quick VFX]', error);
         status.textContent = `${label}: lỗi runtime`;
       } finally {
         button.disabled = false;
@@ -109,6 +109,7 @@ function installSwitcher(): void {
     roleCount: ROLE_BUTTONS.length,
     directRoleButtons: true,
     marksmanDirectRuntimeLabel: true,
+    marksmanSpiralRailLabel: true,
     randomButtonsRemoved: true,
     preBattleRandomizerOwnsRandom: true,
     reloadOnRoleSelect: false,
