@@ -1,4 +1,4 @@
-const VERSION = '2.16.2';
+const VERSION = '2.16.3';
 const ROLE_BUTTONS = [
   ['marksman', 'Xạ thủ'],
   ['mage', 'Pháp sư'],
@@ -40,10 +40,10 @@ function tierLabel(tier: unknown): string {
 }
 
 function formLabel(form: unknown): string {
-  if (form === 'compact-spiral-rail') return 'COMPACT SPIRAL';
-  if (form === 'piercing-spiral-shot') return 'PIERCING SPIRAL';
-  if (form === 'rail-breaker') return 'RAIL BREAKER';
-  return String(form || 'SPIRAL RAIL').toUpperCase();
+  if (form === 'compact-spiral-rail') return 'COMPACT BOLT';
+  if (form === 'piercing-triple-rail-shot') return 'TRIPLE RAIL';
+  if (form === 'rail-breaker-heavy-slug') return 'HEAVY SLUG';
+  return String(form || 'MARKSMAN').toUpperCase();
 }
 
 function installSwitcher(): void {
@@ -67,13 +67,13 @@ function installSwitcher(): void {
 
   const panel = document.createElement('div');
   panel.style.cssText = [
-    'display:none', 'margin-top:6px', 'width:248px', 'max-height:80vh', 'overflow:auto',
+    'display:none', 'margin-top:6px', 'width:258px', 'max-height:80vh', 'overflow:auto',
     'padding:8px', 'border:1px solid rgba(151,218,255,.4)', 'border-radius:9px',
     'background:rgba(4,20,32,.97)', 'box-shadow:0 8px 24px rgba(0,0,0,.4)'
   ].join(';');
 
   const status = document.createElement('div');
-  status.textContent = '2.16.2: Xạ thủ THƯỜNG / SKILL / ULT là 3 VFX khác nhau thật sự, không còn dùng lite / balanced / full để giả tier.';
+  status.textContent = '2.16.3: ba tier Xạ thủ dùng ba silhouette riêng: COMPACT BOLT / TRIPLE RAIL / HEAVY SLUG.';
   status.style.cssText = [
     'margin:2px 2px 8px', 'padding:7px', 'border-radius:6px',
     'background:rgba(95,201,255,.09)', 'color:#bdeeff', 'line-height:1.4',
@@ -82,7 +82,7 @@ function installSwitcher(): void {
   panel.appendChild(status);
 
   const marksmanTitle = document.createElement('div');
-  marksmanTitle.textContent = 'XẠ THỦ · REAL 3-TIER SPIRAL RAIL';
+  marksmanTitle.textContent = 'XẠ THỦ · 3 SILHOUETTE RIÊNG';
   marksmanTitle.style.cssText = [
     'margin:4px 2px 5px', 'font-size:11px', 'font-weight:900', 'letter-spacing:.5px',
     'color:#dff7ff', 'opacity:.92'
@@ -103,9 +103,9 @@ function installSwitcher(): void {
       'display:block', 'width:100%', 'margin:4px 0',
       'border:1px solid rgba(128,223,255,.28)', 'border-radius:7px',
       tier === 'ultimate'
-        ? 'background:linear-gradient(90deg,rgba(255,190,76,.16),rgba(116,103,255,.22))'
+        ? 'background:linear-gradient(90deg,rgba(255,190,76,.18),rgba(116,103,255,.24))'
         : tier === 'skill'
-          ? 'background:rgba(93,177,255,.14)'
+          ? 'background:rgba(93,177,255,.16)'
           : 'background:rgba(255,255,255,.055)',
       'color:#f2fbff', 'padding:8px 9px', 'text-align:left',
       'cursor:pointer', 'font-weight:900', 'letter-spacing:.2px'
@@ -128,7 +128,7 @@ function installSwitcher(): void {
           ? `ĐÃ PHÁT · Xạ thủ · ${tierLabel(result?.marksmanAttackTier ?? tier)} · ${element} · DIRECT ${result?.directVersion ?? VERSION} · ${formLabel(result?.marksmanForm)}`
           : `${label}: ${result?.reason ?? 'không phát được'}`;
       } catch (error) {
-        console.error('[Combat2 2.16.2 Marksman Tier UI]', error);
+        console.error('[Combat2 2.16.3 Marksman Tier UI]', error);
         status.textContent = `${label}: lỗi runtime`;
       } finally {
         setMarksmanBusy(false);
@@ -173,7 +173,7 @@ function installSwitcher(): void {
           ? `ĐÃ PHÁT · ${roleLabel(result.role ?? role)} · ${element}`
           : `${label}: ${result?.reason ?? 'không phát được'}`;
       } catch (error) {
-        console.error('[Combat2 2.16.2 Quick VFX]', error);
+        console.error('[Combat2 2.16.3 Quick VFX]', error);
         status.textContent = `${label}: lỗi runtime`;
       } finally {
         button.disabled = false;
@@ -197,6 +197,8 @@ function installSwitcher(): void {
     marksmanTiers: ['normal', 'skill', 'ultimate'],
     marksmanTierApi: 'playMarksmanTier',
     marksmanRealDistinctTierVfx: true,
+    marksmanSharedTopology: false,
+    marksmanSharedBodyRenderer: false,
     marksmanQualityTierProxy: false,
     singleMarksmanButtonRemoved: true,
     randomButtonsRemoved: true,
