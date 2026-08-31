@@ -4,9 +4,8 @@
 //
 // 2.15.6 changes the test workflow itself: Random is a PRE-BATTLE roster setup.
 // 2.15.7/2.15.8 remain historical generic Marksman visual owners for compatibility gates.
-// 2.16.0 keeps the proven direct runtime ownership model introduced in 2.15.9,
-// but replaces the Marksman visual itself with the narrower Spiral Rail Bolt.
-// 2.16.1 adds three localhost-only Marksman QA buttons: NORMAL / SKILL / ULT.
+// 2.16.0 keeps direct real-combat ownership for the Marksman Spiral Rail Bolt.
+// 2.16.2 gives localhost QA three truly distinct Marksman VFX: NORMAL / SKILL / ULT.
 import '../../../js/data.js';
 import './views/Combat2144BalancedVfxTestRosterPatch';
 import './views/Combat2150ProfessionTestRosterPatch';
@@ -49,9 +48,8 @@ await import('./views/Combat2157VersionBridge');
 await import('./vfx/Combat2158MarksmanPremiumRifledBoltVfxPatch');
 await import('./views/Combat2158VersionBridge');
 
-// Combat2 2.16.0: localhost Xạ thủ QA calls the exact same direct function as real combat.
+// Combat2 2.16.0 direct real-combat Marksman route remains untouched.
+// Combat2 2.16.2 lab imports the real three-tier QA renderer.
 await import('./views/Combat2160MarksmanLabBridge');
 await import('./views/Combat2160VersionBridge');
-
-// Combat2 2.16.1: three Marksman QA buttons map NORMAL/SKILL/ULT to lite/balanced/full.
-await import('./views/Combat2161MarksmanTierUiVersionBridge');
+await import('./views/Combat2162MarksmanTieredQaVersionBridge');
