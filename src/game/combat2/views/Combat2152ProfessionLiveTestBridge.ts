@@ -1,14 +1,18 @@
 import Phaser from 'phaser';
 import { BattleScene } from '../scenes/BattleScene';
 
-const FLAG = '__powderCombat2152ProfessionLiveTestInstalled';
-const SCENE_FLAG = '__powderCombat2152ProfessionLiveTestAttached';
+const VERSION = '2.15.4';
+const FLAG = '__powderCombat2154ProfessionLiveTestInstalled';
+const SCENE_FLAG = '__powderCombat2154ProfessionLiveTestAttached';
 const ROLE_ORDER = [
   'marksman', 'mage', 'fighter', 'knight', 'enchanter',
   'healer', 'musician', 'assassin', 'tank'
 ] as const;
+const MELEE_ROLES = ['fighter', 'knight', 'assassin'] as const;
+const RANGED_ROLES = ['marksman', 'mage', 'enchanter', 'healer', 'musician'] as const;
 
 type RoleKey = typeof ROLE_ORDER[number];
+type TestGroup = 'all' | 'melee' | 'ranged';
 type RuntimePowView = any;
 type RuntimeScene = any;
 
@@ -56,6 +60,23 @@ function clearAutoDemoQuery(): void {
   window.history.replaceState({}, '', next.toString());
 }
 
+function waitScene(scene: RuntimeScene, ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      scene?.events?.off?.(Phaser.Scenes.Events.SHUTDOWN, finish);
+      scene?.events?.off?.(Phaser.Scenes.Events.DESTROY, finish);
+      resolve();
+    };
+    scene?.events?.once?.(Phaser.Scenes.Events.SHUTDOWN, finish);
+    scene?.events?.once?.(Phaser.Scenes.Events.DESTROY, finish);
+    try { scene?.time?.delayedCall?.(Math.max(0, ms), finish); }
+    catch { finish(); }
+  });
+}
+
 function runtimeRows(scene: RuntimeScene): Array<{
   instanceId: string;
   view: RuntimePowView;
@@ -70,6 +91,12 @@ function runtimeRows(scene: RuntimeScene): Array<{
     role: resolveRole(view?.pow?.role),
     side: instanceId.startsWith('player-') ? 'player' : instanceId.startsWith('enemy-') ? 'enemy' : null
   }));
+}
+
+function rolesForGroup(group: TestGroup): readonly RoleKey[] {
+  if (group === 'melee') return MELEE_ROLES;
+  if (group === 'ranged') return RANGED_ROLES;
+  return ROLE_ORDER;
 }
 
 function attachScene(scene: RuntimeScene): boolean {
@@ -95,15 +122,24 @@ function attachScene(scene: RuntimeScene): boolean {
   }));
 
   const pickSource = (role?: RoleKey | null) => {
-    const rows = runtimeRows(scene);
+    const rows = runtimeRows(scene).filter((row) =>
+      Boolean(row.view?.container?.visible)
+      && Number(row.view?.container?.alpha || 0) > 0.35
+      && typeof row.view?.playAttackLunge === 'function'
+    );
     const wanted = role ?? requestedRole();
     if (wanted) {
-      const player = rows.find((row) => row.role === wanted && row.side === 'player');
-      if (player) return player;
-      const anySide = rows.find((row) => row.role === wanted);
-      if (anySide) return anySide;
+      const activePlayer = rows.find((row) => row.role === wanted && row.side === 'player' && Number(row.view?.container?.scaleX || 0) >= 0.7);
+      if (activePlayer) return activePlayer;
+      const activeAny = rows.find((row) => row.role === wanted && Number(row.view?.container?.scaleX || 0) >= 0.7);
+      if (activeAny) return activeAny;
+      const anyRole = rows.find((row) => row.role === wanted);
+      if (anyRole) return anyRole;
     }
-    return rows.find((row) => row.side === 'player') ?? rows[0] ?? null;
+    return rows.find((row) => row.side === 'player' && Number(row.view?.container?.scaleX || 0) >= 0.7)
+      ?? rows.find((row) => row.side === 'player')
+      ?? rows[0]
+      ?? null;
   };
 
   const pickTarget = (sourceSide: 'player' | 'enemy' | null) => {
@@ -117,6 +153,9 @@ function attachScene(scene: RuntimeScene): boolean {
   };
 
   let playing = false;
+  let seriesToken = 0;
+  let lastRandomRole: RoleKey | null = null;
+
   const play = async (requested?: string | null) => {
     if (playing) return { ok: false, reason: 'busy', snapshot: snapshot() };
     const role = resolveRole(requested) ?? requestedRole();
@@ -146,14 +185,87 @@ function attachScene(scene: RuntimeScene): boolean {
     }
   };
 
+  const availableRandomRoles = (group: TestGroup): RoleKey[] => {
+    const allowed = new Set<RoleKey>(rolesForGroup(group));
+    const rows = runtimeRows(scene).filter((row) =>
+      row.role
+      && allowed.has(row.role)
+      && Boolean(row.view?.container?.visible)
+      && Number(row.view?.container?.alpha || 0) > 0.35
+      && typeof row.view?.playAttackLunge === 'function'
+    );
+    return Array.from(new Set(rows.map((row) => row.role).filter((role): role is RoleKey => Boolean(role))));
+  };
+
+  const pickRandomRole = (group: TestGroup): RoleKey | null => {
+    let roles = availableRandomRoles(group);
+    if (roles.length > 1 && lastRandomRole) roles = roles.filter((role) => role !== lastRandomRole);
+    if (roles.length === 0) return null;
+    const role = roles[Math.floor(Math.random() * roles.length)] ?? roles[0];
+    lastRandomRole = role;
+    return role;
+  };
+
+  const playRandom = async (group: TestGroup = 'all') => {
+    const role = pickRandomRole(group);
+    if (!role) return { ok: false, reason: 'no-random-role-available', group };
+    const result = await play(role);
+    return { ...result, random: true, group, requestedRole: role };
+  };
+
+  const stopSeries = () => {
+    seriesToken += 1;
+    return { ok: true, stopped: true, presentationOnly: true };
+  };
+
+  const playRandomSeries = async (group: TestGroup = 'all', requestedCount = 9) => {
+    const count = Phaser.Math.Clamp(Math.floor(Number(requestedCount) || 1), 1, 24);
+    const token = ++seriesToken;
+    const results: any[] = [];
+    for (let index = 0; index < count; index += 1) {
+      if (token !== seriesToken) break;
+      const result = await playRandom(group);
+      results.push(result);
+      root.POWDER_COMBAT2_PROFESSION_LIVE_TEST_LAST = result;
+      root.POWDER_COMBAT2_RANDOM_VFX_PROGRESS = {
+        version: VERSION,
+        group,
+        current: index + 1,
+        total: count,
+        lastRole: result?.role ?? result?.requestedRole ?? null,
+        cancelled: token !== seriesToken
+      };
+      if (token !== seriesToken) break;
+      await waitScene(scene, group === 'melee' ? 210 : 260);
+    }
+    const cancelled = token !== seriesToken;
+    return {
+      ok: results.some((row) => row?.ok),
+      group,
+      requestedCount: count,
+      completedCount: results.length,
+      cancelled,
+      results,
+      presentationOnly: true,
+      damageApplied: false,
+      turnAdvanced: false
+    };
+  };
+
   root.POWDER_COMBAT2_PROFESSION_LIVE_TEST = {
-    version: '2.15.2',
+    version: VERSION,
     ready: true,
     devOnly: true,
     roles: [...ROLE_ORDER],
+    meleeRoles: [...MELEE_ROLES],
+    rangedRoles: [...RANGED_ROLES],
     focusRole: requestedRole(),
     play,
+    playRandom,
+    playRandomSeries,
+    stopRandomSeries: stopSeries,
     snapshot,
+    maxRandomSeriesCount: 24,
     usesLivePowViewPlayAttackLunge: true,
     presentationOnly: true,
     damageApplied: false,
@@ -171,9 +283,10 @@ function attachScene(scene: RuntimeScene): boolean {
   }
 
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    seriesToken += 1;
     if (root.POWDER_COMBAT2_PROFESSION_LIVE_TEST?.play === play) {
       root.POWDER_COMBAT2_PROFESSION_LIVE_TEST = {
-        version: '2.15.2',
+        version: VERSION,
         ready: false,
         devOnly: true,
         reason: 'scene-shutdown',
@@ -195,14 +308,14 @@ function attachRunningBattleScene(): boolean {
   return false;
 }
 
-function installCombat2152ProfessionLiveTestBridge(): void {
+function installCombat2154ProfessionLiveTestBridge(): void {
   const root = globalThis as any;
   if (root[FLAG]) return;
   root[FLAG] = true;
 
   if (!isLocalDev()) {
     root.POWDER_COMBAT2_PROFESSION_LIVE_TEST_BRIDGE = {
-      version: '2.15.2', devOnly: true, installed: false,
+      version: VERSION, devOnly: true, installed: false,
       reason: 'non-localhost', combatLogicChanged: false
     };
     return;
@@ -211,7 +324,7 @@ function installCombat2152ProfessionLiveTestBridge(): void {
   const proto = BattleScene.prototype as any;
   const originalCreate = proto.create;
   if (typeof originalCreate === 'function') {
-    proto.create = function combat2152ProfessionLiveTestCreate(this: RuntimeScene, ...args: any[]): void {
+    proto.create = function combat2154ProfessionLiveTestCreate(this: RuntimeScene, ...args: any[]): void {
       originalCreate.apply(this, args);
       attachScene(this);
     };
@@ -223,7 +336,7 @@ function installCombat2152ProfessionLiveTestBridge(): void {
   }
 
   root.POWDER_COMBAT2_PROFESSION_LIVE_TEST_BRIDGE = {
-    version: '2.15.2',
+    version: VERSION,
     devOnly: true,
     installed: true,
     patchesFutureBattleSceneCreate: true,
@@ -231,6 +344,11 @@ function installCombat2152ProfessionLiveTestBridge(): void {
     boundedBootRetries: [80, 240, 600],
     livePowViewLookup: true,
     livePlayAttackLunge: true,
+    randomSingle: true,
+    randomSeries: true,
+    randomGroups: ['all', 'melee', 'ranged'],
+    maxRandomSeriesCount: 24,
+    stoppableRandomSeries: true,
     autoDemoQuery: 'professionDemo=1',
     presentationOnly: true,
     damageApplied: false,
@@ -239,4 +357,4 @@ function installCombat2152ProfessionLiveTestBridge(): void {
   };
 }
 
-installCombat2152ProfessionLiveTestBridge();
+installCombat2154ProfessionLiveTestBridge();
