@@ -5,9 +5,10 @@ import {
   type DirectionalProjectileOptions
 } from './DirectionalElementProjectileVfx';
 import {
-  isCombat2159MarksmanRole,
-  playCombat2159MarksmanDirectVfx
-} from './Combat2159MarksmanDirectVfx';
+  COMBAT2160_MARKSMAN_VERSION,
+  isCombat2160MarksmanRole,
+  playCombat2160MarksmanSpiralRailBoltVfx
+} from './Combat2160MarksmanSpiralRailBoltVfx';
 import { PowView } from '../views/PowView';
 
 interface PowViewProjectileRuntime {
@@ -63,10 +64,10 @@ async function playNightProjectile(
     role: view.pow.role
   };
 
-  // Combat2 2.15.9: Marksman bypasses the historical owner stack completely.
-  // Both real combat and live QA now execute the same dedicated projectile function.
-  if (isCombat2159MarksmanRole(view.pow.role)) {
-    await playCombat2159MarksmanDirectVfx(options);
+  // Combat2 2.16.0: Marksman has one direct runtime owner.
+  // This intentionally bypasses every historical generic projectile override.
+  if (isCombat2160MarksmanRole(view.pow.role)) {
+    await playCombat2160MarksmanSpiralRailBoltVfx(options);
     return;
   }
 
@@ -78,10 +79,9 @@ async function playNightProjectile(
 /**
  * Final attack-travel bridge.
  *
- * Combat2 2.15.9 keeps compatibility routing for every non-Marksman profession,
- * while Marksman has one direct runtime implementation. This avoids the long
- * stacked DirectionalElementProjectileVfx.play override chain that made visual
- * ownership difficult to verify during QA.
+ * Combat2 2.16.0 keeps compatibility routing for every non-Marksman profession,
+ * while Marksman uses one dedicated Spiral Rail Bolt implementation in both
+ * real combat and localhost QA.
  */
 export function installCombatNightProjectileBridge(): void {
   const prototype = PowView.prototype as unknown as {
@@ -142,7 +142,7 @@ export function installCombatNightProjectileBridge(): void {
 
   const root = globalThis as any;
   root.POWDER_COMBAT2_NIGHT_PROJECTILE = {
-    version: 'combat2-2.15.9',
+    version: 'combat2-2.16.0',
     runtimeEntryPoint: 'PowView.playAttackLunge',
     directTravelOwner: true,
     attackLungeOwner: true,
@@ -150,7 +150,8 @@ export function installCombatNightProjectileBridge(): void {
     elementForwarding: true,
     sourceToTarget: true,
     marksmanDirectRuntime: true,
-    marksmanDirectVersion: '2.15.9',
+    marksmanDirectVersion: COMBAT2160_MARKSMAN_VERSION,
+    marksmanForm: 'spiral-rail-bolt',
     nonMarksmanCompatibilityOwnerStack: true,
     combatLogicChanged: false
   };
