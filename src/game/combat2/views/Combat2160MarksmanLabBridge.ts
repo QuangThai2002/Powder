@@ -1,13 +1,13 @@
 import Phaser from 'phaser';
 import type { CombatProjectileElement, DirectionalProjectileOptions } from '../vfx/DirectionalElementProjectileVfx';
 import {
-  COMBAT2162_MARKSMAN_TIER_VERSION,
-  playCombat2162MarksmanTieredQaVfx,
-  type Combat2162MarksmanTier
-} from '../vfx/Combat2162MarksmanTieredQaVfx';
+  COMBAT2163_MARKSMAN_VERSION,
+  playCombat2163MarksmanDistinctTierVfx,
+  type Combat2163MarksmanTier
+} from '../vfx/Combat2163MarksmanDistinctTierVfx';
 
 const FLAG = '__powderCombat2160MarksmanLabBridgeInstalled';
-const TIER_UI_VERSION = COMBAT2162_MARKSMAN_TIER_VERSION;
+const TIER_UI_VERSION = COMBAT2163_MARKSMAN_VERSION;
 
 type RoleAwareOptions = DirectionalProjectileOptions & { role?: string };
 type RuntimeRow = {
@@ -63,8 +63,20 @@ function randomElement(api: any): CombatProjectileElement {
   return values[Math.floor(Math.random() * values.length)] ?? 'fire';
 }
 
-function isPreviewTier(value: unknown): value is Combat2162MarksmanTier {
+function isPreviewTier(value: unknown): value is Combat2163MarksmanTier {
   return value === 'normal' || value === 'skill' || value === 'ultimate';
+}
+
+function formFor(tier: Combat2163MarksmanTier): string {
+  if (tier === 'skill') return 'piercing-triple-rail-shot';
+  if (tier === 'ultimate') return 'rail-breaker-heavy-slug';
+  return 'compact-spiral-rail';
+}
+
+function silhouetteFor(tier: Combat2163MarksmanTier): string {
+  if (tier === 'skill') return 'center-bolt-plus-two-side-rail-blades';
+  if (tier === 'ultimate') return 'heavy-rail-slug-plus-shock-cone-plus-three-compression-rings';
+  return 'single-compact-bolt';
 }
 
 function installCombat2160MarksmanLabBridge(): void {
@@ -75,7 +87,7 @@ function installCombat2160MarksmanLabBridge(): void {
 
   const api = root.POWDER_COMBAT2_VFX_LAB ?? root.POWDER_COMBAT2_PROFESSION_LIVE_TEST;
   if (!api || typeof api.play !== 'function') {
-    root.POWDER_COMBAT2_2162_MARKSMAN_TIER_UI = {
+    root.POWDER_COMBAT2_2163_MARKSMAN_TIER_UI = {
       version: TIER_UI_VERSION,
       ready: false,
       reason: 'base-vfx-lab-missing'
@@ -87,7 +99,7 @@ function installCombat2160MarksmanLabBridge(): void {
   let marksmanPlaying = false;
 
   const playTier = async (
-    previewTier: Combat2162MarksmanTier,
+    previewTier: Combat2163MarksmanTier,
     requestedElement?: CombatProjectileElement | null
   ) => {
     if (marksmanPlaying) {
@@ -117,7 +129,7 @@ function installCombat2160MarksmanLabBridge(): void {
 
     marksmanPlaying = true;
     try {
-      await playCombat2162MarksmanTieredQaVfx(options, previewTier);
+      await playCombat2163MarksmanDistinctTierVfx(options, previewTier);
       const result = {
         ok: true,
         role: 'marksman',
@@ -127,12 +139,11 @@ function installCombat2160MarksmanLabBridge(): void {
         directMarksmanRuntime: true,
         directVersion: TIER_UI_VERSION,
         marksmanAttackTier: previewTier,
-        marksmanForm: previewTier === 'normal'
-          ? 'compact-spiral-rail'
-          : previewTier === 'skill'
-            ? 'piercing-spiral-shot'
-            : 'rail-breaker',
+        marksmanForm: formFor(previewTier),
+        marksmanSilhouette: silhouetteFor(previewTier),
         realDistinctTierVfx: true,
+        sharedTopology: false,
+        sharedBodyRenderer: false,
         qualityTierProxy: false,
         presentationOnly: true,
         damageApplied: false,
@@ -141,7 +152,7 @@ function installCombat2160MarksmanLabBridge(): void {
       root.POWDER_COMBAT2_PROFESSION_LIVE_TEST_LAST = result;
       return result;
     } catch (error) {
-      console.error('[Combat2 2.16.2 Marksman Real 3-Tier Lab]', error);
+      console.error('[Combat2 2.16.3 Marksman Distinct 3-Tier Lab]', error);
       return {
         ok: false,
         reason: 'marksman-tier-vfx-threw',
@@ -163,7 +174,7 @@ function installCombat2160MarksmanLabBridge(): void {
   };
 
   api.playMarksmanTier = async (
-    requestedTier?: Combat2162MarksmanTier | string | null,
+    requestedTier?: Combat2163MarksmanTier | string | null,
     requestedElement?: CombatProjectileElement | null
   ) => {
     if (!isPreviewTier(requestedTier)) {
@@ -181,16 +192,21 @@ function installCombat2160MarksmanLabBridge(): void {
     everyOtherRoleDelegated: true,
     combatLogicChanged: false
   };
-  root.POWDER_COMBAT2_2162_MARKSMAN_TIER_UI = {
+  root.POWDER_COMBAT2_2163_MARKSMAN_TIER_UI = {
     version: TIER_UI_VERSION,
     ready: true,
     api: 'playMarksmanTier',
     tiers: ['normal', 'skill', 'ultimate'],
     realDistinctTierVfx: true,
+    sharedTopology: false,
+    sharedBodyRenderer: false,
     qualityTierProxy: false,
     normalForm: 'compact-spiral-rail',
-    skillForm: 'piercing-spiral-shot',
-    ultimateForm: 'rail-breaker',
+    normalSilhouette: 'single-compact-bolt',
+    skillForm: 'piercing-triple-rail-shot',
+    skillSilhouette: 'center-bolt-plus-two-side-rail-blades',
+    ultimateForm: 'rail-breaker-heavy-slug',
+    ultimateSilhouette: 'heavy-rail-slug-plus-shock-cone-plus-three-compression-rings',
     blocksConcurrentMarksmanPreview: true,
     presentationOnly: true,
     combatLogicChanged: false
