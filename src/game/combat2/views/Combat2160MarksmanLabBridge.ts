@@ -6,13 +6,22 @@ import {
 } from '../vfx/Combat2160MarksmanSpiralRailBoltVfx';
 
 const FLAG = '__powderCombat2160MarksmanLabBridgeInstalled';
+const TIER_UI_VERSION = '2.16.1';
 
 type RoleAwareOptions = DirectionalProjectileOptions & { role?: string };
+type MarksmanPreviewTier = 'normal' | 'skill' | 'ultimate';
+type PreviewFxTier = 'lite' | 'balanced' | 'full';
 type RuntimeRow = {
   instanceId: string;
   side: 'player' | 'enemy';
   view: any;
 };
+
+const PREVIEW_FX_TIER: Readonly<Record<MarksmanPreviewTier, PreviewFxTier>> = Object.freeze({
+  normal: 'lite',
+  skill: 'balanced',
+  ultimate: 'full'
+});
 
 function isLocalDev(): boolean {
   return typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
@@ -61,6 +70,10 @@ function randomElement(api: any): CombatProjectileElement {
   return values[Math.floor(Math.random() * values.length)] ?? 'fire';
 }
 
+function isPreviewTier(value: unknown): value is MarksmanPreviewTier {
+  return value === 'normal' || value === 'skill' || value === 'ultimate';
+}
+
 function installCombat2160MarksmanLabBridge(): void {
   const root = globalThis as any;
   if (root[FLAG]) return;
@@ -74,13 +87,23 @@ function installCombat2160MarksmanLabBridge(): void {
       ready: false,
       reason: 'base-vfx-lab-missing'
     };
+    root.POWDER_COMBAT2_2161_MARKSMAN_TIER_UI = {
+      version: TIER_UI_VERSION,
+      ready: false,
+      reason: 'base-vfx-lab-missing'
+    };
     return;
   }
 
   const previousPlay = api.play.bind(api);
-  api.play = async (requestedRole?: string | null, requestedElement?: CombatProjectileElement | null) => {
-    if (String(requestedRole || '').toLowerCase() !== 'marksman') {
-      return previousPlay(requestedRole, requestedElement);
+  let marksmanPlaying = false;
+
+  const playDirectMarksman = async (
+    requestedElement?: CombatProjectileElement | null,
+    previewTier?: MarksmanPreviewTier
+  ) => {
+    if (marksmanPlaying) {
+      return { ok: false, reason: 'marksman-preview-busy', role: 'marksman', marksmanAttackTier: previewTier ?? null };
     }
 
     const scene = findScene();
@@ -104,6 +127,13 @@ function installCombat2160MarksmanLabBridge(): void {
       role: 'marksman'
     };
 
+    const forcedFxTier = previewTier ? PREVIEW_FX_TIER[previewTier] : null;
+    const hadFxTier = Object.prototype.hasOwnProperty.call(root, 'POWDER_COMBAT2_FX_TIER');
+    const previousFxTier = root.POWDER_COMBAT2_FX_TIER;
+
+    marksmanPlaying = true;
+    if (forcedFxTier) root.POWDER_COMBAT2_FX_TIER = forcedFxTier;
+
     try {
       await playCombat2160MarksmanSpiralRailBoltVfx(options);
       const result = {
@@ -114,6 +144,9 @@ function installCombat2160MarksmanLabBridge(): void {
         target: targetRow.instanceId,
         directMarksmanRuntime: true,
         directVersion: COMBAT2160_MARKSMAN_VERSION,
+        tierUiVersion: TIER_UI_VERSION,
+        marksmanAttackTier: previewTier ?? null,
+        previewFxTier: forcedFxTier,
         marksmanForm: 'spiral-rail-bolt',
         usesSameFunctionAsRealCombat: true,
         bypassesGenericOwnerStack: true,
@@ -124,15 +157,41 @@ function installCombat2160MarksmanLabBridge(): void {
       root.POWDER_COMBAT2_PROFESSION_LIVE_TEST_LAST = result;
       return result;
     } catch (error) {
-      console.error('[Combat2 2.16.0 Marksman Spiral Rail Lab]', error);
+      console.error('[Combat2 2.16.1 Marksman 3-Tier Lab]', error);
       return {
         ok: false,
         reason: 'spiral-rail-bolt-threw',
         role: 'marksman',
         element,
-        directVersion: COMBAT2160_MARKSMAN_VERSION
+        directVersion: COMBAT2160_MARKSMAN_VERSION,
+        tierUiVersion: TIER_UI_VERSION,
+        marksmanAttackTier: previewTier ?? null,
+        previewFxTier: forcedFxTier
       };
+    } finally {
+      if (forcedFxTier) {
+        if (hadFxTier) root.POWDER_COMBAT2_FX_TIER = previousFxTier;
+        else delete root.POWDER_COMBAT2_FX_TIER;
+      }
+      marksmanPlaying = false;
     }
+  };
+
+  api.play = async (requestedRole?: string | null, requestedElement?: CombatProjectileElement | null) => {
+    if (String(requestedRole || '').toLowerCase() !== 'marksman') {
+      return previousPlay(requestedRole, requestedElement);
+    }
+    return playDirectMarksman(requestedElement);
+  };
+
+  api.playMarksmanTier = async (
+    requestedTier?: MarksmanPreviewTier | string | null,
+    requestedElement?: CombatProjectileElement | null
+  ) => {
+    if (!isPreviewTier(requestedTier)) {
+      return { ok: false, reason: 'invalid-marksman-preview-tier', role: 'marksman', requestedTier };
+    }
+    return playDirectMarksman(requestedElement, requestedTier);
   };
 
   root.POWDER_COMBAT2_VFX_LAB = api;
@@ -145,6 +204,19 @@ function installCombat2160MarksmanLabBridge(): void {
     usesSameFunctionAsRealCombat: true,
     bypassesGenericOwnerStack: true,
     everyOtherRoleDelegated: true,
+    tierPreviewApi: true,
+    combatLogicChanged: false
+  };
+  root.POWDER_COMBAT2_2161_MARKSMAN_TIER_UI = {
+    version: TIER_UI_VERSION,
+    ready: true,
+    api: 'playMarksmanTier',
+    tiers: ['normal', 'skill', 'ultimate'],
+    mapping: { ...PREVIEW_FX_TIER },
+    restoresPreviousFxTier: true,
+    blocksConcurrentMarksmanPreview: true,
+    sameSpiralRailFunction: true,
+    presentationOnly: true,
     combatLogicChanged: false
   };
 }
