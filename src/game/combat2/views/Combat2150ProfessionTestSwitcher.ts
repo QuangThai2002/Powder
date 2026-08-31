@@ -1,4 +1,4 @@
-const VERSION = '2.15.6';
+const VERSION = '2.15.9';
 const ROLE_BUTTONS = [
   ['marksman', 'Xạ thủ'],
   ['mage', 'Pháp sư'],
@@ -36,7 +36,7 @@ function installSwitcher(): void {
 
   const toggle = document.createElement('button');
   toggle.type = 'button';
-  toggle.textContent = 'VFX NHANH · 2.15.6';
+  toggle.textContent = `VFX NHANH · ${VERSION}`;
   toggle.style.cssText = [
     'border:1px solid rgba(151,218,255,.68)', 'border-radius:8px',
     'background:rgba(4,20,32,.94)', 'color:#eef8ff', 'padding:8px 11px',
@@ -51,7 +51,7 @@ function installSwitcher(): void {
   ].join(';');
 
   const status = document.createElement('div');
-  status.textContent = 'Bấm nghề để phát VFX ngay. Random đội hình nằm ở CẤU HÌNH TEST trước trận.';
+  status.textContent = 'Bấm nghề để phát VFX ngay. Xạ thủ 2.15.9 dùng đường runtime direct riêng.';
   status.style.cssText = [
     'margin:2px 2px 8px', 'padding:7px', 'border-radius:6px',
     'background:rgba(95,201,255,.09)', 'color:#bdeeff', 'line-height:1.4',
@@ -81,11 +81,14 @@ function installSwitcher(): void {
         const result = await api.play(role);
         (globalThis as any).POWDER_COMBAT2_PROFESSION_LIVE_TEST_LAST = result;
         const element = result?.element ? String(result.element).toUpperCase() : 'HỆ HIỆN TẠI';
+        const direct = result?.directMarksmanRuntime === true
+          ? ` · DIRECT ${result?.directVersion ?? '2.15.9'}`
+          : '';
         status.textContent = result?.ok
-          ? `ĐÃ PHÁT · ${roleLabel(result.role ?? role)} · ${element}`
+          ? `ĐÃ PHÁT · ${roleLabel(result.role ?? role)} · ${element}${direct}`
           : `${label}: ${result?.reason ?? 'không phát được'}`;
       } catch (error) {
-        console.error('[Combat2 2.15.6 Quick VFX]', error);
+        console.error('[Combat2 2.15.9 Quick VFX]', error);
         status.textContent = `${label}: lỗi runtime`;
       } finally {
         button.disabled = false;
@@ -105,6 +108,7 @@ function installSwitcher(): void {
     devOnly: true,
     roleCount: ROLE_BUTTONS.length,
     directRoleButtons: true,
+    marksmanDirectRuntimeLabel: true,
     randomButtonsRemoved: true,
     preBattleRandomizerOwnsRandom: true,
     reloadOnRoleSelect: false,
