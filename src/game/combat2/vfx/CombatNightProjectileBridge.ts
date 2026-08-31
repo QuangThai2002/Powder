@@ -16,6 +16,12 @@ import {
   playCombat2165MageDistinctTierVfx,
   type Combat2165MageTier
 } from './Combat2165MageDistinctTierVfx';
+import {
+  COMBAT2166_TANK_VERSION,
+  isCombat2166TankRole,
+  playCombat2166TankDistinctTierVfx,
+  type Combat2166TankTier
+} from './Combat2166TankDistinctTierVfx';
 import { PowView } from '../views/PowView';
 
 interface PowViewProjectileRuntime {
@@ -104,6 +110,20 @@ async function playNightProjectile(view: PowViewProjectileRuntime, targetX: numb
     return;
   }
 
+  if (isCombat2166TankRole(view.pow.role)) {
+    const tier = resolveActionTier(view) as Combat2166TankTier;
+    await playCombat2166TankDistinctTierVfx(options, tier);
+    (globalThis as any).POWDER_COMBAT2_TANK_PROJECTILE_LAST = {
+      version: COMBAT2166_TANK_VERSION,
+      tier,
+      role: view.pow.role,
+      element: options.element,
+      at: Date.now(),
+      realCombatRoute: true
+    };
+    return;
+  }
+
   const roleAwarePlay = DirectionalElementProjectileVfx.play as unknown as
     (runtimeOptions: RoleAwareProjectileOptions) => Promise<void>;
   await roleAwarePlay(options);
@@ -148,7 +168,7 @@ export function installCombatNightProjectileBridge(): void {
 
   const root = globalThis as any;
   root.POWDER_COMBAT2_NIGHT_PROJECTILE = {
-    version: `combat2-${COMBAT2165_MAGE_VERSION}`,
+    version: `combat2-${COMBAT2166_TANK_VERSION}`,
     runtimeEntryPoint: 'PowView.playAttackLunge',
     directTravelOwner: true,
     attackLungeOwner: true,
@@ -163,6 +183,10 @@ export function installCombatNightProjectileBridge(): void {
     mageDirectVersion: COMBAT2165_MAGE_VERSION,
     mageTierContext: true,
     mageForms: { normal: 'arcane-orb', skill: 'twin-orbit-orb', ultimate: 'arcane-comet' },
+    tankDirectRuntime: true,
+    tankDirectVersion: COMBAT2166_TANK_VERSION,
+    tankTierContext: true,
+    tankForms: { normal: 'guard-plate-ram', skill: 'tri-plate-bulwark-charge', ultimate: 'fortress-breaker-ram' },
     otherRolesCompatibilityOwnerStack: true,
     combatLogicChanged: false
   };
