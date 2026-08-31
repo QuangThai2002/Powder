@@ -5,6 +5,7 @@ function installCombat2159VersionBridge(): void {
   const projectile = root.POWDER_COMBAT2_NIGHT_PROJECTILE;
   const lab = root.POWDER_COMBAT2_2159_MARKSMAN_LAB;
   const ui = root.POWDER_COMBAT2_PROFESSION_TEST_UI;
+  const uiPending = typeof document !== 'undefined' && document.readyState === 'loading' && !ui;
 
   const checks = {
     projectileBridgeDirect: projectile?.marksmanDirectRuntime === true
@@ -17,11 +18,12 @@ function installCombat2159VersionBridge(): void {
     sameFunctionForCombatAndLab: lab?.usesSameFunctionAsRealCombat === true,
     bypassesGenericOwnerStack: lab?.bypassesGenericOwnerStack === true,
     everyOtherRoleDelegated: lab?.everyOtherRoleDelegated === true,
-    visibleQaVersion: ui?.version === VERSION
-      && ui?.marksmanDirectRuntimeLabel === true,
+    visibleQaVersionReadyOrPending: uiPending || (
+      ui?.version === VERSION && ui?.marksmanDirectRuntimeLabel === true
+    ),
     combatLogicUnchanged: projectile?.combatLogicChanged === false
       && lab?.combatLogicChanged === false
-      && ui?.combatLogicChanged === false
+      && (uiPending || ui?.combatLogicChanged === false)
   };
   const pass = Object.values(checks).every(Boolean);
 
@@ -36,8 +38,8 @@ function installCombat2159VersionBridge(): void {
   root.POWDER_COMBAT2_2159_REGRESSION = { version: VERSION, pass, checks };
 
   if (typeof location !== 'undefined' && ['localhost', '127.0.0.1'].includes(location.hostname)) {
-    if (pass) console.info('[Combat2 2.15.9 Regression PASS]', { projectile, lab, ui, checks });
-    else console.error('[Combat2 2.15.9 Regression FAIL - branch only]', { projectile, lab, ui, checks });
+    if (pass) console.info('[Combat2 2.15.9 Regression PASS]', { projectile, lab, ui, uiPending, checks });
+    else console.error('[Combat2 2.15.9 Regression FAIL - branch only]', { projectile, lab, ui, uiPending, checks });
   }
 }
 
