@@ -4,6 +4,10 @@ import {
   type CombatProjectileElement,
   type DirectionalProjectileOptions
 } from './DirectionalElementProjectileVfx';
+import {
+  isCombat2159MarksmanRole,
+  playCombat2159MarksmanDirectVfx
+} from './Combat2159MarksmanDirectVfx';
 import { PowView } from '../views/PowView';
 
 interface PowViewProjectileRuntime {
@@ -59,17 +63,25 @@ async function playNightProjectile(
     role: view.pow.role
   };
 
+  // Combat2 2.15.9: Marksman bypasses the historical owner stack completely.
+  // Both real combat and live QA now execute the same dedicated projectile function.
+  if (isCombat2159MarksmanRole(view.pow.role)) {
+    await playCombat2159MarksmanDirectVfx(options);
+    return;
+  }
+
   const roleAwarePlay = DirectionalElementProjectileVfx.play as unknown as
     (runtimeOptions: RoleAwareProjectileOptions) => Promise<void>;
   await roleAwarePlay(options);
 }
 
 /**
- * Final Night attack-travel owner.
+ * Final attack-travel bridge.
  *
- * Night46 keeps the same proven Combat2 entry point but now forwards canonical Pow.role
- * to the final VFX owner. That lets presentation route by profession without touching
- * damage, targeting, turn order or any CombatState mechanic.
+ * Combat2 2.15.9 keeps compatibility routing for every non-Marksman profession,
+ * while Marksman has one direct runtime implementation. This avoids the long
+ * stacked DirectionalElementProjectileVfx.play override chain that made visual
+ * ownership difficult to verify during QA.
  */
 export function installCombatNightProjectileBridge(): void {
   const prototype = PowView.prototype as unknown as {
@@ -130,13 +142,16 @@ export function installCombatNightProjectileBridge(): void {
 
   const root = globalThis as any;
   root.POWDER_COMBAT2_NIGHT_PROJECTILE = {
-    version: 'night-46',
+    version: 'combat2-2.15.9',
     runtimeEntryPoint: 'PowView.playAttackLunge',
     directTravelOwner: true,
     attackLungeOwner: true,
     roleForwarding: true,
     elementForwarding: true,
     sourceToTarget: true,
+    marksmanDirectRuntime: true,
+    marksmanDirectVersion: '2.15.9',
+    nonMarksmanCompatibilityOwnerStack: true,
     combatLogicChanged: false
   };
 }
