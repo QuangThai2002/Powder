@@ -1,4 +1,4 @@
-const VERSION = '2.16.1';
+const VERSION = '2.16.2';
 const ROLE_BUTTONS = [
   ['marksman', 'Xạ thủ'],
   ['mage', 'Pháp sư'],
@@ -39,6 +39,13 @@ function tierLabel(tier: unknown): string {
   return String(tier || '').toUpperCase();
 }
 
+function formLabel(form: unknown): string {
+  if (form === 'compact-spiral-rail') return 'COMPACT SPIRAL';
+  if (form === 'piercing-spiral-shot') return 'PIERCING SPIRAL';
+  if (form === 'rail-breaker') return 'RAIL BREAKER';
+  return String(form || 'SPIRAL RAIL').toUpperCase();
+}
+
 function installSwitcher(): void {
   if (!isLocalDev() || document.getElementById('combat2-profession-test-switcher')) return;
 
@@ -60,13 +67,13 @@ function installSwitcher(): void {
 
   const panel = document.createElement('div');
   panel.style.cssText = [
-    'display:none', 'margin-top:6px', 'width:236px', 'max-height:80vh', 'overflow:auto',
+    'display:none', 'margin-top:6px', 'width:248px', 'max-height:80vh', 'overflow:auto',
     'padding:8px', 'border:1px solid rgba(151,218,255,.4)', 'border-radius:9px',
     'background:rgba(4,20,32,.97)', 'box-shadow:0 8px 24px rgba(0,0,0,.4)'
   ].join(';');
 
   const status = document.createElement('div');
-  status.textContent = 'Xạ thủ có 3 mức test riêng: THƯỜNG / SKILL / ULT. Các nghề khác giữ nút test cũ.';
+  status.textContent = '2.16.2: Xạ thủ THƯỜNG / SKILL / ULT là 3 VFX khác nhau thật sự, không còn dùng lite / balanced / full để giả tier.';
   status.style.cssText = [
     'margin:2px 2px 8px', 'padding:7px', 'border-radius:6px',
     'background:rgba(95,201,255,.09)', 'color:#bdeeff', 'line-height:1.4',
@@ -75,7 +82,7 @@ function installSwitcher(): void {
   panel.appendChild(status);
 
   const marksmanTitle = document.createElement('div');
-  marksmanTitle.textContent = 'XẠ THỦ · SPIRAL RAIL';
+  marksmanTitle.textContent = 'XẠ THỦ · REAL 3-TIER SPIRAL RAIL';
   marksmanTitle.style.cssText = [
     'margin:4px 2px 5px', 'font-size:11px', 'font-weight:900', 'letter-spacing:.5px',
     'color:#dff7ff', 'opacity:.92'
@@ -96,9 +103,9 @@ function installSwitcher(): void {
       'display:block', 'width:100%', 'margin:4px 0',
       'border:1px solid rgba(128,223,255,.28)', 'border-radius:7px',
       tier === 'ultimate'
-        ? 'background:linear-gradient(90deg,rgba(255,190,76,.13),rgba(116,103,255,.16))'
+        ? 'background:linear-gradient(90deg,rgba(255,190,76,.16),rgba(116,103,255,.22))'
         : tier === 'skill'
-          ? 'background:rgba(93,177,255,.11)'
+          ? 'background:rgba(93,177,255,.14)'
           : 'background:rgba(255,255,255,.055)',
       'color:#f2fbff', 'padding:8px 9px', 'text-align:left',
       'cursor:pointer', 'font-weight:900', 'letter-spacing:.2px'
@@ -118,10 +125,10 @@ function installSwitcher(): void {
         (globalThis as any).POWDER_COMBAT2_PROFESSION_LIVE_TEST_LAST = result;
         const element = result?.element ? String(result.element).toUpperCase() : 'HỆ HIỆN TẠI';
         status.textContent = result?.ok
-          ? `ĐÃ PHÁT · Xạ thủ · ${tierLabel(result?.marksmanAttackTier ?? tier)} · ${element} · DIRECT ${result?.directVersion ?? '2.16.0'} · ${String(result?.previewFxTier ?? '').toUpperCase()}`
+          ? `ĐÃ PHÁT · Xạ thủ · ${tierLabel(result?.marksmanAttackTier ?? tier)} · ${element} · DIRECT ${result?.directVersion ?? VERSION} · ${formLabel(result?.marksmanForm)}`
           : `${label}: ${result?.reason ?? 'không phát được'}`;
       } catch (error) {
-        console.error('[Combat2 2.16.1 Marksman Tier UI]', error);
+        console.error('[Combat2 2.16.2 Marksman Tier UI]', error);
         status.textContent = `${label}: lỗi runtime`;
       } finally {
         setMarksmanBusy(false);
@@ -166,7 +173,7 @@ function installSwitcher(): void {
           ? `ĐÃ PHÁT · ${roleLabel(result.role ?? role)} · ${element}`
           : `${label}: ${result?.reason ?? 'không phát được'}`;
       } catch (error) {
-        console.error('[Combat2 2.16.1 Quick VFX]', error);
+        console.error('[Combat2 2.16.2 Quick VFX]', error);
         status.textContent = `${label}: lỗi runtime`;
       } finally {
         button.disabled = false;
@@ -186,11 +193,11 @@ function installSwitcher(): void {
     devOnly: true,
     roleCount: ROLE_BUTTONS.length,
     directRoleButtons: true,
-    marksmanDirectRuntimeLabel: true,
-    marksmanSpiralRailLabel: true,
     marksmanTierButtons: 3,
     marksmanTiers: ['normal', 'skill', 'ultimate'],
     marksmanTierApi: 'playMarksmanTier',
+    marksmanRealDistinctTierVfx: true,
+    marksmanQualityTierProxy: false,
     singleMarksmanButtonRemoved: true,
     randomButtonsRemoved: true,
     preBattleRandomizerOwnsRandom: true,
