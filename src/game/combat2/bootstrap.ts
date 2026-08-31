@@ -2,14 +2,10 @@
 // Import order is intentional: data.js populates window.POWDER_DATA before
 // PowderDataAdapter builds the isolated Combat2 test roster.
 //
-// 2.15.6 changes the test workflow itself: Random is now a PRE-BATTLE roster setup.
-// The user randomizes 10 real Pow slots, can edit each slot/image, then explicitly
-// starts the battle. Live VFX random spam is retired from the UI.
-//
-// 2.15.7/2.15.8 are historical generic Marksman visual owners.
-// 2.15.9 fixes the runtime ownership problem: real Marksman combat is routed directly
-// by CombatNightProjectileBridge to one dedicated VFX function, and the localhost
-// Marksman QA button calls that exact same function.
+// 2.15.6 changes the test workflow itself: Random is a PRE-BATTLE roster setup.
+// 2.15.7/2.15.8 remain historical generic Marksman visual owners for compatibility gates.
+// 2.16.0 keeps the proven direct runtime ownership model introduced in 2.15.9,
+// but replaces the Marksman visual itself with the narrower Spiral Rail Bolt.
 import '../../../js/data.js';
 import './views/Combat2144BalancedVfxTestRosterPatch';
 import './views/Combat2150ProfessionTestRosterPatch';
@@ -45,14 +41,13 @@ await import('./views/Combat2155VersionBridge');
 await import('./vfx/Combat2156MarksmanHealerTankFixVfxPatch');
 await import('./views/Combat2156VersionBridge');
 
-// Historical generic Marksman owners retained for compatibility gates.
+// Historical generic Marksman owners retained only for their compatibility gates.
+// Real Marksman combat bypasses this stack in CombatNightProjectileBridge.
 await import('./vfx/Combat2157MarksmanSpiralBoltVfxPatch');
 await import('./views/Combat2157VersionBridge');
 await import('./vfx/Combat2158MarksmanPremiumRifledBoltVfxPatch');
 await import('./views/Combat2158VersionBridge');
 
-// Combat2 2.15.9: the QA button now bypasses the generic owner stack too.
-// Real combat already uses the direct function because CombatNightProjectileBridge
-// imports it before Phaser.Game is created inside main.ts.
-await import('./views/Combat2159MarksmanLabBridge');
-await import('./views/Combat2159VersionBridge');
+// Combat2 2.16.0: localhost Xạ thủ QA calls the exact same direct function as real combat.
+await import('./views/Combat2160MarksmanLabBridge');
+await import('./views/Combat2160VersionBridge');
