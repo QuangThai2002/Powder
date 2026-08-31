@@ -5,6 +5,9 @@
 // 2.15.6 changes the test workflow itself: Random is now a PRE-BATTLE roster setup.
 // The user randomizes 10 real Pow slots, can edit each slot/image, then explicitly
 // starts the battle. Live VFX random spam is retired from the UI.
+//
+// 2.15.7 is intentionally narrow: Marksman only. It replaces the old arrow-like
+// shape with an axis-locked spiral magic bolt. Every other profession delegates.
 import '../../../js/data.js';
 import './views/Combat2144BalancedVfxTestRosterPatch';
 import './views/Combat2150ProfessionTestRosterPatch';
@@ -36,6 +39,10 @@ await import('./views/Combat2155SupportTravelBridge');
 await import('./views/Combat2155DirectVfxLab');
 await import('./views/Combat2155VersionBridge');
 
-// Combat2 2.15.6 FINAL fixes for the three problem cases reported in runtime QA.
+// Combat2 2.15.6 fixes for the three runtime QA cases.
 await import('./vfx/Combat2156MarksmanHealerTankFixVfxPatch');
 await import('./views/Combat2156VersionBridge');
+
+// Combat2 2.15.7 FINAL owner for Marksman only.
+await import('./vfx/Combat2157MarksmanSpiralBoltVfxPatch');
+await import('./views/Combat2157VersionBridge');
