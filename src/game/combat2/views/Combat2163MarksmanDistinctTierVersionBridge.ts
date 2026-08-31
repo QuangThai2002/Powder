@@ -6,6 +6,7 @@ function installCombat2163MarksmanDistinctTierVersionBridge(): void {
   const tierUi = root.POWDER_COMBAT2_2163_MARKSMAN_TIER_UI;
   const ui = root.POWDER_COMBAT2_PROFESSION_TEST_UI;
   const projectile = root.POWDER_COMBAT2_NIGHT_PROJECTILE;
+  const runtime = root.POWDER_COMBAT2_MARKSMAN_RUNTIME_TEST;
 
   const checks = {
     rendererReady: renderer?.version === VERSION
@@ -32,30 +33,40 @@ function installCombat2163MarksmanDistinctTierVersionBridge(): void {
       && ui?.marksmanSharedTopology === false
       && ui?.marksmanSharedBodyRenderer === false
     ),
-    realCombatUntouched: projectile?.marksmanDirectRuntime === true
-      && projectile?.marksmanDirectVersion === '2.16.0'
-      && projectile?.marksmanForm === 'spiral-rail-bolt',
+    realCombatTierRoute: projectile?.marksmanDirectRuntime === true
+      && projectile?.marksmanDirectVersion === '2.16.4'
+      && projectile?.marksmanTierContext === true
+      && projectile?.marksmanForms?.normal === 'compact-spiral-rail'
+      && projectile?.marksmanForms?.skill === 'piercing-triple-rail-shot'
+      && projectile?.marksmanForms?.ultimate === 'rail-breaker-heavy-slug',
+    runtimeHooksReady: runtime?.version === '2.16.4'
+      && runtime?.ready === true
+      && runtime?.realCombatHooks?.basic === 'normal'
+      && runtime?.realCombatHooks?.skill1 === 'skill'
+      && runtime?.realCombatHooks?.skill2 === 'skill'
+      && runtime?.realCombatHooks?.ultimate === 'ultimate',
     boundedPresentation: renderer?.particleEmitters === false
       && renderer?.repeatingTweenLoops === false,
     combatLogicUnchanged: renderer?.combatLogicChanged === false
       && tierUi?.combatLogicChanged === false
       && projectile?.combatLogicChanged === false
+      && runtime?.combatLogicChanged === false
   };
 
   const pass = Object.values(checks).every(Boolean);
   root.POWDER_COMBAT2_RELEASE = {
-    version: VERSION,
+    version: '2.16.4',
     family: 'Combat2',
-    title: 'Marksman Three Distinct Silhouettes QA',
-    scope: 'marksman-only-compact-bolt+triple-rail+heavy-slug-qa',
+    title: 'Marksman Runtime Three-Tier Routing',
+    scope: 'marksman-real-basic+skill+ultimate-and-direct-qa',
     branchOnly: true,
     combatLogicChanged: false
   };
-  root.POWDER_COMBAT2_2163_REGRESSION = { version: VERSION, pass, checks };
+  root.POWDER_COMBAT2_2163_REGRESSION = { version: VERSION, runtimeVersion: '2.16.4', pass, checks };
 
   if (typeof location !== 'undefined' && ['localhost', '127.0.0.1'].includes(location.hostname)) {
-    if (pass) console.info('[Combat2 2.16.3 Regression PASS]', { renderer, tierUi, ui, projectile, checks });
-    else console.error('[Combat2 2.16.3 Regression FAIL - branch only]', { renderer, tierUi, ui, projectile, checks });
+    if (pass) console.info('[Combat2 2.16.4 Marksman Runtime Regression PASS]', { renderer, tierUi, ui, projectile, runtime, checks });
+    else console.error('[Combat2 2.16.4 Marksman Runtime Regression FAIL - branch only]', { renderer, tierUi, ui, projectile, runtime, checks });
   }
 }
 
