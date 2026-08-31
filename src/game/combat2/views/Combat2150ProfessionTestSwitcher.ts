@@ -1,4 +1,4 @@
-const VERSION = '2.16.0';
+const VERSION = '2.16.1';
 const ROLE_BUTTONS = [
   ['marksman', 'Xạ thủ'],
   ['mage', 'Pháp sư'],
@@ -11,6 +11,14 @@ const ROLE_BUTTONS = [
   ['tank', 'Đỡ đòn']
 ] as const;
 
+const MARKSMAN_TIERS = [
+  ['normal', 'XẠ THỦ · THƯỜNG'],
+  ['skill', 'XẠ THỦ · SKILL'],
+  ['ultimate', 'XẠ THỦ · ULT']
+] as const;
+
+type MarksmanTier = typeof MARKSMAN_TIERS[number][0];
+
 function isLocalDev(): boolean {
   return typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
 }
@@ -22,6 +30,13 @@ function liveApi(): any {
 
 function roleLabel(role: unknown): string {
   return ROLE_BUTTONS.find(([key]) => key === String(role))?.[1] ?? String(role || 'không rõ');
+}
+
+function tierLabel(tier: unknown): string {
+  if (tier === 'normal') return 'THƯỜNG';
+  if (tier === 'skill') return 'SKILL';
+  if (tier === 'ultimate') return 'ULT';
+  return String(tier || '').toUpperCase();
 }
 
 function installSwitcher(): void {
@@ -45,13 +60,13 @@ function installSwitcher(): void {
 
   const panel = document.createElement('div');
   panel.style.cssText = [
-    'display:none', 'margin-top:6px', 'width:218px', 'max-height:80vh', 'overflow:auto',
+    'display:none', 'margin-top:6px', 'width:236px', 'max-height:80vh', 'overflow:auto',
     'padding:8px', 'border:1px solid rgba(151,218,255,.4)', 'border-radius:9px',
     'background:rgba(4,20,32,.97)', 'box-shadow:0 8px 24px rgba(0,0,0,.4)'
   ].join(';');
 
   const status = document.createElement('div');
-  status.textContent = 'Bấm nghề để phát VFX ngay. Xạ thủ 2.16.0 dùng Spiral Rail Bolt direct.';
+  status.textContent = 'Xạ thủ có 3 mức test riêng: THƯỜNG / SKILL / ULT. Các nghề khác giữ nút test cũ.';
   status.style.cssText = [
     'margin:2px 2px 8px', 'padding:7px', 'border-radius:6px',
     'background:rgba(95,201,255,.09)', 'color:#bdeeff', 'line-height:1.4',
@@ -59,7 +74,73 @@ function installSwitcher(): void {
   ].join(';');
   panel.appendChild(status);
 
+  const marksmanTitle = document.createElement('div');
+  marksmanTitle.textContent = 'XẠ THỦ · SPIRAL RAIL';
+  marksmanTitle.style.cssText = [
+    'margin:4px 2px 5px', 'font-size:11px', 'font-weight:900', 'letter-spacing:.5px',
+    'color:#dff7ff', 'opacity:.92'
+  ].join(';');
+  panel.appendChild(marksmanTitle);
+
+  const marksmanButtons: HTMLButtonElement[] = [];
+  const setMarksmanBusy = (busy: boolean): void => {
+    for (const button of marksmanButtons) button.disabled = busy;
+  };
+
+  for (const [tier, label] of MARKSMAN_TIERS) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = label;
+    button.dataset.marksmanTier = tier;
+    button.style.cssText = [
+      'display:block', 'width:100%', 'margin:4px 0',
+      'border:1px solid rgba(128,223,255,.28)', 'border-radius:7px',
+      tier === 'ultimate'
+        ? 'background:linear-gradient(90deg,rgba(255,190,76,.13),rgba(116,103,255,.16))'
+        : tier === 'skill'
+          ? 'background:rgba(93,177,255,.11)'
+          : 'background:rgba(255,255,255,.055)',
+      'color:#f2fbff', 'padding:8px 9px', 'text-align:left',
+      'cursor:pointer', 'font-weight:900', 'letter-spacing:.2px'
+    ].join(';');
+
+    button.addEventListener('click', async () => {
+      const api = liveApi();
+      if (!api?.ready || typeof api.playMarksmanTier !== 'function') {
+        status.textContent = `${label}: API 3 tier Xạ thủ chưa sẵn sàng`;
+        return;
+      }
+
+      setMarksmanBusy(true);
+      status.textContent = `Đang phát Xạ thủ · ${tierLabel(tier)}...`;
+      try {
+        const result = await api.playMarksmanTier(tier as MarksmanTier);
+        (globalThis as any).POWDER_COMBAT2_PROFESSION_LIVE_TEST_LAST = result;
+        const element = result?.element ? String(result.element).toUpperCase() : 'HỆ HIỆN TẠI';
+        status.textContent = result?.ok
+          ? `ĐÃ PHÁT · Xạ thủ · ${tierLabel(result?.marksmanAttackTier ?? tier)} · ${element} · DIRECT ${result?.directVersion ?? '2.16.0'} · ${String(result?.previewFxTier ?? '').toUpperCase()}`
+          : `${label}: ${result?.reason ?? 'không phát được'}`;
+      } catch (error) {
+        console.error('[Combat2 2.16.1 Marksman Tier UI]', error);
+        status.textContent = `${label}: lỗi runtime`;
+      } finally {
+        setMarksmanBusy(false);
+      }
+    });
+
+    marksmanButtons.push(button);
+    panel.appendChild(button);
+  }
+
+  const separator = document.createElement('div');
+  separator.style.cssText = [
+    'height:1px', 'margin:9px 2px 7px', 'background:rgba(255,255,255,.1)'
+  ].join(';');
+  panel.appendChild(separator);
+
   for (const [role, label] of ROLE_BUTTONS) {
+    if (role === 'marksman') continue;
+
     const button = document.createElement('button');
     button.type = 'button';
     button.textContent = label;
@@ -81,14 +162,11 @@ function installSwitcher(): void {
         const result = await api.play(role);
         (globalThis as any).POWDER_COMBAT2_PROFESSION_LIVE_TEST_LAST = result;
         const element = result?.element ? String(result.element).toUpperCase() : 'HỆ HIỆN TẠI';
-        const direct = result?.directMarksmanRuntime === true
-          ? ` · DIRECT ${result?.directVersion ?? VERSION}${result?.marksmanForm === 'spiral-rail-bolt' ? ' · SPIRAL RAIL' : ''}`
-          : '';
         status.textContent = result?.ok
-          ? `ĐÃ PHÁT · ${roleLabel(result.role ?? role)} · ${element}${direct}`
+          ? `ĐÃ PHÁT · ${roleLabel(result.role ?? role)} · ${element}`
           : `${label}: ${result?.reason ?? 'không phát được'}`;
       } catch (error) {
-        console.error('[Combat2 2.16.0 Quick VFX]', error);
+        console.error('[Combat2 2.16.1 Quick VFX]', error);
         status.textContent = `${label}: lỗi runtime`;
       } finally {
         button.disabled = false;
@@ -110,6 +188,10 @@ function installSwitcher(): void {
     directRoleButtons: true,
     marksmanDirectRuntimeLabel: true,
     marksmanSpiralRailLabel: true,
+    marksmanTierButtons: 3,
+    marksmanTiers: ['normal', 'skill', 'ultimate'],
+    marksmanTierApi: 'playMarksmanTier',
+    singleMarksmanButtonRemoved: true,
     randomButtonsRemoved: true,
     preBattleRandomizerOwnsRandom: true,
     reloadOnRoleSelect: false,
