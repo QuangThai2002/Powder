@@ -4,11 +4,14 @@ import {
   type CombatProjectileElement,
   type DirectionalProjectileOptions
 } from './DirectionalElementProjectileVfx';
+import { isCombat2160MarksmanRole } from './Combat2160MarksmanSpiralRailBoltVfx';
 import {
-  COMBAT2160_MARKSMAN_VERSION,
-  isCombat2160MarksmanRole,
-  playCombat2160MarksmanSpiralRailBoltVfx
-} from './Combat2160MarksmanSpiralRailBoltVfx';
+  playCombat2163MarksmanDistinctTierVfx,
+  type Combat2163MarksmanTier
+} from './Combat2163MarksmanDistinctTierVfx';
+import {
+  COMBAT2164_MARKSMAN_RUNTIME_VERSION
+} from './Combat2164MarksmanRuntimeTierBridge';
 import { PowView } from '../views/PowView';
 
 interface PowViewProjectileRuntime {
@@ -20,6 +23,7 @@ interface PowViewProjectileRuntime {
   getWorldPosition: () => Phaser.Math.Vector2;
   playCastSignature?: (support: boolean) => Promise<void>;
   tweenPromise?: (config: Phaser.Types.Tweens.TweenBuilderConfig) => Promise<void>;
+  __combat2MarksmanAttackTier?: Combat2163MarksmanTier;
 }
 
 type RoleAwareProjectileOptions = DirectionalProjectileOptions & { role?: string };
@@ -46,6 +50,16 @@ function resolveElement(pow: PowViewProjectileRuntime['pow']): CombatProjectileE
   return 'neutral';
 }
 
+function validTier(value: unknown): value is Combat2163MarksmanTier {
+  return value === 'normal' || value === 'skill' || value === 'ultimate';
+}
+
+function resolveMarksmanTier(view: PowViewProjectileRuntime): Combat2163MarksmanTier {
+  if (validTier(view.__combat2MarksmanAttackTier)) return view.__combat2MarksmanAttackTier;
+  const globalTier = (globalThis as any).POWDER_COMBAT2_MARKSMAN_ACTIVE_TIER;
+  return validTier(globalTier) ? globalTier : 'normal';
+}
+
 async function playNightProjectile(
   view: PowViewProjectileRuntime,
   targetX: number,
@@ -64,10 +78,19 @@ async function playNightProjectile(
     role: view.pow.role
   };
 
-  // Combat2 2.16.0: Marksman has one direct runtime owner.
-  // This intentionally bypasses every historical generic projectile override.
+  // Combat2 2.16.4: the real BattleScene action path sets normal/skill/ultimate
+  // before PowView reaches this bridge. Marksman now uses that exact tier here.
   if (isCombat2160MarksmanRole(view.pow.role)) {
-    await playCombat2160MarksmanSpiralRailBoltVfx(options);
+    const tier = resolveMarksmanTier(view);
+    await playCombat2163MarksmanDistinctTierVfx(options, tier);
+    (globalThis as any).POWDER_COMBAT2_MARKSMAN_PROJECTILE_LAST = {
+      version: COMBAT2164_MARKSMAN_RUNTIME_VERSION,
+      tier,
+      role: view.pow.role,
+      element: options.element,
+      at: Date.now(),
+      realCombatRoute: true
+    };
     return;
   }
 
@@ -79,9 +102,9 @@ async function playNightProjectile(
 /**
  * Final attack-travel bridge.
  *
- * Combat2 2.16.0 keeps compatibility routing for every non-Marksman profession,
- * while Marksman uses one dedicated Spiral Rail Bolt implementation in both
- * real combat and localhost QA.
+ * Non-Marksman roles preserve the compatibility projectile stack. Marksman bypasses
+ * it and receives a distinct NORMAL/SKILL/ULT renderer selected by the real action
+ * currently executing in BattleScene.
  */
 export function installCombatNightProjectileBridge(): void {
   const prototype = PowView.prototype as unknown as {
@@ -142,7 +165,7 @@ export function installCombatNightProjectileBridge(): void {
 
   const root = globalThis as any;
   root.POWDER_COMBAT2_NIGHT_PROJECTILE = {
-    version: 'combat2-2.16.0',
+    version: `combat2-${COMBAT2164_MARKSMAN_RUNTIME_VERSION}`,
     runtimeEntryPoint: 'PowView.playAttackLunge',
     directTravelOwner: true,
     attackLungeOwner: true,
@@ -150,8 +173,13 @@ export function installCombatNightProjectileBridge(): void {
     elementForwarding: true,
     sourceToTarget: true,
     marksmanDirectRuntime: true,
-    marksmanDirectVersion: COMBAT2160_MARKSMAN_VERSION,
-    marksmanForm: 'spiral-rail-bolt',
+    marksmanDirectVersion: COMBAT2164_MARKSMAN_RUNTIME_VERSION,
+    marksmanTierContext: true,
+    marksmanForms: {
+      normal: 'compact-spiral-rail',
+      skill: 'piercing-triple-rail-shot',
+      ultimate: 'rail-breaker-heavy-slug'
+    },
     nonMarksmanCompatibilityOwnerStack: true,
     combatLogicChanged: false
   };
