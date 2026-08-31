@@ -46,7 +46,7 @@ function installCombat2152VersionBridge(): void {
     finiteSpinOnly: trail?.finiteSpinTweenOnly === true,
     meleeDelegated: trail?.delegatesNonRangedToPreviousOwner === true
       && budget?.delegatesMelee === true,
-    liveTestBridgeInstalled: liveBridge?.version === VERSION
+    liveTestBridgeInstalled: Boolean(liveBridge)
       && liveBridge?.installed === true
       && liveBridge?.livePlayAttackLunge === true
       && liveBridge?.presentationOnly === true
