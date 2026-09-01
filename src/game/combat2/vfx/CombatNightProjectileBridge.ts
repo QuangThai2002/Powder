@@ -11,7 +11,7 @@ import {
 } from './Combat2163MarksmanDistinctTierVfx';
 import {
   COMBAT2164_MARKSMAN_RUNTIME_VERSION,
-  COMBAT2172_PROFESSION_RUNTIME_VERSION
+  COMBAT2173_PROFESSION_RUNTIME_VERSION
 } from './Combat2164MarksmanRuntimeTierBridge';
 import {
   COMBAT2165_MAGE_VERSION,
@@ -35,7 +35,7 @@ import {
   type Combat2170HealerTier
 } from './Combat2170HealerDistinctTierVfx';
 import {
-  COMBAT2172_PROFESSION_IMPACT_VERSION,
+  COMBAT2173_PROFESSION_IMPACT_VERSION,
   playCombat2172MeleeProfessionImpact,
   resolveCombat2172MeleeRole,
   scheduleCombat2172RangedImpactFeedback,
@@ -101,19 +101,40 @@ function makeOptions(view: PowViewProjectileRuntime, targetX: number, targetY: n
   };
 }
 
-function recordMeleeImpact(view: PowViewProjectileRuntime, role: Combat2172MeleeRole, tier: Combat2163MarksmanTier, options: RoleAwareProjectileOptions): void {
+function meleeIdentity(role: Combat2172MeleeRole): string {
+  if (role === 'tank') return 'shield-bash-contact';
+  if (role === 'fighter') return 'single-heavy-punch';
+  if (role === 'knight') return 'single-heavy-slash';
+  return 'double-critical-style-slash';
+}
+
+function recordMeleeImpact(
+  view: PowViewProjectileRuntime,
+  role: Combat2172MeleeRole,
+  tier: Combat2163MarksmanTier,
+  options: RoleAwareProjectileOptions
+): void {
   const root = globalThis as any;
-  const version = role === 'tank' ? COMBAT2166_TANK_VERSION : role === 'fighter' ? COMBAT2167_FIGHTER_VERSION : COMBAT2168_KNIGHT_VERSION;
+  const version = role === 'tank'
+    ? COMBAT2166_TANK_VERSION
+    : role === 'fighter'
+      ? COMBAT2167_FIGHTER_VERSION
+      : role === 'knight'
+        ? COMBAT2168_KNIGHT_VERSION
+        : COMBAT2173_PROFESSION_IMPACT_VERSION;
   root[`POWDER_COMBAT2_${role.toUpperCase()}_MELEE_LAST`] = {
     version,
-    impactVersion: COMBAT2172_PROFESSION_IMPACT_VERSION,
+    impactVersion: COMBAT2173_PROFESSION_IMPACT_VERSION,
     tier,
     role: view.pow.role,
     element: options.element,
     at: Date.now(),
     realCombatRoute: true,
     projectileTravel: false,
-    contactOnly: true
+    contactOnly: true,
+    identity: meleeIdentity(role),
+    visualHits: role === 'assassin' ? 2 : 1,
+    guaranteedCritChanged: false
   };
 }
 
@@ -141,7 +162,7 @@ async function playNightProjectile(view: PowViewProjectileRuntime, targetX: numb
     await playCombat2165MageDistinctTierVfx(options, tier as Combat2165MageTier);
     (globalThis as any).POWDER_COMBAT2_MAGE_PROJECTILE_LAST = {
       version: COMBAT2165_MAGE_VERSION,
-      impactVersion: COMBAT2172_PROFESSION_IMPACT_VERSION,
+      impactVersion: COMBAT2173_PROFESSION_IMPACT_VERSION,
       tier,
       role: view.pow.role,
       element: options.element,
@@ -163,7 +184,7 @@ async function playNightProjectile(view: PowViewProjectileRuntime, targetX: numb
     await playCombat2169EnchanterDistinctTierVfx(options, tier as Combat2169EnchanterTier);
     (globalThis as any).POWDER_COMBAT2_ENCHANTER_PROJECTILE_LAST = {
       version: COMBAT2169_ENCHANTER_VERSION,
-      impactVersion: COMBAT2172_PROFESSION_IMPACT_VERSION,
+      impactVersion: COMBAT2173_PROFESSION_IMPACT_VERSION,
       tier,
       role: view.pow.role,
       element: options.element,
@@ -180,7 +201,7 @@ async function playNightProjectile(view: PowViewProjectileRuntime, targetX: numb
     await playCombat2170HealerDistinctTierVfx(options, tier as Combat2170HealerTier);
     (globalThis as any).POWDER_COMBAT2_HEALER_PROJECTILE_LAST = {
       version: COMBAT2170_HEALER_VERSION,
-      impactVersion: COMBAT2172_PROFESSION_IMPACT_VERSION,
+      impactVersion: COMBAT2173_PROFESSION_IMPACT_VERSION,
       tier,
       role: view.pow.role,
       element: options.element,
@@ -195,20 +216,53 @@ async function playNightProjectile(view: PowViewProjectileRuntime, targetX: numb
   await roleAwarePlay(options);
 }
 
-function meleeApproach(distance: number): number {
-  if (distance <= 1) return 0;
-  const contactGap = 210;
-  const gapLimited = Math.max(0, distance - contactGap);
-  const proportional = distance * 0.72;
-  const advance = Math.min(gapLimited, proportional);
-  return advance >= 32 ? advance : distance * 0.4;
+function meleeContactGap(role: Combat2172MeleeRole): number {
+  if (role === 'tank') return 210;
+  if (role === 'fighter') return 185;
+  if (role === 'knight') return 195;
+  return 150;
 }
 
-function meleeDashMs(tier: Combat2163MarksmanTier, reducedMotion: boolean): number {
-  if (reducedMotion) return tier === 'ultimate' ? 115 : 90;
-  if (tier === 'ultimate') return 215;
-  if (tier === 'skill') return 175;
-  return 140;
+function meleeApproach(distance: number, role: Combat2172MeleeRole): number {
+  if (distance <= 1) return 0;
+  const contactGap = meleeContactGap(role);
+  const gapLimited = Math.max(0, distance - contactGap);
+  const proportional = distance * (role === 'assassin' ? 0.8 : role === 'fighter' ? 0.76 : 0.72);
+  const advance = Math.min(gapLimited, proportional);
+  return advance >= 32 ? advance : distance * (role === 'assassin' ? 0.5 : 0.4);
+}
+
+function meleeDashMs(role: Combat2172MeleeRole, tier: Combat2163MarksmanTier, reducedMotion: boolean): number {
+  if (role === 'tank') {
+    if (reducedMotion) return tier === 'ultimate' ? 115 : 90;
+    if (tier === 'ultimate') return 215;
+    if (tier === 'skill') return 175;
+    return 140;
+  }
+  if (role === 'fighter') {
+    if (reducedMotion) return tier === 'ultimate' ? 105 : 82;
+    if (tier === 'ultimate') return 195;
+    if (tier === 'skill') return 160;
+    return 128;
+  }
+  if (role === 'knight') {
+    if (reducedMotion) return tier === 'ultimate' ? 108 : 84;
+    if (tier === 'ultimate') return 205;
+    if (tier === 'skill') return 165;
+    return 132;
+  }
+  if (reducedMotion) return tier === 'ultimate' ? 80 : 60;
+  if (tier === 'ultimate') return 130;
+  if (tier === 'skill') return 108;
+  return 88;
+}
+
+function meleeReturnMs(role: Combat2172MeleeRole, tier: Combat2163MarksmanTier, reducedMotion: boolean): number {
+  if (reducedMotion) return role === 'assassin' ? 60 : 80;
+  if (role === 'assassin') return tier === 'ultimate' ? 95 : 82;
+  if (role === 'fighter') return tier === 'ultimate' ? 165 : 125;
+  if (role === 'knight') return tier === 'ultimate' ? 155 : 120;
+  return tier === 'ultimate' ? 155 : 120;
 }
 
 export function installCombatNightProjectileBridge(): void {
@@ -220,7 +274,7 @@ export function installCombatNightProjectileBridge(): void {
   };
 
   prototype.playElementTravel = async function (this: PowViewProjectileRuntime, targetX: number, targetY: number): Promise<void> {
-    // Support travel for melee roles is target-local only. No source -> target projectile is created.
+    // Melee roles create target-local contact VFX only. No source -> target projectile is created.
     await playNightProjectile(this, targetX, targetY);
   };
 
@@ -236,10 +290,10 @@ export function installCombatNightProjectileBridge(): void {
     if (typeof this.playCastSignature === 'function') await this.playCastSignature(false);
 
     if (meleeRole) {
-      const advance = meleeApproach(distance);
+      const advance = meleeApproach(distance, meleeRole);
       const attackX = startX + (dx / distance) * advance;
       const attackY = startY + (dy / distance) * advance;
-      const dashMs = meleeDashMs(tier, this.reducedMotion);
+      const dashMs = meleeDashMs(meleeRole, tier, this.reducedMotion);
       try {
         if (typeof this.tweenPromise === 'function') {
           await this.tweenPromise({
@@ -247,7 +301,11 @@ export function installCombatNightProjectileBridge(): void {
             x: attackX,
             y: attackY,
             duration: dashMs,
-            ease: tier === 'ultimate' ? 'Cubic.easeIn' : 'Quad.easeOut'
+            ease: meleeRole === 'assassin'
+              ? 'Cubic.easeOut'
+              : tier === 'ultimate'
+                ? 'Cubic.easeIn'
+                : 'Quad.easeOut'
           });
         }
         await playNightProjectile(this, targetX, targetY);
@@ -256,8 +314,8 @@ export function installCombatNightProjectileBridge(): void {
             targets: this.container,
             x: startX,
             y: startY,
-            duration: this.reducedMotion ? 80 : tier === 'ultimate' ? 155 : 120,
-            ease: 'Quad.easeOut'
+            duration: meleeReturnMs(meleeRole, tier, this.reducedMotion),
+            ease: meleeRole === 'assassin' ? 'Cubic.easeOut' : 'Quad.easeOut'
           });
         }
       } finally {
@@ -291,18 +349,18 @@ export function installCombatNightProjectileBridge(): void {
 
   const root = globalThis as any;
   root.POWDER_COMBAT2_NIGHT_PROJECTILE = {
-    version: COMBAT2172_PROFESSION_RUNTIME_VERSION,
+    version: COMBAT2173_PROFESSION_RUNTIME_VERSION,
     runtimeEntryPoint: 'PowView.playAttackLunge',
     directTravelOwner: true,
     attackLungeOwner: true,
     roleForwarding: true,
     elementForwarding: true,
     sourceToTarget: true,
-    professionTierRuntimeVersion: COMBAT2172_PROFESSION_RUNTIME_VERSION,
-    impactFeedbackVersion: COMBAT2172_PROFESSION_IMPACT_VERSION,
+    professionTierRuntimeVersion: COMBAT2173_PROFESSION_RUNTIME_VERSION,
+    impactFeedbackVersion: COMBAT2173_PROFESSION_IMPACT_VERSION,
     marksmanDirectRuntime: true,
     marksmanDirectVersion: COMBAT2164_MARKSMAN_RUNTIME_VERSION,
-    marksmanUntouchedBy2172: true,
+    marksmanUntouchedBy2173: true,
     marksmanTierContext: true,
     marksmanForms: { normal: 'compact-spiral-rail', skill: 'piercing-triple-rail-shot', ultimate: 'rail-breaker-heavy-slug' },
     mageDirectRuntime: true,
@@ -313,17 +371,24 @@ export function installCombatNightProjectileBridge(): void {
     tankDirectVersion: COMBAT2166_TANK_VERSION,
     tankTierContext: true,
     tankProjectileTravel: false,
+    tankIdentityPreserved: true,
     tankForms: { normal: 'shield-bash-contact', skill: 'bulwark-crash-contact', ultimate: 'fortress-quake-contact' },
     fighterDirectRuntime: true,
     fighterDirectVersion: COMBAT2167_FIGHTER_VERSION,
     fighterTierContext: true,
     fighterProjectileTravel: false,
-    fighterForms: { normal: 'heavy-punch-contact', skill: 'cross-break-combo', ultimate: 'meteor-smash-contact' },
+    fighterForms: { normal: 'single-heavy-punch', skill: 'single-heavy-punch-break', ultimate: 'single-heavy-punch-finisher' },
     knightDirectRuntime: true,
     knightDirectVersion: COMBAT2168_KNIGHT_VERSION,
     knightTierContext: true,
     knightProjectileTravel: false,
-    knightForms: { normal: 'valor-slash-contact', skill: 'crossguard-cleave-contact', ultimate: 'royal-judgment-contact' },
+    knightForms: { normal: 'single-heavy-slash', skill: 'single-heavy-slash-cleave', ultimate: 'single-heavy-slash-judgment' },
+    assassinDirectRuntime: true,
+    assassinTierContext: true,
+    assassinProjectileTravel: false,
+    assassinForms: { normal: 'double-critical-slash', skill: 'double-critical-slash-rush', ultimate: 'double-critical-execution' },
+    assassinVisualHits: 2,
+    assassinGuaranteedCritChanged: false,
     enchanterDirectRuntime: true,
     enchanterDirectVersion: COMBAT2169_ENCHANTER_VERSION,
     enchanterTierContext: true,
@@ -334,7 +399,7 @@ export function installCombatNightProjectileBridge(): void {
     healerTierContext: true,
     healerForms: { normal: 'life-seed', skill: 'restoration-ribbon', ultimate: 'sanctuary-heart-ray' },
     allNewProfessionUltimateImpactShake: true,
-    meleeRolesUseActorApproach: ['tank', 'fighter', 'knight'],
+    meleeRolesUseActorApproach: ['tank', 'fighter', 'knight', 'assassin'],
     meleeProjectileTravelDisabled: true,
     otherRolesCompatibilityOwnerStack: true,
     combatLogicChanged: false
