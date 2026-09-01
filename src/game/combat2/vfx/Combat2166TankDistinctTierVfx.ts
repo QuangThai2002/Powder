@@ -156,12 +156,10 @@ async function playFortressBreaker(options: Options, p: Palette): Promise<void> 
   const root = options.scene.add.container(options.target.x, options.target.y)
     .setDepth(powVfxDepth('foreground') + 21)
     .setRotation(incomingAngle(options));
-
   const outer = shieldPlate(options, p, 126, 110, 6, 0.98);
   const middle = shieldPlate(options, p, 92, 80, 4.5, 0.94).setFillStyle(p.main, 0.5);
   const inner = shieldPlate(options, p, 58, 50, 3, 0.96).setFillStyle(p.core, 0.22);
   const core = options.scene.add.rectangle(11, 0, 60, 9, p.core, 0.98).setBlendMode(Phaser.BlendModes.ADD);
-
   const braces = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
   braces.lineStyle(6, p.main, 0.7);
   braces.lineBetween(-70, -48, 74, -76);
@@ -171,12 +169,10 @@ async function playFortressBreaker(options: Options, p: Palette): Promise<void> 
   braces.lineStyle(3, p.core, 0.65);
   braces.lineBetween(-24, -62, 34, -95);
   braces.lineBetween(-24, 62, 34, 95);
-
   const shock = options.scene.add.ellipse(18, 0, 182, 122, 0x000000, 0)
     .setStrokeStyle(6, p.main, 0.62)
     .setBlendMode(Phaser.BlendModes.ADD);
   const flash = options.scene.add.circle(20, 0, 32, p.core, 0.28).setBlendMode(Phaser.BlendModes.ADD);
-
   root.add([braces, shock, outer, middle, inner, flash, core]);
   root.setScale(0.62);
 
@@ -210,6 +206,7 @@ export async function playCombat2166TankDistinctTierVfx(options: Options, tier: 
   await playShieldBash(options, p);
 }
 
+(globalThis as any).POWDER_COMBAT2_TANK_MANUAL_RENDERER = playCombat2166TankDistinctTierVfx;
 (globalThis as any).POWDER_COMBAT2_TANK_DISTINCT_TIERS = {
   version: COMBAT2176_TANK_VERSION,
   role: 'tank',
