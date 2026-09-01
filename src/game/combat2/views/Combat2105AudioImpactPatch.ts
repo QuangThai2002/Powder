@@ -144,6 +144,71 @@ function noiseHit(element: unknown, strength = 1): void {
   source.start();
 }
 
+/**
+ * Dedicated one-shot blade whoosh for contact melee slash VFX.
+ * It is intentionally synthetic so the combat build does not depend on an external audio asset.
+ */
+export function playCombat2105SlashCue(
+  element: unknown,
+  role: unknown,
+  strength = 1,
+  hit: 1 | 2 = 1
+): void {
+  const state = ensureAudio();
+  const ctx = state.context;
+  const master = state.master;
+  if (!state.enabled || !ctx || !master || ctx.state !== 'running' || document.hidden) return;
+
+  const safeStrength = Math.max(0.5, Math.min(1.35, strength));
+  const now = ctx.currentTime;
+  const duration = reducedMotion() ? 0.055 : 0.09 + (safeStrength - 0.5) * 0.035;
+  const frames = Math.max(1, Math.floor(ctx.sampleRate * duration));
+  const buffer = ctx.createBuffer(1, frames, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < frames; i += 1) {
+    const progress = i / frames;
+    const envelope = Math.sin(Math.PI * Math.min(1, progress * 1.7)) * (1 - progress);
+    data[i] = (Math.random() * 2 - 1) * envelope;
+  }
+
+  const source = ctx.createBufferSource();
+  const filter = ctx.createBiquadFilter();
+  const gain = ctx.createGain();
+  const base = elementPitch(element);
+  const roleKey = norm(role);
+  const assassin = roleKey.includes('sat thu') || roleKey.includes('assassin');
+  const startHz = Math.min(6200, (assassin ? 2700 : 2200) + base * 4.5 + (hit === 2 ? 220 : 0));
+  const endHz = Math.max(520, (assassin ? 900 : 680) + base * 1.25);
+
+  filter.type = 'bandpass';
+  filter.frequency.setValueAtTime(startHz, now);
+  filter.frequency.exponentialRampToValueAtTime(endHz, now + duration);
+  filter.Q.value = assassin ? 1.05 : 0.78;
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.075 * safeStrength, now + 0.006);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+  source.buffer = buffer;
+  source.connect(filter);
+  filter.connect(gain);
+  gain.connect(master);
+  source.start(now);
+  source.stop(now + duration + 0.015);
+
+  const edge = ctx.createOscillator();
+  const edgeGain = ctx.createGain();
+  edge.type = assassin ? 'sawtooth' : 'triangle';
+  const edgeStart = Math.max(180, (assassin ? 980 : 760) + base * 0.9 + (hit === 2 ? 85 : 0));
+  edge.frequency.setValueAtTime(edgeStart, now);
+  edge.frequency.exponentialRampToValueAtTime(Math.max(90, edgeStart * 0.56), now + Math.min(0.07, duration));
+  edgeGain.gain.setValueAtTime(0.0001, now);
+  edgeGain.gain.exponentialRampToValueAtTime(0.024 * safeStrength, now + 0.004);
+  edgeGain.gain.exponentialRampToValueAtTime(0.0001, now + Math.min(0.072, duration));
+  edge.connect(edgeGain);
+  edgeGain.connect(master);
+  edge.start(now);
+  edge.stop(now + Math.min(0.08, duration + 0.01));
+}
+
 function powElement(view: any): unknown {
   return view?.pow?.elementKey ?? view?.pow?.element ?? '';
 }
@@ -238,14 +303,15 @@ export function installCombat2105AudioImpactPatch(BattleSceneClass: any, PowView
 
   const state = rootState();
   root.POWDER_COMBAT2_AUDIO_IMPACT = {
-    version: '2.12.5',
-    mode: 'event-bound-cast-travel-hit-sync',
+    version: '2.18.6',
+    mode: 'event-bound-cast-travel-hit-plus-melee-slash',
     timing: {
       cast: 'attack-start',
       travel: 'projectile-start',
-      hit: 'target-reaction-start'
+      hit: 'target-reaction-start',
+      slash: 'melee-cut-reveal'
     },
-    performance: ['no-fixed-travel-timer', 'one-shot-web-audio', 'no-frame-loop'],
+    performance: ['no-fixed-travel-timer', 'one-shot-web-audio', 'no-frame-loop', 'slash-one-shot-no-asset'],
     get enabled(): boolean { return state.enabled; },
     set enabled(value: boolean) { state.enabled = Boolean(value); },
     get volume(): number { return state.volume; },
