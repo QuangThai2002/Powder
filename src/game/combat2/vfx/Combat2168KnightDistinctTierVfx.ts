@@ -2,24 +2,12 @@ import Phaser from 'phaser';
 import type { CombatProjectileElement, DirectionalProjectileOptions } from './DirectionalElementProjectileVfx';
 import { powVfxDepth } from './CombatNightVfxLayout';
 
-export const COMBAT2186_KNIGHT_VERSION = '2.18.6';
-export const COMBAT2185_KNIGHT_VERSION = COMBAT2186_KNIGHT_VERSION;
-export const COMBAT2179_KNIGHT_VERSION = COMBAT2186_KNIGHT_VERSION;
-export const COMBAT2168_KNIGHT_VERSION = COMBAT2186_KNIGHT_VERSION;
+export const COMBAT2179_KNIGHT_VERSION = '2.17.9';
+export const COMBAT2168_KNIGHT_VERSION = COMBAT2179_KNIGHT_VERSION;
 export type Combat2168KnightTier = 'normal' | 'skill' | 'ultimate';
 
 type Options = DirectionalProjectileOptions & { role?: string };
 type Palette = { main: number; core: number; dark: number; accent: number };
-
-type SlashSpec = {
-  half: number;
-  bend: number;
-  shadowWidth: number;
-  glowWidth: number;
-  bodyWidth: number;
-  coreWidth: number;
-  afterOffset: number;
-};
 
 const PALETTE: Readonly<Record<CombatProjectileElement, Palette>> = Object.freeze({
   fire: { main: 0xf27b4f, core: 0xfff1c7, dark: 0x6d2f22, accent: 0xffb86b },
@@ -76,201 +64,120 @@ function tween(
   });
 }
 
-function wait(scene: Phaser.Scene, duration: number): Promise<void> {
-  return new Promise((resolve) => {
-    let done = false;
-    let event: Phaser.Time.TimerEvent | null = null;
-    const finish = () => {
-      if (done) return;
-      done = true;
-      try { event?.remove(false); } catch { /* cleanup only */ }
-      scene.events.off(Phaser.Scenes.Events.SHUTDOWN, finish);
-      scene.events.off(Phaser.Scenes.Events.DESTROY, finish);
-      resolve();
-    };
-    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, finish);
-    scene.events.once(Phaser.Scenes.Events.DESTROY, finish);
-    event = scene.time.delayedCall(duration, finish);
-  });
+function attackAngle(options: Options): number {
+  return Math.atan2(options.target.y - options.source.y, options.target.x - options.source.x);
 }
 
-function slashDirection(options: Options): number {
-  return options.target.x >= options.source.x ? 1 : -1;
-}
-
-function slashSpec(tier: Combat2168KnightTier): SlashSpec {
-  if (tier === 'ultimate') {
-    return { half: 132, bend: 104, shadowWidth: 34, glowWidth: 29, bodyWidth: 17, coreWidth: 6.5, afterOffset: 19 };
-  }
-  if (tier === 'skill') {
-    return { half: 96, bend: 76, shadowWidth: 26, glowWidth: 22, bodyWidth: 13, coreWidth: 5, afterOffset: 15 };
-  }
-  return { half: 70, bend: 54, shadowWidth: 20, glowWidth: 17, bodyWidth: 10, coreWidth: 4, afterOffset: 12 };
-}
-
-function quadraticPoints(
-  startX: number,
-  startY: number,
-  controlX: number,
-  controlY: number,
-  endX: number,
-  endY: number,
-  segments = 22
-): Phaser.Math.Vector2[] {
-  const points: Phaser.Math.Vector2[] = [];
-  for (let i = 0; i <= segments; i += 1) {
-    const t = i / segments;
-    const mt = 1 - t;
-    points.push(new Phaser.Math.Vector2(
-      mt * mt * startX + 2 * mt * t * controlX + t * t * endX,
-      mt * mt * startY + 2 * mt * t * controlY + t * t * endY
-    ));
-  }
-  return points;
-}
-
-function strokeCrescent(
-  graphics: Phaser.GameObjects.Graphics,
-  spec: SlashSpec,
-  direction: number,
-  width: number,
-  color: number,
-  alpha: number,
-  offsetY = 0
-): void {
-  const startY = direction * (spec.bend * 0.42) + offsetY;
-  const endY = -direction * (spec.bend * 0.38) + offsetY;
-  const controlY = -direction * spec.bend + offsetY;
-  graphics.lineStyle(width, color, alpha);
-  graphics.strokePoints(
-    quadraticPoints(-spec.half, startY, 0, controlY, spec.half, endY),
-    false,
-    false
-  );
-}
-
-function buildKnightSlash(
+function slashLine(
   options: Options,
   p: Palette,
-  tier: Combat2168KnightTier
-): Phaser.GameObjects.Container {
-  const spec = slashSpec(tier);
-  const direction = slashDirection(options);
-  const root = options.scene.add.container(options.target.x, options.target.y)
-    .setDepth(powVfxDepth('foreground') + (tier === 'ultimate' ? 23 : tier === 'skill' ? 21 : 19));
-
-  const shadow = options.scene.add.graphics();
-  strokeCrescent(shadow, spec, direction, spec.shadowWidth, p.dark, tier === 'normal' ? 0.58 : 0.68);
-
-  const afterimage = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
-  strokeCrescent(
-    afterimage,
-    spec,
-    direction,
-    tier === 'ultimate' ? 8 : tier === 'skill' ? 6 : 4.5,
-    p.main,
-    tier === 'normal' ? 0.38 : tier === 'skill' ? 0.5 : 0.62,
-    direction * spec.afterOffset
-  );
-
-  const glow = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
-  strokeCrescent(glow, spec, direction, spec.glowWidth, p.main, tier === 'normal' ? 0.2 : tier === 'skill' ? 0.27 : 0.34);
-
-  const blade = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
-  strokeCrescent(blade, spec, direction, spec.bodyWidth, p.accent, tier === 'normal' ? 0.88 : 0.96);
-  strokeCrescent(blade, spec, direction, spec.coreWidth, p.core, 1);
-
-  const contact = options.scene.add.circle(
-    spec.half * 0.08,
-    -direction * spec.bend * 0.12,
-    tier === 'ultimate' ? 25 : tier === 'skill' ? 17 : 11,
-    p.core,
-    tier === 'ultimate' ? 0.34 : tier === 'skill' ? 0.26 : 0.2
-  ).setBlendMode(Phaser.BlendModes.ADD);
-
-  const tipA = options.scene.add.circle(-spec.half * 0.92, direction * spec.bend * 0.39, tier === 'ultimate' ? 5 : 3.5, p.core, 0.72)
-    .setBlendMode(Phaser.BlendModes.ADD);
-  const tipB = options.scene.add.circle(spec.half * 0.94, -direction * spec.bend * 0.36, tier === 'ultimate' ? 5 : 3.5, p.core, 0.72)
-    .setBlendMode(Phaser.BlendModes.ADD);
-
-  root.add([shadow, afterimage, glow, blade, contact, tipA, tipB]);
-
-  if (tier === 'skill') {
-    const breakMarks = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
-    breakMarks.lineStyle(3.5, p.main, 0.58);
-    const x = spec.half * 0.48;
-    breakMarks.lineBetween(x, -direction * 18, x + 25, -direction * 34);
-    breakMarks.lineBetween(x + 5, -direction * 4, x + 34, -direction * 7);
-    breakMarks.lineBetween(x + 4, direction * 8, x + 28, direction * 24);
-    root.addAt(breakMarks, 2);
-  }
-
-  if (tier === 'ultimate') {
-    const inner = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
-    strokeCrescent(inner, { ...spec, half: spec.half * 0.82, bend: spec.bend * 0.73 }, direction, 3.5, p.core, 0.64, -direction * 13);
-    const royalShock = options.scene.add.ellipse(0, 0, 238, 134, 0x000000, 0)
-      .setStrokeStyle(5, p.main, 0.52)
-      .setBlendMode(Phaser.BlendModes.ADD);
-    root.addAt(royalShock, 0);
-    root.add(inner);
-  }
-
-  return root;
+  length: number,
+  thickness: number,
+  slope: number,
+  alpha: number
+): Phaser.GameObjects.Graphics {
+  const g = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+  g.lineStyle(thickness * 2.15, p.main, alpha * 0.2);
+  g.lineBetween(-length, length * slope, length, -length * slope);
+  g.lineStyle(thickness, p.core, alpha);
+  g.lineBetween(-length, length * slope, length, -length * slope);
+  return g;
 }
 
-async function animateKnightSlash(
-  options: Options,
-  root: Phaser.GameObjects.Container,
-  tier: Combat2168KnightTier
-): Promise<void> {
-  const enterMs = options.reducedMotion ? 38 : tier === 'ultimate' ? 64 : tier === 'skill' ? 54 : 44;
-  const holdMs = options.reducedMotion ? 24 : tier === 'ultimate' ? 96 : tier === 'skill' ? 76 : 58;
-  const exitMs = options.reducedMotion ? 62 : tier === 'ultimate' ? 138 : tier === 'skill' ? 112 : 92;
-
-  root.setScale(tier === 'ultimate' ? 0.76 : tier === 'skill' ? 0.82 : 0.86).setAlpha(0.42);
+async function playHeavyCut(options: Options, p: Palette): Promise<void> {
+  const angle = attackAngle(options);
+  const root = options.scene.add.container(options.target.x, options.target.y)
+    .setDepth(powVfxDepth('foreground') + 18)
+    .setRotation(angle * 0.08);
+  const slash = slashLine(options, p, 52, 5.5, 0.62, 0.96);
+  const guardSpark = options.scene.add.circle(0, 0, 10, p.accent, 0.28).setBlendMode(Phaser.BlendModes.ADD);
+  const edge = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+  edge.lineStyle(2.5, p.main, 0.54);
+  edge.lineBetween(-58, 39, 38, -31);
+  root.add([edge, slash, guardSpark]);
+  root.setScale(0.8);
   try {
     await tween(options.scene, root, {
-      scaleX: 1,
-      scaleY: 1,
-      alpha: 1,
-      duration: enterMs,
-      ease: 'Cubic.easeOut'
-    }, enterMs + 160);
-
-    await wait(options.scene, holdMs);
-
-    await tween(options.scene, root, {
-      scaleX: tier === 'ultimate' ? 1.1 : tier === 'skill' ? 1.075 : 1.055,
-      scaleY: tier === 'ultimate' ? 1.1 : tier === 'skill' ? 1.075 : 1.055,
+      scaleX: 1.13,
+      scaleY: 1.13,
       alpha: 0,
-      duration: exitMs,
-      ease: 'Quad.easeOut'
-    }, exitMs + 180);
+      duration: options.reducedMotion ? 80 : 125,
+      ease: 'Cubic.easeOut'
+    }, 360);
   } finally {
     root.destroy(true);
   }
 }
 
-async function playHeavyCut(options: Options, p: Palette): Promise<void> {
-  await animateKnightSlash(options, buildKnightSlash(options, p, 'normal'), 'normal');
-}
-
 async function playGuardBreakCleave(options: Options, p: Palette): Promise<void> {
-  await animateKnightSlash(options, buildKnightSlash(options, p, 'skill'), 'skill');
+  const angle = attackAngle(options);
+  const root = options.scene.add.container(options.target.x, options.target.y)
+    .setDepth(powVfxDepth('foreground') + 19)
+    .setRotation(angle * 0.06);
+  const mainSlash = slashLine(options, p, 74, 7.5, 0.58, 0.98);
+  const after = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+  after.lineStyle(4, p.accent, 0.52);
+  after.lineBetween(-82, 54, 61, -42);
+  const breakMark = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+  breakMark.lineStyle(4, p.main, 0.58);
+  breakMark.lineBetween(8, -28, 41, -52);
+  breakMark.lineBetween(13, -10, 53, -17);
+  breakMark.lineBetween(14, 10, 53, 18);
+  breakMark.lineBetween(8, 28, 41, 52);
+  const contact = options.scene.add.circle(10, 0, 15, p.core, 0.3).setBlendMode(Phaser.BlendModes.ADD);
+  root.add([after, breakMark, mainSlash, contact]);
+  root.setScale(0.73);
+  try {
+    await tween(options.scene, root, {
+      scaleX: 1.2,
+      scaleY: 1.2,
+      alpha: 0,
+      duration: options.reducedMotion ? 105 : 180,
+      ease: 'Cubic.easeOut'
+    }, 430);
+  } finally {
+    root.destroy(true);
+  }
 }
 
 async function playRoyalJudgmentSlash(options: Options, p: Palette): Promise<void> {
-  const root = buildKnightSlash(options, p, 'ultimate');
+  const root = options.scene.add.container(options.target.x, options.target.y)
+    .setDepth(powVfxDepth('foreground') + 22);
+  const slash = slashLine(options, p, 108, 11, 0.68, 1);
+  const royalEdge = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+  royalEdge.lineStyle(5, p.accent, 0.78);
+  royalEdge.lineBetween(-118, 80, 88, -63);
+  royalEdge.lineStyle(3, p.core, 0.72);
+  royalEdge.lineBetween(-110, 61, 98, -82);
+  const crest = options.scene.add.polygon(0, -6, [
+    -34, -16, -18, -36, 0, -20, 18, -36, 34, -16, 25, 16, 0, 31, -25, 16
+  ], p.main, 0.12).setStrokeStyle(4, p.accent, 0.65).setBlendMode(Phaser.BlendModes.ADD);
+  const shock = options.scene.add.ellipse(0, 0, 202, 118, 0x000000, 0)
+    .setStrokeStyle(6, p.main, 0.62)
+    .setBlendMode(Phaser.BlendModes.ADD);
+  const flash = options.scene.add.circle(0, 0, 29, p.core, 0.34).setBlendMode(Phaser.BlendModes.ADD);
+  root.add([shock, crest, royalEdge, slash, flash]);
+  root.setScale(0.58);
 
   if (options.scene.cameras?.main) {
     options.scene.cameras.main.shake(
-      options.reducedMotion ? 86 : 165,
-      options.reducedMotion ? 0.0014 : 0.0053,
+      options.reducedMotion ? 88 : 165,
+      options.reducedMotion ? 0.0015 : 0.0055,
       false
     );
   }
 
-  await animateKnightSlash(options, root, 'ultimate');
+  try {
+    await tween(options.scene, root, {
+      scaleX: 1.46,
+      scaleY: 1.46,
+      alpha: 0,
+      duration: options.reducedMotion ? 150 : 270,
+      ease: 'Cubic.easeOut'
+    }, 550);
+  } finally {
+    root.destroy(true);
+  }
 }
 
 export async function playCombat2168KnightDistinctTierVfx(
@@ -278,24 +185,27 @@ export async function playCombat2168KnightDistinctTierVfx(
   tier: Combat2168KnightTier
 ): Promise<void> {
   const p = PALETTE[options.element] ?? PALETTE.neutral;
-  if (tier === 'ultimate') return playRoyalJudgmentSlash(options, p);
-  if (tier === 'skill') return playGuardBreakCleave(options, p);
-  return playHeavyCut(options, p);
+  if (tier === 'ultimate') {
+    await playRoyalJudgmentSlash(options, p);
+    return;
+  }
+  if (tier === 'skill') {
+    await playGuardBreakCleave(options, p);
+    return;
+  }
+  await playHeavyCut(options, p);
 }
 
 (globalThis as any).POWDER_COMBAT2_KNIGHT_DISTINCT_TIERS = {
-  version: COMBAT2186_KNIGHT_VERSION,
+  version: COMBAT2179_KNIGHT_VERSION,
   role: 'knight',
   owner: 'dedicated-manual',
   realCombatReady: true,
   tiers: {
-    normal: 'clear-crescent-heavy-cut',
-    skill: 'guard-break-crescent-cleave',
-    ultimate: 'royal-judgment-grand-crescent'
+    normal: 'heavy-cut-contact',
+    skill: 'guard-break-cleave-contact',
+    ultimate: 'royal-judgment-slash-contact'
   },
-  slashShape: 'three-layer-curved-crescent-strokepoints',
-  slashPersistence: 'reveal-hold-fade',
-  phaserGraphicsCompatibleCurve: true,
   sourceToTargetProjectile: false,
   contactOnly: true,
   normalCameraShake: false,
