@@ -19,7 +19,10 @@ import {
   playCombat2165MageDistinctTierVfx,
   type Combat2165MageTier
 } from './Combat2165MageDistinctTierVfx';
-import { COMBAT2166_TANK_VERSION } from './Combat2166TankDistinctTierVfx';
+import {
+  COMBAT2166_TANK_VERSION,
+  playCombat2166TankDistinctTierVfx
+} from './Combat2166TankDistinctTierVfx';
 import { COMBAT2167_FIGHTER_VERSION } from './Combat2167FighterDistinctTierVfx';
 import { COMBAT2168_KNIGHT_VERSION } from './Combat2168KnightDistinctTierVfx';
 import {
@@ -173,6 +176,12 @@ async function playNightProjectile(view: PowViewProjectileRuntime, targetX: numb
     return;
   }
 
+  if (meleeRole === 'tank') {
+    await playCombat2166TankDistinctTierVfx(options, tier);
+    recordMeleeImpact(view, 'tank', tier, options);
+    return;
+  }
+
   if (meleeRole) {
     await playCombat2172MeleeProfessionImpact(options, meleeRole, tier);
     recordMeleeImpact(view, meleeRole, tier, options);
@@ -274,7 +283,6 @@ export function installCombatNightProjectileBridge(): void {
   };
 
   prototype.playElementTravel = async function (this: PowViewProjectileRuntime, targetX: number, targetY: number): Promise<void> {
-    // Melee roles create target-local contact VFX only. No source -> target projectile is created.
     await playNightProjectile(this, targetX, targetY);
   };
 
@@ -286,8 +294,6 @@ export function installCombatNightProjectileBridge(): void {
     const distance = Math.max(1, Math.hypot(dx, dy));
     const tier = resolveActionTier(this);
     const meleeRole = resolveCombat2172MeleeRole(this.pow.role);
-
-    if (typeof this.playCastSignature === 'function') await this.playCastSignature(false);
 
     if (meleeRole) {
       const advance = meleeApproach(distance, meleeRole);
@@ -323,6 +329,8 @@ export function installCombatNightProjectileBridge(): void {
       }
       return;
     }
+
+    if (typeof this.playCastSignature === 'function') await this.playCastSignature(false);
 
     const attackX = startX + (dx / distance) * 34;
     const attackY = startY + (dy / distance) * 34;
@@ -366,13 +374,14 @@ export function installCombatNightProjectileBridge(): void {
     mageDirectRuntime: true,
     mageDirectVersion: COMBAT2165_MAGE_VERSION,
     mageTierContext: true,
-    mageForms: { normal: 'arcane-orb', skill: 'twin-orbit-orb', ultimate: 'arcane-comet' },
+    mageForms: { normal: 'arcane-bolt', skill: 'twin-rune-lance', ultimate: 'astral-comet' },
     tankDirectRuntime: true,
     tankDirectVersion: COMBAT2166_TANK_VERSION,
     tankTierContext: true,
     tankProjectileTravel: false,
-    tankIdentityPreserved: true,
-    tankForms: { normal: 'shield-bash-contact', skill: 'bulwark-crash-contact', ultimate: 'fortress-quake-contact' },
+    tankCastSignature: false,
+    tankGenericRenderer: false,
+    tankForms: { normal: 'shield-bash-contact', skill: 'bulwark-slam-contact', ultimate: 'fortress-breaker-contact' },
     fighterDirectRuntime: true,
     fighterDirectVersion: COMBAT2167_FIGHTER_VERSION,
     fighterTierContext: true,
@@ -400,6 +409,7 @@ export function installCombatNightProjectileBridge(): void {
     healerForms: { normal: 'life-seed', skill: 'restoration-ribbon', ultimate: 'sanctuary-heart-ray' },
     allNewProfessionUltimateImpactShake: true,
     meleeRolesUseActorApproach: ['tank', 'fighter', 'knight', 'assassin'],
+    meleeCastSignatureDisabled: true,
     meleeProjectileTravelDisabled: true,
     otherRolesCompatibilityOwnerStack: true,
     combatLogicChanged: false
