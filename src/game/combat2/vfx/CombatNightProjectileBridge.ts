@@ -23,7 +23,11 @@ import {
   COMBAT2166_TANK_VERSION,
   playCombat2166TankDistinctTierVfx
 } from './Combat2166TankDistinctTierVfx';
-import { COMBAT2167_FIGHTER_VERSION } from './Combat2167FighterDistinctTierVfx';
+import {
+  COMBAT2167_FIGHTER_VERSION,
+  playCombat2167FighterDistinctTierVfx,
+  type Combat2167FighterTier
+} from './Combat2167FighterDistinctTierVfx';
 import { COMBAT2168_KNIGHT_VERSION } from './Combat2168KnightDistinctTierVfx';
 import {
   COMBAT2169_ENCHANTER_VERSION,
@@ -106,7 +110,7 @@ function makeOptions(view: PowViewProjectileRuntime, targetX: number, targetY: n
 
 function meleeIdentity(role: Combat2172MeleeRole): string {
   if (role === 'tank') return 'shield-bash-contact';
-  if (role === 'fighter') return 'single-heavy-punch';
+  if (role === 'fighter') return 'heavy-punch-contact';
   if (role === 'knight') return 'single-heavy-slash';
   return 'double-critical-style-slash';
 }
@@ -182,6 +186,12 @@ async function playNightProjectile(view: PowViewProjectileRuntime, targetX: numb
     return;
   }
 
+  if (meleeRole === 'fighter') {
+    await playCombat2167FighterDistinctTierVfx(options, tier as Combat2167FighterTier);
+    recordMeleeImpact(view, 'fighter', tier, options);
+    return;
+  }
+
   if (meleeRole) {
     await playCombat2172MeleeProfessionImpact(options, meleeRole, tier);
     recordMeleeImpact(view, meleeRole, tier, options);
@@ -227,7 +237,7 @@ async function playNightProjectile(view: PowViewProjectileRuntime, targetX: numb
 
 function meleeContactGap(role: Combat2172MeleeRole): number {
   if (role === 'tank') return 210;
-  if (role === 'fighter') return 185;
+  if (role === 'fighter') return 168;
   if (role === 'knight') return 195;
   return 150;
 }
@@ -236,9 +246,9 @@ function meleeApproach(distance: number, role: Combat2172MeleeRole): number {
   if (distance <= 1) return 0;
   const contactGap = meleeContactGap(role);
   const gapLimited = Math.max(0, distance - contactGap);
-  const proportional = distance * (role === 'assassin' ? 0.8 : role === 'fighter' ? 0.76 : 0.72);
+  const proportional = distance * (role === 'assassin' ? 0.8 : role === 'fighter' ? 0.79 : 0.72);
   const advance = Math.min(gapLimited, proportional);
-  return advance >= 32 ? advance : distance * (role === 'assassin' ? 0.5 : 0.4);
+  return advance >= 32 ? advance : distance * (role === 'assassin' ? 0.5 : role === 'fighter' ? 0.46 : 0.4);
 }
 
 function meleeDashMs(role: Combat2172MeleeRole, tier: Combat2163MarksmanTier, reducedMotion: boolean): number {
@@ -249,10 +259,10 @@ function meleeDashMs(role: Combat2172MeleeRole, tier: Combat2163MarksmanTier, re
     return 140;
   }
   if (role === 'fighter') {
-    if (reducedMotion) return tier === 'ultimate' ? 105 : 82;
-    if (tier === 'ultimate') return 195;
-    if (tier === 'skill') return 160;
-    return 128;
+    if (reducedMotion) return tier === 'ultimate' ? 110 : 84;
+    if (tier === 'ultimate') return 205;
+    if (tier === 'skill') return 168;
+    return 132;
   }
   if (role === 'knight') {
     if (reducedMotion) return tier === 'ultimate' ? 108 : 84;
@@ -269,7 +279,7 @@ function meleeDashMs(role: Combat2172MeleeRole, tier: Combat2163MarksmanTier, re
 function meleeReturnMs(role: Combat2172MeleeRole, tier: Combat2163MarksmanTier, reducedMotion: boolean): number {
   if (reducedMotion) return role === 'assassin' ? 60 : 80;
   if (role === 'assassin') return tier === 'ultimate' ? 95 : 82;
-  if (role === 'fighter') return tier === 'ultimate' ? 165 : 125;
+  if (role === 'fighter') return tier === 'ultimate' ? 170 : tier === 'skill' ? 132 : 118;
   if (role === 'knight') return tier === 'ultimate' ? 155 : 120;
   return tier === 'ultimate' ? 155 : 120;
 }
@@ -386,7 +396,9 @@ export function installCombatNightProjectileBridge(): void {
     fighterDirectVersion: COMBAT2167_FIGHTER_VERSION,
     fighterTierContext: true,
     fighterProjectileTravel: false,
-    fighterForms: { normal: 'single-heavy-punch', skill: 'single-heavy-punch-break', ultimate: 'single-heavy-punch-finisher' },
+    fighterCastSignature: false,
+    fighterGenericRenderer: false,
+    fighterForms: { normal: 'heavy-straight-punch-contact', skill: 'rising-breaker-punch-contact', ultimate: 'meteor-fist-finisher-contact' },
     knightDirectRuntime: true,
     knightDirectVersion: COMBAT2168_KNIGHT_VERSION,
     knightTierContext: true,
