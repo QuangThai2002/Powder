@@ -2,8 +2,9 @@ import Phaser from 'phaser';
 import type { CombatProjectileElement, DirectionalProjectileOptions } from './DirectionalElementProjectileVfx';
 import { powVfxDepth } from './CombatNightVfxLayout';
 
-export const COMBAT2173_PROFESSION_IMPACT_VERSION = '2.17.3';
-export const COMBAT2172_PROFESSION_IMPACT_VERSION = COMBAT2173_PROFESSION_IMPACT_VERSION;
+export const COMBAT2174_PROFESSION_IMPACT_VERSION = '2.17.4';
+export const COMBAT2173_PROFESSION_IMPACT_VERSION = COMBAT2174_PROFESSION_IMPACT_VERSION;
+export const COMBAT2172_PROFESSION_IMPACT_VERSION = COMBAT2174_PROFESSION_IMPACT_VERSION;
 export type Combat2172ProfessionTier = 'normal' | 'skill' | 'ultimate';
 export type Combat2172ProfessionRole = 'mage' | 'tank' | 'fighter' | 'knight' | 'assassin' | 'enchanter' | 'healer';
 export type Combat2172MeleeRole = 'tank' | 'fighter' | 'knight' | 'assassin';
@@ -39,6 +40,10 @@ export function resolveCombat2172MeleeRole(role?: string): Combat2172MeleeRole |
   if (value.includes('hiep si') || value.includes('knight') || value.includes('paladin')) return 'knight';
   if (value.includes('sat thu') || value.includes('assassin')) return 'assassin';
   return null;
+}
+
+function isMeleeRole(role: Combat2172ProfessionRole): role is Combat2172MeleeRole {
+  return role === 'tank' || role === 'fighter' || role === 'knight' || role === 'assassin';
 }
 
 function tween(
@@ -95,15 +100,23 @@ function wait(scene: Phaser.Scene, duration: number): Promise<void> {
 function shake(scene: Phaser.Scene, role: Combat2172ProfessionRole, tier: Combat2172ProfessionTier, reducedMotion: boolean): void {
   const camera = scene.cameras?.main;
   if (!camera) return;
+
   if (tier === 'ultimate') {
     const heavy = role === 'tank' || role === 'fighter' || role === 'knight';
-    camera.shake(reducedMotion ? 72 : heavy ? 170 : role === 'assassin' ? 105 : 145, reducedMotion ? 0.0015 : heavy ? 0.0062 : role === 'assassin' ? 0.0038 : 0.0048, false);
+    camera.shake(
+      reducedMotion ? 72 : heavy ? 170 : role === 'assassin' ? 105 : 145,
+      reducedMotion ? 0.0015 : heavy ? 0.0062 : role === 'assassin' ? 0.0038 : 0.0048,
+      false
+    );
     return;
   }
-  if (tier === 'skill' && !reducedMotion) {
-    const intensity = role === 'tank' || role === 'fighter' || role === 'knight' ? 0.0018 : role === 'assassin' ? 0.00135 : 0.0012;
-    camera.shake(role === 'assassin' ? 58 : 76, intensity, false);
-  }
+
+  // Melee normal/skill attacks must keep the camera stable. Their weight comes from
+  // contact VFX and actor motion; camera shake is reserved for Ultimate.
+  if (isMeleeRole(role)) return;
+
+  // Ranged/support skills retain their subtle existing impact feedback.
+  if (tier === 'skill' && !reducedMotion) camera.shake(76, 0.0012, false);
 }
 
 function makeImpactBurst(options: Options, role: Combat2172ProfessionRole, tier: Combat2172ProfessionTier): Phaser.GameObjects.Container {
@@ -300,15 +313,17 @@ async function playAssassinDoubleCriticalSlash(options: Options, tier: Combat217
   const duration = options.reducedMotion ? 52 : tier === 'ultimate' ? 86 : tier === 'skill' ? 72 : 58;
   const gap = options.reducedMotion ? 10 : tier === 'ultimate' ? 18 : tier === 'skill' ? 24 : 30;
   const camera = options.scene.cameras?.main;
+
   for (const hitIndex of [1, 2] as const) {
     const root = buildAssassinSlash(options, tier, p, hitIndex);
     root.setScale(tier === 'ultimate' ? (hitIndex === 2 ? 0.88 : 0.82) : tier === 'skill' ? 0.82 : 0.78);
-    if (camera && !options.reducedMotion && tier !== 'normal') {
-      const intensity = hitIndex === 2
-        ? tier === 'ultimate' ? 0.0038 : 0.002
-        : tier === 'ultimate' ? 0.0023 : 0.0013;
-      camera.shake(hitIndex === 2 ? 72 : 46, intensity, false);
+
+    // Assassin skill keeps both visual cuts but does not shake the screen.
+    // Only the Ultimate finisher may shake on each critical-style contact.
+    if (camera && !options.reducedMotion && tier === 'ultimate') {
+      camera.shake(hitIndex === 2 ? 72 : 46, hitIndex === 2 ? 0.0038 : 0.0023, false);
     }
+
     try {
       await tween(options.scene, root, {
         scaleX: hitIndex === 2 ? 1.3 : 1.18,
@@ -390,7 +405,7 @@ export function scheduleCombat2172RangedImpactFeedback(
 }
 
 (globalThis as any).POWDER_COMBAT2_PROFESSION_IMPACT_2172 = {
-  version: COMBAT2173_PROFESSION_IMPACT_VERSION,
+  version: COMBAT2174_PROFESSION_IMPACT_VERSION,
   meleeRoles: ['tank', 'fighter', 'knight', 'assassin'],
   rangedRoles: ['mage', 'enchanter', 'healer'],
   meleeProjectileTravel: false,
@@ -402,8 +417,9 @@ export function scheduleCombat2172RangedImpactFeedback(
   assassinDamageHitsChanged: false,
   tierIdentityRule: 'normal-skill-ultimate-use-distinct-choreography-not-scale-only',
   ultimateCameraShake: true,
-  skillImpactShake: true,
-  normalImpactShake: false,
+  meleeSkillCameraShake: false,
+  meleeNormalCameraShake: false,
+  rangedSkillImpactShake: true,
   particleEmitters: false,
   repeatingTweenLoops: false,
   cleanupOwned: true,
