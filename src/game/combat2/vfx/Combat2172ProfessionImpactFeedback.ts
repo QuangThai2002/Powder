@@ -45,6 +45,10 @@ export function resolveCombat2172MeleeRole(role?: string): Combat2172MeleeRole |
   return null;
 }
 
+function isMeleeRole(role: Combat2172ProfessionRole): role is Combat2172MeleeRole {
+  return role === 'tank' || role === 'fighter' || role === 'knight' || role === 'assassin';
+}
+
 function tween(
   scene: Phaser.Scene,
   target: Phaser.GameObjects.GameObject | object,
@@ -75,33 +79,80 @@ function tween(
   });
 }
 
+function shake(
+  scene: Phaser.Scene,
+  role: Combat2172ProfessionRole,
+  tier: Combat2172ProfessionTier,
+  reducedMotion: boolean
+): void {
+  const camera = scene.cameras?.main;
+  if (!camera) return;
+
+  if (tier === 'ultimate') {
+    const heavy = role === 'tank' || role === 'fighter' || role === 'knight';
+    camera.shake(
+      reducedMotion ? 72 : heavy ? 170 : role === 'assassin' ? 105 : 145,
+      reducedMotion ? 0.0015 : heavy ? 0.0062 : role === 'assassin' ? 0.0038 : 0.0048,
+      false
+    );
+    return;
+  }
+
+  if (isMeleeRole(role)) return;
+  if (tier === 'skill' && !reducedMotion) camera.shake(76, 0.0012, false);
+}
+
+function makeImpactBurst(
+  options: Options,
+  tier: Combat2172ProfessionTier
+): Phaser.GameObjects.Container {
+  const p = ELEMENT_PALETTE[options.element] ?? ELEMENT_PALETTE.neutral;
+  const radius = tier === 'ultimate' ? 58 : tier === 'skill' ? 40 : 24;
+  const root = options.scene.add.container(options.target.x, options.target.y)
+    .setDepth(powVfxDepth('foreground') + 16);
+  const flash = options.scene.add.circle(
+    0,
+    0,
+    radius * 0.56,
+    p.core,
+    tier === 'ultimate' ? 0.34 : tier === 'skill' ? 0.22 : 0.14
+  ).setBlendMode(Phaser.BlendModes.ADD);
+  const ring = options.scene.add.circle(0, 0, radius, 0x000000, 0)
+    .setStrokeStyle(
+      tier === 'ultimate' ? 5 : tier === 'skill' ? 3.5 : 2,
+      p.main,
+      tier === 'normal' ? 0.66 : 0.94
+    )
+    .setBlendMode(Phaser.BlendModes.ADD);
+  const rays = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+  const rayCount = tier === 'ultimate' ? 8 : tier === 'skill' ? 5 : 3;
+  for (let i = 0; i < rayCount; i += 1) {
+    const rayAngle = (Math.PI * 2 * i) / rayCount;
+    const innerR = radius * 0.32;
+    const outerR = radius * (tier === 'ultimate' ? 1.48 : tier === 'skill' ? 1.18 : 0.96);
+    rays.lineStyle(
+      tier === 'ultimate' ? 4 : tier === 'skill' ? 3 : 2,
+      i % 2 ? p.core : p.main,
+      tier === 'ultimate' ? 0.76 : tier === 'skill' ? 0.54 : 0.36
+    );
+    rays.lineBetween(
+      Math.cos(rayAngle) * innerR,
+      Math.sin(rayAngle) * innerR,
+      Math.cos(rayAngle) * outerR,
+      Math.sin(rayAngle) * outerR
+    );
+  }
+  root.add([flash, rays, ring]);
+  return root;
+}
+
 export async function playCombat2172ImpactFeedback(
   options: Options,
   role: Combat2172ProfessionRole,
   tier: Combat2172ProfessionTier
 ): Promise<void> {
-  const p = ELEMENT_PALETTE[options.element] ?? ELEMENT_PALETTE.neutral;
-  const radius = tier === 'ultimate' ? 58 : tier === 'skill' ? 40 : 24;
-  const root = options.scene.add.container(options.target.x, options.target.y)
-    .setDepth(powVfxDepth('foreground') + 16);
-  const flash = options.scene.add.circle(0, 0, radius * 0.55, p.core, tier === 'ultimate' ? 0.34 : tier === 'skill' ? 0.22 : 0.14)
-    .setBlendMode(Phaser.BlendModes.ADD);
-  const ring = options.scene.add.circle(0, 0, radius, 0x000000, 0)
-    .setStrokeStyle(tier === 'ultimate' ? 5 : tier === 'skill' ? 3.5 : 2, p.main, tier === 'normal' ? 0.66 : 0.92)
-    .setBlendMode(Phaser.BlendModes.ADD);
-  root.add([flash, ring]);
-
-  if (tier === 'ultimate' && options.scene.cameras?.main) {
-    options.scene.cameras.main.shake(
-      options.reducedMotion ? 70 : 135,
-      options.reducedMotion ? 0.0012 : 0.004,
-      false
-    );
-  } else if (tier === 'skill' && role === 'mage' && !options.reducedMotion && options.scene.cameras?.main) {
-    // Mage 2.17.5 was user-approved; preserve its subtle existing skill impact shake.
-    options.scene.cameras.main.shake(76, 0.0012, false);
-  }
-
+  shake(options.scene, role, tier, options.reducedMotion);
+  const root = makeImpactBurst(options, tier);
   const duration = tier === 'ultimate' ? 230 : tier === 'skill' ? 165 : 105;
   root.setScale(tier === 'ultimate' ? 0.56 : tier === 'skill' ? 0.68 : 0.78);
   try {
@@ -122,7 +173,7 @@ export async function playCombat2172MeleeProfessionImpact(
   _role: Combat2172MeleeRole,
   _tier: Combat2172ProfessionTier
 ): Promise<void> {
-  // Retired in 2.18.3. Tank/Fighter/Knight/Assassin must use their dedicated owners.
+  // Retired in 2.18.3. Tank/Fighter/Knight/Assassin must use dedicated owners.
 }
 
 export function rangedImpactDelayMs(
@@ -157,6 +208,7 @@ export function scheduleCombat2172RangedImpactFeedback(
 
 (globalThis as any).POWDER_COMBAT2_PROFESSION_IMPACT_2172 = {
   version: COMBAT2183_PROFESSION_IMPACT_VERSION,
+  mageImpactPresentationPreservedFrom2175: true,
   meleeRoles: ['tank', 'fighter', 'knight', 'assassin'],
   meleeGenericRenderersRetired: true,
   dedicatedMeleeOwnersRequired: true,
