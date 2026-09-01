@@ -28,7 +28,11 @@ import {
   playCombat2167FighterDistinctTierVfx,
   type Combat2167FighterTier
 } from './Combat2167FighterDistinctTierVfx';
-import { COMBAT2168_KNIGHT_VERSION } from './Combat2168KnightDistinctTierVfx';
+import {
+  COMBAT2168_KNIGHT_VERSION,
+  playCombat2168KnightDistinctTierVfx,
+  type Combat2168KnightTier
+} from './Combat2168KnightDistinctTierVfx';
 import {
   COMBAT2169_ENCHANTER_VERSION,
   isCombat2169EnchanterRole,
@@ -111,7 +115,7 @@ function makeOptions(view: PowViewProjectileRuntime, targetX: number, targetY: n
 function meleeIdentity(role: Combat2172MeleeRole): string {
   if (role === 'tank') return 'shield-bash-contact';
   if (role === 'fighter') return 'heavy-punch-contact';
-  if (role === 'knight') return 'single-heavy-slash';
+  if (role === 'knight') return 'heavy-sword-contact';
   return 'double-critical-style-slash';
 }
 
@@ -192,6 +196,12 @@ async function playNightProjectile(view: PowViewProjectileRuntime, targetX: numb
     return;
   }
 
+  if (meleeRole === 'knight') {
+    await playCombat2168KnightDistinctTierVfx(options, tier as Combat2168KnightTier);
+    recordMeleeImpact(view, 'knight', tier, options);
+    return;
+  }
+
   if (meleeRole) {
     await playCombat2172MeleeProfessionImpact(options, meleeRole, tier);
     recordMeleeImpact(view, meleeRole, tier, options);
@@ -238,7 +248,7 @@ async function playNightProjectile(view: PowViewProjectileRuntime, targetX: numb
 function meleeContactGap(role: Combat2172MeleeRole): number {
   if (role === 'tank') return 210;
   if (role === 'fighter') return 168;
-  if (role === 'knight') return 195;
+  if (role === 'knight') return 178;
   return 150;
 }
 
@@ -246,9 +256,9 @@ function meleeApproach(distance: number, role: Combat2172MeleeRole): number {
   if (distance <= 1) return 0;
   const contactGap = meleeContactGap(role);
   const gapLimited = Math.max(0, distance - contactGap);
-  const proportional = distance * (role === 'assassin' ? 0.8 : role === 'fighter' ? 0.79 : 0.72);
+  const proportional = distance * (role === 'assassin' ? 0.8 : role === 'fighter' ? 0.79 : role === 'knight' ? 0.77 : 0.72);
   const advance = Math.min(gapLimited, proportional);
-  return advance >= 32 ? advance : distance * (role === 'assassin' ? 0.5 : role === 'fighter' ? 0.46 : 0.4);
+  return advance >= 32 ? advance : distance * (role === 'assassin' ? 0.5 : role === 'fighter' ? 0.46 : role === 'knight' ? 0.44 : 0.4);
 }
 
 function meleeDashMs(role: Combat2172MeleeRole, tier: Combat2163MarksmanTier, reducedMotion: boolean): number {
@@ -266,9 +276,9 @@ function meleeDashMs(role: Combat2172MeleeRole, tier: Combat2163MarksmanTier, re
   }
   if (role === 'knight') {
     if (reducedMotion) return tier === 'ultimate' ? 108 : 84;
-    if (tier === 'ultimate') return 205;
-    if (tier === 'skill') return 165;
-    return 132;
+    if (tier === 'ultimate') return 202;
+    if (tier === 'skill') return 164;
+    return 130;
   }
   if (reducedMotion) return tier === 'ultimate' ? 80 : 60;
   if (tier === 'ultimate') return 130;
@@ -280,7 +290,7 @@ function meleeReturnMs(role: Combat2172MeleeRole, tier: Combat2163MarksmanTier, 
   if (reducedMotion) return role === 'assassin' ? 60 : 80;
   if (role === 'assassin') return tier === 'ultimate' ? 95 : 82;
   if (role === 'fighter') return tier === 'ultimate' ? 170 : tier === 'skill' ? 132 : 118;
-  if (role === 'knight') return tier === 'ultimate' ? 155 : 120;
+  if (role === 'knight') return tier === 'ultimate' ? 160 : tier === 'skill' ? 126 : 116;
   return tier === 'ultimate' ? 155 : 120;
 }
 
@@ -403,7 +413,9 @@ export function installCombatNightProjectileBridge(): void {
     knightDirectVersion: COMBAT2168_KNIGHT_VERSION,
     knightTierContext: true,
     knightProjectileTravel: false,
-    knightForms: { normal: 'single-heavy-slash', skill: 'single-heavy-slash-cleave', ultimate: 'single-heavy-slash-judgment' },
+    knightCastSignature: false,
+    knightGenericRenderer: false,
+    knightForms: { normal: 'heavy-cut-contact', skill: 'guard-break-cleave-contact', ultimate: 'royal-judgment-slash-contact' },
     assassinDirectRuntime: true,
     assassinTierContext: true,
     assassinProjectileTravel: false,
