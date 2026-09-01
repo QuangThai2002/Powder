@@ -3,22 +3,15 @@ import type { CombatProjectileElement, DirectionalProjectileOptions } from './Di
 import { powVfxDepth } from './CombatNightVfxLayout';
 import { playCombat2105SlashCue } from '../views/Combat2105AudioImpactPatch';
 
-export const COMBAT2186_KNIGHT_VERSION = '2.18.6';
-export const COMBAT2179_KNIGHT_VERSION = COMBAT2186_KNIGHT_VERSION;
-export const COMBAT2168_KNIGHT_VERSION = COMBAT2186_KNIGHT_VERSION;
+export const COMBAT2187_KNIGHT_VERSION = '2.18.7';
+export const COMBAT2186_KNIGHT_VERSION = COMBAT2187_KNIGHT_VERSION;
+export const COMBAT2179_KNIGHT_VERSION = COMBAT2187_KNIGHT_VERSION;
+export const COMBAT2168_KNIGHT_VERSION = COMBAT2187_KNIGHT_VERSION;
 export type Combat2168KnightTier = 'normal' | 'skill' | 'ultimate';
 
 type Options = DirectionalProjectileOptions & { role?: string };
 type Palette = { main: number; core: number; dark: number; accent: number };
-type SlashSpec = {
-  half: number;
-  bend: number;
-  shadowWidth: number;
-  glowWidth: number;
-  bodyWidth: number;
-  coreWidth: number;
-  afterOffset: number;
-};
+type SlashSpec = { half: number; thickness: number; core: number; afterOffset: number };
 
 const PALETTE: Readonly<Record<CombatProjectileElement, Palette>> = Object.freeze({
   fire: { main: 0xf27b4f, core: 0xfff1c7, dark: 0x6d2f22, accent: 0xffb86b },
@@ -93,53 +86,44 @@ function wait(scene: Phaser.Scene, duration: number): Promise<void> {
   });
 }
 
-function slashDirection(options: Options): number {
+function slashSpec(tier: Combat2168KnightTier): SlashSpec {
+  if (tier === 'ultimate') return { half: 148, thickness: 18, core: 4.8, afterOffset: 18 };
+  if (tier === 'skill') return { half: 112, thickness: 13, core: 4, afterOffset: 14 };
+  return { half: 78, thickness: 9, core: 3.2, afterOffset: 10 };
+}
+
+function facing(options: Options): number {
   return options.target.x >= options.source.x ? 1 : -1;
 }
 
-function slashSpec(tier: Combat2168KnightTier): SlashSpec {
-  if (tier === 'ultimate') {
-    return { half: 136, bend: 104, shadowWidth: 34, glowWidth: 28, bodyWidth: 16, coreWidth: 6, afterOffset: 20 };
-  }
-  if (tier === 'skill') {
-    return { half: 100, bend: 76, shadowWidth: 26, glowWidth: 21, bodyWidth: 12, coreWidth: 4.6, afterOffset: 15 };
-  }
-  return { half: 72, bend: 54, shadowWidth: 20, glowWidth: 16, bodyWidth: 9, coreWidth: 3.5, afterOffset: 11 };
+function slashRotation(options: Options, tier: Combat2168KnightTier): number {
+  const face = facing(options);
+  const angle = tier === 'ultimate' ? 0.58 : tier === 'skill' ? 0.52 : 0.64;
+  return -face * angle;
 }
 
-/**
- * Draw a quadratic-looking slash using only Graphics.lineBetween(), which is already used
- * throughout the stable Combat2 VFX stack. No path/bezier/strokePoints API is required.
- */
-function drawCurveSegments(
-  graphics: Phaser.GameObjects.Graphics,
-  spec: SlashSpec,
-  direction: number,
-  width: number,
-  color: number,
-  alpha: number,
-  offsetY = 0,
-  segments = 12
-): void {
-  const x0 = -spec.half;
-  const y0 = direction * spec.bend * 0.45 + offsetY;
-  const cx = 0;
-  const cy = -direction * spec.bend + offsetY;
-  const x1 = spec.half;
-  const y1 = -direction * spec.bend * 0.4 + offsetY;
-  let px = x0;
-  let py = y0;
+function bladePoints(half: number, thickness: number): number[] {
+  return [
+    -half, 0,
+    -half * 0.64, -thickness * 0.22,
+    -half * 0.18, -thickness * 0.88,
+    half * 0.42, -thickness * 0.48,
+    half, 0,
+    half * 0.42, thickness * 0.34,
+    -half * 0.18, thickness * 0.62,
+    -half * 0.66, thickness * 0.18
+  ];
+}
 
-  graphics.lineStyle(width, color, alpha);
-  for (let i = 1; i <= segments; i += 1) {
-    const t = i / segments;
-    const u = 1 - t;
-    const x = u * u * x0 + 2 * u * t * cx + t * t * x1;
-    const y = u * u * y0 + 2 * u * t * cy + t * t * y1;
-    graphics.lineBetween(px, py, x, y);
-    px = x;
-    py = y;
-  }
+function corePoints(half: number, thickness: number): number[] {
+  return [
+    -half, 0,
+    -half * 0.48, -thickness * 0.52,
+    half * 0.56, -thickness * 0.2,
+    half, 0,
+    half * 0.5, thickness * 0.18,
+    -half * 0.46, thickness * 0.4
+  ];
 }
 
 function buildKnightSlash(
@@ -148,86 +132,82 @@ function buildKnightSlash(
   tier: Combat2168KnightTier
 ): Phaser.GameObjects.Container {
   const spec = slashSpec(tier);
-  const direction = slashDirection(options);
-  const depth = tier === 'ultimate' ? 23 : tier === 'skill' ? 21 : 19;
+  const face = facing(options);
   const root = options.scene.add.container(options.target.x, options.target.y)
-    .setDepth(powVfxDepth('foreground') + depth);
+    .setDepth(powVfxDepth('foreground') + (tier === 'ultimate' ? 23 : tier === 'skill' ? 21 : 19))
+    .setRotation(slashRotation(options, tier));
 
-  const shadow = options.scene.add.graphics();
-  drawCurveSegments(shadow, spec, direction, spec.shadowWidth, p.dark, tier === 'normal' ? 0.62 : 0.72);
-
-  const afterimage = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
-  drawCurveSegments(
-    afterimage,
-    spec,
-    direction,
-    tier === 'ultimate' ? 8 : tier === 'skill' ? 6 : 4.5,
-    p.main,
-    tier === 'normal' ? 0.4 : tier === 'skill' ? 0.52 : 0.64,
-    direction * spec.afterOffset
+  const shadow = options.scene.add.polygon(
+    0,
+    2,
+    bladePoints(spec.half * 1.02, spec.thickness * 1.18),
+    p.dark,
+    tier === 'normal' ? 0.72 : 0.78
   );
 
-  const glow = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
-  drawCurveSegments(glow, spec, direction, spec.glowWidth, p.main, tier === 'normal' ? 0.22 : tier === 'skill' ? 0.29 : 0.36);
-
-  const blade = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
-  drawCurveSegments(blade, spec, direction, spec.bodyWidth, p.accent, tier === 'normal' ? 0.9 : 0.98);
-  drawCurveSegments(blade, spec, direction, spec.coreWidth, p.core, 1);
-
-  const contact = options.scene.add.circle(
-    spec.half * 0.08,
-    -direction * spec.bend * 0.12,
-    tier === 'ultimate' ? 26 : tier === 'skill' ? 18 : 12,
-    p.core,
-    tier === 'ultimate' ? 0.36 : tier === 'skill' ? 0.28 : 0.22
+  const after = options.scene.add.polygon(
+    -face * 9,
+    spec.afterOffset,
+    bladePoints(spec.half * 0.9, spec.thickness * 0.62),
+    p.main,
+    tier === 'normal' ? 0.18 : tier === 'skill' ? 0.24 : 0.3
   ).setBlendMode(Phaser.BlendModes.ADD);
 
-  const tipA = options.scene.add.circle(
-    -spec.half * 0.94,
-    direction * spec.bend * 0.42,
-    tier === 'ultimate' ? 5 : 3.5,
-    p.core,
-    0.78
-  ).setBlendMode(Phaser.BlendModes.ADD);
-  const tipB = options.scene.add.circle(
-    spec.half * 0.95,
-    -direction * spec.bend * 0.37,
-    tier === 'ultimate' ? 5 : 3.5,
-    p.core,
-    0.78
+  const glow = options.scene.add.polygon(
+    0,
+    0,
+    bladePoints(spec.half * 1.01, spec.thickness * 1.34),
+    p.main,
+    tier === 'normal' ? 0.12 : tier === 'skill' ? 0.16 : 0.2
   ).setBlendMode(Phaser.BlendModes.ADD);
 
-  root.add([shadow, afterimage, glow, blade, contact, tipA, tipB]);
+  const body = options.scene.add.polygon(
+    0,
+    0,
+    bladePoints(spec.half, spec.thickness),
+    p.accent,
+    tier === 'normal' ? 0.88 : 0.96
+  ).setBlendMode(Phaser.BlendModes.ADD);
+
+  const core = options.scene.add.polygon(
+    face * spec.half * 0.05,
+    -spec.thickness * 0.05,
+    corePoints(spec.half * 0.88, spec.core),
+    p.core,
+    1
+  ).setBlendMode(Phaser.BlendModes.ADD);
+
+  const impact = options.scene.add.circle(
+    face * 7,
+    0,
+    tier === 'ultimate' ? 22 : tier === 'skill' ? 15 : 9,
+    p.core,
+    tier === 'ultimate' ? 0.34 : tier === 'skill' ? 0.26 : 0.18
+  ).setBlendMode(Phaser.BlendModes.ADD);
+
+  root.add([shadow, after, glow, body, core, impact]);
 
   if (tier === 'skill') {
     const breakMarks = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
-    const x = spec.half * 0.44;
-    breakMarks.lineStyle(3.8, p.main, 0.66);
-    breakMarks.lineBetween(x, -direction * 20, x + 28, -direction * 39);
-    breakMarks.lineBetween(x + 5, -direction * 5, x + 37, -direction * 8);
-    breakMarks.lineBetween(x + 4, direction * 9, x + 31, direction * 28);
-    root.addAt(breakMarks, 2);
+    breakMarks.lineStyle(2.8, p.core, 0.66);
+    breakMarks.lineBetween(spec.half * 0.2, -26, spec.half * 0.42, -47);
+    breakMarks.lineBetween(spec.half * 0.27, -5, spec.half * 0.56, -8);
+    breakMarks.lineBetween(spec.half * 0.24, 15, spec.half * 0.48, 35);
+    root.add(breakMarks);
   }
 
   if (tier === 'ultimate') {
-    const inner = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
-    drawCurveSegments(
-      inner,
-      { ...spec, half: spec.half * 0.82, bend: spec.bend * 0.74 },
-      direction,
-      3.5,
-      p.core,
-      0.66,
-      -direction * 13
-    );
-    const royalShock = options.scene.add.ellipse(0, 0, 242, 138, 0x000000, 0)
-      .setStrokeStyle(5, p.main, 0.54)
+    const royalShock = options.scene.add.ellipse(0, 0, 222, 112, 0x000000, 0)
+      .setStrokeStyle(3.5, p.main, 0.4)
       .setBlendMode(Phaser.BlendModes.ADD);
-    const crest = options.scene.add.polygon(0, 0, [
-      -33, -13, -17, -31, 0, -17, 17, -31, 33, -13, 24, 16, 0, 29, -24, 16
-    ], p.main, 0.1).setStrokeStyle(3.5, p.accent, 0.58).setBlendMode(Phaser.BlendModes.ADD);
-    root.addAt(royalShock, 0);
-    root.add([inner, crest]);
+    const secondary = options.scene.add.polygon(
+      -face * 18,
+      20,
+      bladePoints(spec.half * 0.72, spec.thickness * 0.32),
+      p.core,
+      0.36
+    ).setBlendMode(Phaser.BlendModes.ADD);
+    root.add([royalShock, secondary]);
   }
 
   return root;
@@ -238,29 +218,32 @@ async function animateKnightSlash(
   root: Phaser.GameObjects.Container,
   tier: Combat2168KnightTier
 ): Promise<void> {
-  const enterMs = options.reducedMotion ? 36 : tier === 'ultimate' ? 65 : tier === 'skill' ? 55 : 45;
-  const holdMs = options.reducedMotion ? 26 : tier === 'ultimate' ? 120 : tier === 'skill' ? 95 : 75;
-  const exitMs = options.reducedMotion ? 62 : tier === 'ultimate' ? 160 : tier === 'skill' ? 125 : 105;
+  const face = facing(options);
+  const enterMs = options.reducedMotion ? 34 : tier === 'ultimate' ? 62 : tier === 'skill' ? 52 : 44;
+  const holdMs = options.reducedMotion ? 24 : tier === 'ultimate' ? 88 : tier === 'skill' ? 66 : 52;
+  const exitMs = options.reducedMotion ? 58 : tier === 'ultimate' ? 132 : tier === 'skill' ? 108 : 92;
 
-  root.setScale(tier === 'ultimate' ? 0.76 : tier === 'skill' ? 0.82 : 0.86).setAlpha(0.38);
+  root.setScale(0.24, 0.78).setAlpha(0.2);
   try {
     await tween(options.scene, root, {
       scaleX: 1,
       scaleY: 1,
       alpha: 1,
+      x: root.x + face * 5,
       duration: enterMs,
       ease: 'Cubic.easeOut'
-    }, enterMs + 160);
+    }, enterMs + 150);
 
     await wait(options.scene, holdMs);
 
     await tween(options.scene, root, {
-      scaleX: tier === 'ultimate' ? 1.1 : tier === 'skill' ? 1.075 : 1.055,
-      scaleY: tier === 'ultimate' ? 1.1 : tier === 'skill' ? 1.075 : 1.055,
+      scaleX: tier === 'ultimate' ? 1.08 : 1.04,
+      scaleY: 0.88,
       alpha: 0,
+      x: root.x + face * (tier === 'ultimate' ? 20 : 13),
       duration: exitMs,
       ease: 'Quad.easeOut'
-    }, exitMs + 190);
+    }, exitMs + 180);
   } finally {
     root.destroy(true);
   }
@@ -302,19 +285,18 @@ export async function playCombat2168KnightDistinctTierVfx(
 }
 
 (globalThis as any).POWDER_COMBAT2_KNIGHT_DISTINCT_TIERS = {
-  version: COMBAT2186_KNIGHT_VERSION,
+  version: COMBAT2187_KNIGHT_VERSION,
   role: 'knight',
   owner: 'dedicated-manual',
   realCombatReady: true,
   tiers: {
-    normal: 'heavy-cut-contact',
-    skill: 'guard-break-cleave-contact',
-    ultimate: 'royal-judgment-slash-contact'
+    normal: 'sharp-heavy-blade-streak-contact',
+    skill: 'guard-break-tapered-cleave-contact',
+    ultimate: 'royal-judgment-blade-streak-contact'
   },
-  slashShape: 'segmented-curved-heavy-blade',
-  slashPrimitive: 'lineBetween-only',
-  slashPersistence: 'reveal-hold-fade',
-  slashAudio: true,
+  slashShape: 'tapered-blade-streak',
+  curvedArcRemoved: true,
+  slashAudio: 'dedicated-contact-whoosh',
   sourceToTargetProjectile: false,
   contactOnly: true,
   normalCameraShake: false,
