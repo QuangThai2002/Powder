@@ -40,6 +40,12 @@ import {
   playCombat2169EnchanterDistinctTierVfx,
   type Combat2169EnchanterTier
 } from './Combat2169EnchanterDistinctTierVfx';
+import {
+  COMBAT2170_HEALER_VERSION,
+  isCombat2170HealerRole,
+  playCombat2170HealerDistinctTierVfx,
+  type Combat2170HealerTier
+} from './Combat2170HealerDistinctTierVfx';
 import { PowView } from '../views/PowView';
 
 interface PowViewProjectileRuntime {
@@ -142,6 +148,13 @@ async function playNightProjectile(view: PowViewProjectileRuntime, targetX: numb
     return;
   }
 
+  if (isCombat2170HealerRole(view.pow.role)) {
+    const tier = resolveActionTier(view) as Combat2170HealerTier;
+    await playCombat2170HealerDistinctTierVfx(options, tier);
+    (globalThis as any).POWDER_COMBAT2_HEALER_PROJECTILE_LAST = { version: COMBAT2170_HEALER_VERSION, tier, role: view.pow.role, element: options.element, at: Date.now(), realCombatRoute: true };
+    return;
+  }
+
   const roleAwarePlay = DirectionalElementProjectileVfx.play as unknown as (runtimeOptions: RoleAwareProjectileOptions) => Promise<void>;
   await roleAwarePlay(options);
 }
@@ -185,7 +198,7 @@ export function installCombatNightProjectileBridge(): void {
 
   const root = globalThis as any;
   root.POWDER_COMBAT2_NIGHT_PROJECTILE = {
-    version: `combat2-${COMBAT2169_ENCHANTER_VERSION}`,
+    version: `combat2-${COMBAT2170_HEALER_VERSION}`,
     runtimeEntryPoint: 'PowView.playAttackLunge',
     directTravelOwner: true,
     attackLungeOwner: true,
@@ -216,6 +229,10 @@ export function installCombatNightProjectileBridge(): void {
     enchanterDirectVersion: COMBAT2169_ENCHANTER_VERSION,
     enchanterTierContext: true,
     enchanterForms: { normal: 'hex-needle', skill: 'binding-twin-sigil', ultimate: 'abyssal-seal-lance' },
+    healerDirectRuntime: true,
+    healerDirectVersion: COMBAT2170_HEALER_VERSION,
+    healerTierContext: true,
+    healerForms: { normal: 'life-seed', skill: 'restoration-ribbon', ultimate: 'sanctuary-heart-ray' },
     otherRolesCompatibilityOwnerStack: true,
     combatLogicChanged: false
   };
