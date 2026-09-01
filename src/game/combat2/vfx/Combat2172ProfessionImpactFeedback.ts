@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import type { CombatProjectileElement, DirectionalProjectileOptions } from './DirectionalElementProjectileVfx';
 import { powVfxDepth } from './CombatNightVfxLayout';
+import './Combat2184SupportProfessionPresentationBridge';
 
 export const COMBAT2183_PROFESSION_IMPACT_VERSION = '2.18.3';
 export const COMBAT2178_PROFESSION_IMPACT_VERSION = COMBAT2183_PROFESSION_IMPACT_VERSION;
@@ -209,6 +210,7 @@ export function scheduleCombat2172RangedImpactFeedback(
 (globalThis as any).POWDER_COMBAT2_PROFESSION_IMPACT_2172 = {
   version: COMBAT2183_PROFESSION_IMPACT_VERSION,
   mageImpactPresentationPreservedFrom2175: true,
+  supportPresentationBridgeLoaded: true,
   meleeRoles: ['tank', 'fighter', 'knight', 'assassin'],
   meleeGenericRenderersRetired: true,
   dedicatedMeleeOwnersRequired: true,
