@@ -2,16 +2,16 @@ import Phaser from 'phaser';
 import type { CombatProjectileElement, DirectionalProjectileOptions } from './DirectionalElementProjectileVfx';
 import { powVfxDepth } from './CombatNightVfxLayout';
 
-export const COMBAT2174_PROFESSION_IMPACT_VERSION = '2.17.4';
-export const COMBAT2173_PROFESSION_IMPACT_VERSION = COMBAT2174_PROFESSION_IMPACT_VERSION;
-export const COMBAT2172_PROFESSION_IMPACT_VERSION = COMBAT2174_PROFESSION_IMPACT_VERSION;
+export const COMBAT2178_PROFESSION_IMPACT_VERSION = '2.17.8';
+export const COMBAT2174_PROFESSION_IMPACT_VERSION = COMBAT2178_PROFESSION_IMPACT_VERSION;
+export const COMBAT2173_PROFESSION_IMPACT_VERSION = COMBAT2178_PROFESSION_IMPACT_VERSION;
+export const COMBAT2172_PROFESSION_IMPACT_VERSION = COMBAT2178_PROFESSION_IMPACT_VERSION;
 export type Combat2172ProfessionTier = 'normal' | 'skill' | 'ultimate';
 export type Combat2172ProfessionRole = 'mage' | 'tank' | 'fighter' | 'knight' | 'assassin' | 'enchanter' | 'healer';
 export type Combat2172MeleeRole = 'tank' | 'fighter' | 'knight' | 'assassin';
 
 type Options = DirectionalProjectileOptions & { role?: string };
 type Palette = { main: number; core: number; dark: number };
-type TankManualRenderer = (options: Options, tier: Combat2172ProfessionTier) => Promise<void>;
 
 const ELEMENT_PALETTE: Readonly<Record<CombatProjectileElement, Palette>> = Object.freeze({
   fire: { main: 0xff7048, core: 0xffefd0, dark: 0x70291d },
@@ -41,15 +41,6 @@ export function resolveCombat2172MeleeRole(role?: string): Combat2172MeleeRole |
   if (value.includes('hiep si') || value.includes('knight') || value.includes('paladin')) return 'knight';
   if (value.includes('sat thu') || value.includes('assassin')) return 'assassin';
   return null;
-}
-
-function isMeleeRole(role: Combat2172ProfessionRole): role is Combat2172MeleeRole {
-  return role === 'tank' || role === 'fighter' || role === 'knight' || role === 'assassin';
-}
-
-function tankManualRenderer(): TankManualRenderer | null {
-  const candidate = (globalThis as any).POWDER_COMBAT2_TANK_MANUAL_RENDERER;
-  return typeof candidate === 'function' ? candidate as TankManualRenderer : null;
 }
 
 function tween(
@@ -106,7 +97,6 @@ function wait(scene: Phaser.Scene, duration: number): Promise<void> {
 function shake(scene: Phaser.Scene, role: Combat2172ProfessionRole, tier: Combat2172ProfessionTier, reducedMotion: boolean): void {
   const camera = scene.cameras?.main;
   if (!camera) return;
-
   if (tier === 'ultimate') {
     const heavy = role === 'tank' || role === 'fighter' || role === 'knight';
     camera.shake(
@@ -116,8 +106,7 @@ function shake(scene: Phaser.Scene, role: Combat2172ProfessionRole, tier: Combat
     );
     return;
   }
-
-  if (isMeleeRole(role)) return;
+  if ((role === 'tank' || role === 'fighter' || role === 'knight' || role === 'assassin')) return;
   if (tier === 'skill' && !reducedMotion) camera.shake(76, 0.0012, false);
 }
 
@@ -125,8 +114,11 @@ function makeImpactBurst(options: Options, role: Combat2172ProfessionRole, tier:
   const p = ELEMENT_PALETTE[options.element] ?? ELEMENT_PALETTE.neutral;
   const radius = tier === 'ultimate' ? 58 : tier === 'skill' ? 40 : 24;
   const root = options.scene.add.container(options.target.x, options.target.y).setDepth(powVfxDepth('foreground') + 16);
-  const flash = options.scene.add.circle(0, 0, radius * 0.56, p.core, tier === 'ultimate' ? 0.34 : tier === 'skill' ? 0.22 : 0.14).setBlendMode(Phaser.BlendModes.ADD);
-  const ring = options.scene.add.circle(0, 0, radius, 0x000000, 0).setStrokeStyle(tier === 'ultimate' ? 5 : tier === 'skill' ? 3.5 : 2, p.main, tier === 'normal' ? 0.66 : 0.94).setBlendMode(Phaser.BlendModes.ADD);
+  const flash = options.scene.add.circle(0, 0, radius * 0.56, p.core, tier === 'ultimate' ? 0.34 : tier === 'skill' ? 0.22 : 0.14)
+    .setBlendMode(Phaser.BlendModes.ADD);
+  const ring = options.scene.add.circle(0, 0, radius, 0x000000, 0)
+    .setStrokeStyle(tier === 'ultimate' ? 5 : tier === 'skill' ? 3.5 : 2, p.main, tier === 'normal' ? 0.66 : 0.94)
+    .setBlendMode(Phaser.BlendModes.ADD);
   const rays = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
   const rayCount = tier === 'ultimate' ? 8 : tier === 'skill' ? 5 : 3;
   for (let i = 0; i < rayCount; i += 1) {
@@ -140,7 +132,11 @@ function makeImpactBurst(options: Options, role: Combat2172ProfessionRole, tier:
   return root;
 }
 
-export async function playCombat2172ImpactFeedback(options: Options, role: Combat2172ProfessionRole, tier: Combat2172ProfessionTier): Promise<void> {
+export async function playCombat2172ImpactFeedback(
+  options: Options,
+  role: Combat2172ProfessionRole,
+  tier: Combat2172ProfessionTier
+): Promise<void> {
   shake(options.scene, role, tier, options.reducedMotion);
   const root = makeImpactBurst(options, role, tier);
   const duration = tier === 'ultimate' ? 230 : tier === 'skill' ? 165 : 105;
@@ -156,60 +152,6 @@ export async function playCombat2172ImpactFeedback(options: Options, role: Comba
   } finally {
     root.destroy(true);
   }
-}
-
-function buildFighterImpact(options: Options, tier: Combat2172ProfessionTier, p: Palette): Phaser.GameObjects.Container {
-  const angle = Math.atan2(options.target.y - options.source.y, options.target.x - options.source.x);
-  const root = options.scene.add.container(options.target.x, options.target.y).setDepth(powVfxDepth('foreground') + 15).setRotation(angle);
-
-  if (tier === 'normal') {
-    const core = options.scene.add.circle(0, 0, 14, p.dark, 0.98).setStrokeStyle(4, p.core, 0.96);
-    const knuckles = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
-    knuckles.lineStyle(5, p.core, 0.78);
-    knuckles.lineBetween(3, -11, 13, -11);
-    knuckles.lineBetween(3, 0, 15, 0);
-    knuckles.lineBetween(3, 11, 13, 11);
-    const drive = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
-    drive.lineStyle(3, p.main, 0.48);
-    drive.lineBetween(-54, -7, -18, -3);
-    drive.lineBetween(-54, 7, -18, 3);
-    root.add([drive, core, knuckles]);
-    return root;
-  }
-
-  if (tier === 'skill') {
-    const compression = options.scene.add.ellipse(-12, 0, 108, 48, p.main, 0.05).setStrokeStyle(4, p.main, 0.62).setBlendMode(Phaser.BlendModes.ADD);
-    const core = options.scene.add.circle(0, 0, 19, p.dark, 0.98).setStrokeStyle(5, p.core, 0.98);
-    const knuckles = options.scene.add.container(9, 0);
-    [-14, 0, 14].forEach((y) => knuckles.add(options.scene.add.circle(0, y, 6, p.core, 0.8).setBlendMode(Phaser.BlendModes.ADD)));
-    const hookShock = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
-    hookShock.lineStyle(5, p.main, 0.62);
-    hookShock.lineBetween(20, -24, 64, -10);
-    hookShock.lineBetween(20, 24, 64, 10);
-    root.add([compression, hookShock, core, knuckles]);
-    return root;
-  }
-
-  const size = 108;
-  const compression = options.scene.add.ellipse(-14, 0, 158, 72, p.main, 0.08).setStrokeStyle(6, p.main, 0.78).setBlendMode(Phaser.BlendModes.ADD);
-  const punchCore = options.scene.add.circle(0, 0, 25, p.dark, 0.98).setStrokeStyle(6, p.core, 1);
-  const knuckles = options.scene.add.container(10, 0);
-  [-15, 0, 15].forEach((y) => knuckles.add(options.scene.add.circle(0, y, 8, p.core, 0.9).setBlendMode(Phaser.BlendModes.ADD)));
-  const drive = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
-  for (let i = 0; i < 5; i += 1) {
-    const offset = (i - 2) * 12;
-    drive.lineStyle(7, i % 2 ? p.core : p.main, 0.72);
-    drive.lineBetween(-size * 0.92, offset, -size * 0.2, offset * 0.4);
-  }
-  const forwardShock = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
-  forwardShock.lineStyle(7, p.main, 0.7);
-  forwardShock.lineBetween(24, -32, 88, -52);
-  forwardShock.lineBetween(24, 32, 88, 52);
-  forwardShock.lineStyle(4, p.core, 0.72);
-  forwardShock.lineBetween(28, -16, 76, -24);
-  forwardShock.lineBetween(28, 16, 76, 24);
-  root.add([compression, drive, forwardShock, punchCore, knuckles]);
-  return root;
 }
 
 function buildKnightImpact(options: Options, tier: Combat2172ProfessionTier, p: Palette): Phaser.GameObjects.Container {
@@ -249,7 +191,12 @@ function buildKnightImpact(options: Options, tier: Combat2172ProfessionTier, p: 
   return root;
 }
 
-function buildAssassinSlash(options: Options, tier: Combat2172ProfessionTier, p: Palette, hitIndex: 1 | 2): Phaser.GameObjects.Container {
+function buildAssassinSlash(
+  options: Options,
+  tier: Combat2172ProfessionTier,
+  p: Palette,
+  hitIndex: 1 | 2
+): Phaser.GameObjects.Container {
   const root = options.scene.add.container(options.target.x, options.target.y).setDepth(powVfxDepth('foreground') + 17);
   const slash = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
   const direction = hitIndex === 1 ? 1 : -1;
@@ -260,7 +207,8 @@ function buildAssassinSlash(options: Options, tier: Combat2172ProfessionTier, p:
     slash.lineBetween(-size, direction * 38, size, -direction * 38);
     slash.lineStyle(3.5, p.core, 0.96);
     slash.lineBetween(-size, direction * 38, size, -direction * 38);
-    const flash = options.scene.add.circle(0, 0, hitIndex === 2 ? 8 : 6, p.core, hitIndex === 2 ? 0.42 : 0.28).setBlendMode(Phaser.BlendModes.ADD);
+    const flash = options.scene.add.circle(0, 0, hitIndex === 2 ? 8 : 6, p.core, hitIndex === 2 ? 0.42 : 0.28)
+      .setBlendMode(Phaser.BlendModes.ADD);
     root.add([slash, flash]);
     return root;
   }
@@ -273,7 +221,8 @@ function buildAssassinSlash(options: Options, tier: Combat2172ProfessionTier, p:
     slash.lineBetween(-size, direction * 48, size, -direction * 48);
     slash.lineStyle(2.5, p.main, 0.72);
     slash.lineBetween(-size - 6, direction * 56, size - 6, -direction * 40);
-    const flash = options.scene.add.circle(0, 0, hitIndex === 2 ? 12 : 9, p.core, hitIndex === 2 ? 0.56 : 0.36).setBlendMode(Phaser.BlendModes.ADD);
+    const flash = options.scene.add.circle(0, 0, hitIndex === 2 ? 12 : 9, p.core, hitIndex === 2 ? 0.56 : 0.36)
+      .setBlendMode(Phaser.BlendModes.ADD);
     const edge = options.scene.add.circle(0, 0, 27, 0x000000, 0).setStrokeStyle(2, p.main, hitIndex === 2 ? 0.46 : 0.28);
     root.add([edge, slash, flash]);
     return root;
@@ -286,8 +235,10 @@ function buildAssassinSlash(options: Options, tier: Combat2172ProfessionTier, p:
   slash.lineBetween(-size, direction * 62, size, -direction * 62);
   slash.lineStyle(3, p.main, 0.86);
   slash.lineBetween(-size - 9, direction * 72, size - 9, -direction * 52);
-  const flash = options.scene.add.circle(0, 0, hitIndex === 2 ? 17 : 13, p.core, hitIndex === 2 ? 0.7 : 0.46).setBlendMode(Phaser.BlendModes.ADD);
-  const edge = options.scene.add.circle(0, 0, hitIndex === 2 ? 46 : 36, 0x000000, 0).setStrokeStyle(hitIndex === 2 ? 4 : 3, p.main, hitIndex === 2 ? 0.7 : 0.44);
+  const flash = options.scene.add.circle(0, 0, hitIndex === 2 ? 17 : 13, p.core, hitIndex === 2 ? 0.7 : 0.46)
+    .setBlendMode(Phaser.BlendModes.ADD);
+  const edge = options.scene.add.circle(0, 0, hitIndex === 2 ? 46 : 36, 0x000000, 0)
+    .setStrokeStyle(hitIndex === 2 ? 4 : 3, p.main, hitIndex === 2 ? 0.7 : 0.44);
   root.add([edge, slash, flash]);
   return root;
 }
@@ -318,12 +269,13 @@ async function playAssassinDoubleCriticalSlash(options: Options, tier: Combat217
   }
 }
 
-export async function playCombat2172MeleeProfessionImpact(options: Options, role: Combat2172MeleeRole, tier: Combat2172ProfessionTier): Promise<void> {
-  if (role === 'tank') {
-    const renderer = tankManualRenderer();
-    if (renderer) await renderer(options, tier);
-    return;
-  }
+export async function playCombat2172MeleeProfessionImpact(
+  options: Options,
+  role: Combat2172MeleeRole,
+  tier: Combat2172ProfessionTier
+): Promise<void> {
+  // Tank and Fighter now have dedicated direct owners. The old generic renderers are retired.
+  if (role === 'tank' || role === 'fighter') return;
 
   const p = ELEMENT_PALETTE[options.element] ?? ELEMENT_PALETTE.neutral;
   if (role === 'assassin') {
@@ -331,22 +283,17 @@ export async function playCombat2172MeleeProfessionImpact(options: Options, role
     return;
   }
 
-  const root = role === 'fighter'
-    ? buildFighterImpact(options, tier, p)
-    : buildKnightImpact(options, tier, p);
-
-  const duration = role === 'fighter'
-    ? tier === 'ultimate' ? 285 : tier === 'skill' ? 195 : 125
-    : tier === 'ultimate' ? 250 : tier === 'skill' ? 175 : 115;
+  const root = buildKnightImpact(options, tier, p);
+  const duration = tier === 'ultimate' ? 250 : tier === 'skill' ? 175 : 115;
   root.setScale(tier === 'ultimate' ? 0.72 : tier === 'skill' ? 0.82 : 0.88);
   try {
     await Promise.all([
       tween(options.scene, root, {
-        scaleX: role === 'fighter' && tier === 'ultimate' ? 1.42 : tier === 'ultimate' ? 1.28 : tier === 'skill' ? 1.16 : 1.08,
-        scaleY: role === 'fighter' && tier === 'ultimate' ? 1.42 : tier === 'ultimate' ? 1.28 : tier === 'skill' ? 1.16 : 1.08,
+        scaleX: tier === 'ultimate' ? 1.28 : tier === 'skill' ? 1.16 : 1.08,
+        scaleY: tier === 'ultimate' ? 1.28 : tier === 'skill' ? 1.16 : 1.08,
         alpha: 0,
         duration,
-        ease: role === 'fighter' ? 'Cubic.easeOut' : tier === 'ultimate' ? 'Cubic.easeOut' : 'Quad.easeOut'
+        ease: tier === 'ultimate' ? 'Cubic.easeOut' : 'Quad.easeOut'
       }, duration + 250),
       playCombat2172ImpactFeedback(options, role, tier)
     ]);
@@ -386,18 +333,18 @@ export function scheduleCombat2172RangedImpactFeedback(
 }
 
 (globalThis as any).POWDER_COMBAT2_PROFESSION_IMPACT_2172 = {
-  version: COMBAT2174_PROFESSION_IMPACT_VERSION,
+  version: COMBAT2178_PROFESSION_IMPACT_VERSION,
   meleeRoles: ['tank', 'fighter', 'knight', 'assassin'],
   rangedRoles: ['mage', 'enchanter', 'healer'],
   meleeProjectileTravel: false,
   tankIdentity: 'dedicated-manual-owner',
   tankGenericRendererRetired: true,
-  fighterIdentity: { normal: 'compact-straight-punch', skill: 'compressed-power-punch', ultimate: 'full-drive-heavy-punch' },
+  fighterIdentity: 'dedicated-manual-owner',
+  fighterGenericRendererRetired: true,
   knightIdentity: { normal: 'short-heavy-slash', skill: 'extended-cleave-with-afterimage', ultimate: 'royal-execution-slash' },
   assassinIdentity: { normal: 'two-quick-cuts', skill: 'two-accelerated-afterimage-cuts', ultimate: 'two-critical-finisher-cuts' },
   assassinVisualHits: 2,
   assassinDamageHitsChanged: false,
-  tierIdentityRule: 'normal-skill-ultimate-use-distinct-choreography-not-scale-only',
   ultimateCameraShake: true,
   meleeSkillCameraShake: false,
   meleeNormalCameraShake: false,
