@@ -11,6 +11,7 @@ export type Combat2172MeleeRole = 'tank' | 'fighter' | 'knight' | 'assassin';
 
 type Options = DirectionalProjectileOptions & { role?: string };
 type Palette = { main: number; core: number; dark: number };
+type TankManualRenderer = (options: Options, tier: Combat2172ProfessionTier) => Promise<void>;
 
 const ELEMENT_PALETTE: Readonly<Record<CombatProjectileElement, Palette>> = Object.freeze({
   fire: { main: 0xff7048, core: 0xffefd0, dark: 0x70291d },
@@ -44,6 +45,11 @@ export function resolveCombat2172MeleeRole(role?: string): Combat2172MeleeRole |
 
 function isMeleeRole(role: Combat2172ProfessionRole): role is Combat2172MeleeRole {
   return role === 'tank' || role === 'fighter' || role === 'knight' || role === 'assassin';
+}
+
+function tankManualRenderer(): TankManualRenderer | null {
+  const candidate = (globalThis as any).POWDER_COMBAT2_TANK_MANUAL_RENDERER;
+  return typeof candidate === 'function' ? candidate as TankManualRenderer : null;
 }
 
 function tween(
@@ -111,11 +117,7 @@ function shake(scene: Phaser.Scene, role: Combat2172ProfessionRole, tier: Combat
     return;
   }
 
-  // Melee normal/skill attacks must keep the camera stable. Their weight comes from
-  // contact VFX and actor motion; camera shake is reserved for Ultimate.
   if (isMeleeRole(role)) return;
-
-  // Ranged/support skills retain their subtle existing impact feedback.
   if (tier === 'skill' && !reducedMotion) camera.shake(76, 0.0012, false);
 }
 
@@ -154,25 +156,6 @@ export async function playCombat2172ImpactFeedback(options: Options, role: Comba
   } finally {
     root.destroy(true);
   }
-}
-
-function buildTankImpact(options: Options, tier: Combat2172ProfessionTier, p: Palette): Phaser.GameObjects.Container {
-  const size = tier === 'ultimate' ? 78 : tier === 'skill' ? 60 : 42;
-  const root = options.scene.add.container(options.target.x, options.target.y).setDepth(powVfxDepth('foreground') + 14);
-  const plate = options.scene.add.polygon(0, 0, [
-    -size * 0.58, -size * 0.48, size * 0.2, -size * 0.6, size * 0.62, 0,
-    size * 0.2, size * 0.6, -size * 0.58, size * 0.48, -size * 0.34, 0
-  ], p.dark, 0.9).setStrokeStyle(tier === 'ultimate' ? 5 : 3, p.main, 0.96);
-  const core = options.scene.add.rectangle(0, 0, size * 0.85, tier === 'ultimate' ? 8 : 5, p.core, 0.86).setBlendMode(Phaser.BlendModes.ADD);
-  const ground = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
-  ground.lineStyle(tier === 'ultimate' ? 6 : 4, p.main, 0.64);
-  const lines = tier === 'ultimate' ? 5 : tier === 'skill' ? 3 : 2;
-  for (let i = 0; i < lines; i += 1) {
-    const y = (i - (lines - 1) / 2) * 16;
-    ground.lineBetween(-size * 1.2, y, size * 1.25, y * 0.55);
-  }
-  root.add([ground, plate, core]);
-  return root;
 }
 
 function buildFighterImpact(options: Options, tier: Combat2172ProfessionTier, p: Palette): Phaser.GameObjects.Container {
@@ -317,13 +300,9 @@ async function playAssassinDoubleCriticalSlash(options: Options, tier: Combat217
   for (const hitIndex of [1, 2] as const) {
     const root = buildAssassinSlash(options, tier, p, hitIndex);
     root.setScale(tier === 'ultimate' ? (hitIndex === 2 ? 0.88 : 0.82) : tier === 'skill' ? 0.82 : 0.78);
-
-    // Assassin skill keeps both visual cuts but does not shake the screen.
-    // Only the Ultimate finisher may shake on each critical-style contact.
     if (camera && !options.reducedMotion && tier === 'ultimate') {
       camera.shake(hitIndex === 2 ? 72 : 46, hitIndex === 2 ? 0.0038 : 0.0023, false);
     }
-
     try {
       await tween(options.scene, root, {
         scaleX: hitIndex === 2 ? 1.3 : 1.18,
@@ -340,23 +319,25 @@ async function playAssassinDoubleCriticalSlash(options: Options, tier: Combat217
 }
 
 export async function playCombat2172MeleeProfessionImpact(options: Options, role: Combat2172MeleeRole, tier: Combat2172ProfessionTier): Promise<void> {
+  if (role === 'tank') {
+    const renderer = tankManualRenderer();
+    if (renderer) await renderer(options, tier);
+    return;
+  }
+
   const p = ELEMENT_PALETTE[options.element] ?? ELEMENT_PALETTE.neutral;
   if (role === 'assassin') {
     await playAssassinDoubleCriticalSlash(options, tier, p);
     return;
   }
 
-  const root = role === 'tank'
-    ? buildTankImpact(options, tier, p)
-    : role === 'fighter'
-      ? buildFighterImpact(options, tier, p)
-      : buildKnightImpact(options, tier, p);
+  const root = role === 'fighter'
+    ? buildFighterImpact(options, tier, p)
+    : buildKnightImpact(options, tier, p);
 
   const duration = role === 'fighter'
     ? tier === 'ultimate' ? 285 : tier === 'skill' ? 195 : 125
-    : role === 'knight'
-      ? tier === 'ultimate' ? 250 : tier === 'skill' ? 175 : 115
-      : tier === 'ultimate' ? 260 : tier === 'skill' ? 190 : 135;
+    : tier === 'ultimate' ? 250 : tier === 'skill' ? 175 : 115;
   root.setScale(tier === 'ultimate' ? 0.72 : tier === 'skill' ? 0.82 : 0.88);
   try {
     await Promise.all([
@@ -409,7 +390,8 @@ export function scheduleCombat2172RangedImpactFeedback(
   meleeRoles: ['tank', 'fighter', 'knight', 'assassin'],
   rangedRoles: ['mage', 'enchanter', 'healer'],
   meleeProjectileTravel: false,
-  tankIdentity: 'shield-bash-contact',
+  tankIdentity: 'dedicated-manual-owner',
+  tankGenericRendererRetired: true,
   fighterIdentity: { normal: 'compact-straight-punch', skill: 'compressed-power-punch', ultimate: 'full-drive-heavy-punch' },
   knightIdentity: { normal: 'short-heavy-slash', skill: 'extended-cleave-with-afterimage', ultimate: 'royal-execution-slash' },
   assassinIdentity: { normal: 'two-quick-cuts', skill: 'two-accelerated-afterimage-cuts', ultimate: 'two-critical-finisher-cuts' },
