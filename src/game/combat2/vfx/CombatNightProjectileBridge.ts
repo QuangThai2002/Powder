@@ -9,7 +9,10 @@ import {
   playCombat2163MarksmanDistinctTierVfx,
   type Combat2163MarksmanTier
 } from './Combat2163MarksmanDistinctTierVfx';
-import { COMBAT2164_MARKSMAN_RUNTIME_VERSION } from './Combat2164MarksmanRuntimeTierBridge';
+import {
+  COMBAT2164_MARKSMAN_RUNTIME_VERSION,
+  COMBAT2171_PROFESSION_RUNTIME_VERSION
+} from './Combat2164MarksmanRuntimeTierBridge';
 import {
   COMBAT2165_MAGE_VERSION,
   isCombat2165MageRole,
@@ -97,6 +100,7 @@ function resolveActionTier(view: PowViewProjectileRuntime): Combat2163MarksmanTi
 async function playNightProjectile(view: PowViewProjectileRuntime, targetX: number, targetY: number): Promise<void> {
   const source = typeof view.getVfxAnchor === 'function' ? view.getVfxAnchor('body') : view.getWorldPosition();
   const target = new Phaser.Math.Vector2(targetX, targetY);
+  const roleKey = normalize(view.pow.role ?? '');
   const options: RoleAwareProjectileOptions = {
     scene: view.scene,
     source,
@@ -141,10 +145,10 @@ async function playNightProjectile(view: PowViewProjectileRuntime, targetX: numb
     return;
   }
 
-  if (isCombat2169EnchanterRole(view.pow.role)) {
+  if (isCombat2169EnchanterRole(view.pow.role) || roleKey.includes('thuat su')) {
     const tier = resolveActionTier(view) as Combat2169EnchanterTier;
     await playCombat2169EnchanterDistinctTierVfx(options, tier);
-    (globalThis as any).POWDER_COMBAT2_ENCHANTER_PROJECTILE_LAST = { version: COMBAT2169_ENCHANTER_VERSION, tier, role: view.pow.role, element: options.element, at: Date.now(), realCombatRoute: true };
+    (globalThis as any).POWDER_COMBAT2_ENCHANTER_PROJECTILE_LAST = { version: COMBAT2169_ENCHANTER_VERSION, tier, role: view.pow.role, element: options.element, at: Date.now(), realCombatRoute: true, canonicalRoleAlias: roleKey.includes('thuat su') };
     return;
   }
 
@@ -198,13 +202,14 @@ export function installCombatNightProjectileBridge(): void {
 
   const root = globalThis as any;
   root.POWDER_COMBAT2_NIGHT_PROJECTILE = {
-    version: `combat2-${COMBAT2170_HEALER_VERSION}`,
+    version: COMBAT2171_PROFESSION_RUNTIME_VERSION,
     runtimeEntryPoint: 'PowView.playAttackLunge',
     directTravelOwner: true,
     attackLungeOwner: true,
     roleForwarding: true,
     elementForwarding: true,
     sourceToTarget: true,
+    professionTierRuntimeVersion: COMBAT2171_PROFESSION_RUNTIME_VERSION,
     marksmanDirectRuntime: true,
     marksmanDirectVersion: COMBAT2164_MARKSMAN_RUNTIME_VERSION,
     marksmanTierContext: true,
@@ -228,6 +233,7 @@ export function installCombatNightProjectileBridge(): void {
     enchanterDirectRuntime: true,
     enchanterDirectVersion: COMBAT2169_ENCHANTER_VERSION,
     enchanterTierContext: true,
+    enchanterCanonicalRoleAliases: ['thuat si', 'thuat su', 'enchanter', 'warlock'],
     enchanterForms: { normal: 'hex-needle', skill: 'binding-twin-sigil', ultimate: 'abyssal-seal-lance' },
     healerDirectRuntime: true,
     healerDirectVersion: COMBAT2170_HEALER_VERSION,
