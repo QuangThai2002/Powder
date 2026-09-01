@@ -1,4 +1,4 @@
-const VERSION = '2.17.3';
+const VERSION = '2.18.3';
 
 const TIERED_ROLES = [
   ['marksman', 'Xạ thủ'],
@@ -8,10 +8,7 @@ const TIERED_ROLES = [
   ['knight', 'Hiệp sĩ'],
   ['assassin', 'Sát thủ'],
   ['enchanter', 'Thuật sư'],
-  ['healer', 'Trị liệu']
-] as const;
-
-const COMPAT_ROLES = [
+  ['healer', 'Trị liệu'],
   ['musician', 'Nhạc công']
 ] as const;
 
@@ -30,11 +27,6 @@ function isLocalDev(): boolean {
 
 function runtimeTierApi(): any {
   return (globalThis as any).POWDER_COMBAT2_PROFESSION_RUNTIME_TEST;
-}
-
-function compatibilityApi(): any {
-  const root = globalThis as any;
-  return root.POWDER_COMBAT2_VFX_LAB ?? root.POWDER_COMBAT2_PROFESSION_LIVE_TEST;
 }
 
 function tierStyle(tier: ProfessionTier): string {
@@ -70,7 +62,7 @@ function installSwitcher(): void {
   ].join(';');
 
   const status = document.createElement('div');
-  status.textContent = '2.17.3: test trực tiếp 3 cấp VFX của 8 nghề. Tank giữ nguyên; Fighter = đấm nặng; Knight = một phát chém mạnh; Assassin = 2 nhát chém liên tiếp. QA không gây damage và không chuyển lượt.';
+  status.textContent = '2.18.3: 9 nghề đều có THƯỜNG / SKILL / ULT riêng. 4 nghề cận chiến tự lao tới mục tiêu, không projectile, không cast phép. QA không damage và không chuyển lượt.';
   status.style.cssText = [
     'margin:2px 2px 8px', 'padding:7px', 'border-radius:6px',
     'background:rgba(95,201,255,.09)', 'color:#bdeeff', 'line-height:1.4',
@@ -86,7 +78,7 @@ function installSwitcher(): void {
   const playTier = async (role: TieredRole, roleLabel: string, tier: ProfessionTier, tierLabel: string): Promise<void> => {
     const api = runtimeTierApi();
     if (!api?.ready || typeof api.playProfessionTier !== 'function') {
-      status.textContent = `${roleLabel} · ${tierLabel}: API runtime 2.17.3 chưa sẵn sàng`;
+      status.textContent = `${roleLabel} · ${tierLabel}: API runtime ${VERSION} chưa sẵn sàng`;
       return;
     }
 
@@ -102,7 +94,7 @@ function installSwitcher(): void {
         ? `ĐÃ PHÁT · ${roleLabel} · ${tierLabel} · ${element} · ${form}${hitSuffix} · QA KHÔNG DAMAGE/KHÔNG CHUYỂN LƯỢT`
         : `${roleLabel} · ${tierLabel}: ${result?.reason ?? 'không phát được'}`;
     } catch (error) {
-      console.error('[Combat2 2.17.3 Profession Tier UI]', error);
+      console.error('[Combat2 2.18.3 Profession Tier UI]', error);
       status.textContent = `${roleLabel} · ${tierLabel}: lỗi runtime`;
     } finally {
       setTierButtonsBusy(false);
@@ -144,47 +136,6 @@ function installSwitcher(): void {
     panel.appendChild(section);
   }
 
-  const separator = document.createElement('div');
-  separator.style.cssText = 'height:1px;margin:9px 2px 8px;background:rgba(255,255,255,.1)';
-  panel.appendChild(separator);
-
-  const compatTitle = document.createElement('div');
-  compatTitle.textContent = 'NGHỀ CHƯA NÂNG 3 TIER · TEST TƯƠNG THÍCH';
-  compatTitle.style.cssText = 'margin:4px 2px 5px;font-size:10px;font-weight:900;color:#b9cbd4;letter-spacing:.35px';
-  panel.appendChild(compatTitle);
-
-  for (const [role, label] of COMPAT_ROLES) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.textContent = label;
-    button.style.cssText = [
-      'display:block', 'width:100%', 'margin:3px 0',
-      'border:1px solid rgba(255,255,255,.13)', 'border-radius:6px',
-      'background:rgba(255,255,255,.05)', 'color:#eef8ff',
-      'padding:7px 8px', 'text-align:left', 'cursor:pointer', 'font-weight:700'
-    ].join(';');
-    button.addEventListener('click', async () => {
-      const api = compatibilityApi();
-      if (!api?.ready || typeof api.play !== 'function') {
-        status.textContent = `${label}: VFX Lab tương thích chưa sẵn sàng`;
-        return;
-      }
-      button.disabled = true;
-      status.textContent = `Đang phát ${label}...`;
-      try {
-        const result = await api.play(role);
-        (globalThis as any).POWDER_COMBAT2_PROFESSION_LIVE_TEST_LAST = result;
-        status.textContent = result?.ok ? `ĐÃ PHÁT · ${label} · VFX TƯƠNG THÍCH` : `${label}: ${result?.reason ?? 'không phát được'}`;
-      } catch (error) {
-        console.error('[Combat2 2.17.3 Compatibility VFX UI]', error);
-        status.textContent = `${label}: lỗi runtime`;
-      } finally {
-        button.disabled = false;
-      }
-    });
-    panel.appendChild(button);
-  }
-
   toggle.addEventListener('click', () => {
     panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
   });
@@ -198,11 +149,10 @@ function installSwitcher(): void {
     tieredRoleCount: TIERED_ROLES.length,
     tierButtonsPerRole: TIERS.length,
     totalTierButtons: TIERED_ROLES.length * TIERS.length,
-    compatibilityRoles: COMPAT_ROLES.map(([role]) => role),
+    compatibilityRoles: [],
     runtimeTierApi: 'POWDER_COMBAT2_PROFESSION_RUNTIME_TEST.playProfessionTier',
-    fighterIdentity: 'single-heavy-punch',
-    knightIdentity: 'single-heavy-slash',
-    assassinIdentity: 'two-consecutive-critical-style-slashes',
+    allNineProfessionsTiered: true,
+    meleeContactOnlyRoles: ['tank', 'fighter', 'knight', 'assassin'],
     assassinVisualHits: 2,
     assassinGuaranteedCritChanged: false,
     qaDamageApplied: false,
