@@ -1,4 +1,4 @@
-const VERSION = '2.17.1';
+const VERSION = '2.17.3';
 
 const TIERED_ROLES = [
   ['marksman', 'Xạ thủ'],
@@ -6,13 +6,13 @@ const TIERED_ROLES = [
   ['tank', 'Đỡ đòn'],
   ['fighter', 'Đấu sĩ'],
   ['knight', 'Hiệp sĩ'],
+  ['assassin', 'Sát thủ'],
   ['enchanter', 'Thuật sư'],
   ['healer', 'Trị liệu']
 ] as const;
 
 const COMPAT_ROLES = [
-  ['musician', 'Nhạc công'],
-  ['assassin', 'Sát thủ']
+  ['musician', 'Nhạc công']
 ] as const;
 
 const TIERS = [
@@ -70,7 +70,7 @@ function installSwitcher(): void {
   ].join(';');
 
   const status = document.createElement('div');
-  status.textContent = '2.17.1: test trực tiếp 3 cấp VFX của 7 nghề. Nút QA chỉ phát hình ảnh, không gây damage và không chuyển lượt.';
+  status.textContent = '2.17.3: test trực tiếp 3 cấp VFX của 8 nghề. Tank giữ nguyên; Fighter = đấm nặng; Knight = một phát chém mạnh; Assassin = 2 nhát chém liên tiếp. QA không gây damage và không chuyển lượt.';
   status.style.cssText = [
     'margin:2px 2px 8px', 'padding:7px', 'border-radius:6px',
     'background:rgba(95,201,255,.09)', 'color:#bdeeff', 'line-height:1.4',
@@ -86,7 +86,7 @@ function installSwitcher(): void {
   const playTier = async (role: TieredRole, roleLabel: string, tier: ProfessionTier, tierLabel: string): Promise<void> => {
     const api = runtimeTierApi();
     if (!api?.ready || typeof api.playProfessionTier !== 'function') {
-      status.textContent = `${roleLabel} · ${tierLabel}: API runtime 2.17.1 chưa sẵn sàng`;
+      status.textContent = `${roleLabel} · ${tierLabel}: API runtime 2.17.3 chưa sẵn sàng`;
       return;
     }
 
@@ -97,11 +97,12 @@ function installSwitcher(): void {
       (globalThis as any).POWDER_COMBAT2_PROFESSION_LIVE_TEST_LAST = result;
       const element = result?.element ? String(result.element).toUpperCase() : 'HỆ HIỆN TẠI';
       const form = result?.form ? String(result.form).toUpperCase() : 'VFX';
+      const hitSuffix = role === 'assassin' ? ' · 2 NHÁT LIÊN TIẾP' : '';
       status.textContent = result?.ok
-        ? `ĐÃ PHÁT · ${roleLabel} · ${tierLabel} · ${element} · ${form} · QA KHÔNG DAMAGE/KHÔNG CHUYỂN LƯỢT`
+        ? `ĐÃ PHÁT · ${roleLabel} · ${tierLabel} · ${element} · ${form}${hitSuffix} · QA KHÔNG DAMAGE/KHÔNG CHUYỂN LƯỢT`
         : `${roleLabel} · ${tierLabel}: ${result?.reason ?? 'không phát được'}`;
     } catch (error) {
-      console.error('[Combat2 2.17.1 Profession Tier UI]', error);
+      console.error('[Combat2 2.17.3 Profession Tier UI]', error);
       status.textContent = `${roleLabel} · ${tierLabel}: lỗi runtime`;
     } finally {
       setTierButtonsBusy(false);
@@ -175,7 +176,7 @@ function installSwitcher(): void {
         (globalThis as any).POWDER_COMBAT2_PROFESSION_LIVE_TEST_LAST = result;
         status.textContent = result?.ok ? `ĐÃ PHÁT · ${label} · VFX TƯƠNG THÍCH` : `${label}: ${result?.reason ?? 'không phát được'}`;
       } catch (error) {
-        console.error('[Combat2 2.17.1 Compatibility VFX UI]', error);
+        console.error('[Combat2 2.17.3 Compatibility VFX UI]', error);
         status.textContent = `${label}: lỗi runtime`;
       } finally {
         button.disabled = false;
@@ -199,6 +200,11 @@ function installSwitcher(): void {
     totalTierButtons: TIERED_ROLES.length * TIERS.length,
     compatibilityRoles: COMPAT_ROLES.map(([role]) => role),
     runtimeTierApi: 'POWDER_COMBAT2_PROFESSION_RUNTIME_TEST.playProfessionTier',
+    fighterIdentity: 'single-heavy-punch',
+    knightIdentity: 'single-heavy-slash',
+    assassinIdentity: 'two-consecutive-critical-style-slashes',
+    assassinVisualHits: 2,
+    assassinGuaranteedCritChanged: false,
     qaDamageApplied: false,
     qaTurnAdvanced: false,
     realCombatRouteStillOwnedByNightProjectileBridge: true,
