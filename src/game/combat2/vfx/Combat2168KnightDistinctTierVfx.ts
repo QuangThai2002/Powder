@@ -2,9 +2,10 @@ import Phaser from 'phaser';
 import type { CombatProjectileElement, DirectionalProjectileOptions } from './DirectionalElementProjectileVfx';
 import { powVfxDepth } from './CombatNightVfxLayout';
 
-export const COMBAT2185_KNIGHT_VERSION = '2.18.5';
-export const COMBAT2179_KNIGHT_VERSION = COMBAT2185_KNIGHT_VERSION;
-export const COMBAT2168_KNIGHT_VERSION = COMBAT2185_KNIGHT_VERSION;
+export const COMBAT2186_KNIGHT_VERSION = '2.18.6';
+export const COMBAT2185_KNIGHT_VERSION = COMBAT2186_KNIGHT_VERSION;
+export const COMBAT2179_KNIGHT_VERSION = COMBAT2186_KNIGHT_VERSION;
+export const COMBAT2168_KNIGHT_VERSION = COMBAT2186_KNIGHT_VERSION;
 export type Combat2168KnightTier = 'normal' | 'skill' | 'ultimate';
 
 type Options = DirectionalProjectileOptions & { role?: string };
@@ -107,6 +108,27 @@ function slashSpec(tier: Combat2168KnightTier): SlashSpec {
   return { half: 70, bend: 54, shadowWidth: 20, glowWidth: 17, bodyWidth: 10, coreWidth: 4, afterOffset: 12 };
 }
 
+function quadraticPoints(
+  startX: number,
+  startY: number,
+  controlX: number,
+  controlY: number,
+  endX: number,
+  endY: number,
+  segments = 22
+): Phaser.Math.Vector2[] {
+  const points: Phaser.Math.Vector2[] = [];
+  for (let i = 0; i <= segments; i += 1) {
+    const t = i / segments;
+    const mt = 1 - t;
+    points.push(new Phaser.Math.Vector2(
+      mt * mt * startX + 2 * mt * t * controlX + t * t * endX,
+      mt * mt * startY + 2 * mt * t * controlY + t * t * endY
+    ));
+  }
+  return points;
+}
+
 function strokeCrescent(
   graphics: Phaser.GameObjects.Graphics,
   spec: SlashSpec,
@@ -120,10 +142,11 @@ function strokeCrescent(
   const endY = -direction * (spec.bend * 0.38) + offsetY;
   const controlY = -direction * spec.bend + offsetY;
   graphics.lineStyle(width, color, alpha);
-  graphics.beginPath();
-  graphics.moveTo(-spec.half, startY);
-  graphics.quadraticBezierTo(0, controlY, spec.half, endY);
-  graphics.strokePath();
+  graphics.strokePoints(
+    quadraticPoints(-spec.half, startY, 0, controlY, spec.half, endY),
+    false,
+    false
+  );
 }
 
 function buildKnightSlash(
@@ -261,7 +284,7 @@ export async function playCombat2168KnightDistinctTierVfx(
 }
 
 (globalThis as any).POWDER_COMBAT2_KNIGHT_DISTINCT_TIERS = {
-  version: COMBAT2185_KNIGHT_VERSION,
+  version: COMBAT2186_KNIGHT_VERSION,
   role: 'knight',
   owner: 'dedicated-manual',
   realCombatReady: true,
@@ -270,8 +293,9 @@ export async function playCombat2168KnightDistinctTierVfx(
     skill: 'guard-break-crescent-cleave',
     ultimate: 'royal-judgment-grand-crescent'
   },
-  slashShape: 'three-layer-curved-crescent',
+  slashShape: 'three-layer-curved-crescent-strokepoints',
   slashPersistence: 'reveal-hold-fade',
+  phaserGraphicsCompatibleCurve: true,
   sourceToTargetProjectile: false,
   contactOnly: true,
   normalCameraShake: false,
