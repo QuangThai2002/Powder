@@ -6,14 +6,17 @@ import {
   type Combat2163MarksmanTier
 } from './Combat2163MarksmanDistinctTierVfx';
 import { playCombat2165MageDistinctTierVfx } from './Combat2165MageDistinctTierVfx';
-import { playCombat2166TankDistinctTierVfx } from './Combat2166TankDistinctTierVfx';
-import { playCombat2167FighterDistinctTierVfx } from './Combat2167FighterDistinctTierVfx';
-import { playCombat2168KnightDistinctTierVfx } from './Combat2168KnightDistinctTierVfx';
 import { playCombat2169EnchanterDistinctTierVfx } from './Combat2169EnchanterDistinctTierVfx';
 import { playCombat2170HealerDistinctTierVfx } from './Combat2170HealerDistinctTierVfx';
+import {
+  playCombat2172MeleeProfessionImpact,
+  scheduleCombat2172RangedImpactFeedback,
+  type Combat2172MeleeRole
+} from './Combat2172ProfessionImpactFeedback';
 
 export const COMBAT2164_MARKSMAN_RUNTIME_VERSION = '2.16.4';
 export const COMBAT2171_PROFESSION_RUNTIME_VERSION = '2.17.1';
+export const COMBAT2172_PROFESSION_RUNTIME_VERSION = '2.17.2';
 
 type RuntimeProfessionRole = 'marksman' | 'mage' | 'tank' | 'fighter' | 'knight' | 'enchanter' | 'healer';
 
@@ -26,10 +29,7 @@ type RuntimePowView = {
   __combat2MarksmanAttackTier?: Combat2163MarksmanTier;
 };
 
-type RuntimeScene = Phaser.Scene & {
-  powViews?: Map<string, RuntimePowView>;
-};
-
+type RuntimeScene = Phaser.Scene & { powViews?: Map<string, RuntimePowView> };
 type RoleAwareOptions = DirectionalProjectileOptions & { role?: string };
 
 const TEST_ROLES: readonly RuntimeProfessionRole[] = Object.freeze([
@@ -39,9 +39,9 @@ const TEST_ROLES: readonly RuntimeProfessionRole[] = Object.freeze([
 const PROFESSION_FORMS: Readonly<Record<RuntimeProfessionRole, Readonly<Record<Combat2163MarksmanTier, string>>>> = Object.freeze({
   marksman: Object.freeze({ normal: 'compact-spiral-rail', skill: 'piercing-triple-rail-shot', ultimate: 'rail-breaker-heavy-slug' }),
   mage: Object.freeze({ normal: 'arcane-orb', skill: 'twin-orbit-orb', ultimate: 'arcane-comet' }),
-  tank: Object.freeze({ normal: 'guard-plate-ram', skill: 'tri-plate-bulwark-charge', ultimate: 'fortress-breaker-ram' }),
-  fighter: Object.freeze({ normal: 'impact-fist', skill: 'cross-break-rush', ultimate: 'meteor-breaker-drive' }),
-  knight: Object.freeze({ normal: 'valor-blade-thrust', skill: 'crossguard-double-cleave', ultimate: 'royal-judgment-greatblade' }),
+  tank: Object.freeze({ normal: 'shield-bash-contact', skill: 'bulwark-crash-contact', ultimate: 'fortress-quake-contact' }),
+  fighter: Object.freeze({ normal: 'heavy-punch-contact', skill: 'cross-break-combo', ultimate: 'meteor-smash-contact' }),
+  knight: Object.freeze({ normal: 'valor-slash-contact', skill: 'crossguard-cleave-contact', ultimate: 'royal-judgment-contact' }),
   enchanter: Object.freeze({ normal: 'hex-needle', skill: 'binding-twin-sigil', ultimate: 'abyssal-seal-lance' }),
   healer: Object.freeze({ normal: 'life-seed', skill: 'restoration-ribbon', ultimate: 'sanctuary-heart-ray' })
 });
@@ -71,7 +71,6 @@ function resolveElement(pow: RuntimePowView['pow']): CombatProjectileElement {
 function runtimeScene(root: any): RuntimeScene | null {
   const registered = root.POWDER_COMBAT2_ACTIVE_BATTLE_SCENE as RuntimeScene | undefined;
   if (registered?.sys?.isActive?.()) return registered;
-
   const games = ((Phaser as any).GAMES ?? []) as Phaser.Game[];
   for (const game of games) {
     try {
@@ -98,7 +97,7 @@ function pointOf(view: RuntimePowView): Phaser.Math.Vector2 {
   try {
     if (typeof view.getVfxAnchor === 'function') return view.getVfxAnchor('body');
     if (typeof view.getWorldPosition === 'function') return view.getWorldPosition();
-  } catch { /* fall through to container position */ }
+  } catch { /* fall through */ }
   return new Phaser.Math.Vector2(Number(view.container?.x ?? 0), Number(view.container?.y ?? 0));
 }
 
@@ -123,17 +122,20 @@ function isRole(value: unknown): value is RuntimeProfessionRole {
   return TEST_ROLES.includes(value as RuntimeProfessionRole);
 }
 
-async function playProfessionRenderer(
-  role: RuntimeProfessionRole,
-  options: RoleAwareOptions,
-  tier: Combat2163MarksmanTier
-): Promise<void> {
+async function playProfessionRenderer(role: RuntimeProfessionRole, options: RoleAwareOptions, tier: Combat2163MarksmanTier): Promise<void> {
   if (role === 'marksman') return playCombat2163MarksmanDistinctTierVfx(options, tier);
-  if (role === 'mage') return playCombat2165MageDistinctTierVfx(options, tier);
-  if (role === 'tank') return playCombat2166TankDistinctTierVfx(options, tier);
-  if (role === 'fighter') return playCombat2167FighterDistinctTierVfx(options, tier);
-  if (role === 'knight') return playCombat2168KnightDistinctTierVfx(options, tier);
-  if (role === 'enchanter') return playCombat2169EnchanterDistinctTierVfx(options, tier);
+  if (role === 'mage') {
+    scheduleCombat2172RangedImpactFeedback(options, 'mage', tier);
+    return playCombat2165MageDistinctTierVfx(options, tier);
+  }
+  if (role === 'tank' || role === 'fighter' || role === 'knight') {
+    return playCombat2172MeleeProfessionImpact(options, role as Combat2172MeleeRole, tier);
+  }
+  if (role === 'enchanter') {
+    scheduleCombat2172RangedImpactFeedback(options, 'enchanter', tier);
+    return playCombat2169EnchanterDistinctTierVfx(options, tier);
+  }
+  scheduleCombat2172RangedImpactFeedback(options, 'healer', tier);
   return playCombat2170HealerDistinctTierVfx(options, tier);
 }
 
@@ -142,7 +144,7 @@ function updateVisibleWitness(): void {
   const apply = (): void => {
     const root = document.getElementById('combat2-profession-test-switcher');
     const toggle = root?.querySelector('button');
-    if (toggle) toggle.textContent = `VFX NHANH · ${COMBAT2171_PROFESSION_RUNTIME_VERSION} RUNTIME`;
+    if (toggle) toggle.textContent = `VFX NHANH · ${COMBAT2172_PROFESSION_RUNTIME_VERSION} RUNTIME`;
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply, { once: true });
   else queueMicrotask(apply);
@@ -158,7 +160,7 @@ function installRuntimeTierBridge(): void {
   const originalAbility = proto.performAbility;
 
   if (typeof originalCreate === 'function') {
-    proto.create = function combat2164Create(this: RuntimeScene, ...args: any[]) {
+    proto.create = function combat2172Create(this: RuntimeScene, ...args: any[]) {
       const result = originalCreate.apply(this, args);
       root.POWDER_COMBAT2_ACTIVE_BATTLE_SCENE = this;
       updateVisibleWitness();
@@ -166,12 +168,7 @@ function installRuntimeTierBridge(): void {
     };
   }
 
-  const withTier = async (
-    scene: any,
-    actor: any,
-    tier: Combat2163MarksmanTier,
-    run: () => Promise<any>
-  ): Promise<any> => {
+  const withTier = async (scene: any, actor: any, tier: Combat2163MarksmanTier, run: () => Promise<any>): Promise<any> => {
     const view = scene?.powViews instanceof Map ? scene.powViews.get(actor?.instanceId) as RuntimePowView | undefined : undefined;
     const previousViewTier = view?.__combat2MarksmanAttackTier;
     const hadGlobalTier = Object.prototype.hasOwnProperty.call(root, 'POWDER_COMBAT2_MARKSMAN_ACTIVE_TIER');
@@ -180,7 +177,7 @@ function installRuntimeTierBridge(): void {
     if (view) view.__combat2MarksmanAttackTier = tier;
     root.POWDER_COMBAT2_MARKSMAN_ACTIVE_TIER = tier;
     root.POWDER_COMBAT2_MARKSMAN_RUNTIME_LAST_ACTION = {
-      version: COMBAT2171_PROFESSION_RUNTIME_VERSION,
+      version: COMBAT2172_PROFESSION_RUNTIME_VERSION,
       tier,
       actorId: actor?.instanceId ?? null,
       role: actor?.pow?.role ?? null,
@@ -201,13 +198,13 @@ function installRuntimeTierBridge(): void {
   };
 
   if (typeof originalBasic === 'function') {
-    proto.performBasicAttack = async function combat2164Basic(this: any, actor: any, target: any, ...rest: any[]) {
+    proto.performBasicAttack = async function combat2172Basic(this: any, actor: any, target: any, ...rest: any[]) {
       return withTier(this, actor, 'normal', () => originalBasic.call(this, actor, target, ...rest));
     };
   }
 
   if (typeof originalAbility === 'function') {
-    proto.performAbility = async function combat2164Ability(this: any, actor: any, target: any, slot: any, ...rest: any[]) {
+    proto.performAbility = async function combat2172Ability(this: any, actor: any, target: any, slot: any, ...rest: any[]) {
       const tier: Combat2163MarksmanTier = slot === 'ultimate' ? 'ultimate' : 'skill';
       return withTier(this, actor, tier, () => originalAbility.call(this, actor, target, slot, ...rest));
     };
@@ -230,17 +227,11 @@ function installRuntimeTierBridge(): void {
     const source = pointOf(sourceRow.view);
     const target = pointOf(targetRow.view);
     const element = requestedElement ?? resolveElement(sourceRow.view.pow);
-    const options: RoleAwareOptions = {
-      scene,
-      source,
-      target,
-      element,
-      reducedMotion: false,
-      role: requestedRole
-    };
+    const options: RoleAwareOptions = { scene, source, target, element, reducedMotion: false, role: requestedRole };
 
     try {
       await playProfessionRenderer(requestedRole, options, requestedTier);
+      const melee = requestedRole === 'tank' || requestedRole === 'fighter' || requestedRole === 'knight';
       const result = {
         ok: true,
         role: requestedRole,
@@ -249,9 +240,12 @@ function installRuntimeTierBridge(): void {
         source: sourceRow.key,
         target: targetRow.key,
         directProfessionRuntime: true,
-        directVersion: COMBAT2171_PROFESSION_RUNTIME_VERSION,
+        directVersion: COMBAT2172_PROFESSION_RUNTIME_VERSION,
         form: PROFESSION_FORMS[requestedRole][requestedTier],
         runtimeDirectQa: true,
+        meleeContactOnly: melee,
+        projectileTravel: melee ? false : true,
+        ultimateImpactShake: requestedTier === 'ultimate' && requestedRole !== 'marksman',
         damageApplied: false,
         turnAdvanced: false
       };
@@ -259,15 +253,12 @@ function installRuntimeTierBridge(): void {
       root.POWDER_COMBAT2_PROFESSION_RUNTIME_TEST_LAST = result;
       return result;
     } catch (error) {
-      console.error('[Combat2 2.17.1 Profession Runtime QA]', error);
-      return { ok: false, reason: 'runtime-tier-vfx-threw', role: requestedRole, tier: requestedTier, directVersion: COMBAT2171_PROFESSION_RUNTIME_VERSION };
+      console.error('[Combat2 2.17.2 Profession Runtime QA]', error);
+      return { ok: false, reason: 'runtime-tier-vfx-threw', role: requestedRole, tier: requestedTier, directVersion: COMBAT2172_PROFESSION_RUNTIME_VERSION };
     }
   };
 
-  const playMarksmanTier = async (
-    requestedTier?: Combat2163MarksmanTier | string | null,
-    requestedElement?: CombatProjectileElement | null
-  ) => {
+  const playMarksmanTier = async (requestedTier?: Combat2163MarksmanTier | string | null, requestedElement?: CombatProjectileElement | null) => {
     const result = await playProfessionTier('marksman', requestedTier, requestedElement);
     if (result?.ok) {
       const legacyResult = {
@@ -284,13 +275,16 @@ function installRuntimeTierBridge(): void {
   };
 
   root.POWDER_COMBAT2_PROFESSION_RUNTIME_TEST = {
-    version: COMBAT2171_PROFESSION_RUNTIME_VERSION,
+    version: COMBAT2172_PROFESSION_RUNTIME_VERSION,
     ready: true,
     roles: [...TEST_ROLES],
     tiers: ['normal', 'skill', 'ultimate'],
     forms: PROFESSION_FORMS,
     playProfessionTier,
     visualQaOnly: true,
+    meleeContactOnlyRoles: ['tank', 'fighter', 'knight'],
+    meleeProjectileTravel: false,
+    allNewProfessionUltimateImpactShake: true,
     damageApplied: false,
     turnAdvanced: false,
     realCombatTierHookShared: true,
