@@ -2,8 +2,9 @@ import Phaser from 'phaser';
 import type { CombatProjectileElement, DirectionalProjectileOptions } from './DirectionalElementProjectileVfx';
 import { powVfxDepth } from './CombatNightVfxLayout';
 
-export const COMBAT2185_ASSASSIN_VERSION = '2.18.5';
-export const COMBAT2180_ASSASSIN_VERSION = COMBAT2185_ASSASSIN_VERSION;
+export const COMBAT2186_ASSASSIN_VERSION = '2.18.6';
+export const COMBAT2185_ASSASSIN_VERSION = COMBAT2186_ASSASSIN_VERSION;
+export const COMBAT2180_ASSASSIN_VERSION = COMBAT2186_ASSASSIN_VERSION;
 export type Combat2180AssassinTier = 'normal' | 'skill' | 'ultimate';
 
 type Options = DirectionalProjectileOptions & { role?: string };
@@ -89,6 +90,27 @@ function cutSpec(tier: Combat2180AssassinTier): CutSpec {
   return { half: 72, bend: 46, shadow: 16, glow: 13.5, body: 7.5, core: 3.2, afterOffset: 11 };
 }
 
+function quadraticPoints(
+  startX: number,
+  startY: number,
+  controlX: number,
+  controlY: number,
+  endX: number,
+  endY: number,
+  segments = 20
+): Phaser.Math.Vector2[] {
+  const points: Phaser.Math.Vector2[] = [];
+  for (let i = 0; i <= segments; i += 1) {
+    const t = i / segments;
+    const mt = 1 - t;
+    points.push(new Phaser.Math.Vector2(
+      mt * mt * startX + 2 * mt * t * controlX + t * t * endX,
+      mt * mt * startY + 2 * mt * t * controlY + t * t * endY
+    ));
+  }
+  return points;
+}
+
 function strokeCut(
   graphics: Phaser.GameObjects.Graphics,
   spec: CutSpec,
@@ -102,10 +124,11 @@ function strokeCut(
   const endY = -direction * spec.bend * 0.46 + offsetY;
   const controlY = -direction * spec.bend + offsetY;
   graphics.lineStyle(width, color, alpha);
-  graphics.beginPath();
-  graphics.moveTo(-spec.half, startY);
-  graphics.quadraticBezierTo(0, controlY, spec.half, endY);
-  graphics.strokePath();
+  graphics.strokePoints(
+    quadraticPoints(-spec.half, startY, 0, controlY, spec.half, endY),
+    false,
+    false
+  );
 }
 
 function makeCut(
@@ -244,7 +267,7 @@ export async function playCombat2180AssassinDistinctTierVfx(
 }
 
 (globalThis as any).POWDER_COMBAT2_ASSASSIN_DISTINCT_TIERS = {
-  version: COMBAT2185_ASSASSIN_VERSION,
+  version: COMBAT2186_ASSASSIN_VERSION,
   role: 'assassin',
   owner: 'dedicated-manual',
   realCombatReady: true,
@@ -253,9 +276,10 @@ export async function playCombat2180AssassinDistinctTierVfx(
     skill: 'two-shadow-razor-crescent-cuts',
     ultimate: 'two-execution-grand-crescent-cuts'
   },
-  slashShape: 'three-layer-curved-crescent',
+  slashShape: 'three-layer-curved-crescent-strokepoints',
   firstCutPersistsIntoSecond: true,
   slashPersistence: 'reveal-overlap-hold-fade',
+  phaserGraphicsCompatibleCurve: true,
   visualHits: 2,
   damageHitsChanged: false,
   guaranteedCritChanged: false,
