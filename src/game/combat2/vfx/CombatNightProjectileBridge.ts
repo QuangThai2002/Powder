@@ -125,8 +125,12 @@ function makeOptions(view: PowViewProjectileRuntime, targetX: number, targetY: n
 function meleeIdentity(role: Combat2172MeleeRole): string {
   if (role === 'tank') return 'shield-bash-contact';
   if (role === 'fighter') return 'heavy-punch-contact';
-  if (role === 'knight') return 'heavy-sword-contact';
-  return 'double-critical-style-slash';
+  if (role === 'knight') return 'heavy-sword-target-slash';
+  return 'double-critical-style-target-slash';
+}
+
+function usesLocalSlashHop(role: Combat2172MeleeRole): boolean {
+  return role === 'knight' || role === 'assassin';
 }
 
 function recordMeleeImpact(
@@ -152,7 +156,9 @@ function recordMeleeImpact(
     at: Date.now(),
     realCombatRoute: true,
     projectileTravel: false,
-    contactOnly: true,
+    contactOnly: !usesLocalSlashHop(role),
+    targetLocalImpact: usesLocalSlashHop(role),
+    actorMotion: usesLocalSlashHop(role) ? 'local-hop' : 'target-approach',
     identity: meleeIdentity(role),
     visualHits: role === 'assassin' ? 2 : 1,
     guaranteedCritChanged: false
@@ -317,6 +323,21 @@ function meleeReturnMs(role: Combat2172MeleeRole, tier: Combat2163MarksmanTier, 
   return tier === 'ultimate' ? 155 : 120;
 }
 
+function localSlashHop(
+  role: 'knight' | 'assassin',
+  tier: Combat2163MarksmanTier,
+  reducedMotion: boolean
+): { height: number; duration: number } {
+  if (reducedMotion) return { height: role === 'assassin' ? 8 : 7, duration: 62 };
+  const height = tier === 'ultimate'
+    ? (role === 'assassin' ? 22 : 20)
+    : tier === 'skill'
+      ? (role === 'assassin' ? 18 : 16)
+      : (role === 'assassin' ? 14 : 13);
+  const duration = tier === 'ultimate' ? 120 : tier === 'skill' ? 108 : 96;
+  return { height, duration };
+}
+
 export function installCombatNightProjectileBridge(): void {
   const prototype = PowView.prototype as unknown as {
     playElementTravel?: (targetX: number, targetY: number) => Promise<void>;
@@ -338,6 +359,29 @@ export function installCombatNightProjectileBridge(): void {
     const tier = resolveActionTier(this);
     const meleeRole = resolveCombat2172MeleeRole(this.pow.role);
 
+    if (meleeRole === 'knight' || meleeRole === 'assassin') {
+      const hop = localSlashHop(meleeRole, tier, this.reducedMotion);
+      const hopTween = typeof this.tweenPromise === 'function'
+        ? this.tweenPromise({
+          targets: this.container,
+          y: startY - hop.height,
+          duration: hop.duration,
+          ease: 'Quad.easeOut',
+          yoyo: true
+        })
+        : Promise.resolve();
+
+      try {
+        await Promise.all([
+          playNightProjectile(this, targetX, targetY),
+          hopTween
+        ]);
+      } finally {
+        this.container.setPosition(startX, startY);
+      }
+      return;
+    }
+
     if (meleeRole) {
       const advance = meleeApproach(distance, meleeRole);
       const attackX = startX + (dx / distance) * advance;
@@ -350,11 +394,7 @@ export function installCombatNightProjectileBridge(): void {
             x: attackX,
             y: attackY,
             duration: dashMs,
-            ease: meleeRole === 'assassin'
-              ? 'Cubic.easeOut'
-              : tier === 'ultimate'
-                ? 'Cubic.easeIn'
-                : 'Quad.easeOut'
+            ease: tier === 'ultimate' ? 'Cubic.easeIn' : 'Quad.easeOut'
           });
         }
         await playNightProjectile(this, targetX, targetY);
@@ -364,7 +404,7 @@ export function installCombatNightProjectileBridge(): void {
             x: startX,
             y: startY,
             duration: meleeReturnMs(meleeRole, tier, this.reducedMotion),
-            ease: meleeRole === 'assassin' ? 'Cubic.easeOut' : 'Quad.easeOut'
+            ease: 'Quad.easeOut'
           });
         }
       } finally {
@@ -434,12 +474,14 @@ export function installCombatNightProjectileBridge(): void {
     knightProjectileTravel: false,
     knightCastSignature: false,
     knightGenericRenderer: false,
+    knightActorMotion: 'local-hop',
     knightForms: { normal: 'heavy-cut-contact', skill: 'guard-break-cleave-contact', ultimate: 'royal-judgment-slash-contact' },
     assassinDirectRuntime: true,
     assassinDirectVersion: COMBAT2180_ASSASSIN_VERSION,
     assassinProjectileTravel: false,
     assassinCastSignature: false,
     assassinGenericRenderer: false,
+    assassinActorMotion: 'local-hop',
     assassinForms: { normal: 'two-quick-contact-cuts', skill: 'two-shadow-afterimage-cuts', ultimate: 'two-execution-critical-style-cuts' },
     assassinVisualHits: 2,
     assassinGuaranteedCritChanged: false,
@@ -453,7 +495,8 @@ export function installCombatNightProjectileBridge(): void {
     musicianDirectRuntime: true,
     musicianDirectVersion: COMBAT2183_MUSICIAN_VERSION,
     musicianForms: { normal: 'pulse-note', skill: 'chord-wave', ultimate: 'symphony-crescendo' },
-    meleeRolesUseActorApproach: ['tank', 'fighter', 'knight', 'assassin'],
+    meleeRolesUseActorApproach: ['tank', 'fighter'],
+    meleeRolesUseLocalHop: ['knight', 'assassin'],
     meleeCastSignatureDisabled: true,
     meleeProjectileTravelDisabled: true,
     allDedicatedOwners: true,
