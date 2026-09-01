@@ -46,8 +46,18 @@ import {
   type Combat2170HealerTier
 } from './Combat2170HealerDistinctTierVfx';
 import {
+  COMBAT2180_ASSASSIN_VERSION,
+  playCombat2180AssassinDistinctTierVfx,
+  type Combat2180AssassinTier
+} from './Combat2180AssassinDistinctTierVfx';
+import {
+  COMBAT2183_MUSICIAN_VERSION,
+  isCombat2183MusicianRole,
+  playCombat2183MusicianDistinctTierVfx,
+  type Combat2183MusicianTier
+} from './Combat2183MusicianDistinctTierVfx';
+import {
   COMBAT2173_PROFESSION_IMPACT_VERSION,
-  playCombat2172MeleeProfessionImpact,
   resolveCombat2172MeleeRole,
   scheduleCombat2172RangedImpactFeedback,
   type Combat2172MeleeRole
@@ -132,7 +142,7 @@ function recordMeleeImpact(
       ? COMBAT2167_FIGHTER_VERSION
       : role === 'knight'
         ? COMBAT2168_KNIGHT_VERSION
-        : COMBAT2173_PROFESSION_IMPACT_VERSION;
+        : COMBAT2180_ASSASSIN_VERSION;
   root[`POWDER_COMBAT2_${role.toUpperCase()}_MELEE_LAST`] = {
     version,
     impactVersion: COMBAT2173_PROFESSION_IMPACT_VERSION,
@@ -202,40 +212,53 @@ async function playNightProjectile(view: PowViewProjectileRuntime, targetX: numb
     return;
   }
 
-  if (meleeRole) {
-    await playCombat2172MeleeProfessionImpact(options, meleeRole, tier);
-    recordMeleeImpact(view, meleeRole, tier, options);
+  if (meleeRole === 'assassin') {
+    await playCombat2180AssassinDistinctTierVfx(options, tier as Combat2180AssassinTier);
+    recordMeleeImpact(view, 'assassin', tier, options);
     return;
   }
 
   if (isCombat2169EnchanterRole(view.pow.role) || roleKey.includes('thuat su')) {
-    scheduleCombat2172RangedImpactFeedback(options, 'enchanter', tier);
     await playCombat2169EnchanterDistinctTierVfx(options, tier as Combat2169EnchanterTier);
     (globalThis as any).POWDER_COMBAT2_ENCHANTER_PROJECTILE_LAST = {
       version: COMBAT2169_ENCHANTER_VERSION,
-      impactVersion: COMBAT2173_PROFESSION_IMPACT_VERSION,
       tier,
       role: view.pow.role,
       element: options.element,
       at: Date.now(),
       realCombatRoute: true,
       canonicalRoleAlias: roleKey.includes('thuat su'),
+      ownImpact: true,
       ultimateImpactShake: tier === 'ultimate'
     };
     return;
   }
 
   if (isCombat2170HealerRole(view.pow.role)) {
-    scheduleCombat2172RangedImpactFeedback(options, 'healer', tier);
     await playCombat2170HealerDistinctTierVfx(options, tier as Combat2170HealerTier);
     (globalThis as any).POWDER_COMBAT2_HEALER_PROJECTILE_LAST = {
       version: COMBAT2170_HEALER_VERSION,
-      impactVersion: COMBAT2173_PROFESSION_IMPACT_VERSION,
       tier,
       role: view.pow.role,
       element: options.element,
       at: Date.now(),
       realCombatRoute: true,
+      ownImpact: true,
+      ultimateImpactShake: tier === 'ultimate'
+    };
+    return;
+  }
+
+  if (isCombat2183MusicianRole(view.pow.role)) {
+    await playCombat2183MusicianDistinctTierVfx(options, tier as Combat2183MusicianTier);
+    (globalThis as any).POWDER_COMBAT2_MUSICIAN_PROJECTILE_LAST = {
+      version: COMBAT2183_MUSICIAN_VERSION,
+      tier,
+      role: view.pow.role,
+      element: options.element,
+      at: Date.now(),
+      realCombatRoute: true,
+      ownImpact: true,
       ultimateImpactShake: tier === 'ultimate'
     };
     return;
@@ -249,16 +272,16 @@ function meleeContactGap(role: Combat2172MeleeRole): number {
   if (role === 'tank') return 210;
   if (role === 'fighter') return 168;
   if (role === 'knight') return 178;
-  return 150;
+  return 145;
 }
 
 function meleeApproach(distance: number, role: Combat2172MeleeRole): number {
   if (distance <= 1) return 0;
   const contactGap = meleeContactGap(role);
   const gapLimited = Math.max(0, distance - contactGap);
-  const proportional = distance * (role === 'assassin' ? 0.8 : role === 'fighter' ? 0.79 : role === 'knight' ? 0.77 : 0.72);
+  const proportional = distance * (role === 'assassin' ? 0.84 : role === 'fighter' ? 0.79 : role === 'knight' ? 0.77 : 0.72);
   const advance = Math.min(gapLimited, proportional);
-  return advance >= 32 ? advance : distance * (role === 'assassin' ? 0.5 : role === 'fighter' ? 0.46 : role === 'knight' ? 0.44 : 0.4);
+  return advance >= 32 ? advance : distance * (role === 'assassin' ? 0.54 : role === 'fighter' ? 0.46 : role === 'knight' ? 0.44 : 0.4);
 }
 
 function meleeDashMs(role: Combat2172MeleeRole, tier: Combat2163MarksmanTier, reducedMotion: boolean): number {
@@ -280,15 +303,15 @@ function meleeDashMs(role: Combat2172MeleeRole, tier: Combat2163MarksmanTier, re
     if (tier === 'skill') return 164;
     return 130;
   }
-  if (reducedMotion) return tier === 'ultimate' ? 80 : 60;
-  if (tier === 'ultimate') return 130;
-  if (tier === 'skill') return 108;
-  return 88;
+  if (reducedMotion) return tier === 'ultimate' ? 78 : 58;
+  if (tier === 'ultimate') return 128;
+  if (tier === 'skill') return 104;
+  return 84;
 }
 
 function meleeReturnMs(role: Combat2172MeleeRole, tier: Combat2163MarksmanTier, reducedMotion: boolean): number {
-  if (reducedMotion) return role === 'assassin' ? 60 : 80;
-  if (role === 'assassin') return tier === 'ultimate' ? 95 : 82;
+  if (reducedMotion) return role === 'assassin' ? 58 : 80;
+  if (role === 'assassin') return tier === 'ultimate' ? 92 : tier === 'skill' ? 78 : 72;
   if (role === 'fighter') return tier === 'ultimate' ? 170 : tier === 'skill' ? 132 : 118;
   if (role === 'knight') return tier === 'ultimate' ? 160 : tier === 'skill' ? 126 : 116;
   return tier === 'ultimate' ? 155 : 120;
@@ -388,7 +411,6 @@ export function installCombatNightProjectileBridge(): void {
     impactFeedbackVersion: COMBAT2173_PROFESSION_IMPACT_VERSION,
     marksmanDirectRuntime: true,
     marksmanDirectVersion: COMBAT2164_MARKSMAN_RUNTIME_VERSION,
-    marksmanUntouchedBy2173: true,
     marksmanTierContext: true,
     marksmanForms: { normal: 'compact-spiral-rail', skill: 'piercing-triple-rail-shot', ultimate: 'rail-breaker-heavy-slug' },
     mageDirectRuntime: true,
@@ -397,45 +419,44 @@ export function installCombatNightProjectileBridge(): void {
     mageForms: { normal: 'arcane-bolt', skill: 'twin-rune-lance', ultimate: 'astral-comet' },
     tankDirectRuntime: true,
     tankDirectVersion: COMBAT2166_TANK_VERSION,
-    tankTierContext: true,
     tankProjectileTravel: false,
     tankCastSignature: false,
     tankGenericRenderer: false,
     tankForms: { normal: 'shield-bash-contact', skill: 'bulwark-slam-contact', ultimate: 'fortress-breaker-contact' },
     fighterDirectRuntime: true,
     fighterDirectVersion: COMBAT2167_FIGHTER_VERSION,
-    fighterTierContext: true,
     fighterProjectileTravel: false,
     fighterCastSignature: false,
     fighterGenericRenderer: false,
     fighterForms: { normal: 'heavy-straight-punch-contact', skill: 'rising-breaker-punch-contact', ultimate: 'meteor-fist-finisher-contact' },
     knightDirectRuntime: true,
     knightDirectVersion: COMBAT2168_KNIGHT_VERSION,
-    knightTierContext: true,
     knightProjectileTravel: false,
     knightCastSignature: false,
     knightGenericRenderer: false,
     knightForms: { normal: 'heavy-cut-contact', skill: 'guard-break-cleave-contact', ultimate: 'royal-judgment-slash-contact' },
     assassinDirectRuntime: true,
-    assassinTierContext: true,
+    assassinDirectVersion: COMBAT2180_ASSASSIN_VERSION,
     assassinProjectileTravel: false,
-    assassinForms: { normal: 'double-critical-slash', skill: 'double-critical-slash-rush', ultimate: 'double-critical-execution' },
+    assassinCastSignature: false,
+    assassinGenericRenderer: false,
+    assassinForms: { normal: 'two-quick-contact-cuts', skill: 'two-shadow-afterimage-cuts', ultimate: 'two-execution-critical-style-cuts' },
     assassinVisualHits: 2,
     assassinGuaranteedCritChanged: false,
     enchanterDirectRuntime: true,
     enchanterDirectVersion: COMBAT2169_ENCHANTER_VERSION,
-    enchanterTierContext: true,
     enchanterCanonicalRoleAliases: ['thuat si', 'thuat su', 'enchanter', 'warlock'],
-    enchanterForms: { normal: 'hex-needle', skill: 'binding-twin-sigil', ultimate: 'abyssal-seal-lance' },
+    enchanterForms: { normal: 'hex-needle', skill: 'binding-sigil-chain', ultimate: 'abyssal-grand-seal' },
     healerDirectRuntime: true,
     healerDirectVersion: COMBAT2170_HEALER_VERSION,
-    healerTierContext: true,
-    healerForms: { normal: 'life-seed', skill: 'restoration-ribbon', ultimate: 'sanctuary-heart-ray' },
-    allNewProfessionUltimateImpactShake: true,
+    healerForms: { normal: 'mend-spark', skill: 'restoration-stream', ultimate: 'sanctuary-crown' },
+    musicianDirectRuntime: true,
+    musicianDirectVersion: COMBAT2183_MUSICIAN_VERSION,
+    musicianForms: { normal: 'pulse-note', skill: 'chord-wave', ultimate: 'symphony-crescendo' },
     meleeRolesUseActorApproach: ['tank', 'fighter', 'knight', 'assassin'],
     meleeCastSignatureDisabled: true,
     meleeProjectileTravelDisabled: true,
-    otherRolesCompatibilityOwnerStack: true,
+    allDedicatedOwners: true,
     combatLogicChanged: false
   };
 }
