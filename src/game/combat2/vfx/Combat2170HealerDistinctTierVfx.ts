@@ -13,7 +13,7 @@ const PALETTE: Readonly<Record<CombatProjectileElement, Palette>> = Object.freez
   lightning: { main: 0xeadb76, core: 0xffffee, dark: 0x786c25, accent: 0xffef9d }, storm: { main: 0x91a8e1, core: 0xf8f9ff, dark: 0x48567d, accent: 0xbfcdf4 },
   wind: { main: 0x79d9c9, core: 0xf5fffc, dark: 0x316f65, accent: 0xaef1e5 }, leaf: { main: 0x86d991, core: 0xf6ffef, dark: 0x3a6941, accent: 0xb7efbd },
   poison: { main: 0xaad875, core: 0xfbffe7, dark: 0x566e35, accent: 0xd7ef9f }, earth: { main: 0xc29a72, core: 0xffeed5, dark: 0x654e39, accent: 0xe3bd91 },
-  steel: { main: 0xcbdbe3, core: 0xffffff, dark: 0x5b6c75, accent: 0edf5f8 }, light: { main: 0xf2dfa0, core: 0xfffff9, dark: 0x81764d, accent: 0xfff2bd },
+  steel: { main: 0xcbdbe3, core: 0xffffff, dark: 0x5b6c75, accent: 0xedf5f8 }, light: { main: 0xf2dfa0, core: 0xfffff9, dark: 0x81764d, accent: 0xfff2bd },
   dark: { main: 0xaa8ddd, core: 0xfaf4ff, dark: 0x513d6d, accent: 0xcfb6ef }, neutral: { main: 0xa7d5dc, core: 0xffffff, dark: 0x47666d, accent: 0xd5f0f4 }
 });
 
