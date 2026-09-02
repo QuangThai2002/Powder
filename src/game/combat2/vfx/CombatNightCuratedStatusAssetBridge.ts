@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { BattleScene } from '../scenes/BattleScene';
 import { PowView } from '../views/PowView';
+import './Combat21810AllMeleeLocalHopPatch';
 import {
   PersistentPowStatusVfx,
   type PersistentPowStatusKind,
