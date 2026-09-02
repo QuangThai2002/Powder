@@ -3,14 +3,15 @@ import type { CombatProjectileElement, DirectionalProjectileOptions } from './Di
 import { powVfxDepth } from './CombatNightVfxLayout';
 import { playCombat2105SlashCue } from '../views/Combat2105AudioImpactPatch';
 
-export const COMBAT2187_ASSASSIN_VERSION = '2.18.7';
-export const COMBAT2186_ASSASSIN_VERSION = COMBAT2187_ASSASSIN_VERSION;
-export const COMBAT2180_ASSASSIN_VERSION = COMBAT2187_ASSASSIN_VERSION;
+export const COMBAT2189_ASSASSIN_VERSION = '2.18.9';
+export const COMBAT2187_ASSASSIN_VERSION = COMBAT2189_ASSASSIN_VERSION;
+export const COMBAT2186_ASSASSIN_VERSION = COMBAT2189_ASSASSIN_VERSION;
+export const COMBAT2180_ASSASSIN_VERSION = COMBAT2189_ASSASSIN_VERSION;
 export type Combat2180AssassinTier = 'normal' | 'skill' | 'ultimate';
 
 type Options = DirectionalProjectileOptions & { role?: string };
 type Palette = { main: number; core: number; dark: number; accent: number };
-type CutSpec = { half: number; thickness: number; core: number; afterOffset: number };
+type CutSpec = { half: number; width: number; echoOffset: number };
 
 const PALETTE: Readonly<Record<CombatProjectileElement, Palette>> = Object.freeze({
   fire: { main: 0xff6549, core: 0xffe7cc, dark: 0x5f211c, accent: 0xff9b74 },
@@ -86,10 +87,10 @@ function wait(scene: Phaser.Scene, duration: number): Promise<void> {
 }
 
 function cutSpec(tier: Combat2180AssassinTier, hit: 1 | 2): CutSpec {
-  const boost = hit === 2 ? 1.06 : 1;
-  if (tier === 'ultimate') return { half: 122 * boost, thickness: 10, core: 3.4, afterOffset: 12 };
-  if (tier === 'skill') return { half: 96 * boost, thickness: 7.4, core: 2.8, afterOffset: 10 };
-  return { half: 72 * boost, thickness: 5.4, core: 2.2, afterOffset: 8 };
+  const boost = hit === 2 ? 1.05 : 1;
+  if (tier === 'ultimate') return { half: 126 * boost, width: 8.2, echoOffset: 13 };
+  if (tier === 'skill') return { half: 98 * boost, width: 6.2, echoOffset: 10 };
+  return { half: 74 * boost, width: 4.8, echoOffset: 8 };
 }
 
 function facing(options: Options): number {
@@ -98,31 +99,42 @@ function facing(options: Options): number {
 
 function cutRotation(options: Options, hit: 1 | 2): number {
   const face = facing(options);
-  return hit === 1 ? -face * 0.66 : face * 0.58;
+  return hit === 1 ? -face * 0.78 : face * 0.72;
 }
 
-function bladePoints(half: number, thickness: number): number[] {
-  return [
-    -half, 0,
-    -half * 0.58, -thickness * 0.16,
-    -half * 0.12, -thickness * 0.74,
-    half * 0.52, -thickness * 0.34,
-    half, 0,
-    half * 0.5, thickness * 0.25,
-    -half * 0.1, thickness * 0.5,
-    -half * 0.62, thickness * 0.13
-  ];
+function drawTaperedCut(
+  g: Phaser.GameObjects.Graphics,
+  half: number,
+  width: number,
+  color: number,
+  alpha: number,
+  y = 0
+): void {
+  const segments = [
+    { a: -1, b: -0.74, w: 0.18 },
+    { a: -0.74, b: -0.36, w: 0.42 },
+    { a: -0.36, b: 0.38, w: 1 },
+    { a: 0.38, b: 0.76, w: 0.42 },
+    { a: 0.76, b: 1, w: 0.16 }
+  ] as const;
+  for (const segment of segments) {
+    g.lineStyle(Math.max(1, width * segment.w), color, alpha);
+    g.lineBetween(half * segment.a, y, half * segment.b, y);
+  }
 }
 
-function corePoints(half: number, thickness: number): number[] {
-  return [
-    -half, 0,
-    -half * 0.42, -thickness * 0.45,
-    half * 0.58, -thickness * 0.15,
-    half, 0,
-    half * 0.55, thickness * 0.14,
-    -half * 0.44, thickness * 0.34
-  ];
+function drawCutCore(
+  g: Phaser.GameObjects.Graphics,
+  half: number,
+  width: number,
+  color: number,
+  alpha: number
+): void {
+  g.lineStyle(Math.max(1.2, width), color, alpha);
+  g.lineBetween(-half * 0.54, 0, half * 0.6, 0);
+  g.lineStyle(1, color, alpha * 0.8);
+  g.lineBetween(-half * 0.76, 0, -half * 0.54, 0);
+  g.lineBetween(half * 0.6, 0, half * 0.8, 0);
 }
 
 function makeCut(
@@ -133,76 +145,55 @@ function makeCut(
 ): Phaser.GameObjects.Container {
   const spec = cutSpec(tier, hit);
   const face = facing(options);
+  const sign = hit === 1 ? 1 : -1;
   const root = options.scene.add.container(options.target.x, options.target.y)
     .setDepth(powVfxDepth('foreground') + 22 + hit)
     .setRotation(cutRotation(options, hit));
 
-  const shadow = options.scene.add.polygon(
-    0,
-    1.5,
-    bladePoints(spec.half * 1.01, spec.thickness * 1.14),
-    p.dark,
-    tier === 'normal' ? 0.7 : 0.76
+  const shadow = options.scene.add.graphics();
+  drawTaperedCut(shadow, spec.half * 1.02, spec.width * 1.55, p.dark, tier === 'normal' ? 0.64 : 0.72, 1.5);
+
+  const glow = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+  drawTaperedCut(glow, spec.half, spec.width * 1.9, p.main, tier === 'normal' ? 0.08 : tier === 'skill' ? 0.12 : 0.16);
+
+  const edge = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+  drawTaperedCut(edge, spec.half, spec.width, p.accent, tier === 'normal' ? 0.86 : 0.95);
+
+  const core = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+  drawCutCore(core, spec.half, tier === 'ultimate' ? 2.8 : tier === 'skill' ? 2.3 : 1.8, p.core, 1);
+
+  const echo = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+  drawTaperedCut(
+    echo,
+    spec.half * 0.64,
+    tier === 'ultimate' ? 2.8 : tier === 'skill' ? 2.1 : 1.6,
+    p.main,
+    tier === 'normal' ? 0.16 : tier === 'skill' ? 0.23 : 0.3,
+    sign * spec.echoOffset
   );
 
-  const after = options.scene.add.polygon(
-    -face * (hit === 2 ? 7 : 10),
-    (hit === 1 ? 1 : -1) * spec.afterOffset,
-    bladePoints(spec.half * 0.88, spec.thickness * 0.54),
-    p.main,
-    tier === 'normal' ? 0.16 : tier === 'skill' ? 0.22 : 0.27
-  ).setBlendMode(Phaser.BlendModes.ADD);
+  const contact = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+  const spark = tier === 'ultimate' ? 20 : tier === 'skill' ? 14 : 9;
+  contact.lineStyle(tier === 'ultimate' ? 2.2 : 1.7, p.core, hit === 2 ? 0.78 : 0.62);
+  contact.lineBetween(-spark, -3, spark, 3);
+  contact.lineBetween(-3, -spark * 0.55, 3, spark * 0.55);
 
-  const glow = options.scene.add.polygon(
-    0,
-    0,
-    bladePoints(spec.half, spec.thickness * 1.42),
-    p.main,
-    tier === 'normal' ? 0.1 : tier === 'skill' ? 0.14 : 0.18
-  ).setBlendMode(Phaser.BlendModes.ADD);
-
-  const body = options.scene.add.polygon(
-    0,
-    0,
-    bladePoints(spec.half, spec.thickness),
-    p.accent,
-    tier === 'normal' ? 0.9 : 0.98
-  ).setBlendMode(Phaser.BlendModes.ADD);
-
-  const core = options.scene.add.polygon(
-    face * spec.half * 0.05,
-    0,
-    corePoints(spec.half * 0.9, spec.core),
-    p.core,
-    1
-  ).setBlendMode(Phaser.BlendModes.ADD);
-
-  const contact = options.scene.add.circle(
-    hit === 2 ? 7 : -5,
-    0,
-    tier === 'ultimate' ? (hit === 2 ? 16 : 12) : tier === 'skill' ? (hit === 2 ? 11 : 8) : (hit === 2 ? 7 : 5),
-    p.core,
-    tier === 'ultimate' ? 0.34 : tier === 'skill' ? 0.25 : 0.16
-  ).setBlendMode(Phaser.BlendModes.ADD);
-
-  root.add([shadow, after, glow, body, core, contact]);
+  root.add([shadow, glow, echo, edge, core, contact]);
 
   if (tier !== 'normal') {
-    const razor = options.scene.add.polygon(
-      -face * 12,
-      hit === 1 ? 10 : -10,
-      bladePoints(spec.half * 0.6, spec.thickness * 0.3),
-      p.core,
-      tier === 'ultimate' ? 0.3 : 0.22
-    ).setBlendMode(Phaser.BlendModes.ADD);
+    const razor = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+    razor.lineStyle(tier === 'ultimate' ? 2.2 : 1.6, p.core, tier === 'ultimate' ? 0.34 : 0.24);
+    razor.lineBetween(-spec.half * 0.4, sign * 16, spec.half * 0.26, sign * 16);
     root.add(razor);
   }
 
   if (tier === 'ultimate' && hit === 2) {
-    const executionRing = options.scene.add.ellipse(0, 0, 168, 96, 0x000000, 0)
-      .setStrokeStyle(3, p.main, 0.38)
-      .setBlendMode(Phaser.BlendModes.ADD);
-    root.add(executionRing);
+    const execution = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+    execution.lineStyle(2.4, p.main, 0.4);
+    execution.lineBetween(-50, -24, 52, 24);
+    execution.lineStyle(1.4, p.core, 0.35);
+    execution.lineBetween(-38, 26, 42, -26);
+    root.add(execution);
   }
 
   return root;
@@ -215,13 +206,13 @@ async function revealCut(
   hit: 1 | 2
 ): Promise<void> {
   const face = facing(options);
-  const enterMs = options.reducedMotion ? 28 : tier === 'ultimate' ? 48 : tier === 'skill' ? 40 : 34;
-  root.setScale(0.2, 0.72).setAlpha(0.18);
+  const enterMs = options.reducedMotion ? 28 : tier === 'ultimate' ? 46 : tier === 'skill' ? 39 : 33;
+  root.setScale(0.06, 0.72).setAlpha(0.1);
   await tween(options.scene, root, {
-    scaleX: hit === 2 ? 1.03 : 1,
+    scaleX: hit === 2 ? 1.025 : 1,
     scaleY: 1,
     alpha: 1,
-    x: root.x + face * (hit === 2 ? 5 : 3),
+    x: root.x + face * (hit === 2 ? 4 : 2),
     duration: enterMs,
     ease: 'Cubic.easeOut'
   }, enterMs + 145);
@@ -234,12 +225,12 @@ async function fadeCut(
   hit: 1 | 2
 ): Promise<void> {
   const face = facing(options);
-  const exitMs = options.reducedMotion ? 52 : tier === 'ultimate' ? (hit === 2 ? 110 : 98) : tier === 'skill' ? 92 : 78;
+  const exitMs = options.reducedMotion ? 52 : tier === 'ultimate' ? (hit === 2 ? 112 : 100) : tier === 'skill' ? 94 : 80;
   await tween(options.scene, root, {
-    scaleX: hit === 2 ? 1.11 : 1.07,
-    scaleY: 0.82,
+    scaleX: hit === 2 ? 1.08 : 1.05,
+    scaleY: 0.88,
     alpha: 0,
-    x: root.x + face * (hit === 2 ? 16 : 12),
+    x: root.x + face * (hit === 2 ? 13 : 10),
     duration: exitMs,
     ease: 'Quad.easeOut'
   }, exitMs + 170);
@@ -278,7 +269,7 @@ export async function playCombat2180AssassinDistinctTierVfx(
       );
     }
 
-    const holdMs = options.reducedMotion ? 20 : tier === 'ultimate' ? 64 : tier === 'skill' ? 50 : 40;
+    const holdMs = options.reducedMotion ? 20 : tier === 'ultimate' ? 70 : tier === 'skill' ? 54 : 44;
     await wait(options.scene, holdMs);
 
     await Promise.all([
@@ -292,17 +283,17 @@ export async function playCombat2180AssassinDistinctTierVfx(
 }
 
 (globalThis as any).POWDER_COMBAT2_ASSASSIN_DISTINCT_TIERS = {
-  version: COMBAT2187_ASSASSIN_VERSION,
+  version: COMBAT2189_ASSASSIN_VERSION,
   role: 'assassin',
   owner: 'dedicated-manual',
   realCombatReady: true,
   tiers: {
-    normal: 'two-sharp-cross-contact-cuts',
-    skill: 'two-razor-afterimage-cross-cuts',
-    ultimate: 'two-execution-blade-streak-cuts'
+    normal: 'two-thin-anime-cross-cuts',
+    skill: 'two-razor-line-cross-cuts',
+    ultimate: 'two-execution-line-cross-cuts'
   },
-  slashShape: 'thin-tapered-cross-blade-streaks',
-  curvedArcRemoved: true,
+  slashShape: 'thin-segmented-tapered-anime-cross',
+  polygonRibbonRemoved: true,
   firstCutPersistsIntoSecond: true,
   slashAudio: 'two-contact-whooshes',
   visualHits: 2,
