@@ -531,3 +531,80 @@ export function combatTeamByIds(ids: readonly string[]): CombatPow[] | null {
   const team = normalized.map(combatPowById);
   return team.every((pow): pow is CombatPow => Boolean(pow)) ? team : null;
 }
+
+export interface CombatBossRosterSnapshot {
+  powId: string;
+  level: number;
+  stars: number;
+  shiny?: boolean;
+  stats: CatalogStats & { maxHp?: number };
+  scale?: number;
+  boss?: boolean;
+  bossType?: string | null;
+  aiTier?: string;
+  combatGrade?: number;
+  gradeScale?: number;
+  initialRage?: number;
+  initialInitiative?: number;
+}
+
+export interface CombatBossBootstrapSnapshot {
+  version?: string;
+  playerRoster: CombatBossRosterSnapshot[];
+  enemyRoster: CombatBossRosterSnapshot[];
+  initialRageByPowId?: Record<string, number>;
+  initialInitiativeByPowId?: Record<string, number>;
+  [key: string]: unknown;
+}
+
+function bossSnapshotMap(rows: readonly CombatBossRosterSnapshot[] | undefined): Map<string, CombatBossRosterSnapshot> {
+  return new Map((Array.isArray(rows) ? rows : []).map((row) => [String(row?.powId || '').toLowerCase(), row] as const));
+}
+
+/** Apply only the legacy-derived Boss combat snapshot; normal PvE keeps catalog stats. */
+export function applyBossBootstrapToTeam(
+  team: CombatPow[],
+  rows: readonly CombatBossRosterSnapshot[] | undefined
+): CombatPow[] | null {
+  const snapshots = bossSnapshotMap(rows);
+  if (!team.length || snapshots.size !== team.length || team.some((pow) => !snapshots.has(pow.id.toLowerCase()))) return null;
+  const hydrated = team.map((pow): CombatPow | null => {
+    const snapshot = snapshots.get(pow.id.toLowerCase());
+    const stats = snapshot?.stats;
+    if (!snapshot || !stats || !Number.isFinite(stats.hp) || !Number.isFinite(stats.atk) || !Number.isFinite(stats.ap) || !Number.isFinite(stats.def) || !Number.isFinite(stats.speed)) return null;
+    const hp = Math.max(1, Math.round(Number(stats.hp)));
+    return {
+      ...pow,
+      level: Math.max(1, Math.floor(Number(snapshot.level) || pow.level)),
+      attack: Math.max(1, Math.round(Number(stats.atk))),
+      abilityPower: Math.max(1, Math.round(Number(stats.ap))),
+      defense: Math.max(1, Math.round(Number(stats.def))),
+      speed: Math.max(1, Math.round(Number(stats.speed))),
+      hp,
+      maxHp: Math.max(hp, Math.round(Number(stats.maxHp) || hp)),
+      critRate: clamp(finiteNumber(stats.critRate, pow.critRate), 0, 100),
+      critDamage: clamp(finiteNumber(stats.critDamage, pow.critDamage), 100, 250),
+      evasion: clamp(finiteNumber(stats.evasion, pow.evasion), 0, 75),
+      accuracy: clamp(finiteNumber(stats.accuracy, pow.accuracy), 25, 200),
+      critResist: clamp(finiteNumber(stats.critResist, pow.critResist), 0, 50),
+      defPen: clamp(finiteNumber(stats.defPen, pow.defPen), 0, 0.6),
+      healPower: clamp(finiteNumber(stats.healPower, pow.healPower), 0, 60),
+      shieldPower: clamp(finiteNumber(stats.shieldPower, pow.shieldPower), 0, 60),
+      tenacity: clamp(finiteNumber(stats.tenacity, pow.tenacity), 0, 60),
+      damageReduction: clamp(finiteNumber(stats.damageReduction, pow.damageReduction), 0, 0.45)
+    };
+  });
+  return hydrated.every((pow): pow is CombatPow => Boolean(pow)) ? hydrated : null;
+}
+
+export function bossBootstrapRuntimeOptions(snapshot: CombatBossBootstrapSnapshot | undefined): {
+  initialRageByPowId: Record<string, number>;
+  initialInitiativeByPowId: Record<string, number>;
+} {
+  const rage = snapshot?.initialRageByPowId || {};
+  const initiative = snapshot?.initialInitiativeByPowId || {};
+  return {
+    initialRageByPowId: Object.fromEntries(Object.entries(rage).map(([id, value]) => [id.toLowerCase(), clamp(Math.floor(Number(value) || 0), 0, 8)])),
+    initialInitiativeByPowId: Object.fromEntries(Object.entries(initiative).map(([id, value]) => [id.toLowerCase(), clamp(Number(value) || 0, 0, 92)]))
+  };
+}

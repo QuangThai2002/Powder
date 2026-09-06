@@ -29,7 +29,8 @@ export class TurnManager {
     this.state.sanitizeRuntimeNumbers();
 
     for (const unit of this.state.activeLiving()) {
-      this.nextReadyAt.set(unit.instanceId, this.intervalFor(unit));
+      const initiativeLead = Math.min(0.92, Math.max(0, Number(unit.initialInitiative) || 0) / 100);
+      this.nextReadyAt.set(unit.instanceId, this.intervalFor(unit) * (1 - initiativeLead));
     }
   }
 
@@ -120,6 +121,15 @@ export class TurnManager {
     const ratio = Math.min(1, Math.max(0, Number.isFinite(intervalRatio) ? intervalRatio : 0));
     const current = this.safeTimelineValue(this.nextReadyAt.get(unitId), this.timelineNow + this.intervalFor(unit));
     this.nextReadyAt.set(unitId, current + this.intervalFor(unit) * ratio);
+  }
+
+  /** Advance a non-active Pow by a fraction of its normal timeline interval. */
+  advanceUnit(unitId: string, intervalRatio: number): void {
+    const unit = this.state.getUnit(unitId);
+    if (!unit?.alive || unit.fieldSlot === null || this.state.currentUnitId === unitId) return;
+    const ratio = Math.min(1, Math.max(0, Number.isFinite(intervalRatio) ? intervalRatio : 0));
+    const current = this.safeTimelineValue(this.nextReadyAt.get(unitId), this.timelineNow + this.intervalFor(unit));
+    this.nextReadyAt.set(unitId, Math.max(this.timelineNow, current - this.intervalFor(unit) * ratio));
   }
 
   recoverActionLock(): void {

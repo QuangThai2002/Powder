@@ -32,6 +32,11 @@ function syncLegacyUnit(unit){
 }
 function recoveryPoints(row){
   if(row?.ragePoints!=null&&Number.isFinite(Number(row.ragePoints)))return sanitizeRage(row.ragePoints);
+  const energy=row?.serverEnergy??row?.energy;
+  if(energy!=null&&Number.isFinite(Number(energy))){
+    const value=Number(energy);
+    return sanitizeRage(value>RAGE_POINTS.max?Math.floor(value/25):value);
+  }
   const legacy=Math.max(0,Number(row?.rage)||0);
   // Existing legacy threshold 100 = 4 points. Never promote a sub-100 save to READY.
   return sanitizeRage(Math.floor(legacy/25));
@@ -41,7 +46,12 @@ function normalizeCore(core,{fresh=false,packet=null}={}){
   activeCore=core;API.activeCore=core;
   const rows=new Map((packet?.runtime?.units||[]).map(row=>[row?.id,row]));
   for(const unit of core.allRosterUnits||core.allUnits||[]){
-    if(fresh)unit.ragePoints=RAGE_POINTS.start;
+    if(fresh){
+      unit.ragePoints=RAGE_POINTS.start;
+      unit.v9=unit.v9||{};
+      unit.v9.battleFlags=unit.v9.battleFlags&&typeof unit.v9.battleFlags==='object'?unit.v9.battleFlags:{};
+      unit.v9.battleFlags.canonicalSkill12Count=0;
+    }
     else if(rows.has(unit.id))unit.ragePoints=recoveryPoints(rows.get(unit.id));
     else if(!Number.isFinite(Number(unit.ragePoints)))unit.ragePoints=recoveryPoints(unit);
     syncLegacyUnit(unit);
@@ -52,6 +62,52 @@ function normalizeCore(core,{fresh=false,packet=null}={}){
 function rageGainForKey(key){return key==='basic'||key==='skill1'||key==='skill2'?RAGE_POINTS.actionGain:0;}
 function rageCostForKey(key){return key==='ultimate'?RAGE_POINTS.ultimateCost:key==='exclusive'?RAGE_POINTS.exclusiveCost:0;}
 function findUnit(id){return(activeCore?.allRosterUnits||activeCore?.allUnits||[]).find(unit=>unit?.id===id)||null;}
+function isSkill12(key){return key==='skill1'||key==='skill2';}
+function hasEquipmentSet(unit,name,tier=2){
+  const diagnostic=typeof window!=='undefined'?window.POWDER_COMBAT_V9_DIAGNOSTICS:null;
+  if(typeof diagnostic?.hasSet==='function')return Boolean(diagnostic.hasSet(unit,name,tier));
+  const wanted=String(name||'').trim().toLowerCase();
+  return (unit?.v9?.sets||[]).some(value=>String(value?.name||value?.id||value||'').trim().toLowerCase()===wanted&&Number(value?.tier??value?.level??tier)>=tier);
+}
+function artifactCode(unit){
+  const diagnostic=typeof window!=='undefined'?window.POWDER_COMBAT_V9_DIAGNOSTICS:null;
+  const artifact=typeof diagnostic?.artifact==='function'?diagnostic.artifact(unit):unit?.v9?.artifact;
+  return String(artifact?.effect?.code||'');
+}
+function collectActionRageContributions(attacker,key){
+  const contributions=[];
+  const base=rageGainForKey(key);
+  if(base>0)contributions.push({amount:base,source:'action'});
+  if(!isSkill12(key))return{contributions,skillUsed:false,skillCount:0};
+  attacker.v9=attacker.v9||{};
+  attacker.v9.battleFlags=attacker.v9.battleFlags&&typeof attacker.v9.battleFlags==='object'?attacker.v9.battleFlags:{};
+  const flags=attacker.v9.battleFlags;
+  const count=Math.max(0,Math.floor(Number(flags.canonicalSkill12Count)||0))+1;
+  flags.canonicalSkill12Count=count;
+  if(hasEquipmentSet(attacker,'Điều Nhịp',2))contributions.push({amount:1,source:'equipment:Điều Nhịp'});
+  if(count%2===0&&artifactCode(attacker)==='mana_refund_50')contributions.push({amount:1,source:'artifact:mana_refund_50'});
+  return{contributions,skillUsed:true,skillCount:count};
+}
+function emitCanonicalRageEvents(core,attacker,key,before,gain,skillUsed,actionSerial){
+  const after=gain.next,delta=after-before;
+  if(delta!==0){
+    const payload={actorId:attacker.id,sourceId:attacker.id,side:attacker.side,key,preEventRage:before,before,after,finalRage:after,delta,effectiveGain:gain.effectiveGain,rawGain:gain.rawGain,spent:rageCostForKey(key),logicalActionId:actionSerial};
+    try{originalMechanicEvent(core,'RAGE_CHANGE',payload,core.allUnits||core.allRosterUnits||[]);}catch(_){/* semantic observers are optional */}
+  }
+  if(gain.effectiveGain>0){
+    const payload={actorId:attacker.id,sourceId:attacker.id,recipientId:attacker.id,side:attacker.side,key,preEventRage:before,finalRage:after,effectiveGain:gain.effectiveGain,rawGain:gain.rawGain,logicalActionId:actionSerial};
+    try{originalMechanicEvent(core,'ALLY_RAGE_GAIN',payload,core.allUnits||core.allRosterUnits||[]);}catch(_){/* semantic observers are optional */}
+  }
+  if(skillUsed){
+    const payload={actorId:attacker.id,sourceId:attacker.id,side:attacker.side,key,successful:true,logicalActionId:actionSerial};
+    try{originalMechanicEvent(core,'SELF_SKILL_USED',payload,[attacker]);}catch(_){/* semantic observers are optional */}
+    try{originalMechanicEvent(core,'ALLY_SKILL_USED',payload,core.allUnits||core.allRosterUnits||[]);}catch(_){/* semantic observers are optional */}
+  }
+}
+function originalMechanicEvent(core,event,payload,units){
+  const fn=core?.__powderOriginalProcessMechanicEvent;
+  return typeof fn==='function'?fn.call(core,event,payload,units):[];
+}
 
 const patchedCoreApis=new WeakSet();
 function installUnifiedRage(coreApi){
@@ -96,6 +152,7 @@ function installUnifiedRage(coreApi){
     if(payload&&typeof payload==='object'&&payload.requiresMana){payload={...payload,requiresMana:false,cost:0,resourceSystem:RAGE_POINTS.version};}
     return typeof originalProcessMechanicEvent==='function'?originalProcessMechanicEvent.call(this,event,payload,units):[];
   };
+  proto.__powderOriginalProcessMechanicEvent=originalProcessMechanicEvent;
   proto.executeAction=function(attacker,key,requestedTargetId,knowledge={baseWrong:0,extraCorrect:0}){
     if(attacker&&!Number.isFinite(Number(attacker.ragePoints)))attacker.ragePoints=recoveryPoints(attacker);
     const before=sanitizeRage(attacker?.ragePoints),spent=rageCostForKey(key);
@@ -103,11 +160,14 @@ function installUnifiedRage(coreApi){
     let result;
     try{result=originalExecuteAction.call(this,attacker,key,requestedTargetId,knowledge);}
     catch(error){if(attacker){attacker.ragePoints=before;syncLegacyUnit(attacker);}throw error;}
-    if(attacker){
-      const gain=rageModel.applyRageEvent(before,[rageGainForKey(key)],spent);
+    if(attacker&&result?.cancelled!==true){
+      const action=collectActionRageContributions(attacker,key);
+      const gain=rageModel.applyRageEvent(before,action.contributions.map(contribution=>contribution.amount),spent);
       attacker.ragePoints=gain.next;
       for(const unit of this.allRosterUnits||this.allUnits||[])syncLegacyUnit(unit);
-      this.pushEvent?.('rage',{sourceId:attacker.id,targetId:attacker.id,before,after:gain.next,max:RAGE_POINTS.max,spent,amount:gain.effectiveGain,delta:gain.next-before,reason:key,rawGain:gain.rawGain});
+      const actionSerial=Number(this.state?.turnCount)||Number(this.serial)||0;
+      this.pushEvent?.('rage',{sourceId:attacker.id,targetId:attacker.id,before,after:gain.next,max:RAGE_POINTS.max,spent,amount:gain.effectiveGain,delta:gain.next-before,reason:key,rawGain:gain.rawGain,contributions:action.contributions.map(source=>({...source}))});
+      emitCanonicalRageEvents(this,attacker,key,before,gain,action.skillUsed,actionSerial);
     }
     scheduleUiPatch();
     return result;
@@ -219,6 +279,6 @@ function loadMainCombatVisual2221(){
   document.head?.appendChild(script);
 }
 
-const API={version:'24.0-rage-points+main-visual-22.2.1',LIMITS,RAGE_POINTS,stable,hashText,hash,compactUnit,compactCore,coreHash,register,get,list,batched,sanitizeRage,applyRawRageGain,applyRageEvent:rageModel.applyRageEvent,totalRawRageGain:rageModel.totalRawGain,rageMarkerStates:markerStates,installUnifiedRage,activeCore,loadMainCombatVisual2221};
+const API={version:'24.0-rage-points+main-visual-22.2.1',LIMITS,RAGE_POINTS,stable,hashText,hash,compactUnit,compactCore,coreHash,register,get,list,batched,sanitizeRage,applyRawRageGain,applyRageEvent:rageModel.applyRageEvent,totalRawRageGain:rageModel.totalRawGain,rageMarkerStates:markerStates,collectActionRageContributions,installUnifiedRage,activeCore,loadMainCombatVisual2221};
 window.POWDER_COMBAT_RUNTIME_V21=API;register('runtime',API);installCoreExportInterceptor();startUiBridge();loadMainCombatVisual2221();
 })();

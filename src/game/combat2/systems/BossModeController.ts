@@ -1,6 +1,7 @@
 import type { CombatUnitState } from './CombatState';
 import { CombatState } from './CombatState';
 import { TurnManager } from './TurnManager';
+import { applyRawRageGain, sanitizeRagePoints } from './CombatRageEngine';
 
 type BossType = 'daily' | 'weekly' | 'promotion' | 'story';
 type PendingMechanic =
@@ -8,6 +9,22 @@ type PendingMechanic =
   | { response: 'shield-break'; baseline: number; amount: number };
 
 export type BossMechanicEvent = Readonly<{ label: string; targetIds: string[]; damage?: number; phaseChanged?: boolean }>;
+
+type BossRageIntent = 'FULL_READY' | 'GAIN' | 'SPEND';
+
+/**
+ * Legacy Boss writes are mechanic intents, not percentages in the canonical
+ * 0..8 resource. A mechanic hit is one raw gain event; an interruption is one
+ * canonical penalty point. The old 25/30 values are intentionally not divided
+ * into Rage points.
+ */
+function applyBossRageIntent(unit: CombatUnitState, intent: BossRageIntent): number {
+  const before = sanitizeRagePoints(unit.ragePoints);
+  if (intent === 'FULL_READY') unit.ragePoints = 4;
+  else if (intent === 'GAIN') unit.ragePoints = applyRawRageGain(before, 1).next;
+  else unit.ragePoints = Math.max(0, before - 1);
+  return unit.ragePoints - before;
+}
 
 /** Direct Combat2 port of the legacy Boss 18.6 phase/signature contract. */
 export class BossModeController {
@@ -55,11 +72,15 @@ export class BossModeController {
       }
       const ratio = this.phase >= 2 ? 0.11 : 0.085;
       const damage = this.applyRawDamage(target, Math.max(1, Math.round(target.pow.maxHp * ratio)));
+      applyBossRageIntent(target, 'GAIN');
       return { label: 'HUYET LIEP · TRUY SAT', targetIds: [target.instanceId], damage };
     }
     const interrupted = this.boss.shield <= pending.baseline + 1;
     this.boss.shield = Math.max(pending.baseline, this.boss.shield - Math.min(pending.amount, Math.max(0, this.boss.shield - pending.baseline)));
-    if (interrupted) return { label: 'BOSS MECHANIC BI NGAT', targetIds: [this.boss.instanceId] };
+    if (interrupted) {
+      applyBossRageIntent(this.boss, 'SPEND');
+      return { label: 'BOSS MECHANIC BI NGAT', targetIds: [this.boss.instanceId] };
+    }
     if (this.type === 'promotion') {
       for (const target of this.state.living('player')) {
         target.shield = Math.max(0, target.shield - Math.round(target.shield * 0.30));
@@ -70,7 +91,10 @@ export class BossModeController {
     }
     const ratio = this.phase >= 3 ? 0.10 : 0.08;
     let damage = 0;
-    for (const target of this.state.living('player')) damage += this.applyRawDamage(target, Math.max(1, Math.round(target.pow.maxHp * ratio)));
+    for (const target of this.state.living('player')) {
+      damage += this.applyRawDamage(target, Math.max(1, Math.round(target.pow.maxHp * ratio)));
+      applyBossRageIntent(target, 'GAIN');
+    }
     return { label: 'DAI NAN', targetIds: this.state.living('player').map((unit) => unit.instanceId), damage };
   }
 
@@ -90,7 +114,7 @@ export class BossModeController {
   }
 
   snapshot(): Record<string, unknown> {
-    return { bossChallengeId: this.type, phase: this.phase, maxPhase: this.thresholds().length + 1, pending: this.pending?.response ?? null, signatureCounter: this.signatureCounter };
+    return { bossChallengeId: this.type, phase: this.phase, maxPhase: this.thresholds().length + 1, pending: this.pending?.response ?? null, signatureCounter: this.signatureCounter, ragePoints: this.boss.ragePoints };
   }
 
   private updatePhase(): BossMechanicEvent | null {
@@ -106,6 +130,13 @@ export class BossModeController {
     this.boss.abilityPowerMultiplier = Math.min(10, this.boss.abilityPowerMultiplier * power);
     this.boss.speed = Math.min(9999, this.boss.speed * speed);
     this.boss.shield += Math.max(1, Math.round(this.boss.pow.maxHp * this.number('phaseShield', 0)));
+    // Legacy Boss phase changes add 12% timeline meter; the final phase adds
+    // the separate 8% enrage push. Keep this as scheduling, not a resource.
+    this.turns.advanceUnit(this.boss.instanceId, 0.12);
+    if (this.phase >= this.thresholds().length + 1) this.turns.advanceUnit(this.boss.instanceId, 0.08);
+    // Legacy phase/enrage writes rage=100. The boundary semantic is FULL_READY,
+    // not a percentage arithmetic conversion.
+    applyBossRageIntent(this.boss, 'FULL_READY');
     return { label: `BOSS PHA ${this.phase}`, targetIds: [this.boss.instanceId], phaseChanged: true };
   }
 

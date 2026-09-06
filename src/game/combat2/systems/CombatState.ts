@@ -74,6 +74,8 @@ export interface CombatUnitState {
   reviveMarkerActionsRemaining: number;
   alive: boolean;
   actionLocked: boolean;
+  /** Legacy Boss meter expressed as an initial timeline lead, not a second resource. */
+  initialInitiative: number;
 }
 
 export interface ReservePromotion {
@@ -98,13 +100,13 @@ export class CombatState {
   constructor(
     playerTeam: CombatPow[],
     enemyTeam: CombatPow[],
-    options: Readonly<{ battleMode?: CombatRuntimeMode; bossContext?: Record<string, unknown> }> = {}
+    options: Readonly<{ battleMode?: CombatRuntimeMode; bossContext?: Record<string, unknown>; initialRageByPowId?: Readonly<Record<string, number>>; initialInitiativeByPowId?: Readonly<Record<string, number>> }> = {}
   ) {
     this.battleMode = options.battleMode ?? 'pve';
     this.bossContext = options.bossContext ?? {};
     this.units = [
-      ...this.makeUnits(playerTeam, 'player'),
-      ...this.makeUnits(enemyTeam, 'enemy')
+      ...this.makeUnits(playerTeam, 'player', options),
+      ...this.makeUnits(enemyTeam, 'enemy', options)
     ];
   }
 
@@ -171,6 +173,7 @@ export class CombatState {
     for (const unit of this.units) {
       unit.hp = this.finiteClamp(unit.hp, 0, unit.pow.maxHp, 0);
       unit.ragePoints = sanitizeRagePoints(unit.ragePoints);
+      unit.initialInitiative = this.finiteClamp(unit.initialInitiative, 0, 92, 0);
       unit.shield = this.finiteClamp(unit.shield, 0, unit.pow.maxHp * 0.8, 0);
       unit.speed = this.finiteClamp(unit.speed, 1, 9999, unit.pow.speed);
       unit.speedBuffActionsRemaining = this.safeDuration(unit.speedBuffActionsRemaining);
@@ -314,7 +317,7 @@ export class CombatState {
     unit.regenerationActionsRemaining = 0;
   }
 
-  private makeUnits(team: CombatPow[], side: CombatSide): CombatUnitState[] {
+  private makeUnits(team: CombatPow[], side: CombatSide, options: Readonly<{ initialRageByPowId?: Readonly<Record<string, number>>; initialInitiativeByPowId?: Readonly<Record<string, number>> }>): CombatUnitState[] {
     return team.map((pow, slot) => ({
       instanceId: `${side}-${slot}-${pow.id}`,
       pow,
@@ -322,7 +325,7 @@ export class CombatState {
       slot,
       fieldSlot: slot < ACTIVE_TEAM_SIZE ? slot : null,
       hp: pow.hp,
-      ragePoints: RAGE_START_POINTS,
+      ragePoints: this.initialRage(options.initialRageByPowId, pow.id),
       shield: 0,
       speed: this.finiteClamp(pow.speed, 1, 9999, 100),
       speedBuffActionsRemaining: 0,
@@ -367,8 +370,19 @@ export class CombatState {
       passiveUsed: false,
       reviveMarkerActionsRemaining: 0,
       alive: pow.hp > 0,
-      actionLocked: false
+      actionLocked: false,
+      initialInitiative: this.initialInitiative(options.initialInitiativeByPowId, pow.id)
     }));
+  }
+
+  private initialRage(values: Readonly<Record<string, number>> | undefined, powId: string): number {
+    const value = values?.[powId] ?? values?.[powId.toLowerCase()];
+    return sanitizeRagePoints(value === undefined ? RAGE_START_POINTS : value);
+  }
+
+  private initialInitiative(values: Readonly<Record<string, number>> | undefined, powId: string): number {
+    const value = values?.[powId] ?? values?.[powId.toLowerCase()];
+    return this.finiteClamp(Number(value ?? 0), 0, 92, 0);
   }
 
   private sanitizeControlHistory(value: ControlHistoryEntry[] | undefined): ControlHistoryEntry[] {

@@ -91,6 +91,34 @@ async function verifyRageContract(combat) {
     assert.ok(makeLegacy(mode).allRosterUnits.every((unit) => unit.ragePoints === 0), `${mode} legacy default is also zero`);
   }
 
+  const rageRuntime = legacyContext.window.POWDER_COMBAT_RUNTIME_V21;
+  const contributionUnit = { v9: { sets: [{ name: 'Điều Nhịp', tier: 2 }], artifact: { effect: { code: 'mana_refund_50' } }, battleFlags: {} } };
+  const firstSkill = rageRuntime.collectActionRageContributions(contributionUnit, 'skill1');
+  const secondSkill = rageRuntime.collectActionRageContributions(contributionUnit, 'skill2');
+  assert.deepEqual(plain(firstSkill.contributions.map((entry) => entry.amount)), [2, 1], 'Điều Nhịp contributes to the same Skill event');
+  assert.deepEqual(plain(secondSkill.contributions.map((entry) => entry.amount)), [2, 1, 1], 'mana_refund_50 procs on every second Skill 1/2');
+  const secondAmounts = secondSkill.contributions.map((entry) => entry.amount);
+  assert.equal(legacy.applyRageEvent(3, secondAmounts).next, 7, 'resource contributions aggregate before normal gain');
+  assert.equal(legacy.applyRageEvent(4, secondAmounts).next, 6, 'resource contributions aggregate before overflow halving');
+
+  const makeSemanticUnit = (rules, specials = []) => ({
+    id: 'semantic-owner', side: 'player', resources: new Map([['core', { current: 0, max: 8, visible: true }]]),
+    coreMechanic: { gainRules: rules, specialRules: specials }, coreRuntime: {}
+  });
+  const selfSkillUnit = makeSemanticUnit(['SELF_ACTION'], ['SELF_SKILL_USED']);
+  const selfTrigger = legacyContext.window.POWDER_MECHANICS_V2.gainForEvent(selfSkillUnit, 'SELF_SKILL_USED', { actorId: selfSkillUnit.id, side: 'player', key: 'skill1', logicalActionId: 'self-1' });
+  const selfDuplicate = legacyContext.window.POWDER_MECHANICS_V2.gainForEvent(selfSkillUnit, 'SELF_SKILL_USED', { actorId: selfSkillUnit.id, side: 'player', key: 'skill1', logicalActionId: 'self-1' });
+  assert.equal(selfTrigger.delta, 1, 'SELF_SKILL_USED triggers once');
+  assert.equal(selfDuplicate, null, 'SELF_SKILL_USED duplicate is ignored');
+  const allySkillUnit = makeSemanticUnit(['ALLY_SKILL'], ['ALLY_SKILL_USED']);
+  assert.equal(legacyContext.window.POWDER_MECHANICS_V2.gainForEvent(allySkillUnit, 'ALLY_SKILL_USED', { actorId: 'other', side: 'player', key: 'skill2', logicalActionId: 'ally-1' }).delta, 1, 'ALLY_SKILL_USED triggers without Mana cost');
+  assert.equal(legacyContext.window.POWDER_MECHANICS_V2.gainForEvent(allySkillUnit, 'ALLY_SKILL_USED', { actorId: 'other', side: 'player', key: 'skill2', logicalActionId: 'ally-1' }), null, 'ALLY_SKILL_USED duplicate is ignored');
+  const rageChangeUnit = makeSemanticUnit(['RAGE_CHANGE']);
+  assert.equal(legacyContext.window.POWDER_MECHANICS_V2.gainForEvent(rageChangeUnit, 'RAGE_CHANGE', { actorId: rageChangeUnit.id, preEventRage: 3, finalRage: 4, logicalActionId: 'rage-1' }).delta, 1, 'RAGE_CHANGE triggers once per logical resource event');
+  const allyRageUnit = makeSemanticUnit(['ALLY_RAGE_GAIN']);
+  assert.equal(legacyContext.window.POWDER_MECHANICS_V2.gainForEvent(allyRageUnit, 'ALLY_RAGE_GAIN', { actorId: 'other', side: 'player', effectiveGain: 0, logicalActionId: 'gain-0' }), null, 'ALLY_RAGE_GAIN ignores zero effective gain');
+  assert.equal(legacyContext.window.POWDER_MECHANICS_V2.gainForEvent(allyRageUnit, 'ALLY_RAGE_GAIN', { actorId: 'other', side: 'player', effectiveGain: 1, logicalActionId: 'gain-1' }).delta, 1, 'ALLY_RAGE_GAIN accepts effective gain');
+
   for (let start = 0; start <= 8; start += 1) {
     for (let action = 0; action <= 8; action += 1) {
       for (let passive = 0; passive <= 4; passive += 1) {
@@ -149,7 +177,10 @@ async function verifyRageContract(combat) {
   actorRow.rage = 100;
   assert.equal(legacy.restoreBattleRecovery(snapshot).allRosterUnits[0].ragePoints, 4, 'legacy 100 restores to 4');
   actorRow.ragePoints = 7;
+  actorRow.energy = 100;
   assert.equal(legacy.restoreBattleRecovery(snapshot).allRosterUnits[0].ragePoints, 7, 'canonical surplus wins over lossy legacy alias');
+  delete actorRow.ragePoints;
+  assert.equal(legacy.restoreBattleRecovery(snapshot).allRosterUnits[0].ragePoints, 4, 'PvP energy fallback maps legacy FULL_READY only when canonical Rage is absent');
   console.log(JSON.stringify({ status: 'PASS', checks: ['rage-official-rule', 'aggregate-before-halving', 'default-zero', 'ultimate-surplus', 'four-markers-red-overflow', 'real-resolver-resource-parity', 'multi-target-no-duplicate-gain', 'legacy-recovery-threshold'] }));
 }
 
@@ -173,6 +204,11 @@ function createRuntime() {
   const adventureResults = [];
   const restoredContexts = [];
   const shownViews = [];
+  const saveState = { team: ['hero-1'], lessonsDone: ['lesson-1'], rank: 3, owned: {
+    'hero-1': { level: 42, stars: 2, shiny: false },
+    'hero-2': { level: 38, stars: 1, shiny: true },
+    'hero-3': { level: 55, stars: 4, shiny: false }
+  } };
   const requirement = {
     Rank: 1,
     Curriculum: { language: 'ZH', level: 'HSK1' },
@@ -202,9 +238,22 @@ function createRuntime() {
     dispatchEvent() {},
     setTimeout() { return 0; },
     clearTimeout() {},
-    POWDER_DATA: { pows: [{ id: 'hero-1' }, { id: 'enemy-1' }] },
+    POWDER_DATA: { pows: [
+      { id: 'hero-1', maxStars: 7, stats: { hp: 100, atk: 24, ap: 28, def: 16, speed: 42 } },
+      { id: 'hero-2', maxStars: 7, stats: { hp: 110, atk: 22, ap: 25, def: 18, speed: 38 } },
+      { id: 'hero-3', maxStars: 7, stats: { hp: 125, atk: 27, ap: 30, def: 20, speed: 35 } },
+      { id: 'enemy-1', maxStars: 7, stats: { hp: 150, atk: 30, ap: 32, def: 22, speed: 33 } },
+      { id: 'enemy-2', maxStars: 7, stats: { hp: 160, atk: 28, ap: 35, def: 24, speed: 31 } },
+      { id: 'enemy-3', maxStars: 7, stats: { hp: 175, atk: 34, ap: 29, def: 26, speed: 29 } }
+    ] },
+    POWDER_POWER_CURVE_V8: { enemyGradeBase: 1.35 },
+    POWDER_ENGINE: { createCombatant: (pow, owned = {}, options = {}) => {
+      const scale = Math.max(0.1, Number(options.scale) || 1);
+      const stats = pow.stats || {};
+      return { stats: Object.fromEntries(Object.entries(stats).map(([key, value]) => [key, Math.max(1, Math.round(Number(value) * scale))])) };
+    } },
     POWDER_APP: {
-      getSave: () => ({ team: ['hero-1'], lessonsDone: ['lesson-1'] }),
+      getSave: () => plain(saveState),
       getDungeonLearningGate: () => ({ requirement }),
       getCombatQuestionPool: () => [question, { ...question, id: 'academic-q-invalid', lessonId: 'lesson-x' }],
       grantLearningProgress: (entry) => { learning.push(entry); return { ok: true }; },
@@ -217,7 +266,13 @@ function createRuntime() {
       restoreCombatContext: (entry) => { restoredContexts.push(entry); }
     }
   };
-  window.POWDER_BOSS_ENCOUNTER_V1860 = { encounter: (type) => type === 'daily' ? dailyBossConfig : null };
+  const bossConfigs = {
+    daily: dailyBossConfig,
+    weekly: { id: 'weekly', thresholds: [0.7, 0.35], phasePower: 1.16, phaseSpeed: 1.08, phaseShield: 0.12, signature: { id: 'cataclysm', name: 'Đại Nạn', cadence: [3, 3, 2], effect: { kind: 'max-hp-aoe' } } },
+    promotion: { id: 'promotion', thresholds: [0.5], phasePower: 1.14, phaseSpeed: 1.06, phaseShield: 0.10, signature: { id: 'formation_break', name: 'Phá Trận', cadence: [3, 2], effect: { kind: 'shield-break-antiheal' } } },
+    story: { id: 'story', thresholds: [0.5], phasePower: 1.10, phaseSpeed: 1.04, phaseShield: 0.06, signature: { id: 'suppression', name: 'Trấn Áp', cadence: [3, 2], effect: { kind: 'mark-lowest-hp' } } }
+  };
+  window.POWDER_BOSS_ENCOUNTER_V1860 = { encounter: (type) => bossConfigs[type] || null };
   const sandbox = {
     window,
     document: { readyState: 'complete', addEventListener() {} },
@@ -236,7 +291,7 @@ function createRuntime() {
     setTimeout() { return 0; },
     clearTimeout() {}
   };
-  return { sandbox: vm.createContext(sandbox), window, sessionStorage, localStorage, navigation, learning, rewards, bossSettlements, adventureResults, restoredContexts, shownViews, question, dailyBossConfig };
+  return { sandbox: vm.createContext(sandbox), window, sessionStorage, localStorage, navigation, learning, rewards, bossSettlements, adventureResults, restoredContexts, shownViews, question, dailyBossConfig, bossConfigs, saveState };
 }
 
 function stage() {
@@ -254,21 +309,24 @@ function stage() {
 
 function bossStage() {
   return {
-    id: 'challenge-boss-daily', kind: 'boss', bossChallengeId: 'daily',
-    enemyIds: ['enemy-1'], enemyCount: 1, scale: 2.15, initiative: 14,
+    id: 'challenge-boss-daily', islandId: 1, kind: 'boss', bossChallengeId: 'daily',
+    enemyIds: ['enemy-1'], enemyCount: 1, recommendedLevel: 45, adaptive: 1.04,
+    recommendedStars: 3, scale: 2.15, initiative: 14,
     manaStart: 0.8, rageStart: 35, difficultyLabel: 'BOSS'
   };
 }
 
 async function main() {
-  const [transactionSafety, handoffEntry, contract, bossRuntime] = await Promise.all([
+  const [transactionSafety, handoffEntry, bossBootstrap, contract, bossRuntime] = await Promise.all([
     text('js/transaction-safety-v2090.js'),
     text('js/combat-entry-v177.js'),
+    text('js/combat-boss-bootstrap-v1.js'),
     loadContract(),
     loadBossRuntime()
   ]);
   await verifyRageContract(bossRuntime);
   const runtime = createRuntime();
+  vm.runInContext(bossBootstrap, runtime.sandbox, { filename: 'combat-boss-bootstrap-v1.js' });
   vm.runInContext(transactionSafety, runtime.sandbox, { filename: 'transaction-safety-v2090.js' });
   vm.runInContext(handoffEntry, runtime.sandbox, { filename: 'combat-entry-v177.js' });
 
@@ -284,17 +342,20 @@ async function main() {
     const turns = new TurnManager(state);
     const controller = BossModeController.from(state, turns);
     assert.ok(controller, `${type} must create a live Boss controller from BattleRequest context`);
-    return { state, controller, player: state.activeLiving('player')[0], boss: state.activeLiving('enemy')[0] };
+    return { state, turns, controller, player: state.activeLiving('player')[0], boss: state.activeLiving('enemy')[0] };
   };
   const dailyMechanic = bossController('daily', runtime.dailyBossConfig);
   dailyMechanic.boss.hp = 490;
   const phase = dailyMechanic.controller.afterAction(dailyMechanic.player);
   assert.equal(phase.phaseChanged, true, 'Boss must transition phase from real HP threshold');
   assert.equal(dailyMechanic.controller.snapshot().phase, 2);
+  assert.equal(dailyMechanic.controller.snapshot().ragePoints, 4, 'Boss phase FULL_READY uses canonical Rage 4');
+  assert.equal(dailyMechanic.turns.peekNext().instanceId, dailyMechanic.boss.instanceId, 'Boss phase meter lead advances the live timeline');
   dailyMechanic.controller.afterAction(dailyMechanic.boss);
   assert.equal(dailyMechanic.controller.snapshot().pending, 'cleanse', 'Daily Boss must arm Blood Hunt before its next action');
   dailyMechanic.controller.beforeEnemyAction(dailyMechanic.boss);
   assert.ok(dailyMechanic.player.hp < dailyMechanic.player.pow.maxHp, 'Uncleansed Blood Hunt must resolve as max-HP damage');
+  assert.equal(dailyMechanic.player.ragePoints, 1, 'Boss mechanic hit maps to one canonical Rage gain event');
 
   const promotionConfig = { id: 'promotion', thresholds: [0.5], phasePower: 1.14, phaseSpeed: 1.06, phaseShield: 0.10, signature: { id: 'formation_break', name: 'Phá Trận', cadence: [3, 2], effect: { kind: 'shield-break-antiheal' } } };
   const promotionMechanic = bossController('promotion', promotionConfig);
@@ -302,16 +363,33 @@ async function main() {
   promotionMechanic.controller.afterAction(promotionMechanic.boss);
   assert.equal(promotionMechanic.controller.snapshot().pending, 'shield-break', 'Promotion Boss must arm its shield-break response window');
   promotionMechanic.boss.shield = 0;
+  promotionMechanic.boss.ragePoints = 4;
   promotionMechanic.controller.beforeEnemyAction(promotionMechanic.boss);
   assert.equal(promotionMechanic.player.antiHealActionsRemaining, 0, 'Broken promotion shield must interrupt anti-heal punishment');
+  assert.equal(promotionMechanic.boss.ragePoints, 3, 'Promotion interruption maps legacy -25 to one semantic Rage penalty');
 
   const weeklyConfig = { id: 'weekly', thresholds: [0.7, 0.35], phasePower: 1.16, phaseSpeed: 1.08, phaseShield: 0.12, signature: { id: 'cataclysm', name: 'Đại Nạn', cadence: [3, 3, 2], effect: { kind: 'max-hp-aoe' } } };
   const weeklyMechanic = bossController('weekly', weeklyConfig);
   weeklyMechanic.controller.afterAction(weeklyMechanic.boss);
   weeklyMechanic.controller.afterAction(weeklyMechanic.boss);
   assert.equal(weeklyMechanic.controller.snapshot().pending, 'shield-break', 'Weekly Boss must arm Cataclysm shield window');
+  weeklyMechanic.boss.ragePoints = 4;
   weeklyMechanic.controller.beforeEnemyAction(weeklyMechanic.boss);
   assert.ok(weeklyMechanic.player.hp < weeklyMechanic.player.pow.maxHp, 'Unbroken weekly shield must resolve Cataclysm');
+  assert.equal(weeklyMechanic.player.ragePoints, 1, 'Weekly mechanic hit maps to one canonical Rage gain event');
+  const weeklyInterrupted = bossController('weekly', weeklyConfig);
+  weeklyInterrupted.controller.afterAction(weeklyInterrupted.boss);
+  weeklyInterrupted.controller.afterAction(weeklyInterrupted.boss);
+  weeklyInterrupted.boss.ragePoints = 4;
+  weeklyInterrupted.boss.shield = 0;
+  weeklyInterrupted.controller.beforeEnemyAction(weeklyInterrupted.boss);
+  assert.equal(weeklyInterrupted.boss.ragePoints, 3, 'Weekly interruption maps legacy -30 to one semantic Rage penalty');
+  const storyMechanic = bossController('story', runtime.bossConfigs.story);
+  storyMechanic.controller.afterAction(storyMechanic.boss);
+  storyMechanic.controller.afterAction(storyMechanic.boss);
+  assert.equal(storyMechanic.controller.snapshot().pending, 'cleanse', 'Story Boss must arm its cleanse response window');
+  storyMechanic.controller.beforeEnemyAction(storyMechanic.boss);
+  assert.equal(storyMechanic.player.speedDebuffActionsRemaining, 2, 'Story Boss suppression preserves slow timing without a Rage gain');
   const launched = entry.startMap(stage());
   assert.equal(launched, true, 'canRunPvePilot must launch Combat2 for an eligible offline PvE request');
   assert.equal(runtime.window.location.pathname, '/combat2.html', 'Main entry must navigate to Combat2');
@@ -387,17 +465,64 @@ async function main() {
   assert.equal(runtime.learning.length, 2, 'foreign academic questions must not grant learning progress');
   assert.equal(runtime.rewards.length, 1, 'foreign academic questions must not grant rewards');
 
-  const bossRequest = entry.createBossPilotRequest(bossStage());
+  runtime.saveState.team = ['hero-1', 'hero-2', 'hero-3'];
+  const bossFixtures = [
+    bossStage(),
+    { ...bossStage(), id: 'challenge-boss-weekly', bossChallengeId: 'weekly', enemyIds: ['enemy-2'], recommendedLevel: 20, adaptive: 1.18, recommendedStars: 5, scale: 3.4, initiative: 22, rageStart: 80 },
+    { ...bossStage(), id: 'challenge-boss-promotion', bossChallengeId: 'promotion', enemyIds: ['enemy-3'], recommendedLevel: 60, adaptive: 1.02, recommendedStars: 1, scale: 2.65, initiative: 31, rageStart: 50, manaStart: 0.92 }
+  ];
+  const fixtureRequests = bossFixtures.map((fixture) => entry.createBossPilotRequest(fixture));
+  const expectedLegacyRage = old => Math.min(4, Math.max(0, Math.floor(Math.max(0, Number(old) || 0) / 25)));
+  for (let index = 0; index < fixtureRequests.length; index += 1) {
+    const fixture = bossFixtures[index];
+    const current = fixtureRequests[index];
+    assert.equal(current.ok, true, `${fixture.bossChallengeId} Boss request must be valid`);
+    const bootstrap = current.value.bossContext.bootstrap;
+    assert.equal(bootstrap.version, 'boss-bootstrap-v1');
+    assert.equal(bootstrap.legacyManaStart, Math.max(0.5, Math.min(1, Number(fixture.manaStart) || 0.74)), 'manaStart is preserved outside canonical Rage');
+    assert.equal(current.value.battleRules.manaStart, undefined, 'manaStart must not become a Combat2 resource rule');
+    assert.equal(bootstrap.playerRoster.length, 3, `${fixture.bossChallengeId} player roster is preserved`);
+    assert.equal(bootstrap.enemyRoster.length, 1, `${fixture.bossChallengeId} enemy roster is preserved`);
+    const enemyRow = bootstrap.enemyRoster[0];
+    assert.equal(enemyRow.level, bootstrap.targetLevel, `${fixture.bossChallengeId} adaptive target level is preserved`);
+    assert.equal(enemyRow.stars, Math.min(7, Number(enemyRow.stars)), `${fixture.bossChallengeId} target stars are bounded`);
+    assert.equal(bootstrap.initialRageByPowId[enemyRow.powId], expectedLegacyRage(fixture.rageStart), `${fixture.bossChallengeId} legacy Rage adapter is exact`);
+    assert.equal(bootstrap.initialInitiativeByPowId[enemyRow.powId], Math.max(0, Math.min(92, Number(fixture.initiative) || 0)), `${fixture.bossChallengeId} initiative is preserved`);
+    const basePlayer = current.value.playerTeam.map(id => pow(id, 100, 100));
+    const baseEnemy = current.value.enemyTeam.map(id => pow(id, 100, 100));
+    const hydratedPlayer = bossRuntime.applyBossBootstrapToTeam(basePlayer, bootstrap.playerRoster);
+    const hydratedEnemy = bossRuntime.applyBossBootstrapToTeam(baseEnemy, bootstrap.enemyRoster);
+    assert.ok(hydratedPlayer && hydratedEnemy, `${fixture.bossChallengeId} Combat2 roster hydration must pass`);
+    const bootstrapOptions = bossRuntime.bossBootstrapRuntimeOptions(bootstrap);
+    const state = new CombatState(hydratedPlayer, hydratedEnemy, { battleMode: 'boss', bossContext: current.value.bossContext, ...bootstrapOptions });
+    for (const row of [...bootstrap.playerRoster, ...bootstrap.enemyRoster]) {
+      const unit = state.units.find(item => item.pow.id === row.powId);
+      assert.ok(unit, `${fixture.bossChallengeId} CombatState receives ${row.powId}`);
+      assert.equal(unit.pow.level, row.level, `${fixture.bossChallengeId} level parity`);
+      assert.equal(unit.pow.attack, row.stats.atk, `${fixture.bossChallengeId} ATK parity`);
+      assert.equal(unit.pow.abilityPower, row.stats.ap, `${fixture.bossChallengeId} AP parity`);
+      assert.equal(unit.pow.defense, row.stats.def, `${fixture.bossChallengeId} DEF parity`);
+      assert.equal(unit.pow.speed, row.stats.speed, `${fixture.bossChallengeId} Speed parity`);
+      assert.equal(unit.pow.maxHp, row.stats.maxHp, `${fixture.bossChallengeId} HP parity`);
+      assert.equal(unit.ragePoints, bootstrap.initialRageByPowId[row.powId] || 0, `${fixture.bossChallengeId} Rage parity`);
+      assert.equal(unit.initialInitiative, bootstrap.initialInitiativeByPowId[row.powId] || 0, `${fixture.bossChallengeId} initiative parity`);
+    }
+    const bossMode = BossModeController.from(state, new TurnManager(state));
+    assert.ok(bossMode, `${fixture.bossChallengeId} BossModeController receives Boss context`);
+    assert.equal(bossMode.snapshot().ragePoints, expectedLegacyRage(fixture.rageStart));
+  }
+
+  const bossRequest = fixtureRequests[0];
   assert.equal(bossRequest.ok, true, 'Boss BattleRequest must be valid');
   assert.equal(bossRequest.value.battleMode, 'boss');
   assert.equal(bossRequest.value.bossContext.bossChallengeId, 'daily');
   assert.deepEqual(plain(bossRequest.value.bossContext.phaseConfig), runtime.dailyBossConfig, 'Boss phase config must be snapshotted from legacy');
   assert.equal(bossRequest.value.academicContext.requiresActionQuestions, false, 'pre-qualified Boss must not bypass or duplicate the Main gate');
   assert.equal(entry.canRunBossPilot(bossRequest), true, 'eligible offline Boss must be migratable');
-  assert.equal(entry.startBoss(bossStage()), false, 'Boss live route must remain on legacy until adaptive bootstrap parity is complete');
-  assert.equal(runtime.window.location.pathname, '/', 'Boss migration gate must not navigate before parity');
+  assert.equal(entry.startBoss(bossStage()), true, 'Boss live route must launch Combat2 after bootstrap parity');
+  assert.equal(runtime.window.location.pathname, '/combat2.html', 'Boss live route must navigate to Combat2');
   assert.equal(handoff.storeBattleRequest(bossRequest.value).ok, true, 'Boss contract can be verified without enabling live migration');
-  assert.equal(runtime.window.location.pathname, '/', 'harness-only Boss request must not change Main navigation');
+  assert.equal(runtime.window.location.pathname, '/combat2.html', 'Boss request storage must not leave Combat2');
 
   const liveBossRequest = handoff.readBattleRequest();
   assert.equal(liveBossRequest.ok, true);
@@ -447,6 +572,7 @@ async function main() {
       ,'boss-defeat-settlement'
       ,'boss-reward-cooldown-idempotency'
       ,'boss-phase-signature-mechanics'
+      ,'boss-phase-timeline'
     ]
   }));
 }

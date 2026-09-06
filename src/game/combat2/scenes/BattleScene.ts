@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { CombatAbility, CombatPow, CombatSide } from '../data/CombatPow';
-import { ACTIVE_TEAM_SIZE, ALL_COMBAT2_STARTER_POWS, COMBAT2_STARTER_ROSTER, combatTeamByIds } from '../data/PowderDataAdapter';
+import { ACTIVE_TEAM_SIZE, ALL_COMBAT2_STARTER_POWS, COMBAT2_STARTER_ROSTER, applyBossBootstrapToTeam, bossBootstrapRuntimeOptions, combatTeamByIds, type CombatBossBootstrapSnapshot } from '../data/PowderDataAdapter';
 import {
   academicQuestionsFromContext,
   createCombat2BattleResult,
@@ -107,9 +107,18 @@ export class BattleScene extends Phaser.Scene {
       this.handoffError = 'Du lieu cau hoi hoc thuat cho tran nay khong hop le';
       return;
     }
-    const playerTeam = combatTeamByIds(request.value.playerTeam);
-    const enemyTeam = combatTeamByIds(request.value.enemyTeam);
-    if (!playerTeam || !enemyTeam) {
+    const playerTeamBase = combatTeamByIds(request.value.playerTeam);
+    const enemyTeamBase = combatTeamByIds(request.value.enemyTeam);
+    const bossBootstrap = request.value.battleMode === 'boss'
+      ? request.value.bossContext.bootstrap as CombatBossBootstrapSnapshot | undefined
+      : undefined;
+    const playerTeam = request.value.battleMode === 'boss'
+      ? applyBossBootstrapToTeam(playerTeamBase || [], bossBootstrap?.playerRoster)
+      : playerTeamBase;
+    const enemyTeam = request.value.battleMode === 'boss'
+      ? applyBossBootstrapToTeam(enemyTeamBase || [], bossBootstrap?.enemyRoster)
+      : enemyTeamBase;
+    if (!playerTeam || !enemyTeam || (request.value.battleMode === 'boss' && !bossBootstrap)) {
       this.handoffError = 'BattleRequest chua Pow khong ton tai trong catalog';
       return;
     }
@@ -141,9 +150,16 @@ export class BattleScene extends Phaser.Scene {
       this.showHandoffError(width, height, this.handoffError);
       return;
     }
+    const bossBootstrap = this.handoffRequest?.battleMode === 'boss'
+      ? this.handoffRequest.bossContext.bootstrap as CombatBossBootstrapSnapshot | undefined
+      : undefined;
+    const bootstrapOptions = this.handoffRequest?.battleMode === 'boss'
+      ? bossBootstrapRuntimeOptions(bossBootstrap)
+      : {};
     this.combatState = new CombatState(this.playerTeam, this.enemyTeam, {
       battleMode: this.handoffRequest?.battleMode,
-      bossContext: this.handoffRequest?.bossContext
+      bossContext: this.handoffRequest?.bossContext,
+      ...bootstrapOptions
     });
     this.turnManager = new TurnManager(this.combatState);
     this.bossMode = BossModeController.from(this.combatState, this.turnManager);
