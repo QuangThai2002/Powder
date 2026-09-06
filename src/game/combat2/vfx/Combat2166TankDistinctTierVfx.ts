@@ -27,14 +27,14 @@ const PALETTE: Readonly<Record<CombatProjectileElement, Palette>> = Object.freez
 });
 
 export function isCombat2166TankRole(role?: string): boolean {
-  const value = String(role || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const value = String(role || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase();
   return value.includes('do don') || value.includes('tank');
 }
 
 function tween(
   scene: Phaser.Scene,
   target: Phaser.GameObjects.GameObject | object,
-  config: Phaser.Types.Tweens.TweenBuilderConfig,
+  config: CombatTweenConfig,
   fallbackMs: number
 ): Promise<void> {
   return new Promise((resolve) => {

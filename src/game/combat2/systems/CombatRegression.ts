@@ -58,10 +58,10 @@ function validateRageEconomy(): void {
   const ready = applyRawRageGain(2, 2);
   assert(ready.next === 4 && canUseUltimate(ready.next), 'two normal actions must prepare Ultimate');
   const rawEight = applyRawRageGain(0, 8);
-  assert(rawEight.next === 6, 'raw 8 Rage must convert to 6 effective Rage');
-  assert(rageMarkerStates(rawEight.next).join(',') === 'blue,blue,red,red', '6 Rage must display 2 blue + 2 red markers');
+  assert(rawEight.next === 8, 'an event starting below 4 must receive the full gain, capped at 8');
+  assert(rageMarkerStates(rawEight.next).join(',') === 'red,red,red,red', '8 Rage must display 4 red markers');
   const rawNine = applyRawRageGain(0, 9);
-  assert(rawNine.next === 6, 'raw 9 Rage must round overflow down to 6 effective Rage');
+  assert(rawNine.next === 8, 'raw 9 Rage starting from 0 must clamp to 8');
   const rawTwelve = applyRawRageGain(0, 12);
   assert(rawTwelve.next === 8, 'raw 12 Rage must reach the 8-point effective cap');
   assert(rageMarkerStates(rawTwelve.next).every((marker) => marker === 'red'), '8 Rage must display 4 red markers');

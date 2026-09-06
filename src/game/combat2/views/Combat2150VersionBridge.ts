@@ -1,3 +1,5 @@
+export {};
+
 const VERSION = '2.15.0';
 const REQUIRED_ROLES = [
   'marksman', 'mage', 'fighter', 'knight', 'enchanter',

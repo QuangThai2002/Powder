@@ -1,4 +1,4 @@
-import { COMBAT2_STARTER_ROSTER } from '../data/PowderDataAdapter';
+import { COMBAT2_STARTER_ROSTER, combatPowById } from '../data/PowderDataAdapter';
 import { abilityHasLegalTarget, abilityTargetMode } from './CombatAbilityTargeting';
 import { CombatState } from './CombatState';
 import { SkillActionResolver } from './SkillActionResolver';
@@ -13,10 +13,16 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 export function runCombatSpecialSupportRegression(): CombatSpecialSupportRegressionReport {
-  const state = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
+  const supportPow = combatPowById('mosshorn');
+  assert(supportPow, 'Mosshorn canonical support fixture is missing');
+  const player = [
+    supportPow,
+    ...COMBAT2_STARTER_ROSTER.player.filter((pow) => pow.id !== supportPow.id)
+  ].slice(0, COMBAT2_STARTER_ROSTER.player.length);
+  const state = new CombatState(player, COMBAT2_STARTER_ROSTER.enemy);
   const resolver = new SkillActionResolver(() => 0);
   const support = state.units.find((unit) => unit.pow.id === 'mosshorn');
-  assert(support, 'Mosshorn test support is missing');
+  assert(support, 'Mosshorn support fixture was not added to the regression state');
 
   const cleanse = support.pow.abilities.skills.find((ability) => String(ability.status || '').toLowerCase() === 'cleanse');
   const revive = support.pow.abilities.skills.find((ability) => String(ability.status || '').toLowerCase() === 'revive');

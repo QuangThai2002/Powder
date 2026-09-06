@@ -1,3 +1,5 @@
+export {};
+
 const VERSION = '2.15.1';
 const REQUIRED_RANGED_ROLES = ['marksman', 'mage', 'enchanter', 'healer', 'musician'] as const;
 

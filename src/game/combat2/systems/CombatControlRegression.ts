@@ -42,6 +42,14 @@ function approx(actual: number, expected: number, tolerance = 0.0001): boolean {
   return Math.abs(actual - expected) <= tolerance;
 }
 
+function freezeStageOf(unit: { freezeStage: number }): number {
+  return unit.freezeStage;
+}
+
+function controlActionsOf(unit: { controlActionsRemaining: number }): number {
+  return unit.controlActionsRemaining;
+}
+
 function fixture(): CombatState {
   return new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
 }
@@ -199,12 +207,12 @@ function validateFreezeStages(): void {
   const baseSpeed = target.pow.speed;
 
   const chill = skills.resolve(actor, target, freeze, 0, 1);
-  assert(chill.statusLabel === 'chill' && target.freezeStage === 1, 'first Freeze application must become Chill');
+  assert(chill.statusLabel === 'chill' && freezeStageOf(target) === 1, 'first Freeze application must become Chill');
   assert(approx(target.speed, baseSpeed * 0.9, 0.01), 'Chill must reduce Speed by 10%');
 
   actor.skillCooldownActionsRemaining[0] = 0;
   const frostbite = skills.resolve(actor, target, freeze, 0, 2);
-  assert(frostbite.statusLabel === 'frostbite' && target.freezeStage === 2, 'second Freeze application must become Frostbite');
+  assert(frostbite.statusLabel === 'frostbite' && freezeStageOf(target) === 2, 'second Freeze application must become Frostbite');
   assert(approx(target.speed, baseSpeed * 0.8, 0.01), 'Frostbite must reduce Speed by 20%');
 
   const frostBaselineState = fixture();
@@ -217,7 +225,7 @@ function validateFreezeStages(): void {
 
   actor.skillCooldownActionsRemaining[0] = 0;
   const frozen = skills.resolve(actor, target, freeze, 0, 3);
-  assert(frozen.statusLabel === 'freeze' && target.controlStatus === 'freeze' && target.controlActionsRemaining === 1, 'third Freeze application must fully Freeze for one target own turn');
+  assert(frozen.statusLabel === 'freeze' && target.controlStatus === 'freeze' && controlActionsOf(target) === 1, 'third Freeze application must fully Freeze for one target own turn');
 
   const frozenBaselineState = fixture();
   const frozenBaselineActor = frozenBaselineState.activeLiving('player')[0];
@@ -226,7 +234,7 @@ function validateFreezeStages(): void {
   const shatter = new BasicAttackResolver().resolve(actor, target);
   const frozenNormalDamage = new BasicAttackResolver().resolve(frozenBaselineActor, frozenBaselineTarget);
   assert(shatter.freezeShattered, 'taking damage while Frozen must break Freeze');
-  assert(target.controlStatus === null && target.controlActionsRemaining === 0, 'shatter must immediately clear full Freeze');
+  assert(target.controlStatus === null && controlActionsOf(target) === 0, 'shatter must immediately clear full Freeze');
   assert(shatter.damage > frozenNormalDamage.damage, 'Frozen target must take the +30% shatter damage bonus');
 }
 

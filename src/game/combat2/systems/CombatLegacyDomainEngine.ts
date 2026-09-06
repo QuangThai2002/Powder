@@ -222,7 +222,7 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 function roleKey(unit: CombatUnitState): string {
-  const normalized = String(unit.pow.role || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const normalized = String(unit.pow.role || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase();
   if (normalized.includes('do don') || normalized.includes('tank')) return 'tank';
   if (normalized.includes('hiep si') || normalized.includes('knight')) return 'knight';
   if (normalized.includes('dau si') || normalized.includes('fighter')) return 'fighter';

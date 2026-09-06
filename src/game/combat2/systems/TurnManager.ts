@@ -113,6 +113,15 @@ export class TurnManager {
     this.nextReadyAt.set(unit.instanceId, this.timelineNow + this.intervalFor(unit));
   }
 
+  /** Delay the next action by a fraction of that Pow's normal timeline interval. */
+  delayUnit(unitId: string, intervalRatio: number): void {
+    const unit = this.state.getUnit(unitId);
+    if (!unit?.alive || unit.fieldSlot === null || this.state.currentUnitId === unitId) return;
+    const ratio = Math.min(1, Math.max(0, Number.isFinite(intervalRatio) ? intervalRatio : 0));
+    const current = this.safeTimelineValue(this.nextReadyAt.get(unitId), this.timelineNow + this.intervalFor(unit));
+    this.nextReadyAt.set(unitId, current + this.intervalFor(unit) * ratio);
+  }
+
   recoverActionLock(): void {
     const current = this.state.currentUnitId ? this.state.getUnit(this.state.currentUnitId) : undefined;
     if (current) current.actionLocked = false;

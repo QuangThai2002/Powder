@@ -3,7 +3,7 @@ import type { CombatProjectileElement, DirectionalProjectileOptions } from './Di
 import { powVfxDepth } from './CombatNightVfxLayout';
 import { playCombat2105SlashCue } from '../views/Combat2105AudioImpactPatch';
 
-export const COMBAT2189_ASSASSIN_VERSION = '2.18.9';
+export const COMBAT2189_ASSASSIN_VERSION = '2.19.0';
 export const COMBAT2187_ASSASSIN_VERSION = COMBAT2189_ASSASSIN_VERSION;
 export const COMBAT2186_ASSASSIN_VERSION = COMBAT2189_ASSASSIN_VERSION;
 export const COMBAT2180_ASSASSIN_VERSION = COMBAT2189_ASSASSIN_VERSION;
@@ -38,7 +38,7 @@ export function isCombat2180AssassinRole(role?: string): boolean {
 function tween(
   scene: Phaser.Scene,
   target: Phaser.GameObjects.GameObject | object,
-  config: Phaser.Types.Tweens.TweenBuilderConfig,
+  config: CombatTweenConfig,
   fallbackMs: number
 ): Promise<void> {
   return new Promise((resolve) => {
@@ -199,6 +199,71 @@ function makeCut(
   return root;
 }
 
+function makeShadowStep(options: Options, p: Palette, tier: Combat2180AssassinTier): Phaser.GameObjects.Container {
+  const size = tier === 'ultimate' ? 58 : tier === 'skill' ? 48 : 38;
+  const root = options.scene.add.container(options.source.x, options.source.y)
+    .setDepth(powVfxDepth('foreground') + 15)
+    .setScale(0.58)
+    .setAlpha(0);
+  const veil = options.scene.add.ellipse(0, 10, size * 1.8, size * 0.54, p.dark, 0.46)
+    .setBlendMode(Phaser.BlendModes.ADD);
+  const glyph = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+  glyph.lineStyle(tier === 'ultimate' ? 2.4 : 1.8, p.main, 0.68);
+  glyph.strokeCircle(0, 0, size * 0.44);
+  glyph.lineStyle(1.2, p.core, 0.74);
+  glyph.lineBetween(-size * 0.32, 0, 0, -size * 0.32);
+  glyph.lineBetween(0, -size * 0.32, size * 0.32, 0);
+  glyph.lineBetween(size * 0.32, 0, 0, size * 0.32);
+  glyph.lineBetween(0, size * 0.32, -size * 0.32, 0);
+  root.add([veil, glyph]);
+  return root;
+}
+
+function makeAssassinMark(options: Options, p: Palette, tier: Combat2180AssassinTier): Phaser.GameObjects.Container {
+  const radius = tier === 'ultimate' ? 56 : tier === 'skill' ? 46 : 36;
+  const root = options.scene.add.container(options.target.x, options.target.y)
+    .setDepth(powVfxDepth('foreground') + 19)
+    .setScale(0.42)
+    .setAlpha(0);
+  const seal = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+  seal.lineStyle(tier === 'ultimate' ? 3 : 2.2, p.main, 0.66);
+  seal.strokeCircle(0, 0, radius);
+  seal.lineStyle(1.2, p.core, 0.88);
+  seal.lineBetween(-radius * 0.52, -radius * 0.52, radius * 0.52, radius * 0.52);
+  seal.lineBetween(radius * 0.52, -radius * 0.52, -radius * 0.52, radius * 0.52);
+  seal.fillStyle(p.dark, 0.28);
+  seal.fillCircle(0, 0, radius * 0.25);
+  const lock = options.scene.add.circle(0, 0, radius * 0.12, p.core, 0.92).setBlendMode(Phaser.BlendModes.ADD);
+  root.add([seal, lock]);
+  return root;
+}
+
+async function revealSetup(
+  options: Options,
+  shadowStep: Phaser.GameObjects.Container,
+  mark: Phaser.GameObjects.Container,
+  tier: Combat2180AssassinTier
+): Promise<void> {
+  const duration = options.reducedMotion ? 38 : tier === 'ultimate' ? 82 : tier === 'skill' ? 66 : 54;
+  await Promise.all([
+    tween(options.scene, shadowStep, { alpha: 0.92, scaleX: 1, scaleY: 1, y: shadowStep.y - 7, duration, ease: 'Quad.easeOut' }, duration + 150),
+    tween(options.scene, mark, { alpha: 0.88, scaleX: 1, scaleY: 1, duration, ease: 'Back.easeOut' }, duration + 150)
+  ]);
+}
+
+async function fadeSetup(
+  options: Options,
+  shadowStep: Phaser.GameObjects.Container,
+  mark: Phaser.GameObjects.Container,
+  tier: Combat2180AssassinTier
+): Promise<void> {
+  const duration = options.reducedMotion ? 70 : tier === 'ultimate' ? 150 : tier === 'skill' ? 122 : 98;
+  await Promise.all([
+    tween(options.scene, shadowStep, { alpha: 0, scaleX: 1.14, scaleY: 0.72, y: shadowStep.y - 13, duration, ease: 'Quad.easeOut' }, duration + 170),
+    tween(options.scene, mark, { alpha: 0, rotation: 0.38, scaleX: 1.24, scaleY: 1.24, duration, ease: 'Quad.easeOut' }, duration + 170)
+  ]);
+}
+
 async function revealCut(
   options: Options,
   root: Phaser.GameObjects.Container,
@@ -247,14 +312,17 @@ export async function playCombat2180AssassinDistinctTierVfx(
   tier: Combat2180AssassinTier
 ): Promise<void> {
   const p = PALETTE[options.element] ?? PALETTE.neutral;
+  const shadowStep = makeShadowStep(options, p, tier);
+  const mark = makeAssassinMark(options, p, tier);
   const first = makeCut(options, p, tier, 1);
   let second: Phaser.GameObjects.Container | null = null;
 
   try {
+    await revealSetup(options, shadowStep, mark, tier);
     playCombat2105SlashCue(options.element, options.role ?? 'assassin', slashStrength(tier, 1), 1);
     await revealCut(options, first, tier, 1);
 
-    const gap = options.reducedMotion ? 8 : tier === 'ultimate' ? 20 : tier === 'skill' ? 22 : 24;
+    const gap = options.reducedMotion ? 12 : tier === 'ultimate' ? 46 : tier === 'skill' ? 42 : 36;
     await wait(options.scene, gap);
 
     second = makeCut(options, p, tier, 2);
@@ -269,14 +337,17 @@ export async function playCombat2180AssassinDistinctTierVfx(
       );
     }
 
-    const holdMs = options.reducedMotion ? 20 : tier === 'ultimate' ? 70 : tier === 'skill' ? 54 : 44;
+    const holdMs = options.reducedMotion ? 26 : tier === 'ultimate' ? 112 : tier === 'skill' ? 82 : 64;
     await wait(options.scene, holdMs);
 
     await Promise.all([
       fadeCut(options, first, tier, 1),
-      fadeCut(options, second, tier, 2)
+      fadeCut(options, second, tier, 2),
+      fadeSetup(options, shadowStep, mark, tier)
     ]);
   } finally {
+    if (shadowStep.active) shadowStep.destroy(true);
+    if (mark.active) mark.destroy(true);
     if (first.active) first.destroy(true);
     if (second?.active) second.destroy(true);
   }
@@ -288,14 +359,15 @@ export async function playCombat2180AssassinDistinctTierVfx(
   owner: 'dedicated-manual',
   realCombatReady: true,
   tiers: {
-    normal: 'two-thin-anime-cross-cuts',
-    skill: 'two-razor-line-cross-cuts',
-    ultimate: 'two-execution-line-cross-cuts'
+    normal: 'shadow-step+marked-two-cut-cross',
+    skill: 'shadow-step+afterimage-double-cut+lock-mark',
+    ultimate: 'shadow-step+execution-double-cut+lock-mark'
   },
-  slashShape: 'thin-segmented-tapered-anime-cross',
+  slashShape: 'shadow-step+marked-tapered-anime-cross',
   polygonRibbonRemoved: true,
   firstCutPersistsIntoSecond: true,
   slashAudio: 'two-contact-whooshes',
+  presentationLayers: ['source-shadow-step', 'target-assassin-mark', 'two-cross-cuts', 'intersection-burst'],
   visualHits: 2,
   damageHitsChanged: false,
   guaranteedCritChanged: false,

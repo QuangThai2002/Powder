@@ -28,7 +28,7 @@
     #orientation-guard .phone::after { content:""; position:absolute; left:50%; bottom:6px; width:12px; height:3px; border-radius:999px; background:#8eeaff; transform:translateX(-50%); }
     #orientation-guard strong { display:block; font-size:24px; margin-bottom:8px; }
     #orientation-guard span { display:block; color:#b9d4dc; font-size:15px; line-height:1.45; }
-    @media (orientation:portrait) and (max-width:900px) { #orientation-guard { display:flex; } }
+    /* Combat2 has a portrait-aware layout. Never block boot behind an orientation overlay. */
   </style>
 </head>
 <body>
@@ -38,6 +38,7 @@
   <script>
     (()=>{const staticPorts=new Set(['5500','5501']);const wrongServer=staticPorts.has(location.port)||location.protocol==='file:';if(!wrongServer)return;document.getElementById('combat2-launch-guard')?.classList.add('show');document.documentElement.dataset.combat2LaunchBlocked='static-server';window.POWDER_COMBAT2_LAUNCH_GUARD={version:'2.14.6',blocked:true,reason:'vite-required',current:location.href};})();
   </script>
+  <script src="/js/combat-entry-v177.js"></script>
   <script type="module">if(document.documentElement.dataset.combat2LaunchBlocked!=='static-server') import('/src/game/combat2/bootstrap.ts');</script>
 </body>
 </html>

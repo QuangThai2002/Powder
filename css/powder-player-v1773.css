@@ -4916,6 +4916,18 @@ html.reduce-motion .combat-v7-mount .cv7-fx.crit,html.reduce-motion .combat-v7-m
 @media (max-width:520px){.cv1861-boss-mechanic{padding:7px 8px}.cv1861-boss-mechanic header{flex-wrap:wrap}.cv1861-boss-mechanic header em{margin-left:0}.cv1861-boss-mechanic>div{grid-template-columns:1fr}.cv1861-boss-mechanic>div>span{text-align:left}.cv1861-boss-mechanic-notice{top:15%;width:90%;padding:10px 12px}.cv1861-boss-mechanic-notice b{font-size:16px}}
 @media (prefers-reduced-motion:reduce){.cv1861-boss-mechanic-notice{animation:none}.cv1861-boss-mechanic>div>i>b{transition:none}}
 
+/* Main UI layout stabilization: avoid horizontal overflow and navigation-driven reflow. */
+html{overflow-y:scroll;overflow-x:clip}
+body{overflow-x:clip}
+.app,main,.view,.topbar,.nav,.wallet,.home-grid,.base-facility-grid,.tm142-dashboard,.tm142-quick{min-width:0}
+.nav{min-width:0;overflow-x:auto;overflow-y:hidden;overscroll-behavior-inline:contain;scrollbar-width:none}
+.nav::-webkit-scrollbar{display:none}
+.nav-btn{flex:0 0 auto}
+.home-grid>*,.base-facility-grid>*,.tm142-dashboard>*,.tm142-quick>*{min-width:0}
+@media(min-width:1101px){.topbar{grid-template-columns:minmax(180px,250px) minmax(0,1fr) auto auto!important}.wallet{max-width:min(100%,330px);overflow:hidden}}
+@media(max-width:720px){.topbar{position:sticky!important;top:0}.nav{scroll-snap-type:inline proximity;-webkit-overflow-scrolling:touch}.nav-btn{scroll-snap-align:start}.home-grid,.base-facility-grid{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.view,.nav-btn,.base-facility{animation:none!important;transition:none!important}}
+
 /* 18.9.0 Combat Content Expansion */
 .cc1890-hub{margin:14px 0 18px;padding:16px;border:1px solid rgba(143,196,255,.22);border-radius:18px;background:linear-gradient(145deg,rgba(7,18,35,.86),rgba(19,15,42,.82));box-shadow:inset 0 1px rgba(255,255,255,.04)}
 .cc1890-hub>header{display:flex;gap:16px;align-items:flex-start;justify-content:space-between;margin-bottom:14px}.cc1890-hub>header small{letter-spacing:.12em;color:#8dc9ff}.cc1890-hub h2{margin:3px 0 5px}.cc1890-hub p{margin:0;color:rgba(232,241,255,.72);max-width:760px}.cc1890-safe{white-space:nowrap;padding:8px 11px;border:1px solid rgba(107,220,170,.28);border-radius:999px;background:rgba(61,154,113,.12);color:#9ce7c1;font-weight:800;font-size:12px}

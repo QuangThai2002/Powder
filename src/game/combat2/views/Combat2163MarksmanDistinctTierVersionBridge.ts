@@ -1,3 +1,5 @@
+export {};
+
 const VERSION = '2.16.3';
 
 function installCombat2163MarksmanDistinctTierVersionBridge(): void {

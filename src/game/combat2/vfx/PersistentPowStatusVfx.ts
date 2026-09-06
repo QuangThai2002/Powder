@@ -24,6 +24,14 @@ interface ActivePersistentStatus {
   tooltip: Phaser.GameObjects.Text;
 }
 
+type PositionableGameObject = Phaser.GameObjects.GameObject & {
+  setPosition: (x?: number, y?: number, z?: number, w?: number) => unknown;
+};
+
+function isPositionableGameObject(object: Phaser.GameObjects.GameObject): object is PositionableGameObject {
+  return 'setPosition' in object && typeof (object as { setPosition?: unknown }).setPosition === 'function';
+}
+
 interface StatusTooltipCopy {
   glyph: string;
   title: string;
@@ -293,8 +301,7 @@ export class PersistentPowStatusVfx {
     layout: PowVfxLayout
   ): void {
     const anchor = this.statusVisualAnchor(kind, x, y, layout);
-    const positioned = active.object as Phaser.GameObjects.Components.Transform;
-    if (typeof positioned.setPosition === 'function') positioned.setPosition(anchor.x, anchor.y);
+    if (isPositionableGameObject(active.object)) active.object.setPosition(anchor.x, anchor.y);
 
     const badgePosition = this.statusBadgePosition(x, y, layout);
     active.badge.setPosition(badgePosition.x, badgePosition.y);

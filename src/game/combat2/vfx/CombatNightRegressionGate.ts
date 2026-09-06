@@ -1,5 +1,7 @@
 import { LEGACY_EXPANSION_DOMAINS } from '../systems/CombatLegacyDomainEngine';
 import { PowView } from '../views/PowView';
+import { resolveCombat2172MeleeRole } from './Combat2172ProfessionImpactFeedback';
+import { runCombatVfxRegistryRegression } from './CombatVfxRegistry';
 import './CombatNightTeardownBridge';
 import './CombatNightSupportAssetBridge';
 import { installCombatNightAffectedPowEnvelopeBridge } from './CombatNightAffectedPowEnvelopeBridge';
@@ -59,6 +61,13 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
   const budget = root.POWDER_COMBAT2_NIGHT_FX_BUDGET;
   const projectileBridge = root.POWDER_COMBAT2_NIGHT_PROJECTILE;
   const roleAttacks = root.POWDER_COMBAT2_NIGHT_ROLE_ATTACKS;
+  const professionQa = root.POWDER_COMBAT2_PROFESSION_RUNTIME_TEST;
+  const powSignature = root.POWDER_COMBAT2_POW_SIGNATURE;
+  const arenaPresentation = root.POWDER_COMBAT2_ARENA_PRESENTATION;
+  const fairyPresentation = root.POWDER_COMBAT2_FAIRY_ANIME_PRESENTATION;
+  const highFantasyVfx = root.POWDER_COMBAT2_HIGH_FANTASY_VFX;
+  const ultimateVfx = root.POWDER_COMBAT2_ULTIMATE_FX;
+  const vfxRegistryRegression = runCombatVfxRegistryRegression();
   const teardown = root.POWDER_COMBAT2_NIGHT_TEARDOWN;
   const leakAudit = typeof teardown?.getSceneLeakAuditSnapshot === 'function'
     ? teardown.getSceneLeakAuditSnapshot()
@@ -140,35 +149,139 @@ export function runCombatNightRegressionGate(): CombatNightRegressionReport {
       `count=${Object.keys(LEGACY_EXPANSION_DOMAINS).length}`
     ),
     check(
+      'vietnamese-melee-role-normalization',
+      resolveCombat2172MeleeRole('Đỡ đòn') === 'tank'
+        && resolveCombat2172MeleeRole('Đấu sĩ') === 'fighter'
+        && resolveCombat2172MeleeRole('Hiệp sĩ') === 'knight'
+        && resolveCombat2172MeleeRole('Sát thủ') === 'assassin',
+      `tank=${resolveCombat2172MeleeRole('Đỡ đòn')};fighter=${resolveCombat2172MeleeRole('Đấu sĩ')};knight=${resolveCombat2172MeleeRole('Hiệp sĩ')};assassin=${resolveCombat2172MeleeRole('Sát thủ')}`
+    ),
+    check(
       'projectile-final-owner',
       prototype.__nightProjectileBridgeInstalled === true
-        && projectileBridge?.version === 'night-46'
+        && prototype.playAttackLunge?.__powderCombat2FinalAttackOwner === true
+        && typeof projectileBridge?.version === 'string'
+        && projectileBridge?.runtimeEntryPoint === 'PowView.playAttackLunge'
+        && projectileBridge?.finalAttackOwnerGuard === true
         && projectileBridge?.roleForwarding === true
-        && projectileBridge?.elementForwarding === true,
-      `installed=${String(prototype.__nightProjectileBridgeInstalled === true)};version=${projectileBridge?.version ?? 'missing'};role=${String(projectileBridge?.roleForwarding)}`
+        && projectileBridge?.elementForwarding === true
+        && projectileBridge?.meleeSourceCommitCue === true
+        && projectileBridge?.meleeActorApproachDisabled === true
+        && projectileBridge?.meleeContactAccent === true
+        && Array.isArray(projectileBridge?.meleeRolesUseLocalHop)
+        && ['tank', 'fighter', 'knight', 'assassin'].every((role) => projectileBridge.meleeRolesUseLocalHop.includes(role))
+        && projectileBridge?.allDedicatedOwners === true,
+      `installed=${String(prototype.__nightProjectileBridgeInstalled === true)};ownerGuard=${String(prototype.playAttackLunge?.__powderCombat2FinalAttackOwner === true)};version=${projectileBridge?.version ?? 'missing'};entry=${projectileBridge?.runtimeEntryPoint ?? 'missing'};role=${String(projectileBridge?.roleForwarding)};meleeCue=${String(projectileBridge?.meleeSourceCommitCue)};localHop=${String(projectileBridge?.meleeActorApproachDisabled)};contactAccent=${String(projectileBridge?.meleeContactAccent)}`
     ),
     check(
       'profession-attack-routing',
       Boolean(roleAttacks)
-        && roleAttacks?.version === 'night-46'
-        && roleAttacks?.routes?.marksman === 'element-arrow'
-        && roleAttacks?.routes?.mage === 'energy-orb'
-        && roleAttacks?.routes?.enchanter === 'energy-orb'
-        && roleAttacks?.routes?.healer === 'energy-orb-80pct-mage'
-        && roleAttacks?.routes?.musician === 'music-note'
-        && roleAttacks?.routes?.fighter === 'fist-no-projectile'
-        && roleAttacks?.routes?.knight === 'single-heavy-slash-no-projectile'
-        && roleAttacks?.routes?.assassin === 'dual-critical-slash-80pct-knight-no-projectile'
+        && roleAttacks?.version === '2.20.1'
+        && roleAttacks?.routes?.marksman === 'anime-arrow-trail-source-to-target'
+        && roleAttacks?.routes?.mage === 'anime-elemental-nucleus-source-to-target'
+        && roleAttacks?.routes?.enchanter === 'anime-hex-nucleus-source-to-target'
+        && roleAttacks?.routes?.healer === 'anime-restoration-ribbon-source-to-target'
+        && roleAttacks?.routes?.musician === 'anime-chord-note-source-to-target'
+        && roleAttacks?.routes?.tank === 'anime-shield-bash-contact-no-projectile'
+        && roleAttacks?.routes?.fighter === 'anime-fist-impact-contact-no-projectile'
+        && roleAttacks?.routes?.knight === 'anime-heavy-slash-contact-no-projectile'
+        && roleAttacks?.routes?.assassin === 'anime-dual-critical-slash-contact-no-projectile'
         && includesAll(roleAttacks?.rangedRoles, ['marksman', 'mage', 'enchanter', 'healer', 'musician'])
-        && includesAll(roleAttacks?.noProjectileRoles, ['fighter', 'knight', 'assassin'])
-        && Number(roleAttacks?.healerScaleVsMage) === 0.8
-        && Number(roleAttacks?.assassinSlashScaleVsKnight) === 0.8
+        && includesAll(roleAttacks?.noProjectileRoles, ['tank', 'fighter', 'knight', 'assassin'])
+        && Number(roleAttacks?.healerScaleVsMage) === 1
+        && Number(roleAttacks?.assassinSlashScaleVsKnight) === 1
         && roleAttacks?.elementColorPreserved === true
         && roleAttacks?.oneAttackObjectFamilyPerAction === true
         && roleAttacks?.particleEmitters === false
         && roleAttacks?.tweenLoops === false
         && roleAttacks?.combatLogicChanged === false,
       `version=${roleAttacks?.version ?? 'missing'};healer=${roleAttacks?.healerScaleVsMage ?? 'missing'};assassin=${roleAttacks?.assassinSlashScaleVsKnight ?? 'missing'};noProjectile=${Array.isArray(roleAttacks?.noProjectileRoles) ? roleAttacks.noProjectileRoles.join(',') : 'missing'}`
+    ),
+    check(
+      'retired-qa-vfx-lab-not-in-live-runtime',
+      !professionQa
+        && !root.POWDER_COMBAT2_PROFESSION_TEST_UI
+        && !root.POWDER_COMBAT2_VFX_LAB,
+      `professionQa=${String(Boolean(professionQa))};testUi=${String(Boolean(root.POWDER_COMBAT2_PROFESSION_TEST_UI))};vfxLab=${String(Boolean(root.POWDER_COMBAT2_VFX_LAB))}`
+    ),
+    check(
+      'profession-element-action-signature',
+      Boolean(powSignature)
+        && powSignature?.version === '2.19.4'
+        && powSignature?.mode === 'nine-profession-element-skill-signature'
+        && includesAll(powSignature?.roles, ['marksman', 'mage', 'tank', 'fighter', 'knight', 'assassin', 'enchanter', 'healer', 'musician'])
+        && includesAll(powSignature?.slots, ['basic', 'skill-a', 'skill-b', 'ultimate'])
+        && powSignature?.note === 'role glyph + elemental motif + ability traits; presentation only',
+      `version=${powSignature?.version ?? 'missing'};mode=${powSignature?.mode ?? 'missing'};roles=${Array.isArray(powSignature?.roles) ? powSignature.roles.length : 'missing'};slots=${Array.isArray(powSignature?.slots) ? powSignature.slots.join(',') : 'missing'}`
+    ),
+    check(
+      'arcane-arena-presentation-contract',
+      Boolean(arenaPresentation)
+        && arenaPresentation?.version === '2.19.6'
+        && arenaPresentation?.direction === 'arcane-arena-command-deck'
+        && arenaPresentation?.hud === 'center-round-console'
+        && arenaPresentation?.actionMenu === 'element-accented-responsive-deck'
+        && arenaPresentation?.skillCast === 'profession-element-trait-frame'
+        && arenaPresentation?.ultimate === 'role-crest-over-cinematic'
+        && arenaPresentation?.oneShotOnly === true
+        && arenaPresentation?.combatLogicChanged === false,
+      `version=${arenaPresentation?.version ?? 'missing'};hud=${arenaPresentation?.hud ?? 'missing'};deck=${arenaPresentation?.actionMenu ?? 'missing'};skill=${arenaPresentation?.skillCast ?? 'missing'};ultimate=${arenaPresentation?.ultimate ?? 'missing'}`
+    ),
+    check(
+      'fairy-anime-presentation-contract',
+      Boolean(fairyPresentation)
+        && fairyPresentation?.version === '2.20.0'
+        && fairyPresentation?.textureKey === 'combat-fairy-anime-sigil-v1'
+        && fairyPresentation?.sigil === '/assets/combat/vfx/fairy-anime/fairy-sigil-v1.png'
+        && includesAll(fairyPresentation?.coverage, [
+          'basic-release',
+          'skill-cast',
+          'skill-release',
+          'ultimate-cast',
+          'ultimate-release',
+        ])
+        && fairyPresentation?.elementTinted === true
+        && fairyPresentation?.combatLogicChanged === false,
+      `version=${fairyPresentation?.version ?? 'missing'};texture=${fairyPresentation?.textureKey ?? 'missing'};coverage=${Array.isArray(fairyPresentation?.coverage) ? fairyPresentation.coverage.join(',') : 'missing'};tinted=${String(fairyPresentation?.elementTinted)}`
+    ),
+    check(
+      'high-fantasy-anime-vfx-contract',
+      Boolean(highFantasyVfx)
+        && highFantasyVfx?.version === '2.20.1'
+        && includesAll(highFantasyVfx?.groups, ['projectile', 'slash', 'impact', 'magic-circle', 'ultimate', 'support'])
+        && includesAll(highFantasyVfx?.elementIdentity, ['ember', 'ripple', 'crystal', 'lightning', 'wind', 'stone', 'venom', 'radiant', 'void', 'leaf', 'steel'])
+        && highFantasyVfx?.finiteMagicCircle === true
+        && highFantasyVfx?.sourceToTarget === true
+        && highFantasyVfx?.meleeLocalHopPreserved === true
+        && highFantasyVfx?.particleEmitters === false
+        && highFantasyVfx?.tweenLoops === false
+        && highFantasyVfx?.adaptiveQuality === true
+        && includesAll(highFantasyVfx?.magicCircleLifecycle, ['create', 'appear', 'build', 'charge', 'release', 'fade', 'destroy'])
+        && Number(highFantasyVfx?.qualityLayers?.low) === 2
+        && Number(highFantasyVfx?.qualityLayers?.medium) === 3
+        && Number(highFantasyVfx?.qualityLayers?.high) === 5
+        && highFantasyVfx?.missingAssetFallback === 'procedural-owner-with-dev-warning-only-for-enabled-assets'
+        && highFantasyVfx?.multiHitCadence === true
+        && highFantasyVfx?.registry?.version === '2.20.2'
+        && highFantasyVfx?.combatLogicChanged === false,
+      `version=${highFantasyVfx?.version ?? 'missing'};registry=${highFantasyVfx?.registry?.version ?? 'missing'};groups=${Array.isArray(highFantasyVfx?.groups) ? highFantasyVfx.groups.join(',') : 'missing'};circle=${String(highFantasyVfx?.finiteMagicCircle)};layers=${highFantasyVfx?.qualityLayers?.low ?? 'missing'}/${highFantasyVfx?.qualityLayers?.medium ?? 'missing'}/${highFantasyVfx?.qualityLayers?.high ?? 'missing'}`
+    ),
+    check(
+      'combat-vfx-registry-fallback-contract',
+      vfxRegistryRegression.pass
+        && highFantasyVfx?.assetPreload === 'enabled-common-only-with-lazy-ultimate'
+        && Array.isArray(vfxRegistryRegression.checks)
+        && vfxRegistryRegression.checks.length >= 6,
+      `version=${vfxRegistryRegression.version};pass=${String(vfxRegistryRegression.pass)};checks=${vfxRegistryRegression.checks.map((entry) => `${entry.name}:${entry.pass}`).join(',')}`
+    ),
+    check(
+      'ultimate-presentation-timeline-contract',
+      Boolean(ultimateVfx)
+        && ultimateVfx?.presentationTimeline === true
+        && includesAll(ultimateVfx?.phases, ['activate', 'pow-emphasis', 'magic-circle', 'charge', 'release', 'impact', 'hit-reaction', 'finish'])
+        && ultimateVfx?.skipIntroHook === 'POWDER_COMBAT2_ULTIMATE_VFX_MODE=skip-intro'
+        && ultimateVfx?.gameplayIndependent === true,
+      `version=${ultimateVfx?.version ?? 'missing'};timeline=${String(ultimateVfx?.presentationTimeline)};phases=${Array.isArray(ultimateVfx?.phases) ? ultimateVfx.phases.join(',') : 'missing'};skip=${ultimateVfx?.skipIntroHook ?? 'missing'}`
     ),
     check(
       'persistent-status-dedup',

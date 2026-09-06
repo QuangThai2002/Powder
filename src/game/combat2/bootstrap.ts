@@ -2,55 +2,18 @@
 // Import order is intentional: data.js populates window.POWDER_DATA before
 // PowderDataAdapter builds the isolated Combat2 test roster.
 //
-// 2.15.6 changes the test workflow itself: Random is a PRE-BATTLE roster setup.
-// 2.15.7/2.15.8 remain historical generic Marksman visual owners for compatibility gates.
-// 2.16.0 keeps direct real-combat ownership for the Marksman Spiral Rail Bolt.
-// 2.16.3 gives localhost QA three truly different Marksman silhouettes:
-// NORMAL compact bolt / SKILL triple rail / ULT heavy slug.
+// The QA roster and controls stay separate from the runtime combat presentation.
+// All final presentation owners load before Phaser.Game starts, so first-action
+// behavior is identical to every later action.
 import '../../../js/data.js';
 import './views/Combat2144BalancedVfxTestRosterPatch';
 import './views/Combat2150ProfessionTestRosterPatch';
 import './views/Combat2156PreBattleRandomizer';
-import './views/Combat2150ProfessionTestSwitcher';
 import './vfx/CombatNightDomainFieldBridge';
-import './main';
 
-// Preserve previous release gates before newer releases overwrite public VFX metadata.
-await import('./views/Combat2150VersionBridge');
-await import('./views/Combat2151VersionBridge');
+// main.ts installs compatibility patches first and the current combat owners last.
+// Loading the final bridge here would cache it too early, allowing an older wrapper
+// in main.ts to sit above the dedicated melee route.
+await import('./main');
 
-// Combat2 2.15.2 base trail owner + forward-compatible live tester.
-await import('./vfx/Combat2152ProjectileTrailVfxPatch');
-await import('./views/Combat2152ProfessionLiveTestBridge');
-await import('./views/Combat2152VersionBridge');
-
-// Combat2 2.15.3 sharp ranged projectile owner.
-await import('./vfx/Combat2153ProjectileClarityVfxPatch');
-await import('./views/Combat2153VersionBridge');
-
-// Combat2 2.15.4 trajectory + melee owner.
-await import('./vfx/Combat2154TrajectoryAndMeleeVfxPatch');
-await import('./views/Combat2154VersionBridge');
-
-// Combat2 2.15.5 baseline runtime presentation owners.
-await import('./vfx/Combat2155ReliableProjectileAndKnightVfxPatch');
 await import('./views/Combat2155SupportTravelBridge');
-await import('./views/Combat2155DirectVfxLab');
-await import('./views/Combat2155VersionBridge');
-
-// Combat2 2.15.6 compatibility fixes.
-await import('./vfx/Combat2156MarksmanHealerTankFixVfxPatch');
-await import('./views/Combat2156VersionBridge');
-
-// Historical generic Marksman owners retained only for their compatibility gates.
-// Real Marksman combat bypasses this stack in CombatNightProjectileBridge.
-await import('./vfx/Combat2157MarksmanSpiralBoltVfxPatch');
-await import('./views/Combat2157VersionBridge');
-await import('./vfx/Combat2158MarksmanPremiumRifledBoltVfxPatch');
-await import('./views/Combat2158VersionBridge');
-
-// Combat2 2.16.0 direct real-combat Marksman route remains untouched.
-// Combat2 2.16.3 lab calls three separate silhouette builders.
-await import('./views/Combat2160MarksmanLabBridge');
-await import('./views/Combat2160VersionBridge');
-await import('./views/Combat2163MarksmanDistinctTierVersionBridge');

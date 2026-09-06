@@ -1,3 +1,5 @@
+export {};
+
 const VERSION = '2.15.6';
 
 function installCombat2156VersionBridge(): void {

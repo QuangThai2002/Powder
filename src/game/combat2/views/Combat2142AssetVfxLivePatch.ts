@@ -48,17 +48,17 @@ function walkGameObjects(items: Phaser.GameObjects.GameObject[], visit: (child: 
 }
 
 function replaceLegacyVersionText(scene: Phaser.Scene, snapshot: RuntimeSnapshot): void {
-  let runtimeBadge: Phaser.GameObjects.Text | null = null;
+  const runtimeBadge = { current: null as Phaser.GameObjects.Text | null };
   walkGameObjects((scene.children?.list || []) as Phaser.GameObjects.GameObject[], (child) => {
     if (!(child instanceof Phaser.GameObjects.Text)) return;
     const text = String(child.text || '');
     if (/POWDER COMBAT 2\./.test(text)) child.setText(`POWDER COMBAT ${VERSION}`);
     if (text.includes('CONTACT-TIMED AUDIO') || text.includes('REAL SPRITE VFX')) child.setText('LARGE PROJECTILE + WIND DIRECTION');
-    if (/CONTACT AUDIO SYNC|ASSET VFX LIVE|VFX RECOVERY|VFX MISSING|REAL SPRITE/.test(text)) runtimeBadge = child;
+    if (/CONTACT AUDIO SYNC|ASSET VFX LIVE|VFX RECOVERY|VFX MISSING|REAL SPRITE/.test(text)) runtimeBadge.current = child;
   });
 
   const label = `${VERSION} · LARGE PROJECTILE + WIND DIR · ${snapshot.loadedTextures}/${snapshot.expectedTextures} BASE ASSET`;
-  if (runtimeBadge) runtimeBadge.setText(label).setColor('#bff7ff').setAlpha(0.76);
+  if (runtimeBadge.current) runtimeBadge.current.setText(label).setColor('#bff7ff').setAlpha(0.76);
   else if (['localhost', '127.0.0.1'].includes(location.hostname)) {
     scene.add.text(scene.scale.width - 18, scene.scale.height - 50, label, {
       fontFamily: COMBAT_DISPLAY_FONT,

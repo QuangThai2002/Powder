@@ -9,7 +9,8 @@ function normalize(value: unknown): string {
 
 function isSupportProjectileRole(view: any): boolean {
   const role = normalize(view?.pow?.role);
-  return role.includes('tri lieu') || role.includes('healer') || role.includes('do don') || role.includes('tank');
+  // Tank melee support owns its local aura/contact presentation; only healer uses travel.
+  return role.includes('tri lieu') || role.includes('healer');
 }
 
 export function installCombat2155SupportTravelBridge(): void {
@@ -45,7 +46,8 @@ export function installCombat2155SupportTravelBridge(): void {
   root.POWDER_COMBAT2_SUPPORT_TRAVEL_VFX = {
     version: '2.15.5',
     family: 'Combat2',
-    roles: ['healer', 'tank'],
+    roles: ['healer'],
+    excludesMeleeRoles: ['tank', 'fighter', 'knight', 'assassin'],
     supportAbilities: true,
     nonSelfTargetsOnly: true,
     usesElementTravelNotLunge: true,

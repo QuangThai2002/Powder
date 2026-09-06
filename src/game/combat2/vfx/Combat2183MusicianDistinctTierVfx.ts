@@ -33,7 +33,7 @@ export function isCombat2183MusicianRole(role?: string): boolean {
 function tween(
   scene: Phaser.Scene,
   target: Phaser.GameObjects.GameObject | object,
-  config: Phaser.Types.Tweens.TweenBuilderConfig,
+  config: CombatTweenConfig,
   fallbackMs: number
 ): Promise<void> {
   return new Promise((resolve) => {

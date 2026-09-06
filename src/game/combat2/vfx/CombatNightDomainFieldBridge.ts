@@ -4,6 +4,7 @@ import {
   LEGACY_EXPANSION_DOMAINS,
   type LegacyExpansionDomainId
 } from '../systems/CombatLegacyDomainEngine';
+import { strokeQuadraticPath } from './CombatVfxDrawing';
 
 const FLAG = '__powderCombatNightDomainFieldInstalled';
 
@@ -158,10 +159,7 @@ function drawMotif(scene: Phaser.Scene, id: LegacyExpansionDomainId, side: Domai
     g.lineStyle(3, c.accent, 0.19);
     for (let i = -3; i <= 3; i += 1) {
       const x = i * w * 0.09;
-      g.beginPath();
-      g.moveTo(x - 40, 34);
-      g.quadraticBezierTo(x, -36, x + 46, 20);
-      g.strokePath();
+      strokeQuadraticPath(g, x - 40, 34, [{ controlX: x, controlY: -36, endX: x + 46, endY: 20 }]);
       g.strokeEllipse(x + 18, -10, 40, 18);
     }
   } else {

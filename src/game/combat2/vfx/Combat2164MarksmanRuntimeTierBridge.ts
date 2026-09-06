@@ -1,19 +1,23 @@
 import Phaser from 'phaser';
 import { BattleScene } from '../scenes/BattleScene';
-import type { CombatProjectileElement, DirectionalProjectileOptions } from './DirectionalElementProjectileVfx';
 import {
-  playCombat2163MarksmanDistinctTierVfx,
-  type Combat2163MarksmanTier
-} from './Combat2163MarksmanDistinctTierVfx';
-import { playCombat2165MageDistinctTierVfx } from './Combat2165MageDistinctTierVfx';
-import { playCombat2166TankDistinctTierVfx } from './Combat2166TankDistinctTierVfx';
-import { playCombat2167FighterDistinctTierVfx } from './Combat2167FighterDistinctTierVfx';
-import { playCombat2168KnightDistinctTierVfx } from './Combat2168KnightDistinctTierVfx';
-import { playCombat2169EnchanterDistinctTierVfx } from './Combat2169EnchanterDistinctTierVfx';
-import { playCombat2170HealerDistinctTierVfx } from './Combat2170HealerDistinctTierVfx';
-import { playCombat2180AssassinDistinctTierVfx } from './Combat2180AssassinDistinctTierVfx';
-import { playCombat2183MusicianDistinctTierVfx } from './Combat2183MusicianDistinctTierVfx';
-import { scheduleCombat2172RangedImpactFeedback } from './Combat2172ProfessionImpactFeedback';
+  createCombat2104QaSignature,
+  type Combat2104ActionSignature
+} from '../views/Combat2104PowSkillSignaturePatch';
+import type { CombatProjectileElement } from './DirectionalElementProjectileVfx';
+import type { Combat2163MarksmanTier } from './Combat2163MarksmanDistinctTierVfx';
+import { powVfxDepth } from './CombatNightVfxLayout';
+import { ensureCombatVfxTexture } from './CombatVfxRegistry';
+import {
+  createCombat2201VfxScope,
+  playCombat2201ImpactPreview,
+  playCombat2201MagicCircle,
+  playCombat2201ProjectilePreview,
+  playCombat2201SlashPreview,
+  playCombat2201SourceRelease,
+  playCombat2201UltimatePreview,
+  type Combat2201VfxScope
+} from './Combat2201HighFantasyAnimeVfx';
 
 export const COMBAT2164_MARKSMAN_RUNTIME_VERSION = '2.16.4';
 export const COMBAT2188_PROFESSION_RUNTIME_VERSION = '2.18.8';
@@ -26,23 +30,99 @@ export const COMBAT2171_PROFESSION_RUNTIME_VERSION = COMBAT2188_PROFESSION_RUNTI
 
 type RuntimeProfessionRole = 'marksman' | 'mage' | 'tank' | 'fighter' | 'knight' | 'assassin' | 'enchanter' | 'healer' | 'musician';
 type RuntimeMeleeRole = 'tank' | 'fighter' | 'knight' | 'assassin';
-type RoleAwareOptions = DirectionalProjectileOptions & { role?: string };
-type TierRenderer = (options: RoleAwareOptions, tier: Combat2163MarksmanTier) => Promise<void>;
+type VfxLabEffect = 'cast' | 'release' | 'projectile' | 'slash' | 'impact' | 'magic-circle' | 'ultimate';
 
 type RuntimePowView = {
   side?: 'player' | 'enemy';
-  pow?: { elementKey?: string; element?: string; role?: string };
+  scene?: Phaser.Scene;
+  pow?: { id?: string; name?: string; elementKey?: string; element?: string; role?: string };
   container?: Phaser.GameObjects.Container;
   getVfxAnchor?: (anchor: 'body') => Phaser.Math.Vector2;
   getWorldPosition?: () => Phaser.Math.Vector2;
+  playAttackLunge?: (targetX: number, targetY: number) => Promise<void>;
+  playHit?: () => Promise<void>;
   __combat2MarksmanAttackTier?: Combat2163MarksmanTier;
+  __combat2104ActionSignature?: Combat2104ActionSignature;
 };
 
-type RuntimeScene = Phaser.Scene & { powViews?: Map<string, RuntimePowView> };
+type RuntimeCombatUnit = {
+  instanceId: string;
+  side: 'player' | 'enemy';
+  pow?: RuntimePowView['pow'];
+};
+
+type RuntimeScene = Phaser.Scene & {
+  powViews?: Map<string, RuntimePowView>;
+  combatState?: { units?: RuntimeCombatUnit[] };
+};
 
 const TEST_ROLES: readonly RuntimeProfessionRole[] = Object.freeze([
   'marksman', 'mage', 'tank', 'fighter', 'knight', 'assassin', 'enchanter', 'healer', 'musician'
 ]);
+
+const VFX_LAB_EFFECTS: readonly VfxLabEffect[] = Object.freeze([
+  'cast', 'release', 'projectile', 'slash', 'impact', 'magic-circle', 'ultimate'
+]);
+
+const VFX_LAB_FIRST_ART_PACK = Object.freeze([
+  'cast_core_elemental',
+  'dark',
+  'slash_heavy',
+  'slash_dark',
+  'impact_dark',
+  'circle_dark',
+  'ultimate_intro_standard',
+  'ultimate_charge_standard',
+  'ultimate_release_standard',
+  'ultimate_impact_standard',
+  'ultimate_finish_standard'
+]);
+
+// Only art files that exist are opt-in for the isolated Lab path; combat routes retain fallbacks.
+const VFX_LAB_DELIVERED_ART_ASSETS = Object.freeze([
+  'cast_core_elemental',
+  'dark',
+  'slash_heavy',
+  'slash_dark',
+  'impact_dark',
+  'circle_dark',
+  'ultimate_intro_standard',
+  'ultimate_charge_standard',
+  'ultimate_release_standard',
+  'ultimate_impact_standard',
+  'ultimate_finish_standard'
+]);
+
+function configuredAssetIds(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(String);
+  if (value && typeof value === 'object') {
+    return Object.entries(value as Record<string, unknown>)
+      .filter(([, enabled]) => enabled === true)
+      .map(([id]) => id);
+  }
+  return [];
+}
+
+function enableVfxLabArtPack(root: any): () => void {
+  const previous = root.POWDER_COMBAT2_VFX_ASSET_PACK;
+  root.POWDER_COMBAT2_VFX_ASSET_PACK = [...new Set([
+    ...configuredAssetIds(previous),
+    ...VFX_LAB_DELIVERED_ART_ASSETS
+  ])];
+  return () => {
+    if (previous === undefined) delete root.POWDER_COMBAT2_VFX_ASSET_PACK;
+    else root.POWDER_COMBAT2_VFX_ASSET_PACK = previous;
+  };
+}
+
+async function preloadVfxLabArtPack(scene: Phaser.Scene): Promise<void> {
+  const pending = VFX_LAB_DELIVERED_ART_ASSETS.filter((id) => !scene.textures.exists(`combat-vfx-${id}`));
+  if (pending.length === 0) return;
+  const completed = new Promise<void>((resolve) => scene.load.once(Phaser.Loader.Events.COMPLETE, () => resolve()));
+  for (const id of pending) ensureCombatVfxTexture(scene, id, 'vfx-lab-art-pack');
+  if (pending.every((id) => scene.textures.exists(`combat-vfx-${id}`))) return;
+  await completed;
+}
 
 const PROFESSION_FORMS: Readonly<Record<RuntimeProfessionRole, Readonly<Record<Combat2163MarksmanTier, string>>>> = Object.freeze({
   marksman: Object.freeze({ normal: 'compact-spiral-rail', skill: 'piercing-triple-rail-shot', ultimate: 'rail-breaker-heavy-slug' }),
@@ -57,7 +137,7 @@ const PROFESSION_FORMS: Readonly<Record<RuntimeProfessionRole, Readonly<Record<C
 });
 
 function normalize(value: string): string {
-  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase().trim();
 }
 
 function resolveElement(pow: RuntimePowView['pow']): CombatProjectileElement {
@@ -103,7 +183,7 @@ function sideOf(key: string, view: RuntimePowView): 'player' | 'enemy' | null {
   return null;
 }
 
-function pointOf(view: RuntimePowView): Phaser.Math.Vector2 {
+function targetPointOf(view: RuntimePowView): Phaser.Math.Vector2 {
   try {
     if (typeof view.getVfxAnchor === 'function') return view.getVfxAnchor('body');
     if (typeof view.getWorldPosition === 'function') return view.getWorldPosition();
@@ -111,7 +191,37 @@ function pointOf(view: RuntimePowView): Phaser.Math.Vector2 {
   return new Phaser.Math.Vector2(Number(view.container?.x ?? 0), Number(view.container?.y ?? 0));
 }
 
-function pickVisible(scene: RuntimeScene, side: 'player' | 'enemy'): { key: string; view: RuntimePowView } | null {
+function labTravelDirection(source: Phaser.Math.Vector2, target: Phaser.Math.Vector2): string {
+  const dx = target.x - source.x;
+  const dy = target.y - source.y;
+  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) >= 4) return dx > 0 ? 'left-to-right' : 'right-to-left';
+  if (Math.abs(dy) >= 4) return dy > 0 ? 'top-to-bottom' : 'bottom-to-top';
+  return 'stationary';
+}
+
+function roleOfPow(pow?: RuntimePowView['pow']): RuntimeProfessionRole | null {
+  const role = normalize(pow?.role ?? '');
+  if (role.includes('xa thu') || role.includes('marksman')) return 'marksman';
+  if (role.includes('phap su') || role.includes('mage')) return 'mage';
+  if (role.includes('do don') || role.includes('tank')) return 'tank';
+  if (role.includes('dau si') || role.includes('fighter')) return 'fighter';
+  if (role.includes('hiep si') || role.includes('knight')) return 'knight';
+  if (role.includes('sat thu') || role.includes('assassin')) return 'assassin';
+  if (role.includes('thuat su') || role.includes('enchanter') || role.includes('warlock')) return 'enchanter';
+  if (role.includes('tri lieu') || role.includes('healer')) return 'healer';
+  if (role.includes('nhac cong') || role.includes('musician')) return 'musician';
+  return null;
+}
+
+function roleOf(view: RuntimePowView): RuntimeProfessionRole | null {
+  return roleOfPow(view.pow);
+}
+
+function pickVisible(
+  scene: RuntimeScene,
+  side: 'player' | 'enemy',
+  preferredRole?: RuntimeProfessionRole
+): { key: string; view: RuntimePowView } | null {
   const map = scene.powViews;
   if (!(map instanceof Map)) return null;
   const rows = Array.from(map.entries())
@@ -121,7 +231,39 @@ function pickVisible(scene: RuntimeScene, side: 'player' | 'enemy'): { key: stri
       return Boolean(container?.visible) && Number(container?.alpha ?? 0) > 0.3;
     })
     .sort((a, b) => Number(b[1].container?.scaleX ?? 0) - Number(a[1].container?.scaleX ?? 0));
-  return rows[0] ? { key: rows[0][0], view: rows[0][1] } : null;
+  const preferred = preferredRole ? rows.find(([, view]) => roleOf(view) === preferredRole) : null;
+  const row = preferred ?? rows[0];
+  return row ? { key: row[0], view: row[1] } : null;
+}
+
+function pickVisibleRole(
+  scene: RuntimeScene,
+  role: RuntimeProfessionRole
+): { key: string; view: RuntimePowView } | null {
+  const map = scene.powViews;
+  if (!(map instanceof Map)) return null;
+  const units = Array.isArray(scene.combatState?.units) ? scene.combatState.units : [];
+  const rows = units
+    .map((unit) => ({ key: unit.instanceId, side: unit.side, view: map.get(unit.instanceId), role: roleOfPow(unit.pow) }))
+    .filter((row): row is { key: string; side: 'player' | 'enemy'; view: RuntimePowView; role: RuntimeProfessionRole } => {
+      const view = row.view;
+      if (!view) return false;
+      const container = view.container;
+      return Boolean(container?.visible)
+        && Number(container?.alpha ?? 0) > 0.3
+        && row.role === role;
+    })
+    .sort((a, b) => Number(b.view.container?.scaleX ?? 0) - Number(a.view.container?.scaleX ?? 0));
+  const row = rows.find((entry) => entry.side === 'player') ?? rows[0];
+  return row ? { key: row.key, view: row.view } : null;
+}
+
+function visibleRoleDiagnostics(scene: RuntimeScene): string[] {
+  const map = scene.powViews;
+  if (!(map instanceof Map)) return ['powViews-missing'];
+  return Array.from(map.entries())
+    .filter(([, view]) => Boolean(view.container?.visible) && Number(view.container?.alpha ?? 0) > 0.3)
+    .map(([key, view]) => `${key}:${String(view.pow?.role ?? 'missing')}`);
 }
 
 function isTier(value: unknown): value is Combat2163MarksmanTier {
@@ -132,138 +274,60 @@ function isRole(value: unknown): value is RuntimeProfessionRole {
   return TEST_ROLES.includes(value as RuntimeProfessionRole);
 }
 
+function isVfxLabEffect(value: unknown): value is VfxLabEffect {
+  return VFX_LAB_EFFECTS.includes(value as VfxLabEffect);
+}
+
 function isMeleeRole(role: RuntimeProfessionRole): role is RuntimeMeleeRole {
   return role === 'tank' || role === 'fighter' || role === 'knight' || role === 'assassin';
 }
 
-function usesLocalHop(role: RuntimeMeleeRole): role is 'knight' | 'assassin' {
-  return role === 'knight' || role === 'assassin';
-}
-
-function rendererFor(role: RuntimeProfessionRole): TierRenderer {
-  if (role === 'marksman') return playCombat2163MarksmanDistinctTierVfx as TierRenderer;
-  if (role === 'mage') return playCombat2165MageDistinctTierVfx as TierRenderer;
-  if (role === 'tank') return playCombat2166TankDistinctTierVfx as TierRenderer;
-  if (role === 'fighter') return playCombat2167FighterDistinctTierVfx as TierRenderer;
-  if (role === 'knight') return playCombat2168KnightDistinctTierVfx as TierRenderer;
-  if (role === 'assassin') return playCombat2180AssassinDistinctTierVfx as TierRenderer;
-  if (role === 'enchanter') return playCombat2169EnchanterDistinctTierVfx as TierRenderer;
-  if (role === 'healer') return playCombat2170HealerDistinctTierVfx as TierRenderer;
-  return playCombat2183MusicianDistinctTierVfx as TierRenderer;
-}
-
-function tweenQa(
-  scene: Phaser.Scene,
-  target: Phaser.GameObjects.GameObject | object,
-  config: Phaser.Types.Tweens.TweenBuilderConfig,
-  fallbackMs: number
-): Promise<void> {
-  return new Promise((resolve) => {
-    let settled = false;
-    let tween: Phaser.Tweens.Tween | null = null;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const finish = () => {
-      if (settled) return;
-      settled = true;
-      if (timer) clearTimeout(timer);
-      scene.events.off(Phaser.Scenes.Events.SHUTDOWN, abort);
-      scene.events.off(Phaser.Scenes.Events.DESTROY, abort);
-      resolve();
-    };
-    const abort = () => {
-      try { tween?.stop(); } catch { /* cleanup only */ }
-      finish();
-    };
-    timer = setTimeout(finish, fallbackMs);
-    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, abort);
-    scene.events.once(Phaser.Scenes.Events.DESTROY, abort);
-    try { tween = scene.tweens.add({ ...config, targets: target, onComplete: finish, onStop: finish }); }
-    catch { finish(); }
-  });
-}
-
-function meleeMotion(role: RuntimeMeleeRole, tier: Combat2163MarksmanTier): { gap: number; advanceRatio: number; dash: number; back: number } {
-  if (role === 'tank') return { gap: 210, advanceRatio: 0.72, dash: tier === 'ultimate' ? 215 : tier === 'skill' ? 175 : 140, back: tier === 'ultimate' ? 155 : 120 };
-  if (role === 'fighter') return { gap: 168, advanceRatio: 0.79, dash: tier === 'ultimate' ? 205 : tier === 'skill' ? 168 : 132, back: tier === 'ultimate' ? 170 : tier === 'skill' ? 132 : 118 };
-  if (role === 'knight') return { gap: 178, advanceRatio: 0.77, dash: tier === 'ultimate' ? 202 : tier === 'skill' ? 164 : 130, back: tier === 'ultimate' ? 160 : tier === 'skill' ? 126 : 116 };
-  return { gap: 145, advanceRatio: 0.84, dash: tier === 'ultimate' ? 128 : tier === 'skill' ? 104 : 84, back: tier === 'ultimate' ? 92 : tier === 'skill' ? 78 : 72 };
-}
-
-function localHopMotion(role: 'knight' | 'assassin', tier: Combat2163MarksmanTier): { height: number; duration: number } {
-  const height = tier === 'ultimate'
-    ? (role === 'assassin' ? 22 : 20)
-    : tier === 'skill'
-      ? (role === 'assassin' ? 18 : 16)
-      : (role === 'assassin' ? 14 : 13);
-  return { height, duration: tier === 'ultimate' ? 120 : tier === 'skill' ? 108 : 96 };
-}
-
-async function playDedicatedMeleeQaContact(
-  role: RuntimeMeleeRole,
+/** QA invokes the same attack and target-hit route as a player basic action. */
+async function playLiveRuntimeQaAction(
   view: RuntimePowView,
-  options: RoleAwareOptions,
+  targetView: RuntimePowView,
   tier: Combat2163MarksmanTier
-): Promise<void> {
-  const renderer = rendererFor(role);
-  const container = view.container;
-  if (!container) {
-    await renderer(options, tier);
-    return;
+): Promise<CombatProjectileElement> {
+  const attack = view.playAttackLunge;
+  const pow = view.pow;
+  if (typeof attack !== 'function' || !pow) throw new Error('live-powview-attack-missing');
+
+  const hadTier = Object.prototype.hasOwnProperty.call(view, '__combat2MarksmanAttackTier');
+  const previousTier = view.__combat2MarksmanAttackTier;
+  const hadSignature = Object.prototype.hasOwnProperty.call(view, '__combat2104ActionSignature');
+  const previousSignature = view.__combat2104ActionSignature;
+  const scene = view.scene as (Phaser.Scene & { __combat2121Element?: string; __combat2121Side?: 'player' | 'enemy' }) | undefined;
+  const hadElementContext = Boolean(scene) && Object.prototype.hasOwnProperty.call(scene, '__combat2121Element');
+  const previousElementContext = scene?.__combat2121Element;
+  const hadSideContext = Boolean(scene) && Object.prototype.hasOwnProperty.call(scene, '__combat2121Side');
+  const previousSideContext = scene?.__combat2121Side;
+  const target = targetPointOf(targetView);
+  const element = resolveElement(pow);
+
+  // Tier is presentation-only; role and element always come from the real Pow.
+  view.__combat2MarksmanAttackTier = tier;
+  view.__combat2104ActionSignature = createCombat2104QaSignature(pow, tier);
+  if (scene) {
+    scene.__combat2121Element = String(pow.elementKey ?? pow.element ?? '');
+    scene.__combat2121Side = view.side === 'enemy' ? 'enemy' : 'player';
   }
-
-  const startX = container.x;
-  const startY = container.y;
-
-  if (usesLocalHop(role)) {
-    const hop = localHopMotion(role, tier);
-    try {
-      await Promise.all([
-        renderer({ ...options, source: new Phaser.Math.Vector2(startX, startY) }, tier),
-        tweenQa(options.scene, container, {
-          y: startY - hop.height,
-          duration: hop.duration,
-          ease: 'Quad.easeOut',
-          yoyo: true
-        }, hop.duration * 2 + 220)
-      ]);
-    } finally {
-      container.setPosition(startX, startY);
-    }
-    return;
-  }
-
-  const dx = options.target.x - startX;
-  const dy = options.target.y - startY;
-  const distance = Math.max(1, Math.hypot(dx, dy));
-  const motion = meleeMotion(role, tier);
-  const advance = Math.min(Math.max(0, distance - motion.gap), distance * motion.advanceRatio);
-  const attackX = startX + (dx / distance) * advance;
-  const attackY = startY + (dy / distance) * advance;
 
   try {
-    await tweenQa(options.scene, container, {
-      x: attackX,
-      y: attackY,
-      duration: motion.dash,
-      ease: tier === 'ultimate' ? 'Cubic.easeIn' : 'Quad.easeOut'
-    }, motion.dash + 250);
-
-    await renderer({ ...options, source: new Phaser.Math.Vector2(container.x, container.y) }, tier);
-
-    await tweenQa(options.scene, container, {
-      x: startX,
-      y: startY,
-      duration: motion.back,
-      ease: 'Quad.easeOut'
-    }, motion.back + 250);
+    await attack.call(view, target.x, target.y);
+    if (typeof targetView.playHit === 'function') await targetView.playHit();
+    return element;
   } finally {
-    container.setPosition(startX, startY);
+    if (hadTier) view.__combat2MarksmanAttackTier = previousTier;
+    else delete view.__combat2MarksmanAttackTier;
+    if (hadSignature) view.__combat2104ActionSignature = previousSignature;
+    else delete view.__combat2104ActionSignature;
+    if (scene) {
+      if (hadElementContext) scene.__combat2121Element = previousElementContext;
+      else delete scene.__combat2121Element;
+      if (hadSideContext) scene.__combat2121Side = previousSideContext;
+      else delete scene.__combat2121Side;
+    }
   }
-}
-
-async function playProfessionRenderer(role: RuntimeProfessionRole, options: RoleAwareOptions, tier: Combat2163MarksmanTier): Promise<void> {
-  if (role === 'mage') scheduleCombat2172RangedImpactFeedback(options, 'mage', tier);
-  await rendererFor(role)(options, tier);
 }
 
 function updateVisibleWitness(): void {
@@ -336,6 +400,148 @@ function installRuntimeTierBridge(): void {
     };
   }
 
+  let activeLabScope: Combat2201VfxScope | null = null;
+  let labRun = 0;
+
+  const vfxLabRoster = () => {
+    const scene = runtimeScene(root);
+    const map = scene?.powViews;
+    if (!(map instanceof Map)) return [];
+    return Array.from(map.entries())
+      .filter(([key, view]) => Boolean(view.container?.visible) && Number(view.container?.alpha ?? 0) > 0.3)
+      .map(([instanceId, view]) => ({
+        instanceId,
+        side: sideOf(instanceId, view),
+        powId: view.pow?.id ?? null,
+        name: view.pow?.name ?? view.pow?.id ?? instanceId,
+        role: view.pow?.role ?? null,
+        element: view.pow?.elementKey ?? view.pow?.element ?? null,
+        point: targetPointOf(view)
+      }));
+  };
+
+  const cleanupVfxLab = (reason = 'manual') => {
+    labRun += 1;
+    const scope = activeLabScope;
+    activeLabScope = null;
+    scope?.cleanup();
+    const result = {
+      ok: true,
+      reason,
+      activeRootsAfterCleanup: scope?.activeCount() ?? 0,
+      presentationOnly: true,
+      damageApplied: false,
+      turnAdvanced: false
+    };
+    root.POWDER_COMBAT2_VFX_LAB_LAST = result;
+    return result;
+  };
+
+  const playVfxLab = async (
+    requestedEffect?: VfxLabEffect | string | null,
+    sourceId?: string | null,
+    targetId?: string | null
+  ) => {
+    if (!isVfxLabEffect(requestedEffect)) return { ok: false, reason: 'invalid-vfx-lab-effect', requestedEffect };
+    const scene = runtimeScene(root);
+    if (!scene) return { ok: false, reason: 'battle-scene-not-ready', effect: requestedEffect };
+    const map = scene.powViews;
+    if (!(map instanceof Map)) return { ok: false, reason: 'pow-views-missing', effect: requestedEffect };
+    const source = sourceId ? map.get(sourceId) : undefined;
+    const target = targetId ? map.get(targetId) : undefined;
+    if (!source || !sourceId || !Boolean(source.container?.visible)) return { ok: false, reason: 'lab-source-not-visible', effect: requestedEffect, sourceId };
+    if (!target || !targetId || !Boolean(target.container?.visible)) return { ok: false, reason: 'lab-target-not-visible', effect: requestedEffect, targetId };
+    if (sourceId === targetId) return { ok: false, reason: 'lab-source-target-must-differ', effect: requestedEffect, sourceId };
+
+    cleanupVfxLab('replaced-by-play');
+    const runId = ++labRun;
+    const scope = createCombat2201VfxScope();
+    activeLabScope = scope;
+    const sourcePoint = targetPointOf(source);
+    const targetPoint = targetPointOf(target);
+    const element = resolveElement(source.pow);
+    const role = String(source.pow?.role ?? '');
+    const preview = { scene, source: sourcePoint, target: targetPoint, element, role, tier: 'skill' as const, scope };
+    const cleanupOnSceneStop = (): void => { if (activeLabScope === scope) cleanupVfxLab('scene-shutdown'); };
+    const cleanupOnResize = (): void => { if (activeLabScope === scope) cleanupVfxLab('scene-resize'); };
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanupOnSceneStop);
+    scene.events.once(Phaser.Scenes.Events.DESTROY, cleanupOnSceneStop);
+    scene.scale.once(Phaser.Scale.Events.RESIZE, cleanupOnResize);
+    const restoreArtPack = enableVfxLabArtPack(root);
+
+    try {
+      await preloadVfxLabArtPack(scene);
+      if (runId !== labRun || scope.isCleanedUp()) {
+        return {
+          ok: false,
+          cancelled: true,
+          effect: requestedEffect,
+          source: sourceId,
+          target: targetId,
+          presentationOnly: true,
+          damageApplied: false,
+          manaChanged: false,
+          turnAdvanced: false
+        };
+      }
+      let phases: readonly string[] | undefined;
+      if (requestedEffect === 'cast') {
+        await playCombat2201SourceRelease(scene, sourcePoint, element, 'skill', false, { role, scope });
+        phases = ['cast', 'charge', 'release', 'fade', 'cleanup'];
+      } else if (requestedEffect === 'release') {
+        await playCombat2201SourceRelease(scene, sourcePoint, element, 'skill', false, { role, scope });
+        phases = ['release', 'fade', 'cleanup'];
+      } else if (requestedEffect === 'projectile') await playCombat2201ProjectilePreview(preview);
+      else if (requestedEffect === 'slash') await playCombat2201SlashPreview(preview);
+      else if (requestedEffect === 'impact') await playCombat2201ImpactPreview(preview);
+      else if (requestedEffect === 'magic-circle') {
+        await playCombat2201SourceRelease(scene, sourcePoint, element, 'skill', false, { role, scope });
+        await playCombat2201MagicCircle({
+          scene,
+          point: sourcePoint,
+          element,
+          // Lab-only presentation: keep the sheet large and readable around the source Pow.
+          tier: 'ultimate',
+          role,
+          depth: powVfxDepth('body') - 1,
+          holdMs: 900,
+          scope
+        });
+        phases = ['cast', 'magic-circle', 'charge', 'release', 'fade', 'cleanup'];
+      } else {
+        phases = await playCombat2201UltimatePreview({ ...preview, tier: 'ultimate' });
+      }
+      const cancelled = runId !== labRun || scope.isCleanedUp();
+      const result = {
+        ok: !cancelled,
+        cancelled,
+        effect: requestedEffect,
+        source: sourceId,
+        target: targetId,
+        sourceRole: source.pow?.role ?? null,
+        sourceElement: element,
+        direction: labTravelDirection(sourcePoint, targetPoint),
+        ...(phases ? { phases } : {}),
+        activeRootsAfterPlay: scope.activeCount(),
+        presentationOnly: true,
+        damageApplied: false,
+        manaChanged: false,
+        turnAdvanced: false
+      };
+      root.POWDER_COMBAT2_VFX_LAB_LAST = result;
+      return result;
+    } catch (error) {
+      console.error('[Combat2 VFX Lab]', error);
+      return { ok: false, reason: 'vfx-lab-threw', effect: requestedEffect, source: sourceId, target: targetId };
+    } finally {
+      restoreArtPack();
+      scene.events.off(Phaser.Scenes.Events.SHUTDOWN, cleanupOnSceneStop);
+      scene.events.off(Phaser.Scenes.Events.DESTROY, cleanupOnSceneStop);
+      scene.scale.off(Phaser.Scale.Events.RESIZE, cleanupOnResize);
+      if (activeLabScope === scope) activeLabScope = null;
+    }
+  };
+
   const playProfessionTier = async (
     requestedRole?: RuntimeProfessionRole | string | null,
     requestedTier?: Combat2163MarksmanTier | string | null,
@@ -346,38 +552,63 @@ function installRuntimeTierBridge(): void {
 
     const scene = runtimeScene(root);
     if (!scene) return { ok: false, reason: 'battle-scene-not-ready', role: requestedRole, tier: requestedTier };
-    const sourceRow = pickVisible(scene, 'player');
-    const targetRow = pickVisible(scene, 'enemy');
-    if (!sourceRow || !targetRow) return { ok: false, reason: 'visible-source-or-target-missing', role: requestedRole, tier: requestedTier };
-
-    const source = pointOf(sourceRow.view);
-    const target = pointOf(targetRow.view);
-    const element = requestedElement ?? resolveElement(sourceRow.view.pow);
-    const options: RoleAwareOptions = { scene, source, target, element, reducedMotion: false, role: requestedRole };
+    const sourceRow = pickVisibleRole(scene, requestedRole);
+    if (!sourceRow) {
+      return {
+        ok: false,
+        reason: 'matching-profession-pow-not-visible',
+        role: requestedRole,
+        tier: requestedTier,
+        visibleRoles: visibleRoleDiagnostics(scene)
+      };
+    }
+    const sourceSide = sideOf(sourceRow.key, sourceRow.view);
+    const targetRow = pickVisible(scene, sourceSide === 'enemy' ? 'player' : 'enemy');
+    if (!targetRow) return { ok: false, reason: 'visible-target-missing', role: requestedRole, tier: requestedTier };
+    const sourceElement = resolveElement(sourceRow.view.pow);
+    if (requestedElement && requestedElement !== sourceElement) {
+      return {
+        ok: false,
+        reason: 'element-must-match-source-pow',
+        role: requestedRole,
+        tier: requestedTier,
+        requestedElement,
+        sourceElement
+      };
+    }
 
     try {
-      if (isMeleeRole(requestedRole)) await playDedicatedMeleeQaContact(requestedRole, sourceRow.view, options, requestedTier);
-      else await playProfessionRenderer(requestedRole, options, requestedTier);
+      const element = await playLiveRuntimeQaAction(
+        sourceRow.view,
+        targetRow.view,
+        requestedTier
+      );
 
       const melee = isMeleeRole(requestedRole);
-      const localHop = melee && usesLocalHop(requestedRole);
       const result = {
         ok: true,
         role: requestedRole,
         tier: requestedTier,
         element,
         source: sourceRow.key,
+        sourceRole: sourceRow.view.pow?.role ?? null,
+        sourceMatchesRequestedRole: true,
         target: targetRow.key,
         directProfessionRuntime: true,
         directVersion: COMBAT2188_PROFESSION_RUNTIME_VERSION,
         form: PROFESSION_FORMS[requestedRole][requestedTier],
         runtimeDirectQa: true,
+        liveRuntimeRoute: 'PowView.playAttackLunge + PowView.playHit',
+        directRendererBypassed: true,
+        sourceRoleOverride: false,
+        sourceElementOverride: false,
         dedicatedOwner: true,
-        meleeContactOnly: melee && !localHop,
-        targetLocalSlash: localHop || undefined,
+        meleeContactOnly: melee,
+        targetLocalImpactQa: melee || undefined,
         projectileTravel: melee ? false : true,
         dedicatedActorMotionQa: melee,
-        actorMotionQa: localHop ? 'local-hop' : melee ? 'target-approach' : undefined,
+        actorMotionQa: melee ? 'local-hop' : undefined,
+        targetHitFeedbackQa: true,
         meleeCastSignature: melee ? false : undefined,
         assassinVisualHits: requestedRole === 'assassin' ? 2 : undefined,
         assassinGuaranteedCritChanged: false,
@@ -396,7 +627,7 @@ function installRuntimeTierBridge(): void {
 
   const playMarksmanTier = async (requestedTier?: Combat2163MarksmanTier | string | null, requestedElement?: CombatProjectileElement | null) => {
     const result = await playProfessionTier('marksman', requestedTier, requestedElement);
-    if (result?.ok) {
+    if (result?.ok && 'form' in result) {
       const legacyResult = {
         ...result,
         directMarksmanRuntime: true,
@@ -417,14 +648,30 @@ function installRuntimeTierBridge(): void {
     tiers: ['normal', 'skill', 'ultimate'],
     forms: PROFESSION_FORMS,
     playProfessionTier,
+    vfxLabEffects: [...VFX_LAB_EFFECTS],
+    vfxLabFirstArtPack: [...VFX_LAB_FIRST_ART_PACK],
+    vfxLabDeliveredArtAssets: [...VFX_LAB_DELIVERED_ART_ASSETS],
+    getVfxLabRoster: vfxLabRoster,
+    playVfxLab,
+    cleanupVfxLab,
+    vfxLabSourceTargetSelection: true,
+    vfxLabCleanupScope: true,
+    vfxLabResizeCleanup: true,
+    vfxLabPipeline: ['intro', 'cast', 'magic-circle', 'charge', 'release', 'attack', 'impact', 'finish', 'cleanup'],
     visualQaOnly: true,
     allNineProfessionsTiered: true,
     dedicatedOwners: true,
-    meleeContactOnlyRoles: ['tank', 'fighter'],
-    meleeLocalHopRoles: ['knight', 'assassin'],
+    meleeContactOnlyRoles: ['tank', 'fighter', 'knight', 'assassin'],
+    meleeLocalHopRoles: ['tank', 'fighter', 'knight', 'assassin'],
     meleeProjectileTravel: false,
     meleeCastSignature: false,
     meleeQaUsesActorMotion: true,
+    qaUsesLivePowViewAttack: true,
+    directRendererBypassed: true,
+    qaRequiresMatchingPow: true,
+    qaSourceRoleOverride: false,
+    qaSourceElementOverride: false,
+    qaTargetHitFeedback: true,
     assassinVisualHits: 2,
     assassinGuaranteedCritChanged: false,
     normalSkillUltimateDistinct: true,

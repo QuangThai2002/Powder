@@ -235,7 +235,7 @@ export function installCombat2140ExactVfxPatch(
     }
     const p = this.getWorldPosition() as Phaser.Math.Vector2;
     if (this.portrait?.active) {
-      this.portrait.setTintFill(0xffffff);
+      this.portrait.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
       scene.time.delayedCall(reducedMotion() ? 48 : 78, () => {
         if (this.portrait?.active) this.portrait.clearTint();
       });

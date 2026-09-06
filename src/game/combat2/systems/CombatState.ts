@@ -1,12 +1,13 @@
 import type { CombatPow, CombatSide } from '../data/CombatPow';
 import { ACTIVE_TEAM_SIZE } from '../data/PowderDataAdapter';
-import { sanitizeRagePoints } from './CombatRageEngine';
+import { RAGE_START_POINTS, sanitizeRagePoints } from './CombatRageEngine';
 
 export type CombatPhase = 'ready' | 'selecting' | 'resolving' | 'finished';
 export type ControlStatus = 'stun' | 'freeze' | null;
 export type HardControlStatus = 'silence' | 'stun' | 'paralysis' | 'freeze';
 export type FreezeStage = 0 | 1 | 2;
 export type DotStatus = 'burn' | 'poison' | null;
+export type CombatRuntimeMode = 'pve' | 'pvp' | 'boss' | 'daily_boss' | 'dungeon' | 'event';
 
 export interface ControlHistoryEntry {
   status: HardControlStatus;
@@ -88,11 +89,19 @@ const HARD_CONTROL_VALUES = new Set<HardControlStatus>([
 
 export class CombatState {
   readonly units: CombatUnitState[];
+  readonly battleMode: CombatRuntimeMode;
+  readonly bossContext: Record<string, unknown>;
   round = 1;
   phase: CombatPhase = 'ready';
   currentUnitId: string | null = null;
 
-  constructor(playerTeam: CombatPow[], enemyTeam: CombatPow[]) {
+  constructor(
+    playerTeam: CombatPow[],
+    enemyTeam: CombatPow[],
+    options: Readonly<{ battleMode?: CombatRuntimeMode; bossContext?: Record<string, unknown> }> = {}
+  ) {
+    this.battleMode = options.battleMode ?? 'pve';
+    this.bossContext = options.bossContext ?? {};
     this.units = [
       ...this.makeUnits(playerTeam, 'player'),
       ...this.makeUnits(enemyTeam, 'enemy')
@@ -313,7 +322,7 @@ export class CombatState {
       slot,
       fieldSlot: slot < ACTIVE_TEAM_SIZE ? slot : null,
       hp: pow.hp,
-      ragePoints: 0,
+      ragePoints: RAGE_START_POINTS,
       shield: 0,
       speed: this.finiteClamp(pow.speed, 1, 9999, 100),
       speedBuffActionsRemaining: 0,

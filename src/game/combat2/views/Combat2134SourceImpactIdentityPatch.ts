@@ -81,7 +81,7 @@ export function installCombat2134SourceImpactIdentityPatch(BattleSceneClass: any
     const frame = frameForElement(context?.elementKey || ownElement);
 
     if (this.portrait?.active) {
-      this.portrait.setTintFill(0xffffff);
+      this.portrait.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
       scene.time.delayedCall(reducedMotion() ? 48 : 78, () => {
         if (this.portrait?.active) this.portrait.clearTint();
       });

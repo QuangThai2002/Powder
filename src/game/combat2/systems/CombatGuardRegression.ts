@@ -16,11 +16,13 @@ export interface CombatGuardRegressionReport {
 export function runCombatGuardRegression(): CombatGuardRegressionReport {
   const player = COMBAT2_STARTER_ROSTER.player.map((pow, index) => ({
     ...pow,
-    role: index === 0 ? 'Đỡ đòn' : index === 1 ? 'Xạ thủ' : pow.role
+    // Keep this fixture to a single possible interceptor so action-lock checks
+    // cannot pass through a second guard-capable roster member.
+    role: index === 0 ? 'tank' : index === 1 ? 'marksman' : 'mage'
   }));
   const enemy = COMBAT2_STARTER_ROSTER.enemy.map((pow, index) => ({
     ...pow,
-    role: index === 0 ? 'Sát thủ' : pow.role
+    role: index === 0 ? 'assassin' : pow.role
   }));
   const state = new CombatState(player, enemy);
   const protector = state.activeLiving('player')[0];

@@ -38,7 +38,7 @@ function travelMs(options: Options, tier: Combat2165MageTier): number {
 function tween(
   scene: Phaser.Scene,
   target: Phaser.GameObjects.GameObject | object,
-  config: Phaser.Types.Tweens.TweenBuilderConfig,
+  config: CombatTweenConfig,
   fallbackMs: number
 ): Promise<void> {
   return new Promise((resolve) => {

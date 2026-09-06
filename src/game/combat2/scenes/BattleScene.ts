@@ -1,6 +1,16 @@
 import Phaser from 'phaser';
 import type { CombatAbility, CombatPow, CombatSide } from '../data/CombatPow';
-import { ACTIVE_TEAM_SIZE, ALL_COMBAT2_STARTER_POWS, COMBAT2_STARTER_ROSTER } from '../data/PowderDataAdapter';
+import { ACTIVE_TEAM_SIZE, ALL_COMBAT2_STARTER_POWS, COMBAT2_STARTER_ROSTER, combatTeamByIds } from '../data/PowderDataAdapter';
+import {
+  academicQuestionsFromContext,
+  createCombat2BattleResult,
+  loadCombat2BattleRequest,
+  publishCombat2BattleResult,
+  returnCombat2ResultToMain,
+  type Combat2AcademicQuestion as AcademicCombatQuestion,
+  type Combat2BattleRequest,
+  type Combat2BattleResult
+} from '../Combat2BattleHandoff';
 import { ActionPipeline } from '../systems/ActionPipeline';
 import {
   abilityHasLegalTarget,
@@ -15,6 +25,7 @@ import {
   FREEZE_SHATTER_MULTIPLIER
 } from '../systems/CombatControlEngine';
 import { CombatGuardEngine } from '../systems/CombatGuardEngine';
+import { BossModeController } from '../systems/BossModeController';
 import { CombatState, type CombatUnitState } from '../systems/CombatState';
 import { ACTION_BASE_RAW_GAIN, ULTIMATE_RAGE_COST } from '../systems/CombatRageEngine';
 import { SkillActionResolver, type CombatAbilitySlot, type CombatSkillSlot } from '../systems/SkillActionResolver';
@@ -22,6 +33,7 @@ import { TurnManager } from '../systems/TurnManager';
 import { CombatPresentationDirector } from '../views/CombatPresentationDirector';
 import { COMBAT_BODY_FONT, COMBAT_COLORS, COMBAT_DISPLAY_FONT } from '../views/CombatTheme';
 import { PowView } from '../views/PowView';
+import { preloadCombatVfxAssets } from '../vfx/CombatVfxRegistry';
 
 const BATTLE_BG_KEY = 'combat2-battle-bg';
 const BATTLE_BG_URL = '/assets/backgrounds/bg-battle-legend-cloud-arena.webp';
@@ -45,6 +57,12 @@ interface PendingPlayerAction {
   targetMode: CombatAbilityTargetMode;
 }
 
+interface PendingAcademicAction {
+  actor: CombatUnitState;
+  target: CombatUnitState;
+  action: 'basic' | CombatAbilitySlot;
+}
+
 export class BattleScene extends Phaser.Scene {
   private combatState!: CombatState;
   private turnManager!: TurnManager;
@@ -52,6 +70,7 @@ export class BattleScene extends Phaser.Scene {
   private basicAttack!: BasicAttackResolver;
   private skillActions!: SkillActionResolver;
   private guard!: CombatGuardEngine;
+  private bossMode: BossModeController | null = null;
   private presentation!: CombatPresentationDirector;
   private readonly powViews = new Map<string, PowView>();
   private roundText!: Phaser.GameObjects.Text;
@@ -62,13 +81,51 @@ export class BattleScene extends Phaser.Scene {
   private battleMusic: Phaser.Sound.BaseSound | null = null;
   private flowStarted = false;
   private lineupSettling = false;
+  private handoffRequest: Combat2BattleRequest | null = null;
+  private handoffError: string | null = null;
+  private playerTeam: CombatPow[] = COMBAT2_STARTER_ROSTER.player;
+  private enemyTeam: CombatPow[] = COMBAT2_STARTER_ROSTER.enemy;
+  private resultOverlay: Phaser.GameObjects.Container | null = null;
+  private actionBanner: Phaser.GameObjects.Text | null = null;
+  private academicQuestions: AcademicCombatQuestion[] = [];
+  private academicQuestionIndex = 0;
+  private academicQuestionModal: Phaser.GameObjects.Container | null = null;
+  private pendingAcademicAction: PendingAcademicAction | null = null;
+  private academicResponses: Array<{ question: AcademicCombatQuestion; correct: boolean; powId: string }> = [];
 
   constructor() { super('BattleScene'); }
+
+  init(): void {
+    const requestedBattleId = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('battle');
+    const request = loadCombat2BattleRequest();
+    if (!request.ok) {
+      if (requestedBattleId) this.handoffError = request.errors?.join('; ') || 'BattleRequest khong hop le';
+      return;
+    }
+    const academicQuestions = academicQuestionsFromContext(request.value.academicContext);
+    if (request.value.academicContext.requiresActionQuestions === true && academicQuestions.length === 0) {
+      this.handoffError = 'Du lieu cau hoi hoc thuat cho tran nay khong hop le';
+      return;
+    }
+    const playerTeam = combatTeamByIds(request.value.playerTeam);
+    const enemyTeam = combatTeamByIds(request.value.enemyTeam);
+    if (!playerTeam || !enemyTeam) {
+      this.handoffError = 'BattleRequest chua Pow khong ton tai trong catalog';
+      return;
+    }
+    this.handoffRequest = request.value;
+    this.playerTeam = playerTeam;
+    this.enemyTeam = enemyTeam;
+    this.academicQuestions = academicQuestions;
+  }
 
   preload(): void {
     if (!this.textures.exists(BATTLE_BG_KEY)) this.load.image(BATTLE_BG_KEY, BATTLE_BG_URL);
     if (!this.cache.audio.exists(BATTLE_BGM_KEY)) this.load.audio(BATTLE_BGM_KEY, BATTLE_BGM_URL);
-    for (const pow of ALL_COMBAT2_STARTER_POWS) {
+    // Live Ultimate back-circle sheets must finish with the Combat2 preload, not after create().
+    preloadCombatVfxAssets(this, 'all');
+    const roster = this.handoffRequest ? [...this.enemyTeam, ...this.playerTeam] : ALL_COMBAT2_STARTER_POWS;
+    for (const pow of roster) {
       if (!this.textures.exists(pow.assetKey)) this.load.image(pow.assetKey, pow.assetUrl);
       for (const ability of [pow.abilities.basic, ...pow.abilities.skills, pow.abilities.ultimate]) {
         if (ability.iconKey && ability.iconUrl && !this.textures.exists(ability.iconKey)) this.load.image(ability.iconKey, ability.iconUrl);
@@ -77,9 +134,23 @@ export class BattleScene extends Phaser.Scene {
   }
 
   create(): void {
+    // Keep visual QA and VFX bridges attached to the live scene even after a hot reload.
+    (globalThis as any).POWDER_COMBAT2_ACTIVE_BATTLE_SCENE = this;
     const { width, height } = this.scale;
-    this.combatState = new CombatState(COMBAT2_STARTER_ROSTER.player, COMBAT2_STARTER_ROSTER.enemy);
+    if (this.handoffError) {
+      this.showHandoffError(width, height, this.handoffError);
+      return;
+    }
+    this.combatState = new CombatState(this.playerTeam, this.enemyTeam, {
+      battleMode: this.handoffRequest?.battleMode,
+      bossContext: this.handoffRequest?.bossContext
+    });
     this.turnManager = new TurnManager(this.combatState);
+    this.bossMode = BossModeController.from(this.combatState, this.turnManager);
+    if (this.handoffRequest?.battleMode === 'boss' && !this.bossMode) {
+      this.showHandoffError(width, height, 'Boss context hoac phase configuration khong hop le');
+      return;
+    }
     this.actionPipeline = new ActionPipeline(this.turnManager);
     this.basicAttack = new BasicAttackResolver(Math.random);
     this.skillActions = new SkillActionResolver(Math.random);
@@ -87,8 +158,8 @@ export class BattleScene extends Phaser.Scene {
     this.presentation = new CombatPresentationDirector(this);
     this.cameras.main.setBackgroundColor('#06111c');
     this.createBattlefield(width, height);
-    this.createTeam('enemy', COMBAT2_STARTER_ROSTER.enemy);
-    this.createTeam('player', COMBAT2_STARTER_ROSTER.player);
+    this.createTeam('enemy', this.enemyTeam);
+    this.createTeam('player', this.playerTeam);
 
     this.roundText = this.add.text(width / 2, height / 2 - 66, 'VÒNG 1', {
       fontFamily: COMBAT_DISPLAY_FONT, fontSize: '20px', color: COMBAT_COLORS.text, fontStyle: 'bold', backgroundColor: '#0a2433', padding: { x: 17, y: 8 }
@@ -99,8 +170,12 @@ export class BattleScene extends Phaser.Scene {
 
     this.startBattleMusic();
     this.input.once('pointerdown', () => this.startBattleMusic());
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.stopBattleMusic());
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => { this.stopBattleMusic(); this.clearActionBanner(); this.clearAcademicQuestion(); });
     this.events.once(Phaser.Scenes.Events.DESTROY, () => this.stopBattleMusic());
+    this.events.once(Phaser.Scenes.Events.DESTROY, () => {
+      const root = globalThis as any;
+      if (root.POWDER_COMBAT2_ACTIVE_BATTLE_SCENE === this) delete root.POWDER_COMBAT2_ACTIVE_BATTLE_SCENE;
+    });
     this.showPreBattleIntro();
   }
 
@@ -149,6 +224,8 @@ export class BattleScene extends Phaser.Scene {
     this.refreshViews();
     if (this.combatState.isBattleOver()) { this.finishBattle(); return; }
 
+    this.roundText.setVisible(true);
+    this.turnText.setVisible(true);
     const actor = this.turnManager.beginNextTurn();
     if (!actor) { this.turnText.setText('Không tìm được lượt hợp lệ'); return; }
     this.roundText.setText(`VÒNG ${this.combatState.round}`);
@@ -198,6 +275,18 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private async performEnemyAction(actor: CombatUnitState): Promise<void> {
+    const bossEvent = this.bossMode?.beforeEnemyAction(actor);
+    if (bossEvent) {
+      this.combatState.sanitizeRuntimeNumbers();
+      this.refreshViews();
+      for (const targetId of bossEvent.targetIds) this.showFloatingLabel(this.powViews.get(targetId), bossEvent.label, '#ffcf7a');
+      if (this.combatState.isBattleOver()) {
+        this.turnManager.completeAction(actor.instanceId);
+        this.afterAction();
+        return;
+      }
+      await this.wait(340);
+    }
     if (this.skillActions.canUseUltimate(actor)) {
       const ability = actor.pow.abilities.ultimate;
       if (abilityHasLegalTarget(ability, actor, this.combatState.units)) {
@@ -299,10 +388,10 @@ export class BattleScene extends Phaser.Scene {
     const ability = action === 'ultimate' ? actor.pow.abilities.ultimate : actor.pow.abilities.skills[action];
     if (!abilityHasLegalTarget(ability, actor, this.combatState.units)) { this.createActionMenu(actor); return; }
     const mode = abilityTargetMode(ability);
-    if (mode === 'self') { void this.performAbility(actor, actor, action); return; }
+    if (mode === 'self') { this.beginAcademicAction(actor, actor, action); return; }
     if (mode === 'deadAlly') {
       const fallen = this.combatState.units.filter((unit) => unit.side === actor.side && !unit.alive).sort((a, b) => a.slot - b.slot)[0];
-      if (fallen) void this.performAbility(actor, fallen, action); else this.createActionMenu(actor);
+      if (fallen) this.beginAcademicAction(actor, fallen, action); else this.createActionMenu(actor);
       return;
     }
     this.pendingPlayerAction = { actorId: actor.instanceId, action, targetMode: mode };
@@ -315,13 +404,17 @@ export class BattleScene extends Phaser.Scene {
     const targets = mode === 'enemy'
       ? this.combatState.activeLiving(actor.side === 'player' ? 'enemy' : 'player')
       : this.combatState.activeLiving(actor.side).filter((unit) => !requireDebuff || hasNegativeStatus(unit));
-    targets.forEach((target) => this.powViews.get(target.instanceId)?.setTargetable(true));
+    targets.forEach((target) => this.powViews.get(target.instanceId)?.setTargetable(true, mode));
     const prompt = mode === 'enemy'
       ? 'CHỌN POW ĐỊCH'
       : requireDebuff
         ? 'CHỌN ĐỒNG MINH CẦN THANH TẨY'
         : 'CHỌN ĐỒNG MINH';
-    this.turnText.setText(prompt).setColor(mode === 'enemy' ? '#8eeaff' : '#73f0aa');
+    const actionName = ability?.name || actor.pow.abilities.basic.name || 'ĐÒN CƠ BẢN';
+    const actionCue = `${this.shortName(actor.pow.name, 16)} · ${this.shortName(actionName, 22)}`.toUpperCase();
+    const cueColor = mode === 'enemy' ? '#8eeaff' : '#73f0aa';
+    this.roundText.setText(actionCue).setColor(cueColor).setVisible(true);
+    this.turnText.setText(`${prompt} · ${targets.length} HỢP LỆ`).setColor(cueColor).setVisible(true);
   }
 
   private createUndoMenu(actor: CombatUnitState): void {
@@ -355,8 +448,105 @@ export class BattleScene extends Phaser.Scene {
     this.pendingPlayerAction = null;
     this.destroyUndoMenu();
     this.clearTargeting();
+    this.beginAcademicAction(actor, target, action);
+  }
+
+  private beginAcademicAction(actor: CombatUnitState, target: CombatUnitState, action: 'basic' | CombatAbilitySlot): void {
+    if (!this.handoffRequest?.academicContext.requiresActionQuestions) {
+      this.executePlayerAction(actor, target, action);
+      return;
+    }
+    if (this.academicQuestionModal || !actor.alive || this.combatState.currentUnitId !== actor.instanceId) return;
+    const question = this.nextAcademicQuestion();
+    if (!question) {
+      this.turnText.setText('Khong co cau hoi hop le cho hanh dong nay').setColor('#ffb29f');
+      this.createActionMenu(actor);
+      return;
+    }
+    this.pendingAcademicAction = { actor, target, action };
+    this.showAcademicQuestion(question);
+  }
+
+  private executePlayerAction(actor: CombatUnitState, target: CombatUnitState, action: 'basic' | CombatAbilitySlot): void {
     if (action === 'basic') void this.performBasicAttack(actor, target);
     else void this.performAbility(actor, target, action);
+  }
+
+  private nextAcademicQuestion(): AcademicCombatQuestion | null {
+    if (!this.academicQuestions.length) return null;
+    const question = this.academicQuestions[this.academicQuestionIndex % this.academicQuestions.length];
+    this.academicQuestionIndex += 1;
+    return question;
+  }
+
+  private showAcademicQuestion(question: AcademicCombatQuestion): void {
+    const compact = this.scale.width < 600 || this.scale.height > this.scale.width;
+    const width = Math.min(compact ? this.scale.width - 28 : 720, this.scale.width - 44);
+    const optionColumns = compact ? 1 : 2;
+    const optionGap = 10;
+    const optionWidth = (width - 44 - optionGap * (optionColumns - 1)) / optionColumns;
+    const optionHeight = compact ? 56 : 60;
+    const optionRows = Math.ceil(question.options.length / optionColumns);
+    const height = Math.min(this.scale.height - 28, 176 + optionRows * (optionHeight + optionGap) + 62);
+    const root = this.add.container(this.scale.width / 2, this.scale.height / 2).setDepth(90);
+    const panel = this.add.rectangle(0, 0, width, height, 0x071827, 0.985).setStrokeStyle(2, 0x91dff3, 0.8);
+    const title = this.add.text(-width / 2 + 22, -height / 2 + 20, `${question.language === 'ZH' ? 'TIENG TRUNG' : 'TIENG ANH'} · CAU HOI KICH HOAT`, {
+      fontFamily: COMBAT_DISPLAY_FONT, fontSize: compact ? '13px' : '15px', color: '#9de8ff', fontStyle: 'bold'
+    });
+    const prompt = this.add.text(0, -height / 2 + 66, question.prompt, {
+      fontFamily: COMBAT_BODY_FONT, fontSize: compact ? '18px' : '21px', color: '#fff6df', fontStyle: 'bold', align: 'center', wordWrap: { width: width - 50 }
+    }).setOrigin(0.5, 0);
+    const feedback = this.add.text(0, height / 2 - 28, '', {
+      fontFamily: COMBAT_BODY_FONT, fontSize: compact ? '13px' : '14px', color: '#cfe8ee', align: 'center', wordWrap: { width: width - 48 }
+    }).setOrigin(0.5);
+    root.add([panel, title, prompt, feedback]);
+
+    const optionTop = -height / 2 + 126;
+    question.options.forEach((option, index) => {
+      const row = Math.floor(index / optionColumns);
+      const column = index % optionColumns;
+      const x = -width / 2 + 22 + optionWidth / 2 + column * (optionWidth + optionGap);
+      const y = optionTop + row * (optionHeight + optionGap);
+      const card = this.add.rectangle(x, y, optionWidth, optionHeight, 0x12354a, 0.96).setStrokeStyle(1.5, 0x71c6df, 0.7);
+      const label = this.add.text(x - optionWidth / 2 + 13, y, `${String.fromCharCode(65 + index)}. ${option}`, {
+        fontFamily: COMBAT_BODY_FONT, fontSize: compact ? '14px' : '15px', color: '#f2fbff', fontStyle: 'bold', wordWrap: { width: optionWidth - 24 }
+      }).setOrigin(0, 0.5);
+      const hit = this.add.rectangle(x, y, optionWidth, optionHeight, 0xffffff, 0.001).setInteractive({ useHandCursor: true });
+      hit.once('pointerup', () => this.answerAcademicQuestion(question, option, root, card, feedback));
+      root.add([card, label, hit]);
+    });
+    this.academicQuestionModal = root;
+  }
+
+  private answerAcademicQuestion(
+    question: AcademicCombatQuestion,
+    choice: string,
+    root: Phaser.GameObjects.Container,
+    selectedCard: Phaser.GameObjects.Rectangle,
+    feedback: Phaser.GameObjects.Text
+  ): void {
+    if (this.academicQuestionModal !== root || !this.pendingAcademicAction) return;
+    const correct = choice === question.answer;
+    root.getAll().forEach((child) => {
+      if (child instanceof Phaser.GameObjects.Rectangle && child.input) child.disableInteractive();
+    });
+    selectedCard.setFillStyle(correct ? 0x197653 : 0x863b48, 1).setStrokeStyle(2, correct ? 0x8ff3ba : 0xffadb7, 1);
+    feedback.setColor(correct ? '#9affc4' : '#ffb1ba').setText(correct
+      ? `CHINH XAC${question.explain ? ` · ${question.explain}` : ''}`
+      : `CHUA DUNG · Dap an: ${question.answer}${question.explain ? ` · ${question.explain}` : ''}`);
+    const pending = this.pendingAcademicAction;
+    this.academicResponses.push({ question, correct, powId: pending.actor.pow.id });
+    this.time.delayedCall(correct ? 480 : 680, () => {
+      if (this.academicQuestionModal !== root) return;
+      this.clearAcademicQuestion();
+      this.executePlayerAction(pending.actor, pending.target, pending.action);
+    });
+  }
+
+  private clearAcademicQuestion(): void {
+    this.academicQuestionModal?.destroy(true);
+    this.academicQuestionModal = null;
+    this.pendingAcademicAction = null;
   }
 
   private async performBasicAttack(actor: CombatUnitState, requestedTarget: CombatUnitState): Promise<void> {
@@ -373,6 +563,7 @@ export class BattleScene extends Phaser.Scene {
       this.showActionBanner(actorView, actor.pow.abilities.basic.name, '#8eeaff');
       if (actorView && targetView) { const p = targetView.getWorldPosition(); await actorView.playAttackLunge(p.x, p.y); }
       const result = this.basicAttack.resolve(actor, target);
+      this.handleBossAction(actor, { targetId: target.instanceId });
       this.combatState.sanitizeRuntimeNumbers();
       this.refreshViews();
       if (targetView) {
@@ -420,6 +611,7 @@ export class BattleScene extends Phaser.Scene {
       const result = slot === 'ultimate'
         ? this.skillActions.resolveUltimate(actor, target, ability, this.combatState.round)
         : this.skillActions.resolve(actor, target, ability, slot, this.combatState.round);
+      this.handleBossAction(actor, { cleansed: result.cleansed, targetId: target.instanceId });
       if (result.targetSpeedChanged && target.instanceId !== actor.instanceId) this.turnManager.rescheduleUnit(target.instanceId);
       this.combatState.sanitizeRuntimeNumbers();
       this.refreshViews();
@@ -513,6 +705,14 @@ export class BattleScene extends Phaser.Scene {
 
   private afterAction(): void { void this.settleAfterAction(); }
 
+  private handleBossAction(actor: CombatUnitState, result: { cleansed?: boolean; targetId?: string } = {}): void {
+    const event = this.bossMode?.afterAction(actor, result);
+    if (!event) return;
+    this.combatState.sanitizeRuntimeNumbers();
+    this.refreshViews();
+    for (const targetId of event.targetIds) this.showFloatingLabel(this.powViews.get(targetId), event.label, event.phaseChanged ? '#ffd36a' : '#ffcf7a');
+  }
+
   private async settleAfterAction(): Promise<void> {
     if (this.lineupSettling) return;
     this.lineupSettling = true;
@@ -573,11 +773,46 @@ export class BattleScene extends Phaser.Scene {
 
   private showActionBanner(view: PowView | undefined, name: string, color: string): void {
     if (!view) return;
+    this.clearActionBanner();
     const p = view.getWorldPosition();
     const top = p.y < this.scale.height / 2;
     const y = top ? Math.min(this.scale.height / 2 - 115, p.y + 160) : Math.max(this.scale.height / 2 + 115, p.y - 160);
-    const text = this.add.text(p.x, y, this.shortName(name, 32).toUpperCase(), { fontFamily: COMBAT_DISPLAY_FONT, fontSize: '21px', color, fontStyle: 'bold', backgroundColor: '#07131ddd', padding: { x: 13, y: 8 }, stroke: '#06111c', strokeThickness: 3 }).setOrigin(0.5).setDepth(46);
-    this.tweens.add({ targets: text, y: y + (top ? 12 : -12), alpha: 0, delay: 480, duration: 1000, ease: 'Quad.easeOut', onComplete: () => text.destroy() });
+    const direction = top ? 1 : -1;
+    const text = this.add.text(p.x, y - direction * 8, this.shortName(name, 32).toUpperCase(), { fontFamily: COMBAT_DISPLAY_FONT, fontSize: '21px', color, fontStyle: 'bold', backgroundColor: '#07131ddd', padding: { x: 13, y: 8 }, stroke: '#06111c', strokeThickness: 3 })
+      .setOrigin(0.5)
+      .setDepth(46)
+      .setAlpha(0);
+    this.actionBanner = text;
+    // Presentation-only lifecycle: 220ms appear, 1650ms readable hold, 300ms fade.
+    this.tweens.add({
+      targets: text,
+      y,
+      alpha: 1,
+      duration: 220,
+      ease: 'Sine.easeOut',
+      onComplete: () => {
+        if (this.actionBanner !== text || !text.active) return;
+        this.tweens.add({
+          targets: text,
+          y: y + direction * 10,
+          alpha: 0,
+          delay: 1650,
+          duration: 300,
+          ease: 'Quad.easeOut',
+          onComplete: () => {
+            if (this.actionBanner === text) this.actionBanner = null;
+            text.destroy();
+          }
+        });
+      }
+    });
+  }
+
+  private clearActionBanner(): void {
+    if (!this.actionBanner) return;
+    this.tweens.killTweensOf(this.actionBanner);
+    this.actionBanner.destroy();
+    this.actionBanner = null;
   }
 
   private showDamageNumber(view: PowView, hpDamage: number, shieldDamage: number, defeated: boolean, crit = false): void {
@@ -616,6 +851,60 @@ export class BattleScene extends Phaser.Scene {
     const win = this.combatState.living('player').length > 0 && this.combatState.living('enemy').length === 0;
     this.turnText.setText('');
     this.roundText.setText(win ? 'CHIẾN THẮNG' : 'THẤT BẠI').setFontSize(34).setColor(win ? '#73f0aa' : '#ff7282');
+    if (this.handoffRequest) this.showHandoffResult(win ? 'victory' : 'defeat');
+  }
+
+  private showHandoffError(width: number, height: number, message: string): void {
+    const root = this.add.container(width / 2, height / 2).setDepth(200);
+    const plate = this.add.rectangle(0, 0, Math.min(width * 0.78, 720), 260, 0x081723, 0.98).setStrokeStyle(2, 0xffb578, 0.85);
+    const title = this.add.text(0, -72, 'KHONG THE KHOI TAO TRAN', { fontFamily: COMBAT_DISPLAY_FONT, fontSize: '29px', color: '#ffe0c1', fontStyle: 'bold' }).setOrigin(0.5);
+    const detail = this.add.text(0, -14, message, { fontFamily: COMBAT_BODY_FONT, fontSize: '17px', color: '#d2e3ea', align: 'center', wordWrap: { width: Math.min(width * 0.62, 570) } }).setOrigin(0.5);
+    const button = this.add.rectangle(0, 80, 230, 48, 0x1d7d9c, 0.9).setStrokeStyle(1, 0xa9edff, 0.9).setInteractive({ useHandCursor: true });
+    const label = this.add.text(0, 80, 'VE MAIN', { fontFamily: COMBAT_BODY_FONT, fontSize: '18px', color: '#f5fdff', fontStyle: 'bold' }).setOrigin(0.5);
+    button.on('pointerup', () => { window.location.assign(new URL('./', window.location.href).toString()); });
+    root.add([plate, title, detail, button, label]);
+  }
+
+  private handoffResult(kind: Combat2BattleResult['result']): Partial<Combat2BattleResult> {
+    const request = this.handoffRequest!;
+    const survivors = (side: CombatSide) => this.combatState.living(side).map((unit) => ({
+      id: unit.pow.id,
+      hp: Math.round(unit.hp),
+      maxHp: Math.round(unit.pow.maxHp),
+      rage: Math.round(unit.ragePoints)
+    }));
+    return createCombat2BattleResult(request, {
+      result: kind,
+      survivingState: { player: survivors('player'), enemy: survivors('enemy'), round: this.combatState.round },
+      academicResponses: this.academicResponses,
+      bossOutcome: this.bossMode?.snapshot()
+    });
+  }
+
+  private showHandoffResult(kind: Combat2BattleResult['result']): void {
+    if (this.resultOverlay || !this.handoffRequest) return;
+    const result = this.handoffResult(kind);
+    const published = publishCombat2BattleResult(result);
+    if (!published.ok) {
+      this.showHandoffError(this.scale.width, this.scale.height, published.errors?.join('; ') || 'Khong the luu ket qua tran');
+      return;
+    }
+    const win = kind === 'victory';
+    const root = this.add.container(this.scale.width / 2, this.scale.height / 2).setDepth(200);
+    const plate = this.add.rectangle(0, 0, Math.min(this.scale.width * 0.78, 720), 276, 0x071621, 0.985).setStrokeStyle(3, win ? 0x73f0aa : 0xff7282, 0.9);
+    const title = this.add.text(0, -78, win ? 'CHIEN THANG' : 'THAT BAI', { fontFamily: COMBAT_DISPLAY_FONT, fontSize: '38px', color: win ? '#9affc4' : '#ffacb6', fontStyle: 'bold' }).setOrigin(0.5);
+    const mode = this.add.text(0, -28, `KET QUA ${this.handoffRequest.battleMode.toUpperCase()} · VONG ${this.combatState.round}`, { fontFamily: COMBAT_BODY_FONT, fontSize: '17px', color: '#d7e8ee', fontStyle: 'bold' }).setOrigin(0.5);
+    const note = this.add.text(0, 14, win ? 'Ket qua da san sang de Main xu ly phan thuong mot lan.' : 'Khong co phan thuong khi that bai.', { fontFamily: COMBAT_BODY_FONT, fontSize: '16px', color: '#b8ced8', align: 'center', wordWrap: { width: 540 } }).setOrigin(0.5);
+    const button = this.add.rectangle(0, 90, 250, 50, win ? 0x287a58 : 0x8a3444, 0.95).setStrokeStyle(1, 0xf1f7f5, 0.85).setInteractive({ useHandCursor: true });
+    const buttonLabel = this.add.text(0, 90, 'VE PHIEU LUU', { fontFamily: COMBAT_BODY_FONT, fontSize: '18px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+    button.on('pointerup', () => {
+      this.stopBattleMusic();
+      this.tweens.killAll();
+      this.input.removeAllListeners();
+      returnCombat2ResultToMain(result);
+    });
+    root.add([plate, title, mode, note, button, buttonLabel]);
+    this.resultOverlay = root;
   }
 
   private refreshViews(): void { for (const unit of this.combatState.units) this.powViews.get(unit.instanceId)?.updateRuntime(unit); }

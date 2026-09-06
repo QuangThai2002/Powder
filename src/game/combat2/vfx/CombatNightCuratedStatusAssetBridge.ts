@@ -187,6 +187,14 @@ export function installCombatNightCuratedStatusAssetBridge(): void {
     duplicateLegacyPersistentHidden: true,
     combatLogicChanged: false
   };
+  root.POWDER_COMBAT2_STATUS_FX = {
+    version: INSTALL_VERSION,
+    mode: 'real-spritesheet-ordered-frames',
+    owner: 'CombatNightCuratedStatusAssetBridge',
+    oneSpritePerPow: true,
+    orderedFrames: true,
+    combatLogicChanged: false
+  };
 
   root.POWDER_COMBAT2_NIGHT_PERSISTENT_STATUS = {
     ...(root.POWDER_COMBAT2_NIGHT_PERSISTENT_STATUS || {}),

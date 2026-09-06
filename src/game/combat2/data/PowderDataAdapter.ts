@@ -146,6 +146,7 @@ function normalizeText(value: string | undefined): string {
   return String(value || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, 'd')
     .toLowerCase()
     .trim();
 }
@@ -515,3 +516,18 @@ export const ALL_COMBAT2_STARTER_POWS: CombatPow[] = [
   ...COMBAT2_STARTER_ROSTER.enemy,
   ...COMBAT2_STARTER_ROSTER.player
 ];
+
+/** Build an isolated canonical Pow fixture without mutating the active test roster. */
+export function combatPowById(id: string): CombatPow | null {
+  const normalizedId = String(id || '').trim().toLowerCase();
+  const source = catalogPows.find((pow) => String(pow.id || '').trim().toLowerCase() === normalizedId);
+  return source && isCombatReadyCatalogPow(source) ? toCombatPow(source) : null;
+}
+
+/** Hydrates only the Pow IDs supplied by a validated Main -> Combat2 request. */
+export function combatTeamByIds(ids: readonly string[]): CombatPow[] | null {
+  const normalized = Array.from(new Set(ids.map((id) => String(id || '').trim().toLowerCase()).filter(Boolean))).slice(0, TOTAL_TEAM_SIZE);
+  if (!normalized.length) return null;
+  const team = normalized.map(combatPowById);
+  return team.every((pow): pow is CombatPow => Boolean(pow)) ? team : null;
+}

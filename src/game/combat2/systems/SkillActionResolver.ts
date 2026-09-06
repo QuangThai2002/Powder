@@ -12,7 +12,7 @@ import { CombatLegacyStatEngine } from './CombatLegacyStatEngine';
 import {
   ACTION_BASE_RAW_GAIN,
   ULTIMATE_RAGE_COST,
-  applyRawRageGain,
+  applyRageEvent,
   canUseUltimate as rageCanUseUltimate,
   spendUltimate
 } from './CombatRageEngine';
@@ -162,6 +162,7 @@ export class SkillActionResolver {
     rageSpent: number,
     currentRound: number
   ): SkillActionResult {
+    const rageBeforeEvent = actor.ragePoints + rageSpent;
     const abilityType = String(ability.type || '').trim().toLowerCase();
     const parsedStatus = this.parseStatus(ability.status);
     const noDirectDamage =
@@ -188,8 +189,11 @@ export class SkillActionResolver {
     const statusResult = damageResult.evaded && !noDirectDamage
       ? this.emptyStatusResult('evade')
       : this.applyStatus(actor, target, ability, currentRound, damageResult.damage);
-    const rawRageGain = this.previewRawRageGain(ability, abilitySlot);
-    const rageResult = applyRawRageGain(actor.ragePoints, rawRageGain);
+    const rageResult = applyRageEvent(rageBeforeEvent, [
+      abilitySlot === 'ultimate' ? 0 : ACTION_BASE_RAW_GAIN,
+      this.resourceBonusRaw(ability.status)
+    ], rageSpent);
+    const rawRageGain = rageResult.rawGain;
     actor.ragePoints = rageResult.next;
     const cooldownApplied = cooldownForAbility(ability, abilitySlot);
     this.applyCooldown(actor, abilitySlot, cooldownApplied);
@@ -604,6 +608,7 @@ export class SkillActionResolver {
     return String(unit.pow.role || '')
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[đĐ]/g, 'd')
       .toLowerCase();
   }
 

@@ -5,6 +5,7 @@ import {
   type LegacyExpansionDomainId,
   type LegacySimpleDomainId
 } from '../systems/CombatLegacyDomainEngine';
+import { strokeQuadraticPath } from '../vfx/CombatVfxDrawing';
 import { COMBAT_BODY_FONT, COMBAT_DISPLAY_FONT } from './CombatTheme';
 
 interface DomainSnapshot {
@@ -123,11 +124,10 @@ function drawBranchMotif(scene: Phaser.Scene, branch: Branch, side: 'player' | '
     g.lineStyle(3, palette.accent, expansion ? 0.45 : 0.24);
     for (let i = -2; i <= 2; i += 1) {
       const yy = i * 21;
-      g.beginPath();
-      g.moveTo(-zoneW * 0.26, yy);
-      g.quadraticBezierTo(-zoneW * 0.09, yy - 18, zoneW * 0.02, yy);
-      g.quadraticBezierTo(zoneW * 0.15, yy + 18, zoneW * 0.28, yy);
-      g.strokePath();
+      strokeQuadraticPath(g, -zoneW * 0.26, yy, [
+        { controlX: -zoneW * 0.09, controlY: yy - 18, endX: zoneW * 0.02, endY: yy },
+        { controlX: zoneW * 0.15, controlY: yy + 18, endX: zoneW * 0.28, endY: yy }
+      ]);
     }
   } else {
     g.lineStyle(2.5, palette.accent, expansion ? 0.45 : 0.24);

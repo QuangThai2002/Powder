@@ -326,7 +326,7 @@ export function installCombat2130AssetVfxPatch(BattleSceneClass: any, PowViewCla
     }
     void burst(scene, spec, p.x, p.y - 8, tier() === 'full' ? 0.92 : 0.78, 185, 0.62);
     if (this.portrait?.active) {
-      this.portrait.setTintFill(0xffffff);
+      this.portrait.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
       scene.time.delayedCall(reducedMotion() ? 50 : 78, () => { if (this.portrait?.active) this.portrait.clearTint(); });
     }
   };

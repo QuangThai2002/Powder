@@ -2,6 +2,11 @@ import Phaser from 'phaser';
 import type { CombatAbility, CombatSide } from '../data/CombatPow';
 import { COMBAT_BODY_FONT, COMBAT_DISPLAY_FONT } from './CombatTheme';
 import type { PowView } from './PowView';
+import {
+  playCombat2201UltimatePhaseVfx,
+  type Combat2201UltimatePresentationTier
+} from '../vfx/Combat2201HighFantasyAnimeVfx';
+import { CombatVfxTimeline, resolveCombatVfxPresentationMode } from '../vfx/CombatVfxTimeline';
 
 const PATCH_FLAG = '__powderCombat2101UltimateCinematicInstalled';
 
@@ -36,6 +41,11 @@ function colorFor(elementKey: string): number {
   if (key.includes('light') || key.includes('anh sang')) return 0xffefad;
   if (key.includes('dark') || key.includes('bong toi')) return 0xa88cf2;
   return 0x8eeaff;
+}
+
+function presentationTier(): Combat2201UltimatePresentationTier {
+  const requested = String((globalThis as any).POWDER_COMBAT2_ULTIMATE_PRESENTATION_TIER || 'standard');
+  return requested === 'ancient' || requested === 'high' ? requested : 'standard';
 }
 
 function tween(scene: Phaser.Scene, config: Phaser.Types.Tweens.TweenBuilderConfig): Promise<void> {
@@ -117,12 +127,15 @@ export function installCombat2101UltimateCinematicPatch(DirectorClass: any): voi
   ): Promise<void> {
     if (!actorView) return;
     const scene = this.scene;
+    const mode = resolveCombatVfxPresentationMode(reducedMotion());
+    if (mode === 'skip-intro') return;
+    const reduced = mode === 'reduced';
+    const assetTier = presentationTier();
     const { width, height } = scene.scale;
     const p = actorView.getWorldPosition();
     const color = colorFor(elementKey);
     const overlay = scene.add.rectangle(width / 2, height / 2, width, height, 0x01050a, 0.64).setDepth(72).setAlpha(0);
     const flare = scene.add.rectangle(width / 2, p.y, width * 0.82, 7, color, 0.5).setDepth(73).setScale(0, 1);
-    const sigil = motif(scene, p.x, p.y, elementKey, color);
     const bannerY = height * 0.5;
     const bannerWidth = Math.min(720, width * 0.5);
     const banner = scene.add.container(width / 2, bannerY).setDepth(84).setAlpha(0).setScale(0.94);
@@ -140,15 +153,35 @@ export function installCombat2101UltimateCinematicPatch(DirectorClass: any): voi
     }).setOrigin(0, 0.5);
     banner.add([plate, accent, icon, name, sub]);
 
-    if (!reducedMotion()) scene.cameras.main.flash(85, 255, 232, 166, false);
-    const hold = reducedMotion() ? 120 : 360;
-    await Promise.all([
-      tween(scene, { targets: overlay, alpha: 1, duration: reducedMotion() ? 70 : 120, yoyo: true, hold, ease: 'Sine.easeOut' }),
-      tween(scene, { targets: flare, scaleX: 1, duration: reducedMotion() ? 100 : 190, yoyo: true, hold: reducedMotion() ? 20 : 110, ease: 'Cubic.easeOut' }),
-      tween(scene, { targets: sigil, scaleX: 1.18, scaleY: 1.18, rotation: reducedMotion() ? 0 : 0.35, alpha: 0, duration: reducedMotion() ? 250 : 620, ease: 'Quad.easeOut' }),
-      tween(scene, { targets: banner, alpha: 1, scaleX: 1, scaleY: 1, duration: reducedMotion() ? 100 : 160, yoyo: true, hold, ease: 'Back.easeOut' })
-    ]);
-    overlay.destroy(); flare.destroy(); sigil.destroy(true); banner.destroy(true);
+    if (!reduced) scene.cameras.main.flash(85, 255, 232, 166, false);
+    const hold = reduced ? 120 : 360;
+    const timeline = new CombatVfxTimeline(scene, 'ultimate-intro', mode);
+    try {
+      await timeline.runParallel([
+        {
+          phase: 'activate',
+          run: () => Promise.all([
+            tween(scene, { targets: overlay, alpha: 1, duration: reduced ? 70 : 120, yoyo: true, hold, ease: 'Sine.easeOut' }),
+            playCombat2201UltimatePhaseVfx(scene, p, 'intro', assetTier, reduced)
+          ]).then(() => undefined)
+        },
+        {
+          phase: 'pow-emphasis',
+          run: () => tween(scene, { targets: flare, scaleX: 1, duration: reduced ? 100 : 190, yoyo: true, hold: reduced ? 20 : 110, ease: 'Cubic.easeOut' })
+        },
+        {
+          phase: 'charge',
+          run: () => Promise.all([
+            tween(scene, { targets: banner, alpha: 1, scaleX: 1, scaleY: 1, duration: reduced ? 100 : 160, yoyo: true, hold, ease: 'Back.easeOut' }),
+            playCombat2201UltimatePhaseVfx(scene, p, 'charge', assetTier, reduced)
+          ]).then(() => undefined)
+        }
+      ]);
+      await timeline.run('release', () => playCombat2201UltimatePhaseVfx(scene, p, 'release', assetTier, reduced));
+    } finally {
+      timeline.destroy();
+      overlay.destroy(); flare.destroy(); banner.destroy(true);
+    }
   };
 
   proto.playUltimateImpact = async function combat2101UltimateImpact(
@@ -160,15 +193,40 @@ export function installCombat2101UltimateCinematicPatch(DirectorClass: any): voi
     if (!targetView) return;
     const scene = this.scene;
     const p = targetView.getWorldPosition();
-    const fx = finisher(scene, p.x, p.y, elementKey);
+    const mode = resolveCombatVfxPresentationMode(reducedMotion());
+    const reduced = mode === 'reduced';
+    const assetTier = presentationTier();
     const field = scene.add.rectangle(scene.scale.width / 2, scene.scale.height / 2, scene.scale.width, scene.scale.height, selfTargeted ? 0x73f0aa : colorFor(elementKey), 0.08).setDepth(75).setAlpha(0.58);
-    if (!reducedMotion() && !selfTargeted) scene.cameras.main.shake(135, 0.0024);
-    await Promise.all([
-      tween(scene, { targets: fx, scaleX: 1.8, scaleY: 1.8, alpha: 0, duration: reducedMotion() ? 150 : 280, ease: 'Quad.easeOut' }),
-      tween(scene, { targets: field, alpha: 0, duration: reducedMotion() ? 130 : 240, ease: 'Quad.easeOut' })
-    ]);
-    fx.destroy(true); field.destroy();
+    if (!reduced && !selfTargeted) scene.cameras.main.shake(135, 0.0024);
+    const timeline = new CombatVfxTimeline(scene, 'ultimate-impact', mode);
+    try {
+      await timeline.runParallel([
+        {
+          phase: 'impact',
+          run: () => Promise.all([
+            playCombat2201UltimatePhaseVfx(scene, p, 'impact', assetTier, reduced)
+          ]).then(() => undefined)
+        },
+        {
+          phase: 'hit-reaction',
+          run: () => tween(scene, { targets: field, alpha: 0, duration: reduced ? 130 : 240, ease: 'Quad.easeOut' })
+        }
+      ]);
+      // Finish belongs after the real attack and impact, not in the intro banner.
+      await timeline.run('finish', () => playCombat2201UltimatePhaseVfx(scene, p, 'finish', assetTier, reduced));
+    } finally {
+      timeline.destroy();
+      field.destroy();
+    }
   };
 
-  root.POWDER_COMBAT2_ULTIMATE_FX = { version: '2.10.1', lowFx: lowFx(), reducedMotion: reducedMotion() };
+  root.POWDER_COMBAT2_ULTIMATE_FX = {
+    version: '2.10.1',
+    lowFx: lowFx(),
+    reducedMotion: reducedMotion(),
+    presentationTimeline: true,
+    phases: ['activate', 'pow-emphasis', 'magic-circle', 'charge', 'release', 'impact', 'hit-reaction', 'finish'],
+    skipIntroHook: 'POWDER_COMBAT2_ULTIMATE_VFX_MODE=skip-intro',
+    gameplayIndependent: true
+  };
 }

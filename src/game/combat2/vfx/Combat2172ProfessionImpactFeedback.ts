@@ -34,7 +34,7 @@ const ELEMENT_PALETTE: Readonly<Record<CombatProjectileElement, Palette>> = Obje
 });
 
 function normalize(value: string): string {
-  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase().trim();
 }
 
 export function resolveCombat2172MeleeRole(role?: string): Combat2172MeleeRole | null {
@@ -53,7 +53,7 @@ function isMeleeRole(role: Combat2172ProfessionRole): role is Combat2172MeleeRol
 function tween(
   scene: Phaser.Scene,
   target: Phaser.GameObjects.GameObject | object,
-  config: Phaser.Types.Tweens.TweenBuilderConfig,
+  config: CombatTweenConfig,
   fallbackMs: number
 ): Promise<void> {
   return new Promise((resolve) => {
@@ -152,7 +152,7 @@ export async function playCombat2172ImpactFeedback(
   role: Combat2172ProfessionRole,
   tier: Combat2172ProfessionTier
 ): Promise<void> {
-  shake(options.scene, role, tier, options.reducedMotion);
+  shake(options.scene, role, tier, Boolean(options.reducedMotion));
   const root = makeImpactBurst(options, tier);
   const duration = tier === 'ultimate' ? 230 : tier === 'skill' ? 165 : 105;
   root.setScale(tier === 'ultimate' ? 0.56 : tier === 'skill' ? 0.68 : 0.78);

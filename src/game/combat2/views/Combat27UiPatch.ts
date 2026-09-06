@@ -2,7 +2,8 @@ import Phaser from 'phaser';
 import type { CombatAbility } from '../data/CombatPow';
 import { abilityHasLegalTarget } from '../systems/CombatAbilityTargeting';
 import type { CombatUnitState } from '../systems/CombatState';
-import { ACTION_BASE_RAW_GAIN } from '../systems/CombatRageEngine';
+import { ACTION_BASE_RAW_GAIN, ULTIMATE_RAGE_COST, canUseUltimate } from '../systems/CombatRageEngine';
+import { createCombat2201UltimateReadyCircle } from '../vfx/Combat2201HighFantasyAnimeVfx';
 import { COMBAT_BODY_FONT, COMBAT_DISPLAY_FONT } from './CombatTheme';
 
 interface PatchableScene extends Phaser.Scene {
@@ -11,6 +12,8 @@ interface PatchableScene extends Phaser.Scene {
   actionMenu: Phaser.GameObjects.Container | null;
   pendingPlayerAction: unknown;
   flowStarted: boolean;
+  roundText: Phaser.GameObjects.Text;
+  turnText: Phaser.GameObjects.Text;
   destroyActionMenu: () => void;
   destroyUndoMenu: () => void;
   clearTargeting: () => void;
@@ -28,6 +31,7 @@ interface PatchablePowView {
   cardHeight: number;
   barWidth: number;
   container: Phaser.GameObjects.Container;
+  portrait: Phaser.GameObjects.Image;
   hpBar: Phaser.GameObjects.Rectangle;
   hpText: Phaser.GameObjects.Text;
   statusText: Phaser.GameObjects.Text;
@@ -36,12 +40,14 @@ interface PatchablePowView {
   combat27ShieldBar?: Phaser.GameObjects.Rectangle;
   combat27ShieldFrame?: Phaser.GameObjects.Rectangle;
   combat271UltimateReadyFx?: Phaser.GameObjects.Container;
+  getVfxAnchor?: (anchor: 'body') => Phaser.Math.Vector2;
 }
 
 const PATCH_FLAG = '__powderCombat27UiInstalled';
 const STATUS_ICON_SIZE = 18;
 const STATUS_ICON_GAP = 5;
-const ULTIMATE_READY_RAGE = 4;
+const ULTIMATE_READY_CIRCLE_Y_OFFSET = 20;
+const ULTIMATE_READY_RAGE = ULTIMATE_RAGE_COST;
 
 function normalize(value: unknown): string {
   return String(value || '').replace(/^self:/i, '').trim().toLowerCase();
@@ -141,83 +147,77 @@ function elementVisual(pow: any): ElementVisual {
   return { key: 'generic', color: 0xd8a857, secondary: 0xffe3a0 };
 }
 
-function addElementalReadyFx(
-  scene: Phaser.Scene,
-  parent: Phaser.GameObjects.Container,
-  x: number,
-  y: number,
-  pow: any,
-  radius: number,
-  compact = false
-): Phaser.GameObjects.Container {
-  const visual = elementVisual(pow);
-  const fx = scene.add.container(x, y);
-  const ring = scene.add.circle(0, 0, radius, visual.color, compact ? 0.025 : 0.035)
-    .setStrokeStyle(compact ? 2 : 3, visual.color, compact ? 0.72 : 0.78);
-  const inner = scene.add.circle(0, 0, radius * 0.82, 0x000000, 0)
-    .setStrokeStyle(1, visual.secondary, 0.28);
-  fx.add([ring, inner]);
-
-  const count = compact ? 4 : 6;
-  for (let i = 0; i < count; i += 1) {
-    const angle = (Math.PI * 2 * i) / count;
-    const distance = radius * (0.92 + (i % 2) * 0.1);
-    let deco: Phaser.GameObjects.GameObject;
-    const dx = Math.cos(angle) * distance;
-    const dy = Math.sin(angle) * distance;
-
-    if (visual.key === 'fire' || visual.key === 'lava') {
-      deco = scene.add.triangle(dx, dy, 0, 10, 5, 0, 10, 10, i % 2 ? visual.secondary : visual.color, 0.78)
-        .setRotation(angle + Math.PI / 2).setScale(compact ? 0.7 : 0.9);
-    } else if (visual.key === 'lightning' || visual.key === 'storm') {
-      const bolt = scene.add.graphics();
-      bolt.lineStyle(compact ? 2 : 3, i % 2 ? visual.secondary : visual.color, 0.9);
-      bolt.beginPath(); bolt.moveTo(dx - 4, dy - 7); bolt.lineTo(dx + 2, dy - 1); bolt.lineTo(dx - 1, dy + 3); bolt.lineTo(dx + 6, dy + 8); bolt.strokePath();
-      deco = bolt;
-    } else if (visual.key === 'water' || visual.key === 'wind') {
-      const wave = scene.add.arc(dx, dy, compact ? 8 : 10, 205, 345, false, 0x000000, 0)
-        .setStrokeStyle(compact ? 2 : 3, i % 2 ? visual.secondary : visual.color, 0.75).setRotation(angle);
-      deco = wave;
-    } else if (visual.key === 'ice') {
-      deco = scene.add.rectangle(dx, dy, compact ? 4 : 5, compact ? 14 : 18, i % 2 ? visual.secondary : visual.color, 0.8)
-        .setRotation(angle + Math.PI / 2);
-    } else if (visual.key === 'leaf') {
-      deco = scene.add.ellipse(dx, dy, compact ? 9 : 12, compact ? 5 : 6, i % 2 ? visual.secondary : visual.color, 0.75)
-        .setRotation(angle + 0.45);
-    } else if (visual.key === 'poison') {
-      deco = scene.add.circle(dx, dy, compact ? 4 : 6, i % 2 ? visual.secondary : visual.color, 0.42)
-        .setStrokeStyle(1, visual.secondary, 0.72);
-    } else if (visual.key === 'earth') {
-      deco = scene.add.polygon(dx, dy, [0, -7, 7, -2, 5, 6, -4, 7, -8, 0], i % 2 ? visual.secondary : visual.color, 0.64)
-        .setScale(compact ? 0.75 : 1);
-    } else if (visual.key === 'steel') {
-      deco = scene.add.rectangle(dx, dy, compact ? 10 : 13, compact ? 3 : 4, i % 2 ? visual.secondary : visual.color, 0.82)
-        .setRotation(angle + Math.PI / 2);
-    } else if (visual.key === 'light') {
-      deco = scene.add.star(dx, dy, 4, compact ? 3 : 4, compact ? 7 : 9, i % 2 ? visual.secondary : visual.color, 0.82);
-    } else if (visual.key === 'dark') {
-      deco = scene.add.arc(dx, dy, compact ? 7 : 9, 55, 305, false, 0x000000, 0)
-        .setStrokeStyle(compact ? 2 : 3, i % 2 ? visual.secondary : visual.color, 0.78).setRotation(angle);
-    } else {
-      deco = scene.add.circle(dx, dy, compact ? 3 : 4, i % 2 ? visual.secondary : visual.color, 0.8);
-    }
-    fx.add(deco);
-  }
-
-  parent.add(fx);
-  scene.tweens.add({ targets: ring, alpha: compact ? 0.95 : 1, scaleX: 1.06, scaleY: 1.06, yoyo: true, repeat: -1, duration: compact ? 760 : 920, ease: 'Sine.easeInOut' });
-  scene.tweens.add({ targets: inner, alpha: 0.72, scaleX: 0.94, scaleY: 0.94, yoyo: true, repeat: -1, duration: compact ? 980 : 1180, ease: 'Sine.easeInOut' });
-  if (!scene.game.device.os.iOS || !compact) {
-    scene.tweens.add({ targets: fx, angle: visual.key === 'lightning' ? 3 : 360, duration: visual.key === 'lightning' ? 420 : visual.key === 'water' || visual.key === 'wind' ? 5200 : 6800, yoyo: visual.key === 'lightning', repeat: -1, ease: 'Linear' });
-  }
+function addUltimateReadyFx(view: PatchablePowView): Phaser.GameObjects.Container {
+  const worldAnchor = view.getVfxAnchor?.('body');
+  const x = worldAnchor?.x ?? view.container.x;
+  const y = (worldAnchor?.y ?? view.container.y - 42) + ULTIMATE_READY_CIRCLE_Y_OFFSET;
+  // This is a world-space halo, deliberately wider than the card rather than
+  // an in-card portrait decoration. It sits below every PowView at depth -1.
+  const visualDiameter = Math.min(view.cardWidth * 1.18, view.cardHeight * 1.08);
+  const fx = createCombat2201UltimateReadyCircle({
+    scene: view.scene,
+    x,
+    y,
+    rarity: String(view.pow?.rarity || ''),
+    element: view.pow?.elementKey || view.pow?.element,
+    visualDiameter,
+    reducedMotion: Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
+  });
+  // Scene-level display list prevents card/container clipping and ensures the
+  // halo remains entirely behind the card foreground and its HUD.
+  fx.setDepth(-1);
+  view.container.once(Phaser.GameObjects.Events.DESTROY, () => {
+    if (fx.active) fx.destroy(true);
+  });
   return fx;
 }
 
-function actionAvailability(scene: PatchableScene, actor: CombatUnitState, ability: CombatAbility, slot: 0 | 1 | 'ultimate'): boolean {
-  const resourceReady = slot === 'ultimate'
+function syncUltimateReadyFxPosition(view: PatchablePowView): void {
+  const fx = view.combat271UltimateReadyFx;
+  if (!fx?.active) return;
+  const anchor = view.getVfxAnchor?.('body');
+  fx.setPosition(anchor?.x ?? view.container.x, (anchor?.y ?? view.container.y - 42) + ULTIMATE_READY_CIRCLE_Y_OFFSET);
+}
+
+interface ActionAvailability {
+  enabled: boolean;
+  resource: string;
+}
+
+function lockedAction(reason: string): ActionAvailability {
+  return { enabled: false, resource: `KHÓA · ${reason}` };
+}
+
+function basicAvailability(scene: PatchableScene): ActionAvailability {
+  return scene.combatState.activeLiving('enemy').length > 0
+    ? { enabled: true, resource: `+${ACTION_BASE_RAW_GAIN} NỘ · CHỌN ĐỊCH` }
+    : lockedAction('KHÔNG CÓ POW ĐỊCH');
+}
+
+function actionAvailability(
+  scene: PatchableScene,
+  actor: CombatUnitState,
+  ability: CombatAbility,
+  slot: 0 | 1 | 'ultimate'
+): ActionAvailability {
+  if (!actor.alive) return lockedAction('POW ĐÃ HẠ GỤC');
+  if (scene.skillActions.isSilenced(actor)) return lockedAction('CÂM LẶNG · ĐÁNH THƯỜNG');
+
+  const cooldown = scene.skillActions.cooldownRemaining(actor, slot);
+  if (cooldown > 0) return lockedAction(`HỒI CHIÊU · ${cooldown} LƯỢT`);
+
+  if (slot === 'ultimate' && actor.ragePoints < ULTIMATE_RAGE_COST) {
+    const rage = Math.max(0, Math.floor(actor.ragePoints));
+    return lockedAction(`CẦN ${ULTIMATE_RAGE_COST} NỘ · ${rage}/${ULTIMATE_RAGE_COST}`);
+  }
+
+  if (!abilityHasLegalTarget(ability, actor, scene.combatState.units)) return lockedAction('KHÔNG CÓ MỤC TIÊU');
+
+  const ready = slot === 'ultimate'
     ? scene.skillActions.canUseUltimate(actor)
     : scene.skillActions.canUse(actor, slot);
-  return resourceReady && abilityHasLegalTarget(ability, actor, scene.combatState.units);
+  if (!ready) return lockedAction('CHƯA SẴN SÀNG');
+  return { enabled: true, resource: scene.abilityResourceText(actor, ability, slot) };
 }
 
 function createSharedSkillOverlay(this: PatchableScene, actor: CombatUnitState): void {
@@ -225,52 +225,74 @@ function createSharedSkillOverlay(this: PatchableScene, actor: CombatUnitState):
   this.destroyUndoMenu();
   this.clearTargeting();
   this.pendingPlayerAction = null;
+  this.roundText.setVisible(false);
+  this.turnText.setVisible(false);
 
   const basic = actor.pow.abilities.basic;
   const skill1 = actor.pow.abilities.skills[0];
   const skill2 = actor.pow.abilities.skills[1];
   const ultimate = actor.pow.abilities.ultimate;
+  const basicState = basicAvailability(this);
+  const skill1State = actionAvailability(this, actor, skill1, 0);
+  const skill2State = actionAvailability(this, actor, skill2, 1);
+  const ultimateState = actionAvailability(this, actor, ultimate, 'ultimate');
   const actions = [
-    { label: 'ĐÒN CƠ BẢN', ability: basic, slot: 'basic' as const, resource: `+${ACTION_BASE_RAW_GAIN} NỘ`, enabled: this.combatState.activeLiving('enemy').length > 0 },
-    { label: 'KỸ NĂNG I', ability: skill1, slot: 0 as const, resource: this.abilityResourceText(actor, skill1, 0), enabled: actionAvailability(this, actor, skill1, 0) },
-    { label: 'KỸ NĂNG II', ability: skill2, slot: 1 as const, resource: this.abilityResourceText(actor, skill2, 1), enabled: actionAvailability(this, actor, skill2, 1) },
-    { label: 'TUYỆT KỸ', ability: ultimate, slot: 'ultimate' as const, resource: this.abilityResourceText(actor, ultimate, 'ultimate'), enabled: actionAvailability(this, actor, ultimate, 'ultimate') }
+    { label: 'ĐÒN CƠ BẢN', ability: basic, slot: 'basic' as const, ...basicState },
+    { label: 'KỸ NĂNG I', ability: skill1, slot: 0 as const, ...skill1State },
+    { label: 'KỸ NĂNG II', ability: skill2, slot: 1 as const, ...skill2State },
+    { label: 'TUYỆT KỸ', ability: ultimate, slot: 'ultimate' as const, ...ultimateState }
   ];
 
   const width = this.scale.width;
   const height = this.scale.height;
-  const overlayTop = Math.round(height * 0.625);
-  const overlayBottom = height - 8;
+  const compact = height > width || width < 920 || height < 640;
+  const columns = compact ? 2 : 4;
+  const rows = Math.ceil(actions.length / columns);
+  const overlayTop = Math.round(height * (compact ? 0.36 : 0.625));
+  const overlayBottom = height - (compact ? 12 : 8);
   const overlayHeight = overlayBottom - overlayTop;
   const centerY = overlayTop + overlayHeight / 2;
   const menu = this.add.container(0, 0).setDepth(72);
 
   const dim = this.add.rectangle(width / 2, centerY, width, overlayHeight, 0x02080e, 0.68);
   const topFade = this.add.rectangle(width / 2, overlayTop + 8, width, 16, 0x08131d, 0.34);
-  const title = this.add.text(width / 2, overlayTop + 21, 'CHỌN KỸ NĂNG', {
-    fontFamily: COMBAT_DISPLAY_FONT, fontSize: '21px', color: '#f8e9bd', fontStyle: 'bold', stroke: '#06111c', strokeThickness: 3
+  const title = this.add.text(width / 2, overlayTop + 18, `${String(actor.pow.name || '').toUpperCase()} · CHỌN HÀNH ĐỘNG`, {
+    fontFamily: COMBAT_DISPLAY_FONT, fontSize: compact ? '16px' : '19px', color: '#f8e9bd', fontStyle: 'bold', stroke: '#06111c', strokeThickness: 3,
+    fixedWidth: Math.max(220, width - 40), align: 'center'
   }).setOrigin(0.5);
-  const ornamentLeft = this.add.rectangle(width / 2 - 118, overlayTop + 21, 76, 1, 0xd7b86c, 0.35);
-  const ornamentRight = this.add.rectangle(width / 2 + 118, overlayTop + 21, 76, 1, 0xd7b86c, 0.35);
-  menu.add([dim, topFade, title, ornamentLeft, ornamentRight]);
+  const subtitle = this.add.text(width / 2, overlayTop + 39, `${actor.pow.role} · ${actor.pow.element} · NỘ ${Math.max(0, Math.floor(actor.ragePoints))}/${ULTIMATE_RAGE_COST}`, {
+    fontFamily: COMBAT_BODY_FONT, fontSize: compact ? '10px' : '12px', color: '#a9cbd3', fontStyle: 'bold',
+    fixedWidth: Math.max(220, width - 40), align: 'center'
+  }).setOrigin(0.5);
+  const ornamentOffset = compact ? 94 : 128;
+  const ornamentLength = compact ? 42 : 76;
+  const ornamentLeft = this.add.rectangle(width / 2 - ornamentOffset, overlayTop + 18, ornamentLength, 1, 0xd7b86c, 0.35);
+  const ornamentRight = this.add.rectangle(width / 2 + ornamentOffset, overlayTop + 18, ornamentLength, 1, 0xd7b86c, 0.35);
+  menu.add([dim, topFade, title, subtitle, ornamentLeft, ornamentRight]);
 
-  const margin = 62;
-  const gap = 12;
-  const cardWidth = Math.min(322, (width - margin * 2 - gap * 3) / 4);
-  const cardHeight = Math.min(236, overlayHeight - 58);
-  const rowWidth = cardWidth * 4 + gap * 3;
-  const startX = width / 2 - rowWidth / 2 + cardWidth / 2;
-  const cardY = overlayTop + 49 + cardHeight / 2;
-  const ultimateReady = actor.ragePoints >= ULTIMATE_READY_RAGE;
+  const margin = compact ? 18 : 62;
+  const gap = compact ? 10 : 12;
+  const cardWidth = Math.min(compact ? 280 : 322, (width - margin * 2 - gap * (columns - 1)) / columns);
+  const headerHeight = compact ? 62 : 58;
+  const availableCardHeight = overlayHeight - headerHeight - gap * (rows - 1) - 8;
+  const cardHeight = Math.max(compact ? 132 : 124, Math.min(compact ? 224 : 236, availableCardHeight / rows));
+  const cardStartY = overlayTop + headerHeight + cardHeight / 2;
+  const ultimateReady = ultimateState.enabled && actor.ragePoints >= ULTIMATE_READY_RAGE;
   const ultimateElement = elementVisual(actor.pow);
 
   actions.forEach((action, index) => {
+    const row = Math.floor(index / columns);
+    const col = index % columns;
+    const rowCount = Math.min(columns, actions.length - row * columns);
+    const rowWidth = cardWidth * rowCount + gap * (rowCount - 1);
     const ability = action.ability;
     const tag = action.slot === 'basic' ? 'ATK' : action.slot === 'ultimate' ? 'ULT' : this.abilityTag(ability);
     const isUltimate = action.slot === 'ultimate';
     const ready = isUltimate && ultimateReady;
     const accent = ready ? ultimateElement.color : abilityAccent(ability, tag);
-    const x = startX + index * (cardWidth + gap);
+    const x = width / 2 - rowWidth / 2 + cardWidth / 2 + col * (cardWidth + gap);
+    const cardY = cardStartY + row * (cardHeight + gap);
+    const tight = cardHeight < 180;
 
     const bg = this.add.rectangle(x, cardY, cardWidth, cardHeight, 0x07131f, action.enabled ? 0.9 : 0.68)
       .setStrokeStyle(action.enabled ? (ready ? 2.2 : 1.4) : 1, action.enabled ? accent : 0x59636a, action.enabled ? (ready ? 0.96 : 0.68) : 0.36);
@@ -278,13 +300,12 @@ function createSharedSkillOverlay(this: PatchableScene, actor: CombatUnitState):
       .setStrokeStyle(1, action.enabled ? accent : 0x4c5960, action.enabled ? 0.14 : 0.08);
     const accentLine = this.add.rectangle(x, cardY - cardHeight / 2 + 4, cardWidth - 24, 2, accent, action.enabled ? 0.44 : 0.16);
 
-    const iconY = cardY - cardHeight / 2 + 45;
-    const iconPlate = this.add.circle(x, iconY, 33, 0x06111a, 0.9).setStrokeStyle(1.5, accent, action.enabled ? 0.74 : 0.28);
-    if (ready) addElementalReadyFx(this, menu, x, iconY, actor.pow, 43, true);
+    const iconY = cardY - cardHeight / 2 + (tight ? 28 : compact ? 34 : 40);
+    const iconPlate = this.add.circle(x, iconY, tight ? 20 : compact ? 25 : 33, 0x06111a, 0.9).setStrokeStyle(1.5, accent, action.enabled ? 0.74 : 0.28);
 
     let icon: Phaser.GameObjects.Image | Phaser.GameObjects.Text;
     if (ability.iconKey && this.textures.exists(ability.iconKey)) {
-      icon = this.add.image(x, iconY, ability.iconKey).setDisplaySize(56, 56).setAlpha(action.enabled ? 1 : 0.38);
+      icon = this.add.image(x, iconY, ability.iconKey).setDisplaySize(tight ? 34 : compact ? 44 : 56, tight ? 34 : compact ? 44 : 56).setAlpha(action.enabled ? 1 : 0.38);
       if (!action.enabled && icon instanceof Phaser.GameObjects.Image) icon.setTint(0x69777f);
     } else {
       icon = this.add.text(x, iconY, isUltimate ? '✦' : action.slot === 'basic' ? '◆' : String(Number(action.slot) + 1), {
@@ -292,24 +313,24 @@ function createSharedSkillOverlay(this: PatchableScene, actor: CombatUnitState):
       }).setOrigin(0.5);
     }
 
-    const headerY = cardY - cardHeight / 2 + 81;
+    const headerY = cardY - cardHeight / 2 + (tight ? 53 : compact ? 66 : 81);
     const header = this.add.text(x, headerY, `${action.label} · ${tag}`, {
-      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '14px', color: action.enabled ? '#fff0cf' : '#929da2', fontStyle: 'bold', fixedWidth: cardWidth - 22, align: 'center'
+      fontFamily: COMBAT_DISPLAY_FONT, fontSize: tight ? '10px' : compact ? '11px' : '14px', color: action.enabled ? '#fff0cf' : '#929da2', fontStyle: 'bold', fixedWidth: cardWidth - 22, align: 'center'
     }).setOrigin(0.5, 0);
-    const name = this.add.text(x, headerY + 22, String(ability.name || ''), {
-      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '16px', color: action.enabled ? '#d8eff5' : '#7d898e', fontStyle: 'bold', fixedWidth: cardWidth - 22, align: 'center', wordWrap: { width: cardWidth - 26 }
+    const name = this.add.text(x, headerY + (tight ? 17 : compact ? 19 : 22), String(ability.name || ''), {
+      fontFamily: COMBAT_DISPLAY_FONT, fontSize: tight ? '11px' : compact ? '13px' : '16px', color: action.enabled ? '#d8eff5' : '#7d898e', fontStyle: 'bold', fixedWidth: cardWidth - 22, align: 'center', wordWrap: { width: cardWidth - 26 }
     }).setOrigin(0.5, 0);
 
     const desc = abilityDescription(ability);
-    const bodyY = headerY + 50;
+    const bodyY = headerY + (tight ? 33 : compact ? 42 : 50);
     const primary = this.add.text(x - cardWidth / 2 + 13, bodyY, desc.primary, {
-      fontFamily: COMBAT_BODY_FONT, fontSize: '14px', color: action.enabled ? '#edf6f7' : '#78858b', fixedWidth: cardWidth - 26, wordWrap: { width: cardWidth - 26 }, lineSpacing: 2
+      fontFamily: COMBAT_BODY_FONT, fontSize: tight ? '10px' : compact ? '11px' : '14px', color: action.enabled ? '#edf6f7' : '#78858b', fixedWidth: cardWidth - 26, wordWrap: { width: cardWidth - 26 }, lineSpacing: 2
     });
-    const secondary = this.add.text(x - cardWidth / 2 + 13, bodyY + 35, desc.secondary, {
-      fontFamily: COMBAT_BODY_FONT, fontSize: '12px', color: action.enabled ? '#afcbd3' : '#6f7b80', fixedWidth: cardWidth - 26, wordWrap: { width: cardWidth - 26 }, lineSpacing: 1
-    });
+    const secondary = this.add.text(x - cardWidth / 2 + 13, bodyY + (tight ? 22 : compact ? 28 : 35), desc.secondary, {
+      fontFamily: COMBAT_BODY_FONT, fontSize: compact ? '10px' : '12px', color: action.enabled ? '#afcbd3' : '#6f7b80', fixedWidth: cardWidth - 26, wordWrap: { width: cardWidth - 26 }, lineSpacing: 1
+    }).setVisible(!tight);
     const resource = this.add.text(x, cardY + cardHeight / 2 - 17, ready ? `✦ SẴN SÀNG · ${action.resource}` : action.resource, {
-      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '12px', color: action.enabled ? (ready ? '#fff1a7' : '#7de6ff') : '#d09292', fontStyle: 'bold', fixedWidth: cardWidth - 22, align: 'center'
+      fontFamily: COMBAT_DISPLAY_FONT, fontSize: compact ? '10px' : '12px', color: action.enabled ? (ready ? '#fff1a7' : '#7de6ff') : '#ffb0ae', fontStyle: 'bold', fixedWidth: cardWidth - 22, align: 'center', wordWrap: { width: cardWidth - 22 }
     }).setOrigin(0.5);
 
     const hit = this.add.rectangle(x, cardY, cardWidth, cardHeight, 0xffffff, 0.001);
@@ -405,10 +426,11 @@ function installPowHudPatch(PowViewClass: any): void {
     }
     this.combat27ShieldFrame?.setVisible(hasShield);
 
-    const ultimateReady = unit.alive && unit.fieldSlot !== null && unit.ragePoints >= ULTIMATE_READY_RAGE;
+    const ultimateReady = unit.alive && unit.fieldSlot !== null && canUseUltimate(unit.ragePoints);
     if (ultimateReady && !this.combat271UltimateReadyFx) {
-      this.combat271UltimateReadyFx = addElementalReadyFx(this.scene, this.container, 0, -6, unit.pow, Math.max(this.cardWidth, this.cardHeight) * 0.53, false);
-      this.container.sendToBack(this.combat271UltimateReadyFx);
+      this.combat271UltimateReadyFx = addUltimateReadyFx(this);
+    } else if (ultimateReady) {
+      syncUltimateReadyFxPosition(this);
     } else if (!ultimateReady && this.combat271UltimateReadyFx) {
       this.combat271UltimateReadyFx.destroy(true);
       this.combat271UltimateReadyFx = undefined;

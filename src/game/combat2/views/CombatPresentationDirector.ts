@@ -3,6 +3,7 @@ import type { CombatAbility, CombatSide } from '../data/CombatPow';
 import type { ElementOutcome } from '../systems/CombatIdentityRules';
 import { COMBAT_BODY_FONT, COMBAT_DISPLAY_FONT } from './CombatTheme';
 import { PowView } from './PowView';
+import { playCombat2201MagicCircle } from '../vfx/Combat2201HighFantasyAnimeVfx';
 
 export class CombatPresentationDirector {
   private readonly reducedMotion: boolean;
@@ -13,31 +14,21 @@ export class CombatPresentationDirector {
 
   async playSkillIntro(
     actorView: PowView | undefined,
-    targetView: PowView | undefined,
+    _targetView: PowView | undefined,
     _ability: CombatAbility,
-    slot: 0 | 1,
+    _slot: 0 | 1,
     elementKey: string,
-    selfTargeted: boolean
+    _selfTargeted: boolean
   ): Promise<void> {
     if (!actorView) return;
     const actor = actorView.getWorldPosition();
-    const targetVisible = Boolean(targetView?.container.visible);
-    const target = targetVisible && targetView ? targetView.getWorldPosition() : actor;
-    const element = this.elementColor(elementKey);
-    const accent = slot === 0 ? 0x70dced : 0xb69cff;
-    const fx = this.scene.add.container(actor.x, actor.y).setDepth(45).setScale(0.72);
-    fx.add([
-      this.scene.add.circle(0, 0, slot === 0 ? 52 : 60, 0x000000, 0).setStrokeStyle(slot === 0 ? 3 : 4, element, 0.86),
-      this.scene.add.circle(0, 0, slot === 0 ? 32 : 38, accent, 0.05).setStrokeStyle(2, accent, 0.68)
-    ]);
-    const path = this.scene.add.graphics().setDepth(43);
-    if (!selfTargeted && targetVisible) path.lineStyle(slot === 0 ? 2 : 3, accent, 0.32).lineBetween(actor.x, actor.y, target.x, target.y);
-    await Promise.all([
-      this.tween({ targets: fx, scaleX: 1.22, scaleY: 1.22, alpha: 0, duration: this.reducedMotion ? 150 : slot === 0 ? 260 : 320, ease: 'Quad.easeOut' }),
-      this.tween({ targets: path, alpha: 0, duration: this.reducedMotion ? 160 : 340, ease: 'Quad.easeOut' })
-    ]);
-    fx.destroy(true);
-    path.destroy();
+    await playCombat2201MagicCircle({
+      scene: this.scene,
+      point: actor,
+      element: elementKey,
+      tier: 'skill',
+      reducedMotion: this.reducedMotion
+    });
   }
 
   async playUltimateIntro(actorView: PowView | undefined, ability: CombatAbility, side: CombatSide, elementKey: string): Promise<void> {
@@ -47,8 +38,6 @@ export class CombatPresentationDirector {
     const actor = actorView.getWorldPosition();
     const element = this.elementColor(elementKey);
     const overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x02070d, 0.5).setDepth(70).setAlpha(0);
-    const spot = this.scene.add.circle(actor.x, actor.y, 88, element, 0.07).setStrokeStyle(5, element, 0.92).setDepth(72).setScale(0.7);
-
     const portrait = height > width;
     const bannerY = Math.round(height * (portrait ? 0.47 : 0.43));
     const bannerWidth = Math.min(portrait ? 720 : 760, width * (portrait ? 0.8 : 0.52));
@@ -85,12 +74,10 @@ export class CombatPresentationDirector {
     const hold = this.reducedMotion ? 700 : 1900;
     await Promise.all([
       this.tween({ targets: overlay, alpha: 1, duration: 280, yoyo: true, hold, ease: 'Sine.easeOut' }),
-      this.tween({ targets: spot, scaleX: 1.34, scaleY: 1.34, alpha: 0, duration: this.reducedMotion ? 900 : 2200, ease: 'Quad.easeOut' }),
       this.tween({ targets: banner, alpha: 1, scaleX: 1, scaleY: 1, duration: 300, yoyo: true, hold, ease: 'Quad.easeOut' })
     ]);
 
     overlay.destroy();
-    spot.destroy();
     banner.destroy(true);
   }
 

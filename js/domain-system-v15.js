@@ -26,6 +26,9 @@ const EXP={
   draw_swords:{id:'draw_swords',name:'Rút Kiếm Ra',short:'RÚT KIẾM RA',branch:'leaf',kind:'special',icon:'⚔',durationActions:5,description:'5 hành động. Pow không phải Hiệp sĩ/Đấu sĩ/Đỡ đòn: +30% Damage, +30% Max HP, +30% Hút máu. Mỗi hành động xuất 1 trong 5 kiếm không lặp, Tất Trúng, gây 20% Max HP + Burn/Poison/Shock/Anti-Heal/Freeze.',stats:{damage:.30,hp:.30,lifesteal:.30,shieldCap:.50},swordsSureHit:true,roleRestricted:true}
 };
 const BRANCH={fire:['nine_suns','infinite_strike','limitless_void'],water:['frozen_silence','diamond_guard','jackpot_bagua'],leaf:['myriad_poison','rebirth_wood','draw_swords']};
+// Validate the owned catalog before exposing it to legacy runtime patches.
+const __domainIds=Object.getOwnPropertyNames(EXP),__specialIds=__domainIds.filter(id=>EXP[id]?.kind==='special');
+if(__domainIds.length!==9||__specialIds.length!==3)throw new Error('POWDER_DOMAIN_LOCK_V1880');
 const SWORDS=[
   {id:'flame',name:'Xích Diệm Phần Thiên Kiếm',status:'Burn',icon:'🔥'},
   {id:'poison',name:'Vạn Độc Phệ Tâm Kiếm',status:'Poison',icon:'☣'},
@@ -385,7 +388,6 @@ P.supportEffect=function(att,a,targets,key='skill1',effectKnow=1,damageKnow=1){
 };
 P.executeAction=function(att,key,req,knowledge={baseWrong:0,extraCorrect:0}){try{return oldExec.call(this,att,key,req,knowledge)}finally{if(att?.side)sideState(this,att.side).pendingActionScale=1;immortalCheck(this);for(const side of ['player','enemy'])rescueBySinhQi(this,side)}};
 P.domainBalanceSnapshot=function(){const out={};for(const side of ['player','enemy']){const st=sideState(this,side);out[side]={simpleCharges:st.simpleCharges,simple:st.simpleActive,expansion:st.expansion,equippedSimple:st.equippedSimple,simpleLevel:st.simpleLevel,equippedExpansion:st.equippedExpansion,jackpotAttempts:st.jackpotAttempts,limitlessCorrect:st.limitlessCorrect,pendingActionScale:st.pendingActionScale}}return out};
-const __domainIds=Object.keys(EXP),__specialIds=__domainIds.filter(id=>EXP[id]?.special);if(__domainIds.length!==9||__specialIds.length!==3)throw new Error('POWDER_DOMAIN_LOCK_V1880');
 window.POWDER_DOMAIN_SYSTEM_V15={version:'15.0.0',SIMPLE,EXPANSIONS:EXP,LEVELS,BRANCH,SWORDS,PVP_CAP,pvpCap,lockedExpansionCount:9,normalExpansionCount:6,specialExpansionCount:3,lockedExpansionIds:[...__domainIds],serverVerifiedOnline:['limitless_void','draw_swords','jackpot_bagua'],policy:{simpleModes:['pve','pvp'],expansionModes:['pvp'],normalExpansionActions:4,limitlessActions:2,drawSwordActions:5,jackpotActions:3,sureHit:'Cửu Nhật Burn và 5 kiếm của Rút Kiếm Ra được server xác nhận; Jackpot Tất Trúng trong thời gian hiệu lực; không bỏ qua DEF toàn cục.',simpleResistance:'Sơ/Trung/Cao giảm 30/40/50% phần damage/effect do Bành Trướng tạo thêm.',onlineAuthority:'18.8.0: damage/heal/CC/terrain/swords/question impact được xác minh phía server.'}};
 window.POWDER_DOMAIN_SYSTEM_V14=window.POWDER_DOMAIN_SYSTEM_V15;window.POWDER_DOMAIN_SYSTEM_V13=window.POWDER_DOMAIN_SYSTEM_V15;
 })();

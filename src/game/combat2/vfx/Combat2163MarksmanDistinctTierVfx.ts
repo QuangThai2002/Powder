@@ -37,7 +37,7 @@ const ELEMENT: Readonly<Record<CombatProjectileElement, Profile>> = Object.freez
 function tween(
   scene: Phaser.Scene,
   target: Phaser.GameObjects.GameObject | object,
-  config: Phaser.Types.Tweens.TweenBuilderConfig,
+  config: CombatTweenConfig,
   fallbackMs: number
 ): Promise<void> {
   return new Promise((resolve) => {

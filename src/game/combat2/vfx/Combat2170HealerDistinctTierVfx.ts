@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import type { CombatProjectileElement, DirectionalProjectileOptions } from './DirectionalElementProjectileVfx';
+import { strokeQuadraticPath } from './CombatVfxDrawing';
 import { powVfxDepth } from './CombatNightVfxLayout';
 
 export const COMBAT2182_HEALER_VERSION = '2.18.2';
@@ -34,7 +35,7 @@ export function isCombat2170HealerRole(role?: string): boolean {
 function tween(
   scene: Phaser.Scene,
   target: Phaser.GameObjects.GameObject | object,
-  config: Phaser.Types.Tweens.TweenBuilderConfig,
+  config: CombatTweenConfig,
   fallbackMs: number
 ): Promise<void> {
   return new Promise((resolve) => {
@@ -103,9 +104,9 @@ async function playRestorationStream(options: Options, p: Palette): Promise<void
   const bottom = options.scene.add.circle(6, 13, 10, p.accent, 0.28).setStrokeStyle(2.5, p.main, 0.72);
   const ribbon = options.scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
   ribbon.lineStyle(4, p.core, 0.6);
-  ribbon.beginPath(); ribbon.moveTo(-48, -12); ribbon.quadraticBezierTo(-5, -32, 58, 0); ribbon.strokePath();
+  strokeQuadraticPath(ribbon, -48, -12, [{ controlX: -5, controlY: -32, endX: 58, endY: 0 }]);
   ribbon.lineStyle(4, p.main, 0.56);
-  ribbon.beginPath(); ribbon.moveTo(-48, 12); ribbon.quadraticBezierTo(-5, 32, 58, 0); ribbon.strokePath();
+  strokeQuadraticPath(ribbon, -48, 12, [{ controlX: -5, controlY: 32, endX: 58, endY: 0 }]);
   root.add([ribbon, top, bottom]);
   const ms = travelMs(options, 'skill');
   try { await tween(options.scene, root, { x: options.target.x, y: options.target.y, duration: ms, ease: 'Sine.easeInOut' }, ms + 280); }

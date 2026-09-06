@@ -51,6 +51,8 @@ export class PowView {
   private runtimeVisualStatus = '';
   private targetable = false;
   private selectedTarget = false;
+  private activeTurn = false;
+  private targetTone: 'enemy' | 'ally' = 'enemy';
   private targetSelectedHandler: (() => void) | null = null;
   private hasRuntimeSnapshot = false;
   private previousHp = 0;
@@ -127,10 +129,31 @@ export class PowView {
     this.refreshStatusFrame(runtimeStatus);
   }
 
-  setActiveTurn(active: boolean): void { this.turnGlow.setVisible(active); }
+  setActiveTurn(active: boolean): void {
+    if (this.activeTurn === active) return;
+    this.activeTurn = active;
+    this.scene.tweens.killTweensOf(this.turnGlow);
+    if (!active) {
+      this.turnGlow.setVisible(false).setAlpha(1).setScale(1);
+      return;
+    }
 
-  setTargetable(active: boolean): void {
+    this.turnGlow.setVisible(true).setScale(this.reducedMotion ? 1 : 0.94).setAlpha(this.reducedMotion ? 0.95 : 0.3);
+    if (!this.reducedMotion) {
+      this.scene.tweens.add({
+        targets: this.turnGlow,
+        scaleX: 1,
+        scaleY: 1,
+        alpha: 0.95,
+        duration: 170,
+        ease: 'Cubic.easeOut'
+      });
+    }
+  }
+
+  setTargetable(active: boolean, tone: 'enemy' | 'ally' = 'enemy'): void {
     this.targetable = active;
+    this.targetTone = active ? tone : 'enemy';
     if (active) this.targetHitArea.setInteractive({ useHandCursor: true });
     else {
       this.targetHitArea.disableInteractive();
@@ -204,6 +227,8 @@ export class PowView {
 
   getWorldPosition(): Phaser.Math.Vector2 { return new Phaser.Math.Vector2(this.container.x, this.container.y); }
 
+  getRarity(): string { return String((this.pow as { rarity?: unknown }).rarity ?? ''); }
+
   private getVfxLayout() {
     const liveScale = Phaser.Math.Clamp(
       Number.isFinite(this.container.scaleX) ? Math.abs(this.container.scaleX) : this.fieldScale,
@@ -255,6 +280,28 @@ export class PowView {
     const artWidth = w - 20;
     const artY = top + 9 + artHeight / 2;
     const artBack = this.scene.add.rectangle(0, artY, artWidth, artHeight, 0x0c2636, 1).setStrokeStyle(2, elementColor, 0.58);
+    const artFrame = this.scene.add.graphics();
+    const frameLeft = -artWidth / 2 + 10;
+    const frameRight = artWidth / 2 - 10;
+    const frameTop = artY - artHeight / 2 + 10;
+    const frameBottom = artY + artHeight / 2 - 10;
+    const corner = 18;
+    artFrame.lineStyle(1.4, elementColor, 0.72);
+    artFrame.lineBetween(frameLeft, frameTop + corner, frameLeft, frameTop).lineBetween(frameLeft, frameTop, frameLeft + corner, frameTop);
+    artFrame.lineBetween(frameRight - corner, frameTop, frameRight, frameTop).lineBetween(frameRight, frameTop, frameRight, frameTop + corner);
+    artFrame.lineBetween(frameLeft, frameBottom - corner, frameLeft, frameBottom).lineBetween(frameLeft, frameBottom, frameLeft + corner, frameBottom);
+    artFrame.lineBetween(frameRight - corner, frameBottom, frameRight, frameBottom).lineBetween(frameRight, frameBottom, frameRight, frameBottom - corner);
+    const horizon = this.scene.add.rectangle(0, artY + artHeight * 0.31, artWidth - 24, 2, elementColor, 0.34);
+    const roleBadge = this.scene.add.circle(left + 27, top + 27, 16, 0x04111a, 0.92).setStrokeStyle(2, elementColor, 0.9);
+    const roleGlyph = this.scene.add.text(left + 27, top + 27, this.roleGlyph(), {
+      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '19px', color: '#ffffff', fontStyle: 'bold', stroke: '#021018', strokeThickness: 3
+    }).setOrigin(0.5);
+    const elementRibbon = this.scene.add.text(left + 51, top + 18, this.pow.element.toUpperCase(), {
+      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '10px', color: '#e8fbff', fontStyle: 'bold', stroke: '#021018', strokeThickness: 3
+    }).setOrigin(0, 0.5);
+    const roleRibbon = this.scene.add.text(left + 51, top + 34, this.pow.role.toUpperCase(), {
+      fontFamily: COMBAT_BODY_FONT, fontSize: '9px', color: '#a9d8e3', fontStyle: 'bold', stroke: '#021018', strokeThickness: 3
+    }).setOrigin(0, 0.5);
 
     this.portrait = this.scene.add.image(this.pow.display.offsetX ?? 0, artY + (this.pow.display.offsetY ?? 0), this.pow.assetKey).setOrigin(0.5);
     const source = this.portrait.texture.getSourceImage() as HTMLImageElement | HTMLCanvasElement;
@@ -276,12 +323,16 @@ export class PowView {
     const hpY = infoY + 53;
     const hpBack = this.scene.add.rectangle(left + 12, hpY, this.barWidth, 17, 0x163342, 1).setOrigin(0, 0.5);
     this.hpBar = this.scene.add.rectangle(left + 12, hpY, this.barWidth, 17, 0x47dc90, 1).setOrigin(0, 0.5);
+    const hpLip = this.scene.add.rectangle(left + 12, hpY - 6, this.barWidth, 1, 0xffffff, 0.22).setOrigin(0, 0.5);
     this.hpText = this.scene.add.text(0, hpY, '', {
       fontFamily: COMBAT_DISPLAY_FONT, fontSize: '15px', color: '#ffffff', fontStyle: 'bold', stroke: '#041018', strokeThickness: 4
     }).setOrigin(0.5);
 
     const rageY = hpY + 29;
     const markerStartX = -36;
+    const rageLabel = this.scene.add.text(left + 12, rageY, 'NỘ', {
+      fontFamily: COMBAT_DISPLAY_FONT, fontSize: '10px', color: '#9ddde9', fontStyle: 'bold'
+    }).setOrigin(0, 0.5);
     for (let index = 0; index < 4; index += 1) {
       const marker = this.scene.add.circle(markerStartX + index * 24, rageY, 8.4, COMBAT_COLORS.rageEmpty, 0.38).setStrokeStyle(1, 0x496675, 0.4);
       this.rageMarkers.push(marker);
@@ -292,13 +343,16 @@ export class PowView {
     }).setOrigin(0.5).setVisible(false);
 
     this.targetHitArea = this.scene.add.rectangle(0, 0, w, h, 0xffffff, 0.001);
-    this.targetHitArea.on('pointerover', () => { if (this.targetable && !this.selectedTarget) this.targetGlow.setStrokeStyle(3, 0x78e8ff, 0.82).setVisible(true); });
+    this.targetHitArea.on('pointerover', () => {
+      if (this.targetable && !this.selectedTarget) this.targetGlow.setStrokeStyle(3, this.targetGlowColor(), 0.82).setVisible(true);
+    });
     this.targetHitArea.on('pointerout', () => this.refreshTargetGlow());
     this.targetHitArea.on('pointerup', () => { if (this.targetable) this.targetSelectedHandler?.(); });
 
     this.container.add([
-      this.statusFrame, this.targetGlow, this.turnGlow, card, artBack, this.portrait, this.controlImmunityRing,
-      this.controlHistoryText, name, meta, hpBack, this.hpBar, this.hpText, ...this.rageMarkers, this.statusText,
+      this.statusFrame, this.targetGlow, this.turnGlow, card, artBack, this.portrait, artFrame, horizon, roleBadge,
+      roleGlyph, elementRibbon, roleRibbon, this.controlImmunityRing, this.controlHistoryText, name, meta,
+      hpBack, this.hpBar, hpLip, this.hpText, rageLabel, ...this.rageMarkers, this.statusText,
       this.targetHitArea
     ]);
   }
@@ -361,7 +415,7 @@ export class PowView {
     const p = this.getVfxAnchor('body');
     const color = this.elementColor();
     const flash = this.scene.add.circle(p.x, p.y - 4, 46, 0xffffff, 0.16).setStrokeStyle(3, color, 0.8).setDepth(powVfxDepth('body')).setScale(0.82);
-    this.portrait.setTintFill(0xffffff);
+    this.portrait.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
     this.scene.time.delayedCall(this.reducedMotion ? 55 : 85, () => { if (this.portrait.active) this.portrait.clearTint(); });
     this.scene.tweens.add({ targets: flash, scaleX: 1.38, scaleY: 1.38, alpha: 0, duration: this.reducedMotion ? 110 : 180, ease: 'Quad.easeOut', onComplete: () => flash.destroy() });
   }
@@ -459,14 +513,29 @@ export class PowView {
   }
 
   private normalizeText(value: string): string {
-    return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase().trim();
+  }
+
+  private roleGlyph(): string {
+    const role = this.normalizeText(this.pow.role);
+    if (role.includes('xa thu') || role.includes('marksman')) return '➤';
+    if (role.includes('phap su') || role.includes('mage')) return '✦';
+    if (role.includes('do don') || role.includes('tank')) return '⬡';
+    if (role.includes('dau si') || role.includes('fighter')) return '✶';
+    if (role.includes('hiep si') || role.includes('knight')) return '⚔';
+    if (role.includes('sat thu') || role.includes('assassin')) return '◈';
+    if (role.includes('tri lieu') || role.includes('healer')) return '+';
+    if (role.includes('nhac cong') || role.includes('musician')) return '♪';
+    return '◇';
   }
 
   private refreshTargetGlow(): void {
     if (!this.targetable) { this.targetGlow.setVisible(false); return; }
     if (this.selectedTarget) this.targetGlow.setStrokeStyle(4, 0xffdc6d, 1).setVisible(true);
-    else this.targetGlow.setStrokeStyle(2, 0x78e8ff, 0.58).setVisible(true);
+    else this.targetGlow.setStrokeStyle(2, this.targetGlowColor(), 0.58).setVisible(true);
   }
+
+  private targetGlowColor(): number { return this.targetTone === 'ally' ? 0x73f0aa : 0x78e8ff; }
 
   private refreshStatusFrame(status: string): void {
     const color = this.statusColor(status);

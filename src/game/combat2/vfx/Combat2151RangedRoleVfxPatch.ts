@@ -96,7 +96,7 @@ function baseRadius(reducedDetail: boolean): number {
 function tweenObject(
   scene: Phaser.Scene,
   target: Phaser.GameObjects.GameObject,
-  config: Phaser.Types.Tweens.TweenBuilderConfig,
+  config: CombatTweenConfig,
   fallbackMs: number
 ): Promise<void> {
   return new Promise((resolve) => {

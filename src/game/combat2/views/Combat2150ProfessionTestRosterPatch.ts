@@ -108,6 +108,7 @@ function normalizeText(value: unknown): string {
   return String(value || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, 'd')
     .toLowerCase()
     .trim();
 }
@@ -286,6 +287,32 @@ function resolveRequestedFocus(): RoleKey | null {
   return resolveRoleKey(raw);
 }
 
+function createTestOnlyAssassin(candidates: readonly ProfessionCandidate[]): ProfessionCandidate | null {
+  // The shipped catalog currently has no Assassin. Reuse an existing dark Pow only
+  // inside the local Combat Test roster so the real Assassin VFX route is testable.
+  const donor = candidates.find((candidate) => candidate.pow.id === 'umbrael')
+    ?? candidates.find((candidate) => candidate.pow.elementKey === 'dark');
+  if (!donor) return null;
+  return {
+    roleKey: 'assassin',
+    pow: {
+      ...donor.pow,
+      id: `combat-test-assassin-${donor.pow.id}`,
+      name: `${donor.pow.name} · Sát thủ Test`,
+      role: ROLE_LABEL.assassin,
+      abilities: {
+        ...donor.pow.abilities,
+        basic: { ...donor.pow.abilities.basic, name: 'Hắc Ảnh Song Trảm' },
+        skills: donor.pow.abilities.skills.map((skill, index) => ({
+          ...skill,
+          name: index === 0 ? 'Ảnh Bộ Liên Trảm' : 'Ám Kích Tàn Nguyệt'
+        })),
+        ultimate: { ...donor.pow.abilities.ultimate, name: 'Phán Quyết Hư Vô' }
+      }
+    }
+  };
+}
+
 function installProfessionRoster(): void {
   const root = globalThis as any;
   if (root[PATCH_FLAG]) return;
@@ -296,6 +323,14 @@ function installProfessionRoster(): void {
   const candidates = rawPows
     .map((pow) => toCombatCandidate(pow, catalog ?? {}))
     .filter((candidate): candidate is ProfessionCandidate => Boolean(candidate));
+  const testOnlyRoles: RoleKey[] = [];
+  if (!candidates.some((candidate) => candidate.roleKey === 'assassin')) {
+    const assassin = createTestOnlyAssassin(candidates);
+    if (assassin) {
+      candidates.push(assassin);
+      testOnlyRoles.push('assassin');
+    }
+  }
 
   const buckets = new Map<RoleKey, ProfessionCandidate[]>();
   for (const role of ROLE_ORDER) buckets.set(role, []);
@@ -322,34 +357,29 @@ function installProfessionRoster(): void {
   }
 
   const missingRoles = ROLE_ORDER.filter((role) => !selected.has(role));
-  if (missingRoles.length > 0) {
-    root.POWDER_COMBAT2_PROFESSION_TEST_ROSTER = {
-      version: '2.15.0',
-      mode: 'canonical-9-role-coverage',
-      rosterMutation: false,
-      missingRoles,
-      candidateCount: candidates.length,
-      combatLogicChanged: false
-    };
-    return;
-  }
+  const availableRoles = ROLE_ORDER.filter((role) => selected.has(role));
+  if (availableRoles.length === 0) return;
 
-  const focusRole = resolveRequestedFocus();
+  // Do not discard every real profession just because the catalog has not shipped
+  // one role yet. The live QA reports that gap, while all available roles stay testable.
+  const requestedFocus = resolveRequestedFocus();
+  const focusRole = requestedFocus && selected.has(requestedFocus) ? requestedFocus : null;
   const orderedRoles = focusRole
-    ? [focusRole, ...ROLE_ORDER.filter((role) => role !== focusRole)]
-    : [...ROLE_ORDER];
+    ? [focusRole, ...availableRoles.filter((role) => role !== focusRole)]
+    : availableRoles;
   const orderedPows = orderedRoles.map((role) => selected.get(role)!.pow);
 
-  const extra = candidates
+  const extras = candidates
     .filter((candidate) => !usedIds.has(candidate.pow.id))
     .sort((a, b) => {
       const aUnique = usedElements.has(a.pow.elementKey) ? 0 : 1;
       const bUnique = usedElements.has(b.pow.elementKey) ? 0 : 1;
       return bUnique - aUnique;
-    })[0];
-  if (!extra) return;
+    })
+    .map((candidate) => candidate.pow)
+    .slice(0, Math.max(0, 10 - orderedPows.length));
 
-  const fullRoster = [...orderedPows, extra.pow];
+  const fullRoster = [...orderedPows, ...extras];
   const playerTeam = fullRoster.slice(0, 5);
   const enemyTeam = fullRoster.slice(5, 10);
   if (playerTeam.length !== 5 || enemyTeam.length !== 5) return;
@@ -386,13 +416,15 @@ function installProfessionRoster(): void {
   };
 
   root.POWDER_COMBAT2_PROFESSION_TEST_ROSTER = {
-    version: '2.15.0',
-    mode: 'canonical-9-role-coverage',
+    version: '2.15.1',
+    mode: missingRoles.length ? 'canonical-available-role-coverage' : 'canonical-9-role-coverage',
     rosterMutation: true,
     canonicalCatalogOnly: true,
+    testOnlyRoles,
     mainCatalogMutated: false,
     roles: [...ROLE_ORDER],
-    missingRoles: [],
+    availableRoles,
+    missingRoles,
     focusRole,
     focusQuery: 'profession',
     focusProfession,
@@ -400,7 +432,7 @@ function installProfessionRoster(): void {
     enemy: enemyTeam.map(describe),
     active: [...playerTeam.slice(0, 3), ...enemyTeam.slice(0, 3)].map(describe),
     reserves: [...playerTeam.slice(3), ...enemyTeam.slice(3)].map(describe),
-    nineRoleCoverage: true,
+    nineRoleCoverage: missingRoles.length === 0,
     focusedRoleStartsPlayerActive: Boolean(focusRole),
     combatLogicChanged: false
   };

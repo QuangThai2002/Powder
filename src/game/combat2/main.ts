@@ -38,13 +38,11 @@ import { installCombat2115ReserveUiPatch } from './views/Combat2115ReserveUiPatc
 import { installCombat2122CinematicMotionPatch } from './views/Combat2122CinematicMotionPatch';
 import { installCombat2123CleanDomainCinematicPatch } from './views/Combat2123CleanDomainCinematicPatch';
 import { installCombat2124PowSkillMotionIdentityPatch } from './views/Combat2124PowSkillMotionIdentityPatch';
-import { installCombat2132AtlasFallbackPatch } from './views/Combat2132AtlasFallbackPatch';
-import { installCombat2133AtlasPresentationPatch } from './views/Combat2133AtlasPresentationPatch';
 import { installCombat2133PrimitiveGuardPatch } from './views/Combat2133PrimitiveGuardPatch';
-import { installCombat2134SourceImpactIdentityPatch } from './views/Combat2134SourceImpactIdentityPatch';
-import { installCombat2140ExactVfxPatch } from './views/Combat2140ExactVfxPatch';
-import { installCombat2141SemanticVfxPatch } from './views/Combat2141SemanticVfxPatch';
-import { installCombat2142AssetVfxLivePatch } from './views/Combat2142AssetVfxLivePatch';
+import { installCombat2104PowSkillSignaturePatch } from './views/Combat2104PowSkillSignaturePatch';
+import { installCombat2196ArenaPresentationPatch } from './views/Combat2196ArenaPresentationPatch';
+import { installCombat2200FairyAnimePresentationPatch } from './views/Combat2200FairyAnimePresentationPatch';
+import { installCombat2201HighFantasyAnimeVfx } from './vfx/Combat2201HighFantasyAnimeVfx';
 import { PowView } from './views/PowView';
 
 const logicalWidth = 1600;
@@ -130,9 +128,9 @@ installCombat293LegacyDomainTickPatch(BattleScene);
 installCombat294DomainControlsPatch(BattleScene);
 installCombat295LegacyDomainParityPatch();
 installCombat296VersionPatch(BattleScene);
-// Combat 2.9.8/2.9.9 and 2.10.4 procedural action/status/role-glyph FX are intentionally retired.
-// All presentation patches are installed before Phaser.Game is created so the very first
-// BattleScene.preload() includes the bundled img + img2 VFX textures.
+// Legacy atlas/exact-asset wrappers are intentionally retired from the live route.
+// Current presentation is owned by PowView base feedback plus the dedicated
+// nine-role projectile bridge installed below.
 installCombat2100ReserveFlowPatch(BattleScene, PowView);
 installCombat2101UltimateCinematicPatch(CombatPresentationDirector);
 installCombat2101VersionPatch(BattleScene);
@@ -147,22 +145,21 @@ installCombat2115ReserveUiPatch(BattleScene);
 installCombat2122CinematicMotionPatch(BattleScene, PowView);
 installCombat2123CleanDomainCinematicPatch(BattleScene);
 installCombat2124PowSkillMotionIdentityPatch(BattleScene);
-installCombat2132AtlasFallbackPatch(BattleScene, PowView);
 installCombat2133PrimitiveGuardPatch(PowView);
-installCombat2133AtlasPresentationPatch(CombatPresentationDirector);
-installCombat2134SourceImpactIdentityPatch(BattleScene, PowView);
-installCombat2140ExactVfxPatch(BattleScene, PowView, CombatPresentationDirector);
-installCombat2141SemanticVfxPatch(BattleScene, PowView, CombatPresentationDirector);
-installCombat2142AssetVfxLivePatch(BattleScene);
 
 // Legacy compatibility owners install first. Combat2 release-specific final owners install
 // afterwards and before Phaser.Game so the first battle action uses the current release VFX.
 await import('./vfx/CombatNightProjectileBridge');
+// Installed after the final projectile owner so the signature describes the exact
+// live action route instead of an earlier compatibility wrapper.
+installCombat2104PowSkillSignaturePatch(BattleScene);
+installCombat2196ArenaPresentationPatch(BattleScene);
+installCombat2200FairyAnimePresentationPatch(BattleScene);
 await import('./vfx/CombatNightCuratedStatusAssetBridge');
 await import('./vfx/CombatNightStatusTooltipBridge');
 await import('./vfx/CombatNightFxBudgetBridge');
+installCombat2201HighFantasyAnimeVfx(PowView);
 await import('./vfx/CombatNightRegressionGate');
-await import('./vfx/Combat2151RangedRoleVfxPatch');
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO, parent: 'powder-combat2', width: logicalWidth, height: logicalHeight, backgroundColor: '#08131f',

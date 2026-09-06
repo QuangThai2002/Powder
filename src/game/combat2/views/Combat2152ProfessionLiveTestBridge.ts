@@ -8,7 +8,7 @@ const ROLE_ORDER = [
   'marksman', 'mage', 'fighter', 'knight', 'enchanter',
   'healer', 'musician', 'assassin', 'tank'
 ] as const;
-const MELEE_ROLES = ['fighter', 'knight', 'assassin'] as const;
+const MELEE_ROLES = ['tank', 'fighter', 'knight', 'assassin'] as const;
 const RANGED_ROLES = ['marksman', 'mage', 'enchanter', 'healer', 'musician'] as const;
 
 type RoleKey = typeof ROLE_ORDER[number];
@@ -25,6 +25,7 @@ function normalize(value: unknown): string {
   return String(value || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, 'd')
     .toLowerCase()
     .trim();
 }
@@ -170,12 +171,17 @@ function attachScene(scene: RuntimeScene): boolean {
 
     playing = true;
     try {
-      await attack.call(source.view, target.view.container.x, target.view.container.y);
+      const point = typeof target.view?.getWorldPosition === 'function'
+        ? target.view.getWorldPosition()
+        : target.view.container;
+      await attack.call(source.view, point.x, point.y);
+      if (typeof target.view?.playHit === 'function') await target.view.playHit();
       return {
         ok: true,
         role: source.role,
         source: source.instanceId,
         target: target.instanceId,
+        targetHitFeedback: true,
         presentationOnly: true,
         damageApplied: false,
         turnAdvanced: false
@@ -232,7 +238,8 @@ function attachScene(scene: RuntimeScene): boolean {
         group,
         current: index + 1,
         total: count,
-        lastRole: result?.role ?? result?.requestedRole ?? null,
+        lastRole: ('role' in result ? result.role : null)
+          ?? ('requestedRole' in result ? result.requestedRole : null),
         cancelled: token !== seriesToken
       };
       if (token !== seriesToken) break;

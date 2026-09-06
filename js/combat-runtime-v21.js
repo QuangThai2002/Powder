@@ -1,7 +1,9 @@
 (()=>{'use strict';
 const modules=new Map();
 const LIMITS=Object.freeze({moduleEvents:160,securityAudit:96,securityChecksums:32,networkHistory:96,balanceRows:1200,metaRows:40});
-const RAGE_POINTS=Object.freeze({version:'rage-points-v1',ready:4,max:8,actionGain:2,ultimateCost:4,exclusiveCost:4,overflowRate:.5});
+const rageModel=globalThis.POWDER_COMBAT_RAGE_MODEL;
+if(!rageModel)throw new Error('Combat runtime requires combat-rage-model.js.');
+const RAGE_POINTS=rageModel.rules;
 let activeCore=null;
 
 function stable(value,depth=0){if(depth>7)return '"[depth]"';if(value===null||value===undefined)return JSON.stringify(value??null);if(typeof value==='number'||typeof value==='boolean'||typeof value==='string')return JSON.stringify(value);if(Array.isArray(value))return '['+value.slice(0,64).map(x=>stable(x,depth+1)).join(',')+']';if(value instanceof Map)return stable([...value.entries()],depth+1);if(typeof value==='object'){const keys=Object.keys(value).sort().slice(0,96);return '{'+keys.map(k=>JSON.stringify(k)+':'+stable(value[k],depth+1)).join(',')+'}';}return JSON.stringify(String(value));}
@@ -16,17 +18,9 @@ function get(name){return modules.get(String(name));}
 function list(){return [...modules.keys()];}
 async function batched(total,worker,{chunk=4,onProgress}={}){total=Math.max(0,Number(total)||0);chunk=Math.max(1,Number(chunk)||1);for(let i=0;i<total;i++){await worker(i);onProgress?.(i+1,total);if((i+1)%chunk===0)await new Promise(resolve=>(typeof requestAnimationFrame==='function'?requestAnimationFrame(()=>resolve()):setTimeout(resolve,0)));}}
 
-function sanitizeRage(value){return Math.min(RAGE_POINTS.max,Math.max(0,Math.floor(Number.isFinite(Number(value))?Number(value):0)));}
-function applyRawRageGain(current,rawGain){
-  const previous=sanitizeRage(current),raw=Math.max(0,Math.floor(Number(rawGain)||0));
-  const room=Math.max(0,RAGE_POINTS.ready-previous),normalRaw=Math.min(room,raw),overflowRaw=Math.max(0,raw-normalRaw),overflowEffective=Math.floor(overflowRaw*RAGE_POINTS.overflowRate);
-  const next=sanitizeRage(previous+normalRaw+overflowEffective);
-  return{previous,rawGain:raw,normalRaw,overflowRaw,overflowEffective,effectiveGain:next-previous,next};
-}
-function markerStates(value){
-  const points=sanitizeRage(value),red=Math.max(0,points-RAGE_POINTS.ready),blue=Math.max(0,points-red*2),empty=Math.max(0,4-blue-red);
-  return[...Array(blue).fill('blue'),...Array(red).fill('red'),...Array(empty).fill('empty')].slice(0,4);
-}
+function sanitizeRage(value){return rageModel.sanitizeRagePoints(Number(value));}
+const applyRawRageGain=rageModel.applyRawRageGain;
+const markerStates=rageModel.rageMarkerStates;
 function legacyRageValue(points){const p=sanitizeRage(points);return p>=RAGE_POINTS.ready?100:p*25;}
 function syncLegacyUnit(unit){
   if(!unit)return unit;
@@ -37,16 +31,17 @@ function syncLegacyUnit(unit){
   return unit;
 }
 function recoveryPoints(row){
-  if(Number.isFinite(Number(row?.ragePoints)))return sanitizeRage(row.ragePoints);
+  if(row?.ragePoints!=null&&Number.isFinite(Number(row.ragePoints)))return sanitizeRage(row.ragePoints);
   const legacy=Math.max(0,Number(row?.rage)||0);
-  return sanitizeRage(Math.round(legacy/25));
+  // Existing legacy threshold 100 = 4 points. Never promote a sub-100 save to READY.
+  return sanitizeRage(Math.floor(legacy/25));
 }
 function normalizeCore(core,{fresh=false,packet=null}={}){
   if(!core)return core;
   activeCore=core;API.activeCore=core;
   const rows=new Map((packet?.runtime?.units||[]).map(row=>[row?.id,row]));
   for(const unit of core.allRosterUnits||core.allUnits||[]){
-    if(fresh)unit.ragePoints=0;
+    if(fresh)unit.ragePoints=RAGE_POINTS.start;
     else if(rows.has(unit.id))unit.ragePoints=recoveryPoints(rows.get(unit.id));
     else if(!Number.isFinite(Number(unit.ragePoints)))unit.ragePoints=recoveryPoints(unit);
     syncLegacyUnit(unit);
@@ -109,7 +104,7 @@ function installUnifiedRage(coreApi){
     try{result=originalExecuteAction.call(this,attacker,key,requestedTargetId,knowledge);}
     catch(error){if(attacker){attacker.ragePoints=before;syncLegacyUnit(attacker);}throw error;}
     if(attacker){
-      const afterSpend=Math.max(0,before-spent),gain=applyRawRageGain(afterSpend,rageGainForKey(key));
+      const gain=rageModel.applyRageEvent(before,[rageGainForKey(key)],spent);
       attacker.ragePoints=gain.next;
       for(const unit of this.allRosterUnits||this.allUnits||[])syncLegacyUnit(unit);
       this.pushEvent?.('rage',{sourceId:attacker.id,targetId:attacker.id,before,after:gain.next,max:RAGE_POINTS.max,spent,amount:gain.effectiveGain,delta:gain.next-before,reason:key,rawGain:gain.rawGain});

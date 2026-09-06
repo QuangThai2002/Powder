@@ -168,7 +168,7 @@ export function installCombat2132AtlasFallbackPatch(BattleSceneClass: any, PowVi
     const impactFrame = actionFrameByScene.get(scene) ?? elementFrame(this);
     const fx = atlasImage(scene, p.x, p.y - 5, impactFrame, 39);
     if (this.portrait?.active) {
-      this.portrait.setTintFill(0xffffff);
+      this.portrait.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
       scene.time.delayedCall(reducedMotion() ? 50 : 82, () => { if (this.portrait?.active) this.portrait.clearTint(); });
     }
     if (!fx) return;

@@ -1,3 +1,5 @@
+export {};
+
 const VERSION = '2.15.4';
 const MELEE_ROLES = ['fighter', 'knight', 'assassin'] as const;
 

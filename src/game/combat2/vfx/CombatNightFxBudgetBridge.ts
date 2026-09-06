@@ -5,6 +5,7 @@ import {
   type DirectionalProjectileOptions
 } from './DirectionalElementProjectileVfx';
 import { powVfxDepth } from './CombatNightVfxLayout';
+import { playCombat2201ActionVfx, type Combat2201ActionTier } from './Combat2201HighFantasyAnimeVfx';
 
 const FLAG = '__powderCombatNightFxBudgetInstalled';
 const BALANCED_BURST_THRESHOLD = 2;
@@ -45,12 +46,15 @@ type RoleAttackKind =
   | 'assassin'
   | 'tank'
   | 'fallback';
-type RoleAwareProjectileOptions = DirectionalProjectileOptions & { role?: string };
+type RoleAwareProjectileOptions = DirectionalProjectileOptions & {
+  role?: string;
+  signature?: { tier?: Combat2201ActionTier; role?: string; traits?: readonly string[] };
+};
 
 let activeProjectiles = 0;
 
 function normalize(value: string | undefined): string {
-  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase().trim();
 }
 
 function resolveRole(rawRole: string | undefined): RoleAttackKind {
@@ -112,7 +116,7 @@ function night45Radius(reducedDetail: boolean): number {
 function tweenObject(
   scene: Phaser.Scene,
   target: Phaser.GameObjects.GameObject,
-  config: Phaser.Types.Tweens.TweenBuilderConfig,
+  config: CombatTweenConfig,
   fallbackMs: number
 ): Promise<void> {
   return new Promise((resolve) => {
@@ -519,18 +523,12 @@ export function installCombatNightFxBudgetBridge(): void {
 
   owner.play = async (rawOptions: DirectionalProjectileOptions): Promise<void> => {
     const options = rawOptions as RoleAwareProjectileOptions;
-    const current = tier();
-    const concurrency = activeProjectiles + 1;
-    const burstReducedMotion = current === 'balanced' && concurrency >= BALANCED_BURST_THRESHOLD;
-    const reducedDetail = Boolean(options.reducedMotion) || current === 'lite' || burstReducedMotion;
-    const durationMs = readableDuration(options, current, burstReducedMotion);
-
-    activeProjectiles += 1;
-    try {
-      await playRoleAttack(options, durationMs, reducedDetail);
-    } finally {
-      activeProjectiles = Math.max(0, activeProjectiles - 1);
-    }
+    const actionTier = options.signature?.tier === 'ultimate'
+      ? 'ultimate'
+      : options.signature?.tier === 'skill'
+        ? 'skill'
+        : 'normal';
+    await playCombat2201ActionVfx(options, actionTier);
   };
 
   root.POWDER_COMBAT2_NIGHT_FX_BUDGET = {
@@ -566,10 +564,10 @@ export function installCombatNightFxBudgetBridge(): void {
       fighter: 'fist-no-projectile',
       knight: 'single-heavy-slash-no-projectile',
       assassin: 'dual-critical-slash-80pct-knight-no-projectile',
-      tank: 'night45-energy-comet-fallback-until-designed'
+      tank: 'shield-bash-contact-no-projectile'
     },
     rangedRoles: ['marksman', 'mage', 'enchanter', 'healer', 'musician'],
-    noProjectileRoles: ['fighter', 'knight', 'assassin'],
+    noProjectileRoles: ['tank', 'fighter', 'knight', 'assassin'],
     healerScaleVsMage: HEALER_ORB_SCALE_VS_MAGE,
     assassinSlashScaleVsKnight: ASSASSIN_SLASH_SCALE_VS_KNIGHT,
     elementColorPreserved: true,

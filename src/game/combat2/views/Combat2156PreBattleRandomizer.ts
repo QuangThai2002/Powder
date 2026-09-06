@@ -14,6 +14,14 @@ function isLocalDev(): boolean {
   return typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
 }
 
+function hasHandoffRequest(): boolean {
+  return Boolean((window as any).POWDER_COMBAT2_HANDOFF?.readBattleRequest?.()?.ok);
+}
+
+function isHandoffLaunch(): boolean {
+  return typeof window !== 'undefined' && Boolean(new URLSearchParams(window.location.search).get('battle'));
+}
+
 function uniquePool(): CombatPow[] {
   const map = new Map<string, CombatPow>();
   [...COMBAT2_STARTER_ROSTER.player, ...COMBAT2_STARTER_ROSTER.enemy].forEach((pow) => {
@@ -77,7 +85,7 @@ function installPauseBridge(): void {
 
   proto.create = function combat2156PreBattleCreate(this: any, ...args: any[]): void {
     originalCreate.apply(this, args);
-    if (!isLocalDev() || shouldStartImmediately()) return;
+    if (!isLocalDev() || shouldStartImmediately() || hasHandoffRequest() || isHandoffLaunch()) return;
     this[SCENE_FLAG] = true;
     try { this.scene.pause(); } catch { /* setup overlay still blocks interaction */ }
     (globalThis as any).POWDER_COMBAT2_PREBATTLE_PAUSED_SCENE = this;
@@ -85,7 +93,7 @@ function installPauseBridge(): void {
 }
 
 function installSetupUi(pool: CombatPow[], defaultOrder: string[]): void {
-  if (!isLocalDev() || typeof document === 'undefined') return;
+  if (!isLocalDev() || hasHandoffRequest() || isHandoffLaunch() || typeof document === 'undefined') return;
   if (document.getElementById('combat2-prebattle-randomizer')) return;
 
   if (shouldStartImmediately()) {
