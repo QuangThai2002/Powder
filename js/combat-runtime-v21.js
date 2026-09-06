@@ -146,6 +146,8 @@ function installUnifiedRage(coreApi){
   coreApi.resourceSystem=RAGE_POINTS.version;
   coreApi.MANA_DISABLED=true;
   coreApi.applyRawRageGain=applyRawRageGain;
+  coreApi.applyRageEvent=rageModel.applyRageEvent;
+  coreApi.totalRawRageGain=rageModel.totalRawGain;
   coreApi.rageMarkerStates=markerStates;
   coreApi.syncLegacyRageUnit=syncLegacyUnit;
   register('unified-rage',coreApi);
@@ -217,6 +219,6 @@ function loadMainCombatVisual2221(){
   document.head?.appendChild(script);
 }
 
-const API={version:'24.0-rage-points+main-visual-22.2.1',LIMITS,RAGE_POINTS,stable,hashText,hash,compactUnit,compactCore,coreHash,register,get,list,batched,sanitizeRage,applyRawRageGain,rageMarkerStates:markerStates,installUnifiedRage,activeCore,loadMainCombatVisual2221};
+const API={version:'24.0-rage-points+main-visual-22.2.1',LIMITS,RAGE_POINTS,stable,hashText,hash,compactUnit,compactCore,coreHash,register,get,list,batched,sanitizeRage,applyRawRageGain,applyRageEvent:rageModel.applyRageEvent,totalRawRageGain:rageModel.totalRawGain,rageMarkerStates:markerStates,installUnifiedRage,activeCore,loadMainCombatVisual2221};
 window.POWDER_COMBAT_RUNTIME_V21=API;register('runtime',API);installCoreExportInterceptor();startUiBridge();loadMainCombatVisual2221();
 })();

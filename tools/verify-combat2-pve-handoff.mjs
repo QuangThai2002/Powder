@@ -53,6 +53,7 @@ async function loadBossRuntime() {
     globalThis.window = dataContext.window;
     try {
       return {
+        catalogWindow: dataContext.window,
         ...require(join(combatDirectory, 'systems', 'BossModeController.js')),
         ...require(join(combatDirectory, 'systems', 'CombatState.js')),
         ...require(join(combatDirectory, 'systems', 'TurnManager.js')),
@@ -71,6 +72,7 @@ async function loadBossRuntime() {
 }
 
 async function verifyRageContract(combat) {
+  globalThis.window = combat.catalogWindow;
   assert.equal(combat.runCombatRageRegression().rageEconomyChecked, true);
   assert.equal(combat.runCombatMultiTargetRegression().singleResourceCommitChecked, true);
   const makeState = () => new combat.CombatState(combat.COMBAT2_STARTER_ROSTER.player, combat.COMBAT2_STARTER_ROSTER.enemy);
