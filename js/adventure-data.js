@@ -74,10 +74,6 @@ function pressureProfile(i,n,kind){
  const starBonus=(kind==='boss'?1:kind==='elite'?1:(n>=16&&i>=4?1:0));
  return {pressure,label:labels[pressure],adaptive,scale:Number(scale.toFixed(3)),initiative:Math.round(initiative),manaStart:Number(manaStart.toFixed(2)),rageStart:Math.round(rageStart),starBonus};
 }
-function stageEconomy(kind,n,rewards){
- const staminaCost=kind==='boss'?12:kind==='elite'?8:5,candy=kind==='boss'?3:kind==='elite'?2:1;
- return{staminaCost,...(n===1?{firstAttemptStaminaCost:0}:{}),defeatStaminaRatio:.5,firstClearRewards:{...rewards},repeatRewards:{coins:Math.max(1,Math.round(rewards.coins*.35)),exp:Math.max(1,Math.round(rewards.exp*.35)),powCandy:{common:candy}}};
-}
 function buildStages(island){const out=[],count=stageCount(island);for(let n=1;n<=count;n++){
  const kind=stageKind(island.id,n),ec=enemyCount(island.id,n,kind),eliteIndex=n===5?0:n===10?1:2;
  const enemyIds=[], pool=strongerPool(island,n);
@@ -89,8 +85,7 @@ function buildStages(island){const out=[],count=stageCount(island);for(let n=1;n
  const rewardMult=1+(island.id-1)*.045+(kind==='elite'?.18:kind==='boss'?.48:0);
  const baseCoins=kind==='boss'?900+island.id*120:kind==='elite'?420+island.id*60:150+island.id*35;
  const baseExp=kind==='boss'?140+island.id*15:kind==='elite'?75+island.id*8:32+island.id*4;
- const rewards={coins:Math.round(baseCoins*rewardMult),exp:Math.round(baseExp*rewardMult)};
- out.push({id:`${island.id}-${n}`,islandId:island.id,number:n,kind,name:kind==='boss'?`Ngữ Ấn ${island.name}`:kind==='elite'?`Tinh Anh · ${String(n).padStart(2,'0')}`:`Chặng ${String(n).padStart(2,'0')}`,academicMode:n===1?'free-combat':'learning-gated',enemyIds,enemyCount:ec,recommendedLevel:level,recommendedStars,scale:pressure.scale,adaptive:pressure.adaptive,pressure:pressure.pressure,difficultyLabel:pressure.label,initiative:pressure.initiative,manaStart:pressure.manaStart,rageStart:pressure.rageStart,prepCount:gate.count,prepNeed:gate.need,learningThreshold:gate.threshold,rewards,economy:stageEconomy(kind,n,rewards),storyIndex:progress});
+ out.push({id:`${island.id}-${n}`,islandId:island.id,number:n,kind,name:kind==='boss'?`Ngữ Ấn ${island.name}`:kind==='elite'?`Tinh Anh · ${String(n).padStart(2,'0')}`:`Chặng ${String(n).padStart(2,'0')}`,enemyIds,enemyCount:ec,recommendedLevel:level,recommendedStars,scale:pressure.scale,adaptive:pressure.adaptive,pressure:pressure.pressure,difficultyLabel:pressure.label,initiative:pressure.initiative,manaStart:pressure.manaStart,rageStart:pressure.rageStart,prepCount:gate.count,prepNeed:gate.need,learningThreshold:gate.threshold,rewards:{coins:Math.round(baseCoins*rewardMult),exp:Math.round(baseExp*rewardMult)},storyIndex:progress});
  }return out;}
 for(const island of islands)island.stages=buildStages(island);
 window.POWDER_ADVENTURE_DATA={version:2,title:'Biên Niên Sử Màn Sương Vô Ngôn',islands,stageCount,islandById:id=>islands.find(x=>x.id===Number(id)),stageById:id=>{for(const i of islands){const s=i.stages.find(x=>x.id===String(id));if(s)return s}return null;}};
