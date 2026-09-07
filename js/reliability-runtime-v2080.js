@@ -29,7 +29,7 @@ async function refresh(){
 function canCloudWrite(){return remote.cloudWritesAllowed!==false&&remote.mode!=='emergency'}
 function canEconomyWrite(){return remote.economyWritesAllowed!==false&&remote.mode!=='emergency'}
 function state(){return{...remote,lastError,lastFetchAt,online:navigator.onLine!==false}}
-function boot(){apply(remote,'boot');refresh();timer=setInterval(()=>{if(!document.hidden&&navigator.onLine!==false)refresh()},POLL);window.addEventListener('online',()=>setTimeout(refresh,600),{passive:true});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastFetchAt>POLL)refresh()},{passive:true})}
+function boot(){apply(remote,'boot');lastFetchAt=Date.now();window.addEventListener('online',()=>apply(remote,'online'),{passive:true});document.addEventListener('visibilitychange',()=>{if(!document.hidden)apply(remote,'visible')},{passive:true})}
 window.POWDER_RELIABILITY_V2080=Object.freeze({version:VERSION,state,refresh,canCloudWrite,canEconomyWrite});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
