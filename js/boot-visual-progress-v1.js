@@ -1,24 +1,18 @@
 (()=>{'use strict';
 if(window.POWDER_BOOT_VISUAL_PROGRESS_V1)return;
-const VERSION='1.0.1';
+const VERSION='1.0.2';
 const ESTIMATE_KEY='powder_boot_visual_estimate_ms_v1';
 const DEFAULT_MS=5000,MIN_MS=2500,MAX_MS=12000;
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
-let raf=0,last=-1,finished=false,estimate=DEFAULT_MS,lastDuration=0,percentEl=null,fillEl=null,visualText=null;
+let raf=0,last=-1,finished=false,estimate=DEFAULT_MS,lastDuration=0,percentEl=null,fillEl=null;
 try{const saved=Number(localStorage.getItem(ESTIMATE_KEY));if(Number.isFinite(saved)&&saved>0)estimate=clamp(saved,MIN_MS,MAX_MS)}catch(_){}
 function ensureUi(){
  percentEl=document.getElementById('bootProgressPct');
  fillEl=document.getElementById('bootProgressFill');
  if(!percentEl||!fillEl)return false;
- if(!visualText||!visualText.isConnected){
-   const cs=getComputedStyle(percentEl),color=cs.color,fontSize=cs.fontSize,fontWeight=cs.fontWeight,lineHeight=cs.lineHeight;
-   percentEl.style.position='relative';
-   percentEl.style.color='transparent';
-   visualText=document.createElement('span');
-   visualText.id='bootVisualProgressPctV1';
-   Object.assign(visualText.style,{position:'absolute',inset:'0',display:'grid',placeItems:'center',color,fontSize,fontWeight,lineHeight,pointerEvents:'none'});
-   percentEl.appendChild(visualText);
- }
+ percentEl.style.removeProperty('position');
+ percentEl.style.removeProperty('color');
+ percentEl.querySelector?.('#bootVisualProgressPctV1')?.remove();
  fillEl.style.transition='width .12s linear';
  return true;
 }
@@ -31,7 +25,7 @@ function saveEstimate(actual){
 function paint(value){
  if(!ensureUi())return;
  value=clamp(Math.round(value),0,100);
- if(value!==last){visualText.textContent=`${value}%`;last=value}
+ if(value!==last){percentEl.textContent=`${value}%`;last=value}
  const width=`${value}%`;
  if(fillEl.style.width!==width)fillEl.style.width=width;
 }
