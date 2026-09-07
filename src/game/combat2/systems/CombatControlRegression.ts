@@ -231,11 +231,22 @@ function validateFreezeStages(): void {
   const frozenBaselineActor = frozenBaselineState.activeLiving('player')[0];
   const frozenBaselineTarget = frozenBaselineState.activeLiving('enemy')[0];
   assert(frozenBaselineActor && frozenBaselineTarget, 'Frozen damage baseline missing');
-  const shatter = new BasicAttackResolver().resolve(actor, target);
+  const normalFrozenHit = new BasicAttackResolver().resolve(actor, target);
   const frozenNormalDamage = new BasicAttackResolver().resolve(frozenBaselineActor, frozenBaselineTarget);
-  assert(shatter.freezeShattered, 'taking damage while Frozen must break Freeze');
-  assert(target.controlStatus === null && controlActionsOf(target) === 0, 'shatter must immediately clear full Freeze');
-  assert(shatter.damage > frozenNormalDamage.damage, 'Frozen target must take the +30% shatter damage bonus');
+  assert(!normalFrozenHit.freezeShattered, 'normal damage must not implicitly Shatter Freeze');
+  assert(target.controlStatus === 'freeze' && controlActionsOf(target) === 1, 'normal damage must preserve full Freeze');
+  assert(normalFrozenHit.damage === frozenNormalDamage.damage, 'normal damage must not receive the explicit Shatter bonus');
+
+  actor.skillCooldownActionsRemaining[0] = 0;
+  const controlHistoryBefore = target.controlHistory.length;
+  const shatter = skills.resolve(actor, target, {
+    name: 'Explicit Shatter Fixture', power: 100, type: 'physical', damageType: 'physical',
+    shatterFrozen: true, status: 'freeze'
+  }, 0, 4);
+  assert(shatter.freezeShattered, 'explicit Shatter must break a full Freeze');
+  assert(target.controlStatus === null && controlActionsOf(target) === 0, 'explicit Shatter must clear full Freeze');
+  assert(target.freezeStage === 0, 'the Shatter hit must not reapply Chill');
+  assert(target.controlHistory.length === controlHistoryBefore, 'Shatter must preserve the successful Freeze CC history');
 }
 
 function validateAntiChain(): void {

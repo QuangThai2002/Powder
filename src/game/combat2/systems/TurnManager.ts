@@ -205,7 +205,10 @@ export class TurnManager {
     }
     if (unit.antiHealActionsRemaining > 0) {
       unit.antiHealActionsRemaining -= 1;
-      if (unit.antiHealActionsRemaining <= 0) unit.antiHeal = 0;
+      if (unit.antiHealActionsRemaining <= 0) {
+        unit.antiHeal = 0;
+        unit.grievousTier = null;
+      }
     }
     // Regeneration is a start-of-turn effect. Its duration is consumed only
     // after an actual regeneration tick so casting it never burns one tick immediately.

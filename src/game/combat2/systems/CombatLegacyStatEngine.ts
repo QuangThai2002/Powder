@@ -1,6 +1,8 @@
+import type { CombatRarity, CombatScalingStat, CritMode } from '../data/CombatPow';
 import type { CombatUnitState } from './CombatState';
 
-export const CRIT_DAMAGE_CAP = 250;
+export const AD_CRIT_DEFAULT_MULTIPLIER = 2;
+export const MAGIC_CRIT_MULTIPLIER_CAP = 2;
 export const CRIT_RESIST_CAP = 50;
 export const DEF_PEN_CAP = 0.45;
 export const DEF_PEN_ULTIMATE_CAP = 0.6;
@@ -10,6 +12,13 @@ export const HEAL_POWER_CAP = 60;
 export const SHIELD_POWER_CAP = 60;
 export const HIT_CHANCE_MIN = 0.25;
 
+const COMPAT_AD_CRIT_DAMAGE_CAP = 250;
+const MYTHIC_AD_CRIT_DAMAGE_CAP = 280;
+
+export function adCritDamageCapForRarity(rarity: CombatRarity): number {
+  return rarity === 'mythic' ? MYTHIC_AD_CRIT_DAMAGE_CAP : COMPAT_AD_CRIT_DAMAGE_CAP;
+}
+
 export interface LegacyHitResult {
   hit: boolean;
   evaded: boolean;
@@ -17,7 +26,11 @@ export interface LegacyHitResult {
   crit: boolean;
   critChance: number;
   critMultiplier: number;
+  critMode: CritMode;
   offense: number;
+  lethality: number;
+  armorPen: number;
+  defenseAfterLethality: number;
   effectiveDefense: number;
   mitigation: number;
   damageReduction: number;
@@ -30,19 +43,25 @@ export class CombatLegacyStatEngine {
     actor: CombatUnitState,
     target: CombatUnitState,
     options: {
-      usesAttack: boolean;
+      offenseStat: CombatScalingStat;
+      critMode: CritMode;
+      magicCritMultiplier?: number;
+      lethality?: number;
+      armorPen?: number;
       ultimate?: boolean;
       unavoidable?: boolean;
       area?: boolean;
     }
   ): LegacyHitResult {
-    const offense = options.usesAttack
+    const offense = options.offenseStat === 'attack'
       ? this.safePositive(actor.pow.attack, 1) * this.safeMultiplier(actor.attackMultiplier)
       : this.safePositive(actor.pow.abilityPower, actor.pow.attack) * this.safeMultiplier(actor.abilityPowerMultiplier);
     const targetDefense = this.safeNonNegative(target.pow.defense) * this.safeMultiplier(target.defenseMultiplier);
     const penCap = options.ultimate ? DEF_PEN_ULTIMATE_CAP : DEF_PEN_CAP;
-    const defPen = this.clamp(actor.pow.defPen, 0, penCap);
-    const effectiveDefense = Math.max(0, targetDefense * (1 - defPen));
+    const lethality = this.safeNonNegative(options.lethality ?? actor.pow.lethality ?? 0);
+    const armorPen = this.clamp(options.armorPen ?? actor.pow.defPen, 0, penCap);
+    const defenseAfterLethality = Math.max(0, targetDefense - lethality);
+    const effectiveDefense = defenseAfterLethality * (1 - armorPen);
     const mitigation = this.mitigationFromDefense(offense, effectiveDefense);
 
     const evasionCap = ['wind', 'storm', 'dark'].includes(String(target.pow.elementKey).toLowerCase()) ? 75 : 60;
@@ -55,15 +74,25 @@ export class CombatLegacyStatEngine {
       : this.clamp((100 + accuracyBonus - effectiveEvasion) / 100, HIT_CHANCE_MIN, 1);
     const hit = Boolean(options.unavoidable) || this.safeRandom() < hitChance;
 
-    const critChance = this.clamp(
-      (this.clamp(actor.pow.critRate + actor.critRateBonus, 0, 100) - this.clamp(target.pow.critResist, 0, CRIT_RESIST_CAP)) / 100,
-      0,
-      1
-    );
-    const crit = hit && this.safeRandom() < critChance;
-    const critMultiplier = crit
-      ? this.clamp(actor.pow.critDamage, 150, CRIT_DAMAGE_CAP) / 100
-      : 1;
+    const magicMultiplier = this.safeMagicCritMultiplier(options.magicCritMultiplier);
+    const critEligible = options.critMode === 'natural-ad' ||
+      (options.critMode === 'magic' && magicMultiplier > 1);
+    const critChance = critEligible
+      ? this.clamp(
+          (this.clamp(actor.pow.critRate + actor.critRateBonus, 0, 100) - this.clamp(target.pow.critResist, 0, CRIT_RESIST_CAP)) / 100,
+          0,
+          1
+        )
+      : 0;
+    // Preserve the legacy RNG stream: every landed hit consumes one Crit roll,
+    // even when the typed mode makes the final Crit chance zero.
+    const critRoll = hit ? this.safeRandom() : 1;
+    const crit = critEligible && critRoll < critChance;
+    const critMultiplier = !crit
+      ? 1
+      : options.critMode === 'magic'
+        ? magicMultiplier
+        : this.naturalAdCritMultiplier(actor);
     const damageReduction = this.clamp(
       target.pow.damageReduction + target.damageReductionBonus,
       0,
@@ -77,7 +106,11 @@ export class CombatLegacyStatEngine {
       crit,
       critChance,
       critMultiplier,
+      critMode: options.critMode,
       offense,
+      lethality,
+      armorPen,
+      defenseAfterLethality,
       effectiveDefense,
       mitigation,
       damageReduction
@@ -102,7 +135,17 @@ export class CombatLegacyStatEngine {
     const off = Math.max(1, Number(offense) || 1);
     const def = Math.max(0, Number(defense) || 0);
     const ratio = def / (def + 0.8 * off);
-    return this.clamp(ratio * 0.75, 0.1, 0.7);
+    return this.clamp(ratio * 0.75, 0, 0.7);
+  }
+
+  private naturalAdCritMultiplier(actor: CombatUnitState): number {
+    const cap = adCritDamageCapForRarity(actor.pow.rarity);
+    return this.clamp(actor.pow.critDamage, AD_CRIT_DEFAULT_MULTIPLIER * 100, cap) / 100;
+  }
+
+  private safeMagicCritMultiplier(value: number | undefined): number {
+    if (!Number.isFinite(value)) return 1;
+    return this.clamp(value as number, 1, MAGIC_CRIT_MULTIPLIER_CAP);
   }
 
   private safeRandom(): number {

@@ -118,6 +118,10 @@ export function cooldownForAbility(
     status === 'crit up' ||
     status === 'evasion up' ||
     status === 'anti heal' ||
+    status === 'grievous-40' ||
+    status === 'grievous 40' ||
+    status === 'grievous-60' ||
+    status === 'grievous 60' ||
     status === 'attack down' ||
     status === 'ap down' ||
     status === 'defense down' ||

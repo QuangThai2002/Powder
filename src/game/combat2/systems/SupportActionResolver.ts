@@ -1,4 +1,5 @@
 import type { CombatUnitState } from './CombatState';
+import { effectiveHealingReduction } from './CombatHealingReduction';
 import { ACTION_BASE_RAW_GAIN, applyRawRageGain } from './CombatRageEngine';
 
 export type SupportActionKind = 'speed' | 'heal' | 'shield';
@@ -33,7 +34,9 @@ export class SupportActionResolver {
 
   private applyHeal(actor: CombatUnitState): Omit<SupportActionResult, 'rageGained'> {
     const missing = Math.max(0, actor.pow.maxHp - actor.hp);
-    const amount = Math.min(missing, Math.max(1, Math.round(actor.pow.maxHp * 0.2)));
+    const poisonAnti = Math.min(0.4, Math.max(0, actor.poisonStacks) * 0.06);
+    const reduction = effectiveHealingReduction(actor.grievousTier, [actor.antiHeal, poisonAnti]);
+    const amount = Math.min(missing, Math.max(0, Math.round(actor.pow.maxHp * 0.2 * (1 - reduction))));
     actor.hp += amount;
     return { kind: 'heal', value: amount, label: 'HỒI MÁU' };
   }

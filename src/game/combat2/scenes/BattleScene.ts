@@ -25,6 +25,7 @@ import {
   FREEZE_SHATTER_MULTIPLIER
 } from '../systems/CombatControlEngine';
 import { CombatGuardEngine } from '../systems/CombatGuardEngine';
+import { effectiveHealingReduction } from '../systems/CombatHealingReduction';
 import { BossModeController } from '../systems/BossModeController';
 import { CombatState, type CombatUnitState } from '../systems/CombatState';
 import { ACTION_BASE_RAW_GAIN, ULTIMATE_RAGE_COST } from '../systems/CombatRageEngine';
@@ -697,7 +698,7 @@ export class BattleScene extends Phaser.Scene {
 
     if (actor.regenerationActionsRemaining > 0 && actor.alive) {
       const poisonAnti = Math.min(0.4, actor.poisonStacks * 0.06);
-      const antiHeal = Math.min(0.4, Math.max(0, actor.antiHeal) + poisonAnti);
+      const antiHeal = effectiveHealingReduction(actor.grievousTier, [actor.antiHeal, poisonAnti]);
       const healPower = Math.min(60, Math.max(0, actor.pow.healPower)) / 100;
       const raw = Math.round(actor.pow.maxHp * 0.06 * (1 + healPower) * (1 - antiHeal));
       const healed = Math.min(Math.max(0, actor.pow.maxHp - actor.hp), Math.max(0, raw));

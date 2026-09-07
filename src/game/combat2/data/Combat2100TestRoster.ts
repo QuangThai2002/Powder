@@ -77,6 +77,20 @@ function abilityOf(pow: any, row: any, offset: 0 | 1 | 2 | 3, fallbackName: stri
     name: String(row?.name || fallbackName),
     power: positive(row?.power, fallbackPower),
     type,
+    damageType: row?.damageType === 'physical' || row?.damageType === 'magic'
+      ? row.damageType
+      : type === 'physical' ? 'physical' : 'magic',
+    scalingStat: row?.scalingStat === 'attack' || row?.scalingStat === 'ability-power'
+      ? row.scalingStat
+      : type === 'physical' ? 'attack' : 'ability-power',
+    ...(row?.critMode === 'natural-ad' || row?.critMode === 'magic' || row?.critMode === 'never'
+      ? { critMode: row.critMode }
+      : {}),
+    ...(Number.isFinite(row?.magicCritMultiplier) ? { magicCritMultiplier: Number(row.magicCritMultiplier) } : {}),
+    ...(row?.shatterFrozen ? { shatterFrozen: true } : {}),
+    ...(row?.grievousTier === 'grievous-40' || row?.grievousTier === 'grievous-60'
+      ? { grievousTier: row.grievousTier }
+      : {}),
     ...(status ? { status } : {}),
     ...(row?.target ? { target: String(row.target) } : {}),
     ...(row?.area ? { area: true } : {}),
@@ -119,10 +133,11 @@ function convert(row: any, fallback: CombatPow): CombatPow {
     hp,
     maxHp: hp,
     critRate: clamp(stats.critRate, 0, 100, fallback.critRate || 0),
-    critDamage: clamp(stats.critDamage, 100, 250, fallback.critDamage || 150),
+    critDamage: clamp(stats.critDamage, 100, 280, fallback.critDamage || 150),
     evasion: clamp(stats.evasion, 0, 75, fallback.evasion || 0),
     accuracy: clamp(stats.accuracy, 25, 200, fallback.accuracy || 100),
     critResist: clamp(stats.critResist, 0, 50, fallback.critResist || 0),
+    lethality: Math.max(0, finite(stats.lethality, fallback.lethality || 0)),
     defPen: clamp(stats.defPen, 0, 0.6, fallback.defPen || 0),
     healPower: clamp(stats.healPower, 0, 60, fallback.healPower || 0),
     shieldPower: clamp(stats.shieldPower, 0, 60, fallback.shieldPower || 0),

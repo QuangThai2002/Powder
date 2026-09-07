@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test:combat2-handoff": "node tools/verify-combat2-pve-handoff.mjs",
+    "test:combat2-damage-math": "node tools/verify-combat2-damage-math.mjs",
     "assets:audit": "node tools/audit-pow-assets.mjs",
     "check": "npm run typecheck && npm run build && npm run assets:audit"
   },

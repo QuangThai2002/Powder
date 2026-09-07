@@ -1,4 +1,10 @@
-import type { CombatAbility } from '../data/CombatPow';
+import type {
+  CombatAbility,
+  CombatDamageType,
+  CombatScalingStat,
+  CritMode,
+  GrievousTier
+} from '../data/CombatPow';
 import type { CombatUnitState, HardControlStatus } from './CombatState';
 import { CombatIdentityRules, type ElementOutcome } from './CombatIdentityRules';
 import {
@@ -9,6 +15,13 @@ import {
   isHardControlStatus
 } from './CombatControlEngine';
 import { CombatLegacyStatEngine } from './CombatLegacyStatEngine';
+import {
+  GRIEVOUS_40,
+  GRIEVOUS_60,
+  effectiveHealingReduction,
+  grievousReduction,
+  strongestGrievousTier
+} from './CombatHealingReduction';
 import {
   ACTION_BASE_RAW_GAIN,
   ULTIMATE_RAGE_COST,
@@ -48,6 +61,7 @@ export interface SkillActionResult {
   freezeShattered: boolean;
   cooldownApplied: number;
   crit: boolean;
+  critMultiplier: number;
   evaded: boolean;
   hitChance: number;
   critChance: number;
@@ -179,6 +193,7 @@ export class SkillActionResolver {
           elementOutcome: 'neutral' as ElementOutcome,
           freezeShattered: false,
           crit: false,
+          critMultiplier: 1,
           evaded: false,
           hitChance: 1,
           critChance: 0,
@@ -186,9 +201,12 @@ export class SkillActionResolver {
         }
       : this.applyDamage(actor, target, ability, damageKind);
 
+    const suppressFreezeReapply = damageResult.freezeShattered && parsedStatus.status === 'freeze';
     const statusResult = damageResult.evaded && !noDirectDamage
       ? this.emptyStatusResult('evade')
-      : this.applyStatus(actor, target, ability, currentRound, damageResult.damage);
+      : suppressFreezeReapply
+        ? this.emptyStatusResult(null)
+        : this.applyStatus(actor, target, ability, currentRound, damageResult.damage);
     const rageResult = applyRageEvent(rageBeforeEvent, [
       abilitySlot === 'ultimate' ? 0 : ACTION_BASE_RAW_GAIN,
       this.resourceBonusRaw(ability.status)
@@ -220,20 +238,25 @@ export class SkillActionResolver {
     kind: 'skill' | 'ultimate'
   ): Pick<SkillActionResult,
     'damage' | 'shieldDamage' | 'hpDamage' | 'identityMultiplier' | 'elementOutcome' |
-    'freezeShattered' | 'crit' | 'evaded' | 'hitChance' | 'critChance' | 'mitigation'> {
+    'freezeShattered' | 'crit' | 'critMultiplier' | 'evaded' | 'hitChance' | 'critChance' | 'mitigation'> {
     const normalizedType = String(ability.type || '').trim().toLowerCase();
-    const usesAttack = normalizedType === 'physical';
+    const damageType = this.damageTypeFor(ability, normalizedType);
+    const offenseStat = this.scalingStatFor(ability, normalizedType);
+    const critMode = this.critModeFor(ability, damageType);
     const coefficient = Math.min(5, Math.max(0.1, this.safeStat(ability.power, 100) / 100));
-    const identity = this.identity.evaluateDamage(actor, target, kind, ability.type);
+    const identity = this.identity.evaluateDamage(actor, target, kind, damageType);
     const hit = this.legacyStats.resolveHit(actor, target, {
-      usesAttack,
+      offenseStat,
+      critMode,
+      magicCritMultiplier: ability.magicCritMultiplier,
       ultimate: kind === 'ultimate',
       unavoidable: Boolean(ability.unavoidable || ability.sureHit),
       area: Boolean(ability.area)
     });
     const frozen = target.controlStatus === 'freeze' && target.controlActionsRemaining > 0;
     const frostbitten = target.freezeStage === 2 && target.freezeStageActionsRemaining > 0;
-    const vulnerability = frozen
+    const explicitShatter = Boolean(ability.shatterFrozen) && frozen;
+    const vulnerability = explicitShatter
       ? FREEZE_SHATTER_MULTIPLIER
       : frostbitten
         ? FROSTBITE_DAMAGE_MULTIPLIER
@@ -258,7 +281,7 @@ export class SkillActionResolver {
 
     target.shield = Math.max(0, shieldBefore - shieldDamage);
     target.hp = Math.max(0, target.hp - hpDamage);
-    const freezeShattered = frozen && damage > 0;
+    const freezeShattered = explicitShatter && damage > 0;
     if (freezeShattered) this.control.breakFreeze(target);
 
     return {
@@ -269,6 +292,7 @@ export class SkillActionResolver {
       elementOutcome: identity.outcome,
       freezeShattered,
       crit: hit.crit,
+      critMultiplier: hit.critMultiplier,
       evaded: hit.evaded,
       hitChance: hit.hitChance,
       critChance: hit.critChance,
@@ -420,9 +444,16 @@ export class SkillActionResolver {
         target.accuracyDebuffActionsRemaining = Math.max(target.accuracyDebuffActionsRemaining, 2 + durationBonus);
         break;
       case 'anti heal':
-        target.antiHeal = Math.max(target.antiHeal, 0.25);
+      case 'grievous-40':
+      case 'grievous 40':
+      case 'grievous-60':
+      case 'grievous 60': {
+        const requested = this.grievousTierFor(ability, status);
+        target.grievousTier = strongestGrievousTier(target.grievousTier, requested);
+        target.antiHeal = Math.max(target.antiHeal, grievousReduction(target.grievousTier));
         target.antiHealActionsRemaining = Math.max(target.antiHealActionsRemaining, 2 + durationBonus);
         break;
+      }
       case 'cleanse':
       case 'purify': {
         const hadSpeedDebuff = target.speedDebuffActionsRemaining > 0 || target.freezeStage > 0;
@@ -436,6 +467,7 @@ export class SkillActionResolver {
         target.dotDamage = 0;
         target.dotActionsRemaining = 0;
         target.antiHeal = 0;
+        target.grievousTier = null;
         target.antiHealActionsRemaining = 0;
         if (target.attackMultiplier < 1) { target.attackMultiplier = 1; target.attackBuffActionsRemaining = 0; }
         if (target.abilityPowerMultiplier < 1) { target.abilityPowerMultiplier = 1; target.abilityPowerBuffActionsRemaining = 0; }
@@ -505,7 +537,7 @@ export class SkillActionResolver {
 
   private healTarget(source: CombatUnitState, target: CombatUnitState, rawAmount: number): number {
     const poisonAntiHeal = Math.min(0.4, Math.max(0, target.poisonStacks) * 0.06);
-    const antiHeal = Math.min(0.4, Math.max(0, target.antiHeal) + poisonAntiHeal);
+    const antiHeal = effectiveHealingReduction(target.grievousTier, [target.antiHeal, poisonAntiHeal]);
     const boosted = Math.max(0, rawAmount) * this.legacyStats.healMultiplier(source);
     const amount = Math.min(
       Math.round(target.pow.maxHp * 0.35),
@@ -537,6 +569,7 @@ export class SkillActionResolver {
     target.damageReductionBonus = 0;
     target.guardActionsRemaining = 0;
     target.antiHeal = 0;
+    target.grievousTier = null;
     target.antiHealActionsRemaining = 0;
     target.regenerationActionsRemaining = 0;
     target.controlImmunityActionsRemaining = 0;
@@ -589,6 +622,29 @@ export class SkillActionResolver {
       return;
     }
     actor.skillCooldownActionsRemaining[slot] = Math.max(actor.skillCooldownActionsRemaining[slot], internal);
+  }
+
+  private damageTypeFor(ability: CombatAbility, normalizedType: string): CombatDamageType {
+    if (ability.damageType === 'physical' || ability.damageType === 'magic') return ability.damageType;
+    return normalizedType === 'physical' ? 'physical' : 'magic';
+  }
+
+  private scalingStatFor(ability: CombatAbility, normalizedType: string): CombatScalingStat {
+    if (ability.scalingStat === 'attack' || ability.scalingStat === 'ability-power') return ability.scalingStat;
+    return normalizedType === 'physical' ? 'attack' : 'ability-power';
+  }
+
+  private critModeFor(ability: CombatAbility, damageType: CombatDamageType): CritMode {
+    if (ability.critMode === 'never') return 'never';
+    if (damageType === 'physical') return 'natural-ad';
+    return ability.critMode === 'magic' ? 'magic' : 'never';
+  }
+
+  private grievousTierFor(ability: CombatAbility, status: string): GrievousTier {
+    if (ability.grievousTier === GRIEVOUS_60 || status === 'grievous-60' || status === 'grievous 60') {
+      return GRIEVOUS_60;
+    }
+    return GRIEVOUS_40;
   }
 
   private resourceBonusRaw(rawStatus: string | undefined): number {

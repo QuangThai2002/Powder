@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { BattleScene } from './scenes/BattleScene';
 import { COMBAT2_STARTER_ROSTER } from './data/PowderDataAdapter';
 import { runCombat2SmokeRegression } from './systems/CombatRegression';
+import { runCombatDamageMathRegression } from './systems/CombatDamageMathRegression';
 import { runCombatFinalRegression } from './systems/CombatFinalRegression';
 import { runCombatPresentationRegression } from './systems/CombatPresentationRegression';
 import { CombatGuardEngine } from './systems/CombatGuardEngine';
@@ -185,6 +186,7 @@ if (isLocalDev) {
   queueMicrotask(() => {
     try {
       const report = runCombat2SmokeRegression();
+      const damageMath = runCombatDamageMathRegression();
       const finalGate = runCombatFinalRegression();
       const presentationGate = runCombatPresentationRegression(testRosterReport);
       const specialSupport = runCombatSpecialSupportRegression();
@@ -196,7 +198,7 @@ if (isLocalDev) {
       const legacyDomainSpecial = runCombatLegacyDomainSpecialRegression();
       const legacyDomainParity = runCombatLegacyDomainParityRegression();
       console.info('[Combat2 Regression PASS]', {
-        ...report, finalGate, presentationGate, specialSupport, rage, guard, multiTarget, legacyRole, legacyDomain, legacyDomainSpecial, legacyDomainParity,
+        ...report, damageMath, finalGate, presentationGate, specialSupport, rage, guard, multiTarget, legacyRole, legacyDomain, legacyDomainSpecial, legacyDomainParity,
         roster: testRosterReport,
         actionFx: (globalThis as any).POWDER_COMBAT2_ACTION_FX?.version ?? 'missing',
         statusFx: (globalThis as any).POWDER_COMBAT2_STATUS_FX?.version ?? 'missing',

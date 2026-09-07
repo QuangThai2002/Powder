@@ -8,6 +8,11 @@ export type CombatRarity =
   | 'mythic'
   | 'ancient';
 
+export type CombatDamageType = 'physical' | 'magic';
+export type CombatScalingStat = 'attack' | 'ability-power';
+export type CritMode = 'natural-ad' | 'magic' | 'never';
+export type GrievousTier = 'grievous-40' | 'grievous-60';
+
 export interface PowDisplayProfile {
   heightRatio: number;
   scaleAdjust?: number;
@@ -19,6 +24,16 @@ export interface CombatAbility {
   name: string;
   power: number;
   type: string;
+  /** Canonical damage identity. Crit behavior follows this, not the scaling stat. */
+  damageType?: CombatDamageType;
+  /** Kept separate so future hybrid skills can scale independently from damage identity. */
+  scalingStat?: CombatScalingStat;
+  critMode?: CritMode;
+  /** Total Magic Crit multiplier; only read when critMode is explicitly "magic". */
+  magicCritMultiplier?: number;
+  /** Only an explicit Shatter hit may consume a full Freeze. */
+  shatterFrozen?: boolean;
+  grievousTier?: GrievousTier;
   status?: string;
   target?: string;
   area?: boolean;
@@ -75,6 +90,8 @@ export interface CombatPow {
   evasion: number;
   accuracy: number;
   critResist: number;
+  /** Flat DEF removal applied before percentage Armor Penetration. */
+  lethality?: number;
   defPen: number;
   healPower: number;
   shieldPower: number;

@@ -1,4 +1,4 @@
-import type { CombatPow, CombatSide } from '../data/CombatPow';
+import type { CombatPow, CombatSide, GrievousTier } from '../data/CombatPow';
 import { ACTIVE_TEAM_SIZE } from '../data/PowderDataAdapter';
 import { RAGE_START_POINTS, sanitizeRagePoints } from './CombatRageEngine';
 
@@ -46,6 +46,8 @@ export interface CombatUnitState {
   damageReductionBonus: number;
   guardActionsRemaining: number;
   antiHeal: number;
+  /** Canonical non-stacking healing reduction; legacy antiHeal remains an adapter input. */
+  grievousTier: GrievousTier | null;
   antiHealActionsRemaining: number;
   regenerationActionsRemaining: number;
   /** Future own turns before Skill I/II become usable again. */
@@ -194,7 +196,10 @@ export class CombatState {
       unit.tenacityBuffActionsRemaining = this.safeDuration(unit.tenacityBuffActionsRemaining);
       unit.damageReductionBonus = this.finiteClamp(unit.damageReductionBonus, 0, 0.45, 0);
       unit.guardActionsRemaining = this.safeDuration(unit.guardActionsRemaining);
-      unit.antiHeal = this.finiteClamp(unit.antiHeal, 0, 0.4, 0);
+      unit.antiHeal = this.finiteClamp(unit.antiHeal, 0, 0.6, 0);
+      if (unit.grievousTier !== 'grievous-40' && unit.grievousTier !== 'grievous-60') {
+        unit.grievousTier = null;
+      }
       unit.antiHealActionsRemaining = this.safeDuration(unit.antiHealActionsRemaining);
       unit.regenerationActionsRemaining = this.safeDuration(unit.regenerationActionsRemaining);
       unit.skillCooldownActionsRemaining = [
@@ -313,6 +318,7 @@ export class CombatState {
     unit.damageReductionBonus = 0;
     unit.guardActionsRemaining = 0;
     unit.antiHeal = 0;
+    unit.grievousTier = null;
     unit.antiHealActionsRemaining = 0;
     unit.regenerationActionsRemaining = 0;
   }
@@ -347,6 +353,7 @@ export class CombatState {
       damageReductionBonus: 0,
       guardActionsRemaining: 0,
       antiHeal: 0,
+      grievousTier: null,
       antiHealActionsRemaining: 0,
       regenerationActionsRemaining: 0,
       skillCooldownActionsRemaining: [0, 0],

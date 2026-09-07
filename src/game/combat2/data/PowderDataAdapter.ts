@@ -19,6 +19,7 @@ interface CatalogStats {
   evasion?: number;
   accuracy?: number;
   critResist?: number;
+  lethality?: number;
   defPen?: number;
   healPower?: number;
   shieldPower?: number;
@@ -29,6 +30,12 @@ interface CatalogAbility {
   name?: string;
   power?: number;
   type?: string;
+  damageType?: string;
+  scalingStat?: string;
+  critMode?: string;
+  magicCritMultiplier?: number;
+  shatterFrozen?: boolean;
+  grievousTier?: string;
   status?: string;
   target?: string;
   area?: boolean;
@@ -330,10 +337,26 @@ function normalizeAbility(
   const balancedStatus = balancedHardControlStatus(migratedStatus, pow.rosterOrder, abilityOffset);
   const type = normalizeAbilityType(ability?.type, balancedStatus, fallbackType);
   const status = normalizeAbilityStatus(balancedStatus, type);
+  const damageType = ability?.damageType === 'physical' || ability?.damageType === 'magic'
+    ? ability.damageType
+    : type === 'physical' ? 'physical' : 'magic';
+  const scalingStat = ability?.scalingStat === 'attack' || ability?.scalingStat === 'ability-power'
+    ? ability.scalingStat
+    : type === 'physical' ? 'attack' : 'ability-power';
   return {
     name: String(ability?.name || fallbackName),
     power: finitePositive(ability?.power, fallbackPower),
     type,
+    damageType,
+    scalingStat,
+    ...(ability?.critMode === 'natural-ad' || ability?.critMode === 'magic' || ability?.critMode === 'never'
+      ? { critMode: ability.critMode }
+      : {}),
+    ...(Number.isFinite(ability?.magicCritMultiplier) ? { magicCritMultiplier: Number(ability?.magicCritMultiplier) } : {}),
+    ...(ability?.shatterFrozen ? { shatterFrozen: true } : {}),
+    ...(ability?.grievousTier === 'grievous-40' || ability?.grievousTier === 'grievous-60'
+      ? { grievousTier: ability.grievousTier }
+      : {}),
     ...(status ? { status } : {}),
     ...(ability?.target ? { target: String(ability.target) } : {}),
     ...(ability?.area ? { area: true } : {}),
@@ -435,10 +458,11 @@ function toCombatPow(pow: CatalogPow): CombatPow {
     hp,
     maxHp: hp,
     critRate: clamp(finiteNumber(stats.critRate, 0), 0, 100),
-    critDamage: clamp(finiteNumber(stats.critDamage, 150), 100, 250),
+    critDamage: clamp(finiteNumber(stats.critDamage, 150), 100, 280),
     evasion: clamp(finiteNumber(stats.evasion, Math.max(roleEvasion, elementEvasion)), 0, SPECIAL_EVA_ELEMENTS.has(elementKey) ? 75 : 60),
     accuracy: clamp(finiteNumber(stats.accuracy, 100), 25, 200),
     critResist: clamp(finiteNumber(stats.critResist, ROLE_CRIT_RESIST[roleKey] ?? 0), 0, 50),
+    lethality: Math.max(0, finiteNumber(stats.lethality, 0)),
     defPen: clamp(finiteNumber(stats.defPen, 0), 0, 0.6),
     healPower: clamp(finiteNumber(stats.healPower, ROLE_HEAL_POWER[roleKey] ?? 0), 0, 60),
     shieldPower: clamp(finiteNumber(stats.shieldPower, ROLE_SHIELD_POWER[roleKey] ?? 0), 0, 60),
@@ -583,7 +607,7 @@ export function applyBossBootstrapToTeam(
       hp,
       maxHp: Math.max(hp, Math.round(Number(stats.maxHp) || hp)),
       critRate: clamp(finiteNumber(stats.critRate, pow.critRate), 0, 100),
-      critDamage: clamp(finiteNumber(stats.critDamage, pow.critDamage), 100, 250),
+      critDamage: clamp(finiteNumber(stats.critDamage, pow.critDamage), 100, 280),
       evasion: clamp(finiteNumber(stats.evasion, pow.evasion), 0, 75),
       accuracy: clamp(finiteNumber(stats.accuracy, pow.accuracy), 25, 200),
       critResist: clamp(finiteNumber(stats.critResist, pow.critResist), 0, 50),
