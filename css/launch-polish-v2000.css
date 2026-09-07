@@ -80,3 +80,126 @@ html.powder-combat-fullscreen .cv7-field{height:calc(var(--powder-vvh) - 80px)!i
   .pvp1870-shell{padding:8px}.pvp1870-stats article{padding:9px}.pvp1870-stats b{font-size:18px}.pvp1870-unit{padding:3px}.pvp1870-unit-art{height:46px}.pvp1870-reserve-row{gap:3px}.pvp1870-skills button{font-size:10px}
 }
 @media(prefers-reduced-motion:reduce){.pr1910-network-banner{transition:none}}
+
+/* Powder topbar compact pass — presentation only. Keep all existing nav/account logic. */
+@media(min-width:1181px){
+  .app .topbar{
+    display:flex!important;
+    flex-wrap:nowrap!important;
+    align-items:center!important;
+    gap:8px!important;
+    min-height:64px!important;
+    padding:6px 10px!important;
+    border-radius:20px!important;
+  }
+  .topbar .brand.brand-logo-only{
+    flex:0 0 50px!important;
+    width:50px!important;
+    height:50px!important;
+    min-width:50px!important;
+    margin:0!important;
+    align-self:center!important;
+  }
+  .topbar .brand.brand-logo-only .brand-orb{
+    width:46px!important;
+    height:46px!important;
+    padding:4px!important;
+    border-radius:15px!important;
+  }
+  .topbar .nav{
+    flex:1 1 auto!important;
+    min-width:0!important;
+    width:auto!important;
+    min-height:48px!important;
+    display:grid!important;
+    grid-template-columns:repeat(9,minmax(64px,1fr))!important;
+    align-items:stretch!important;
+    gap:3px!important;
+    padding:4px!important;
+    border-radius:17px!important;
+    overflow:hidden!important;
+  }
+  .topbar .nav-btn{
+    min-width:0!important;
+    min-height:40px!important;
+    padding:5px 6px!important;
+    border-radius:12px!important;
+    font-size:.84rem!important;
+    line-height:1.1!important;
+  }
+  .topbar .wallet{
+    flex:0 0 auto!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:flex-end!important;
+    flex-wrap:nowrap!important;
+    gap:5px!important;
+    margin:0!important;
+  }
+  .topbar .wallet-pill,.topbar .wallet span{
+    min-height:40px!important;
+    padding:5px 8px!important;
+    border-radius:13px!important;
+  }
+  .topbar .wallet-coin,.topbar .element-coin{
+    min-width:76px!important;
+    width:auto!important;
+    justify-content:center!important;
+  }
+  .topbar .wallet .wallet-icon-img{
+    width:21px!important;
+    height:21px!important;
+    flex:0 0 21px!important;
+  }
+  .topbar .online-account-pill{
+    min-width:124px!important;
+    max-width:142px!important;
+    grid-template-columns:30px minmax(0,1fr) 7px!important;
+    gap:6px!important;
+    padding:4px 7px!important;
+  }
+  .topbar .online-account-avatar{width:30px!important;height:30px!important}
+  .topbar .online-account-avatar img{width:27px!important;height:27px!important}
+  .topbar .online-account-copy b{font-size:.88rem!important}
+  .topbar .online-account-copy small{font-size:.66rem!important;margin-top:2px!important}
+  .topbar .topbar-liveops-156,.topbar .topbar-gear{
+    flex:0 0 38px!important;
+    width:38px!important;
+    height:38px!important;
+    min-width:38px!important;
+    margin:0!important;
+    align-self:center!important;
+    border-radius:12px!important;
+  }
+}
+@media(min-width:1181px) and (max-width:1480px){
+  .topbar .nav-btn{font-size:.76rem!important;padding-inline:3px!important}
+  .topbar .nav{grid-template-columns:repeat(9,minmax(58px,1fr))!important}
+  .topbar .wallet-coin,.topbar .element-coin{min-width:68px!important}
+  .topbar .online-account-pill{min-width:112px!important;max-width:126px!important}
+}
+@media(max-width:1180px){
+  .app .topbar{
+    display:flex!important;
+    flex-wrap:wrap!important;
+    align-items:center!important;
+    gap:7px!important;
+    min-height:0!important;
+    padding:7px 8px!important;
+    border-radius:18px!important;
+  }
+  .topbar .brand.brand-logo-only{order:1!important;flex:0 0 48px!important;width:48px!important;height:48px!important;min-width:48px!important}
+  .topbar .brand.brand-logo-only .brand-orb{width:44px!important;height:44px!important;padding:4px!important;border-radius:14px!important}
+  .topbar .wallet{order:1!important;margin-left:auto!important;display:flex!important;align-items:center!important;gap:4px!important}
+  .topbar .topbar-liveops-156,.topbar .topbar-gear{order:1!important;flex:0 0 36px!important;width:36px!important;height:36px!important;min-width:36px!important;border-radius:11px!important;margin:0!important}
+  .topbar .nav{order:2!important;width:100%!important;display:grid!important;grid-template-columns:repeat(9,minmax(92px,1fr))!important;gap:3px!important;min-height:46px!important;padding:4px!important;border-radius:15px!important;overflow-x:auto!important;scrollbar-width:none!important}
+  .topbar .nav::-webkit-scrollbar{display:none!important}
+  .topbar .nav-btn{min-height:38px!important;padding:5px 6px!important;border-radius:11px!important;font-size:.8rem!important}
+  .topbar .wallet-pill,.topbar .wallet span{min-height:38px!important;padding:4px 7px!important;border-radius:12px!important}
+}
+@media(max-width:720px){
+  .topbar .wallet-coin,.topbar .element-coin{min-width:64px!important}
+  .topbar .online-account-pill{min-width:104px!important;max-width:118px!important}
+  .topbar .online-account-copy small{display:none!important}
+  .topbar .nav{grid-template-columns:repeat(9,minmax(82px,1fr))!important}
+}
