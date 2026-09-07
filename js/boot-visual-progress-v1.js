@@ -1,10 +1,10 @@
 (()=>{'use strict';
 if(window.POWDER_BOOT_VISUAL_PROGRESS_V1)return;
-const VERSION='1.0.0';
+const VERSION='1.0.1';
 const ESTIMATE_KEY='powder_boot_visual_estimate_ms_v1';
 const DEFAULT_MS=5000,MIN_MS=2500,MAX_MS=12000;
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
-let raf=0,last=-1,finished=false,estimate=DEFAULT_MS,percentEl=null,fillEl=null,visualText=null;
+let raf=0,last=-1,finished=false,estimate=DEFAULT_MS,lastDuration=0,percentEl=null,fillEl=null,visualText=null;
 try{const saved=Number(localStorage.getItem(ESTIMATE_KEY));if(Number.isFinite(saved)&&saved>0)estimate=clamp(saved,MIN_MS,MAX_MS)}catch(_){}
 function ensureUi(){
  percentEl=document.getElementById('bootProgressPct');
@@ -42,9 +42,9 @@ function tick(){
  if(complete){
    finished=true;
    const actual=performance.now();
+   lastDuration=Math.round(actual);
    paint(100);
    saveEstimate(actual);
-   window.POWDER_BOOT_VISUAL_PROGRESS_V1.lastDurationMs=Math.round(actual);
    return;
  }
  if(screen?.hidden){finished=true;return}
@@ -55,5 +55,5 @@ function tick(){
 }
 function start(){if(raf||finished)return;ensureUi();raf=requestAnimationFrame(tick)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
-window.POWDER_BOOT_VISUAL_PROGRESS_V1={version:VERSION,get estimateMs(){return Math.round(estimate)},get lastDurationMs(){return 0},start};
+window.POWDER_BOOT_VISUAL_PROGRESS_V1={version:VERSION,get estimateMs(){return Math.round(estimate)},get lastDurationMs(){return lastDuration},start};
 })();
