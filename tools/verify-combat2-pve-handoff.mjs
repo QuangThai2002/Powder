@@ -204,6 +204,7 @@ function createRuntime() {
   const adventureResults = [];
   const restoredContexts = [];
   const shownViews = [];
+  const legacyStarts = [];
   const saveState = { team: ['hero-1'], lessonsDone: ['lesson-1'], rank: 3, owned: {
     'hero-1': { level: 42, stars: 2, shiny: false },
     'hero-2': { level: 38, stars: 1, shiny: true },
@@ -264,6 +265,9 @@ function createRuntime() {
     POWDER_ADVENTURE: {
       onBattleFinished: (entry) => { adventureResults.push(entry); },
       restoreCombatContext: (entry) => { restoredContexts.push(entry); }
+    },
+    POWDER_BATTLE_PLAYER_V177: {
+      startEncounter: (...args) => { legacyStarts.push(args); return true; }
     }
   };
   const bossConfigs = {
@@ -291,7 +295,7 @@ function createRuntime() {
     setTimeout() { return 0; },
     clearTimeout() {}
   };
-  return { sandbox: vm.createContext(sandbox), window, sessionStorage, localStorage, navigation, learning, rewards, bossSettlements, adventureResults, restoredContexts, shownViews, question, dailyBossConfig, bossConfigs, saveState };
+  return { sandbox: vm.createContext(sandbox), window, sessionStorage, localStorage, navigation, learning, rewards, bossSettlements, adventureResults, restoredContexts, shownViews, legacyStarts, question, dailyBossConfig, bossConfigs, saveState };
 }
 
 function stage() {
@@ -334,6 +338,7 @@ async function main() {
   const entry = runtime.window.POWDER_COMBAT_ENTRY_V177;
   const handoff = runtime.window.POWDER_COMBAT2_HANDOFF;
   const { CombatState, TurnManager, BossModeController } = bossRuntime;
+  assert.deepEqual(plain(entry.combat2Cutover), { pve: true, boss: true, legacyFallback: false }, 'PvE and Boss entry must be cut over to Combat2');
   const pow = (id, hp, speed = 100) => ({ id, name: id, hp, maxHp: hp, speed, passive: null });
   const bossController = (type, config) => {
     const state = new CombatState([pow('hero-mechanic', 100)], [pow(`boss-${type}`, 1000)], {
@@ -393,6 +398,13 @@ async function main() {
   const launched = entry.startMap(stage());
   assert.equal(launched, true, 'canRunPvePilot must launch Combat2 for an eligible offline PvE request');
   assert.equal(runtime.window.location.pathname, '/combat2.html', 'Main entry must navigate to Combat2');
+  assert.equal(runtime.legacyStarts.length, 0, 'eligible PvE must not invoke the legacy renderer');
+
+  runtime.window.POWDER_ONLINE_V150 = { hasSession: () => true };
+  assert.equal(entry.startMap(stage()), false, 'ineligible online PvE must fail closed instead of launching legacy Combat');
+  assert.equal(entry.startBoss(bossStage()), false, 'ineligible online Boss must fail closed instead of launching legacy Combat');
+  assert.equal(runtime.legacyStarts.length, 0, 'rejected Combat2 entries must not invoke the legacy renderer');
+  delete runtime.window.POWDER_ONLINE_V150;
 
   const request = handoff.readBattleRequest();
   assert.equal(request.ok, true, 'BattleRequest must be stored before Combat2 navigation');
@@ -521,6 +533,7 @@ async function main() {
   assert.equal(entry.canRunBossPilot(bossRequest), true, 'eligible offline Boss must be migratable');
   assert.equal(entry.startBoss(bossStage()), true, 'Boss live route must launch Combat2 after bootstrap parity');
   assert.equal(runtime.window.location.pathname, '/combat2.html', 'Boss live route must navigate to Combat2');
+  assert.equal(runtime.legacyStarts.length, 0, 'eligible Boss must not invoke the legacy renderer');
   assert.equal(handoff.storeBattleRequest(bossRequest.value).ok, true, 'Boss contract can be verified without enabling live migration');
   assert.equal(runtime.window.location.pathname, '/combat2.html', 'Boss request storage must not leave Combat2');
 

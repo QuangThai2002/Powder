@@ -83,8 +83,8 @@ function createBossPilotRequest(stage){const player=playerTeam(),challengeId=Str
 function canRunBossPilot(request){const bootstrap=request?.value?.bossContext?.bootstrap;return !!request?.ok&&request.value.battleMode==='boss'&&!!request.value.bossContext?.phaseConfig&&Array.isArray(bootstrap?.playerRoster)&&bootstrap.playerRoster.length>0&&Array.isArray(bootstrap?.enemyRoster)&&bootstrap.enemyRoster.length>0&&typeof window.POWDER_APP?.onBossCombatFinished==='function'&&typeof window.POWDER_TX_SAFETY_V2090?.mutate==='function'&&!window.POWDER_ONLINE_V150?.hasSession?.()&&!request.value.sourceContext?.stage?.serverCombatSessionId;}
 function scene(){return window.POWDER_BATTLE_PLAYER_V177||null;}
 function normalize(stage,source){const s=stage&&typeof stage==='object'?JSON.parse(JSON.stringify(stage)):null;if(!s)return null;s.entrySource=source;return s;}
-function startMap(stage){const s=normalize(stage,'map');if(!s||Number(s.islandId)<1||!s.id)return false;const pilot=createPvePilotRequest(s);if(canRunPvePilot(pilot)){const launched=launchCombat2(pilot.value);if(launched.ok)return true;}return !!scene()?.startEncounter?.(s,'map');}
-function startBoss(stage){const s=normalize(stage,'boss');if(!s||s.kind!=='boss'||!s.bossChallengeId)return false;const pilot=createBossPilotRequest(s);if(canRunBossPilot(pilot)){const launched=launchCombat2(pilot.value);if(launched.ok)return true;}return !!scene()?.startEncounter?.(s,'boss');}
+function startMap(stage){const s=normalize(stage,'map');if(!s||Number(s.islandId)<1||!s.id)return false;const pilot=createPvePilotRequest(s);if(!canRunPvePilot(pilot))return false;return launchCombat2(pilot.value).ok;}
+function startBoss(stage){const s=normalize(stage,'boss');if(!s||s.kind!=='boss'||!s.bossChallengeId)return false;const pilot=createBossPilotRequest(s);if(!canRunBossPilot(pilot))return false;return launchCombat2(pilot.value).ok;}
 function startEvent(stage){const s=normalize(stage,'event');if(!s||s.eventCombat!==true||!s.eventId)return false;return !!scene()?.startEncounter?.(s,'event');}
 function isActive(){return !!scene()?.isActive?.();}
 function getState(){return scene()?.getState?.()||null;}
@@ -92,5 +92,5 @@ function forfeit(reason='navigation'){return !!scene()?.forfeit?.(reason);}
 function getExitCost(){return Math.max(0,Number(scene()?.getExitCost?.()||0));}
 window.addEventListener('powder:app-booted',scheduleSettlement,{once:true});
 window.POWDER_COMBAT2_HANDOFF=Object.freeze({version:HANDOFF_VERSION,createBattleRequest,validateBattleRequest,storeBattleRequest,readBattleRequest,publishBattleResult,readBattleResult,returnToMain,settleReturnedResult,launchCombat2});
-window.POWDER_COMBAT_ENTRY_V177=Object.freeze({version:VERSION,startMap,startBoss,startEvent,isActive,getState,forfeit,getExitCost,createPvePilotRequest,createBossPilotRequest,canRunBossPilot,launchCombat2,modes:Object.freeze(['map','boss','event'])});
+window.POWDER_COMBAT_ENTRY_V177=Object.freeze({version:VERSION,startMap,startBoss,startEvent,isActive,getState,forfeit,getExitCost,createPvePilotRequest,createBossPilotRequest,canRunPvePilot,canRunBossPilot,launchCombat2,combat2Cutover:Object.freeze({pve:true,boss:true,legacyFallback:false}),modes:Object.freeze(['map','boss','event'])});
 })();
