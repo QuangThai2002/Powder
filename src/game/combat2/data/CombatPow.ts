@@ -21,6 +21,7 @@ export interface PowDisplayProfile {
 }
 
 export interface CombatAbility {
+  id?: string;
   name: string;
   power: number;
   type: string;
@@ -61,6 +62,8 @@ export interface CombatPassive {
   id: string;
   name: string;
   element?: string;
+  description?: string;
+  artUrl?: string;
 }
 
 /**
@@ -79,6 +82,8 @@ export interface CombatPow {
   role: string;
   rarity: CombatRarity;
   level: number;
+  stars?: number;
+  maxStars?: number;
   attack: number;
   abilityPower: number;
   defense: number;

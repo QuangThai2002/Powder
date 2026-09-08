@@ -72,5 +72,14 @@
     const adaptive=Math.max(Number(stage?.recommendedLevel)||1,Math.round(avgLevel*(Number(stage?.adaptive)||1)));
     return{version:VERSION,source:'legacy-boss-boundary',recommendedLevel:Number(stage?.recommendedLevel)||null,adaptive:Number(stage?.adaptive)||1,recommendedStars:Number(stage?.recommendedStars)||0,targetLevel:Math.max(1,Math.min(100,adaptive)),targetStars:Math.max(Number(stage?.recommendedStars)||0,Math.min(7,avgStars+(stage?.kind==='boss'?1:0))),stageScale:Number(stage?.scale)||1,gradeBase:Number(window.POWDER_POWER_CURVE_V8?.enemyGradeBase)||1.35,initiative:Number(stage?.initiative)||0,legacyManaStart:clamp(Number(stage?.manaStart)||.74,.5,1),legacyRageStart:clamp(Number(stage?.rageStart)||20,20,80),playerRoster:players,enemyRoster:enemies,initialRageByPowId,initialInitiativeByPowId};
   }
-  window.POWDER_COMBAT2_BOSS_BOOTSTRAP=Object.freeze({version:VERSION,legacyRageToCanonical,build});
+  function buildPve(stage,{playerIds=[],enemyIds=[],save={}}={}){
+    const players=playerRows(playerIds,save);
+    const enemies=adaptiveEnemyRows(players,{...stage,enemyIds,kind:String(stage?.kind||'normal')});
+    if(!players.length||!enemies.length)return null;
+    const initialRageByPowId={},initialInitiativeByPowId={};
+    for(const item of players){initialRageByPowId[item.powId]=0;initialInitiativeByPowId[item.powId]=0;}
+    for(const item of enemies){initialRageByPowId[item.powId]=clamp(item.initialRage,0,8);initialInitiativeByPowId[item.powId]=clamp(item.initialInitiative,0,92);}
+    return{version:VERSION,source:'legacy-pve-boundary',playerRoster:players,enemyRoster:enemies,initialRageByPowId,initialInitiativeByPowId};
+  }
+  window.POWDER_COMBAT2_BOSS_BOOTSTRAP=Object.freeze({version:VERSION,legacyRageToCanonical,build,buildPve});
 })();

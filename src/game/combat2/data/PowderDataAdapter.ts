@@ -27,7 +27,9 @@ interface CatalogStats {
   damageReduction?: number;
 }
 interface CatalogAbility {
+  id?: string;
   name?: string;
+  description?: string;
   power?: number;
   type?: string;
   damageType?: string;
@@ -38,6 +40,8 @@ interface CatalogAbility {
   grievousTier?: string;
   status?: string;
   target?: string;
+  hits?: number;
+  specialMechanic?: string;
   area?: boolean;
   sureHit?: boolean;
   unavoidable?: boolean;
@@ -45,7 +49,13 @@ interface CatalogAbility {
   pierceGuard?: boolean;
   bypassFront?: boolean;
 }
-interface CatalogPassive { id?: string; name?: string; element?: string; }
+interface CatalogPassive {
+  id?: string;
+  name?: string;
+  element?: string;
+  description?: string;
+  art?: string;
+}
 interface CatalogAbilities {
   basic?: CatalogAbility;
   skills?: CatalogAbility[];
@@ -62,6 +72,9 @@ interface CatalogPow {
   rarity?: string;
   asset?: string;
   rosterOrder?: number;
+  startStars?: number;
+  maxStars?: number;
+  passiveArt?: string;
   stats?: CatalogStats;
   abilities?: CatalogAbilities;
 }
@@ -70,8 +83,24 @@ interface PowderCatalog {
   pows?: CatalogPow[];
 }
 
+interface CanonicalSkillMetadata { id?: string; name?: string; description?: string; }
+interface CanonicalPowKit {
+  nativeStar?: number;
+  maxStarWorkbook?: number;
+  core?: string;
+  coreDescription?: string;
+  skills?: Partial<Record<'basic' | 'skill1' | 'skill2' | 'ultimate', CanonicalSkillMetadata>>;
+  starProgression?: Array<Record<string, unknown>>;
+}
+interface CanonicalSkillCatalog { pows?: Record<string, CanonicalPowKit>; }
+interface CanonicalSkillArt { get?: (abilityOrId: string | { id?: string }) => string; }
+
 declare global {
-  interface Window { POWDER_DATA?: PowderCatalog; }
+  interface Window {
+    POWDER_DATA?: PowderCatalog;
+    POWDER_SKILL_V81?: CanonicalSkillCatalog;
+    POWDER_SKILL_ART?: CanonicalSkillArt;
+  }
 }
 
 export const ACTIVE_TEAM_SIZE = 3;
@@ -85,7 +114,6 @@ const ENEMY_PREFERRED_IDS = [
   'terrapup', 'aquabub', 'zephyroo', 'gearbit', 'stormeon'
 ] as const;
 
-const CANONICAL_PREFIX = 'assets/pow-beta12/';
 const CANONICAL_SKILL_ART_PREFIX = '/assets/skills/v81/';
 export const STANDARD_POW_COUNT = 99;
 export const STANDARD_SKILLS_PER_POW = 4;
@@ -325,6 +353,11 @@ function canonicalSkillVisual(skillIndex: number | undefined): Pick<CombatAbilit
   };
 }
 
+function canonicalSkillMetadata(pow: CatalogPow, abilityOffset: 0 | 1 | 2 | 3): CanonicalSkillMetadata | undefined {
+  const slot = (['basic', 'skill1', 'skill2', 'ultimate'] as const)[abilityOffset];
+  return window.POWDER_SKILL_V81?.pows?.[String(pow.id || '')]?.skills?.[slot];
+}
+
 function normalizeAbility(
   pow: CatalogPow,
   ability: CatalogAbility | undefined,
@@ -333,6 +366,7 @@ function normalizeAbility(
   fallbackType: string,
   abilityOffset: 0 | 1 | 2 | 3
 ): CombatAbility {
+  const metadata = canonicalSkillMetadata(pow, abilityOffset);
   const migratedStatus = migrateLegacyStatus(ability?.status);
   const balancedStatus = balancedHardControlStatus(migratedStatus, pow.rosterOrder, abilityOffset);
   const type = normalizeAbilityType(ability?.type, balancedStatus, fallbackType);
@@ -344,7 +378,11 @@ function normalizeAbility(
     ? ability.scalingStat
     : type === 'physical' ? 'attack' : 'ability-power';
   return {
-    name: String(ability?.name || fallbackName),
+    ...(metadata?.id ? { id: String(metadata.id) } : ability?.id ? { id: String(ability.id) } : {}),
+    name: String(metadata?.name || ability?.name || fallbackName),
+    ...(metadata?.description || ability?.description
+      ? { description: String(metadata?.description || ability?.description) }
+      : {}),
     power: finitePositive(ability?.power, fallbackPower),
     type,
     damageType,
@@ -359,6 +397,10 @@ function normalizeAbility(
       : {}),
     ...(status ? { status } : {}),
     ...(ability?.target ? { target: String(ability.target) } : {}),
+    ...(Number.isFinite(ability?.hits) && Number(ability?.hits) > 0
+      ? { hits: Math.floor(Number(ability?.hits)) }
+      : {}),
+    ...(ability?.specialMechanic ? { mechanic: String(ability.specialMechanic) } : {}),
     ...(ability?.area ? { area: true } : {}),
     ...(ability?.sureHit ? { sureHit: true } : {}),
     ...(ability?.unavoidable ? { unavoidable: true } : {}),
@@ -369,13 +411,21 @@ function normalizeAbility(
   };
 }
 
-function normalizePassive(passive: CatalogPassive | undefined): CombatPassive | undefined {
-  const id = String(passive?.id || '').trim();
+function normalizePassive(pow: CatalogPow, passive: CatalogPassive | undefined): CombatPassive | undefined {
+  const kit = window.POWDER_SKILL_V81?.pows?.[String(pow.id || '')];
+  const hasStructuredStarterPassive = String(pow.id || '').startsWith('starter_') && Boolean(passive?.description);
+  const id = String(hasStructuredStarterPassive ? passive?.id : pow.id ? `${pow.id}.core` : passive?.id || '').trim();
   if (!id) return undefined;
   return {
     id,
-    name: String(passive?.name || id),
-    ...(passive?.element ? { element: String(passive.element) } : {})
+    name: String(kit?.core || passive?.name || id),
+    ...(passive?.element ? { element: String(passive.element) } : {}),
+    ...(passive?.description || kit?.coreDescription
+      ? { description: String(passive?.description || kit?.coreDescription) }
+      : {}),
+    ...(pow.passiveArt || passive?.art
+      ? { artUrl: `/${String(pow.passiveArt || passive?.art).replace(/^\/+/, '')}` }
+      : {})
   };
 }
 
@@ -391,41 +441,25 @@ function normalizeAbilities(pow: CatalogPow): CombatAbilitySet {
     ultimate: normalizeAbility(pow, pow.abilities?.ultimate, `${name} Ultimate`, 175, 'ultimate', 3)
   };
 
-  // Combat-only fixture: real Cleanse and active Revive for deterministic testing.
-  if (String(pow.id || '').trim().toLowerCase() === 'mosshorn') {
-    normalized.skills = [
-      {
-        ...normalized.skills[0],
-        name: 'Thanh Tẩy Sinh Mệnh',
-        power: 1,
-        type: 'support',
-        status: 'cleanse'
-      },
-      {
-        ...normalized.skills[1],
-        name: 'Hồi Sinh Mầm Sống',
-        power: 1,
-        type: 'support',
-        status: 'revive'
-      }
-    ];
-  }
-
   return normalized;
 }
 
 function canonicalAssetUrl(asset: string | undefined, powId: string): string {
   const normalized = String(asset || '').replace(/^\/+/, '');
-  if (!normalized.startsWith(CANONICAL_PREFIX)) {
+  if (!isCanonicalPowAsset(normalized)) {
     throw new Error(`[Combat2] Pow ${powId} has a non-canonical asset: ${normalized || '(missing)'}`);
   }
   return `/${normalized}`;
 }
 
+function isCanonicalPowAsset(asset: string): boolean {
+  return /^assets\/[^?#]+\.(?:avif|png|webp)$/i.test(asset);
+}
+
 function isCombatReadyCatalogPow(pow: CatalogPow): boolean {
   const id = String(pow.id || '').trim();
   const asset = String(pow.asset || '').replace(/^\/+/, '');
-  return Boolean(id) && asset.startsWith(CANONICAL_PREFIX);
+  return Boolean(id) && isCanonicalPowAsset(asset);
 }
 
 function toCombatPow(pow: CatalogPow): CombatPow {
@@ -437,7 +471,7 @@ function toCombatPow(pow: CatalogPow): CombatPow {
   const roleKey = combatRoleKey(pow);
   const elementKey = String(pow.element || 'unknown');
   const elementName = String(window.POWDER_DATA?.elements?.[elementKey]?.name || elementKey);
-  const passive = normalizePassive(pow.abilities?.passive);
+  const passive = normalizePassive(pow, pow.abilities?.passive);
   const roleEvasion = ROLE_EVASION[roleKey] ?? 0;
   const elementEvasion = SPECIAL_EVA_ELEMENTS.has(elementKey) ? 12 : 0;
 
@@ -451,6 +485,8 @@ function toCombatPow(pow: CatalogPow): CombatPow {
     role: String(pow.role || pow.combatRole || 'Không xác định'),
     rarity: normalizeRarity(pow.rarity),
     level: 60,
+    stars: Math.max(0, Math.floor(finiteNumber(pow.startStars, 0))),
+    maxStars: Math.max(0, Math.floor(finiteNumber(pow.maxStars, 0))),
     attack,
     abilityPower,
     defense: finitePositive(stats.def, 45),
@@ -600,6 +636,7 @@ export function applyBossBootstrapToTeam(
     return {
       ...pow,
       level: Math.max(1, Math.floor(Number(snapshot.level) || pow.level)),
+      stars: Math.max(0, Math.floor(Number(snapshot.stars) || 0)),
       attack: Math.max(1, Math.round(Number(stats.atk))),
       abilityPower: Math.max(1, Math.round(Number(stats.ap))),
       defense: Math.max(1, Math.round(Number(stats.def))),

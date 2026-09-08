@@ -412,6 +412,25 @@ async function main() {
   assert.equal(request.value.academicContext.requiresActionQuestions, true);
   assert.equal(request.value.academicContext.authority, 'main-learning');
   assert.equal(request.value.academicContext.allowedQuestionPool.length, 1, 'snapshot must exclude ineligible questions');
+  assert.equal(request.value.rosterContext.source, 'legacy-pve-boundary', 'PvE must snapshot final stats before Combat2 boot');
+  assert.equal(request.value.rosterContext.playerRoster.length, 1, 'PvE player snapshot must match the selected team');
+  assert.equal(request.value.rosterContext.enemyRoster.length, 1, 'PvE enemy snapshot must match the stage roster');
+  const pvePlayerRow = request.value.rosterContext.playerRoster[0];
+  const pveEnemyRow = request.value.rosterContext.enemyRoster[0];
+  const pveBasePlayer = request.value.playerTeam.map(id => pow(id, 100, 100));
+  const pveBaseEnemy = request.value.enemyTeam.map(id => pow(id, 100, 100));
+  const pveHydratedPlayer = bossRuntime.applyBossBootstrapToTeam(pveBasePlayer, request.value.rosterContext.playerRoster);
+  const pveHydratedEnemy = bossRuntime.applyBossBootstrapToTeam(pveBaseEnemy, request.value.rosterContext.enemyRoster);
+  assert.ok(pveHydratedPlayer && pveHydratedEnemy, 'PvE snapshot must hydrate the requested roster');
+  assert.equal(pveHydratedPlayer[0].level, runtime.saveState.owned['hero-1'].level, 'PvE level must come from the final Main-owned snapshot');
+  assert.equal(pveHydratedPlayer[0].stars, runtime.saveState.owned['hero-1'].stars, 'PvE stars must come from the final Main-owned snapshot');
+  assert.equal(pveHydratedPlayer[0].attack, pvePlayerRow.stats.atk, 'PvE final player ATK must survive handoff');
+  assert.equal(pveHydratedEnemy[0].attack, pveEnemyRow.stats.atk, 'PvE adaptive enemy ATK must survive handoff');
+  const pveBootstrapOptions = bossRuntime.bossBootstrapRuntimeOptions(request.value.rosterContext);
+  const pveState = new CombatState(pveHydratedPlayer, pveHydratedEnemy, { battleMode: 'pve', ...pveBootstrapOptions });
+  assert.equal(pveState.units.find(unit => unit.pow.id === pveEnemyRow.powId)?.initialInitiative,
+    request.value.rosterContext.initialInitiativeByPowId[pveEnemyRow.powId] || 0,
+    'PvE initiative snapshot must be applied before the first turn');
 
   const eligibleQuestions = contract.academicQuestionsFromContext(request.value.academicContext);
   assert.equal(eligibleQuestions.length, 1, 'Combat2 must accept Main snapshot questions only when lesson/concept match');

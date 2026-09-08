@@ -113,13 +113,16 @@ export class BattleScene extends Phaser.Scene {
     const bossBootstrap = request.value.battleMode === 'boss'
       ? request.value.bossContext.bootstrap as CombatBossBootstrapSnapshot | undefined
       : undefined;
-    const playerTeam = request.value.battleMode === 'boss'
-      ? applyBossBootstrapToTeam(playerTeamBase || [], bossBootstrap?.playerRoster)
+    const rosterBootstrap = request.value.battleMode === 'boss'
+      ? bossBootstrap
+      : request.value.rosterContext as CombatBossBootstrapSnapshot | undefined;
+    const playerTeam = rosterBootstrap
+      ? applyBossBootstrapToTeam(playerTeamBase || [], rosterBootstrap.playerRoster)
       : playerTeamBase;
-    const enemyTeam = request.value.battleMode === 'boss'
-      ? applyBossBootstrapToTeam(enemyTeamBase || [], bossBootstrap?.enemyRoster)
+    const enemyTeam = rosterBootstrap
+      ? applyBossBootstrapToTeam(enemyTeamBase || [], rosterBootstrap.enemyRoster)
       : enemyTeamBase;
-    if (!playerTeam || !enemyTeam || (request.value.battleMode === 'boss' && !bossBootstrap)) {
+    if (!playerTeam || !enemyTeam || ((request.value.battleMode === 'boss' || request.value.battleMode === 'pve') && !rosterBootstrap)) {
       this.handoffError = 'BattleRequest chua Pow khong ton tai trong catalog';
       return;
     }
@@ -151,11 +154,13 @@ export class BattleScene extends Phaser.Scene {
       this.showHandoffError(width, height, this.handoffError);
       return;
     }
-    const bossBootstrap = this.handoffRequest?.battleMode === 'boss'
+    const runtimeBootstrap = this.handoffRequest?.battleMode === 'boss'
       ? this.handoffRequest.bossContext.bootstrap as CombatBossBootstrapSnapshot | undefined
-      : undefined;
-    const bootstrapOptions = this.handoffRequest?.battleMode === 'boss'
-      ? bossBootstrapRuntimeOptions(bossBootstrap)
+      : this.handoffRequest?.battleMode === 'pve'
+        ? this.handoffRequest.rosterContext as CombatBossBootstrapSnapshot | undefined
+        : undefined;
+    const bootstrapOptions = runtimeBootstrap
+      ? bossBootstrapRuntimeOptions(runtimeBootstrap)
       : {};
     this.combatState = new CombatState(this.playerTeam, this.enemyTeam, {
       battleMode: this.handoffRequest?.battleMode,

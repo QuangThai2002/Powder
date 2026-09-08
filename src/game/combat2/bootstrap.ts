@@ -6,6 +6,8 @@
 // All final presentation owners load before Phaser.Game starts, so first-action
 // behavior is identical to every later action.
 import '../../../js/data.js';
+import '../../../js/skill-v81-data.js';
+import '../../../js/skill-art-v107.js';
 import { COMBAT_FEATURE_FLAGS } from './CombatFeatureFlags';
 import './views/Combat2144BalancedVfxTestRosterPatch';
 import './views/Combat2150ProfessionTestRosterPatch';

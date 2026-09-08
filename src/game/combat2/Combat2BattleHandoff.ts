@@ -12,6 +12,7 @@ export type Combat2BattleRequest = Readonly<{
   enemyTeam: string[];
   enemyConfig: Record<string, unknown>;
   battleRules: Record<string, unknown>;
+  rosterContext: Record<string, unknown>;
   bossContext: Record<string, unknown>;
   academicContext: Record<string, unknown>;
   rewardContext: Record<string, unknown>;

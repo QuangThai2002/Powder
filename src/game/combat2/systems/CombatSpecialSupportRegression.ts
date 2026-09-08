@@ -13,8 +13,32 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 export function runCombatSpecialSupportRegression(): CombatSpecialSupportRegressionReport {
-  const supportPow = combatPowById('mosshorn');
-  assert(supportPow, 'Mosshorn canonical support fixture is missing');
+  const canonicalSupportPow = combatPowById('mosshorn');
+  assert(canonicalSupportPow, 'Mosshorn canonical support fixture is missing');
+  const supportPow = {
+    ...canonicalSupportPow,
+    abilities: {
+      ...canonicalSupportPow.abilities,
+      skills: [
+        {
+          ...canonicalSupportPow.abilities.skills[0],
+          id: 'regression.cleanse',
+          name: 'Regression Cleanse',
+          power: 1,
+          type: 'support',
+          status: 'cleanse'
+        },
+        {
+          ...canonicalSupportPow.abilities.skills[1],
+          id: 'regression.revive',
+          name: 'Regression Revive',
+          power: 1,
+          type: 'support',
+          status: 'revive'
+        }
+      ]
+    }
+  };
   const player = [
     supportPow,
     ...COMBAT2_STARTER_ROSTER.player.filter((pow) => pow.id !== supportPow.id)
