@@ -1,5 +1,23 @@
 (()=>{'use strict';
 const VERSION='18.8.1';
+const FEATURE_FLAGS=window.POWDER_COMBAT_FEATURE_FLAGS_V1||{};
+if(FEATURE_FLAGS.PVP_ENABLED!==true){
+  const frozen=Object.freeze({
+    version:VERSION,
+    enabled:false,
+    frozen:true,
+    load:async()=>null,
+    challenge:async()=>false,
+    isInMatch:()=>false,
+    state:()=>null,
+    history:()=>[],
+    openReplay:async()=>false,
+    reconnect:async()=>false,
+    diagnostics:()=>({version:VERSION,enabled:false,frozen:true,matchId:null,status:null,pollArmed:false,clockArmed:false,networkRequests:0})
+  });
+  window.POWDER_PVP_V1881=frozen;window.POWDER_PVP_V1880=frozen;window.POWDER_PVP_V1871=frozen;window.POWDER_PVP_V1870=frozen;window.POWDER_PVP_V155=frozen;
+  return;
+}
 const SIMPLE_DOMAINS=[['crimson','Xích Viêm Sát Giới','Hỏa'],['tide','Huyền Thủy Trấn Giới','Thủy'],['verdant','Thanh Mộc Huyết Giới','Mộc']];
 const EXPANSIONS=[['nine_suns','Cửu Nhật Phần Thiên Giới','Thường'],['infinite_strike','Thiên Kích Vô Tận Giới','Thường'],['limitless_void','Vô Lượng Không Xứ','Đặc biệt'],['frozen_silence','Huyền Băng Tịch Diệt Giới','Thường'],['diamond_guard','Bất Động Kim Cương Giới','Thường'],['jackpot_bagua','Tọa Sát Bát Đồ','Đặc biệt'],['myriad_poison','Vạn Độc Phệ Sinh Giới','Thường'],['rebirth_wood','Vạn Mộc Luân Sinh Giới','Thường'],['draw_swords','Rút Kiếm Ra','Đặc biệt']];
 if(EXPANSIONS.length!==9||EXPANSIONS.filter(x=>x[2]==='Thường').length!==6||EXPANSIONS.filter(x=>x[2]==='Đặc biệt').length!==3)throw new Error('POWDER_DOMAIN_LOCK_V1880');

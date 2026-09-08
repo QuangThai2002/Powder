@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { COMBAT_FEATURE_FLAGS } from '../CombatFeatureFlags';
 import type { CombatSide } from '../data/CombatPow';
 import {
   LEGACY_EXPANSION_DOMAINS,
@@ -125,8 +126,12 @@ function createControls(scene: PatchableScene, actor: CombatUnitState): void {
     const id = snapshot.equippedExpansion as LegacyExpansionDomainId;
     const cfg = LEGACY_EXPANSION_DOMAINS[id];
     const jackpot = id === 'jackpot_bagua';
-    const enabled = mode() === 'pvp' && !snapshot.expansion && (jackpot || !snapshot.expansionUsed);
-    createButton(scene, panel, 27, cfg.short, cfg.kind === 'special' ? 'BÀNH TRƯỚNG · ĐẶC BIỆT' : 'BÀNH TRƯỚNG · PvP', enabled, () => {
+    const enabled = COMBAT_FEATURE_FLAGS.DOMAIN_EXPANSION_ENABLED
+      && mode() === 'pvp' && !snapshot.expansion && (jackpot || !snapshot.expansionUsed);
+    const detail = COMBAT_FEATURE_FLAGS.DOMAIN_EXPANSION_ENABLED
+      ? (cfg.kind === 'special' ? 'BÀNH TRƯỚNG · ĐẶC BIỆT' : 'BÀNH TRƯỚNG · PvP')
+      : 'Bành Trướng Lãnh Địa đang tạm khóa.';
+    createButton(scene, panel, 27, cfg.short, detail, enabled, () => {
       const result = engine.activateExpansion(actor.side, mode());
       if (!result.ok) {
         const reason = result.reason.startsWith('jackpot-miss-')

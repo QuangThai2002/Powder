@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { COMBAT_FEATURE_FLAGS } from './CombatFeatureFlags';
 import { BattleScene } from './scenes/BattleScene';
 import { COMBAT2_STARTER_ROSTER } from './data/PowderDataAdapter';
 import { runCombat2SmokeRegression } from './systems/CombatRegression';
@@ -127,7 +128,7 @@ installCombat291LegacyDomainHardeningPatch();
 installCombat292LegacyAbilityMetadataPatch(BattleScene);
 installCombat293LegacyDomainTickPatch(BattleScene);
 installCombat294DomainControlsPatch(BattleScene);
-installCombat295LegacyDomainParityPatch();
+if (COMBAT_FEATURE_FLAGS.DOMAIN_EXPANSION_ENABLED) installCombat295LegacyDomainParityPatch();
 installCombat296VersionPatch(BattleScene);
 // Legacy atlas/exact-asset wrappers are intentionally retired from the live route.
 // Current presentation is owned by PowView base feedback plus the dedicated
@@ -144,7 +145,7 @@ installCombat2109BattleEndPatch(BattleScene);
 installCombat2112LegacyHudBridgePatch(BattleScene);
 installCombat2115ReserveUiPatch(BattleScene);
 installCombat2122CinematicMotionPatch(BattleScene, PowView);
-installCombat2123CleanDomainCinematicPatch(BattleScene);
+if (COMBAT_FEATURE_FLAGS.DOMAIN_EXPANSION_ENABLED) installCombat2123CleanDomainCinematicPatch(BattleScene);
 installCombat2124PowSkillMotionIdentityPatch(BattleScene);
 installCombat2133PrimitiveGuardPatch(PowView);
 
@@ -195,8 +196,12 @@ if (isLocalDev) {
       const multiTarget = runCombatMultiTargetRegression();
       const legacyRole = runCombatLegacyRoleRegression();
       const legacyDomain = runCombatLegacyDomainRegression();
-      const legacyDomainSpecial = runCombatLegacyDomainSpecialRegression();
-      const legacyDomainParity = runCombatLegacyDomainParityRegression();
+      const legacyDomainSpecial = COMBAT_FEATURE_FLAGS.DOMAIN_EXPANSION_ENABLED
+        ? runCombatLegacyDomainSpecialRegression()
+        : { frozen: true };
+      const legacyDomainParity = COMBAT_FEATURE_FLAGS.DOMAIN_EXPANSION_ENABLED
+        ? runCombatLegacyDomainParityRegression()
+        : { frozen: true };
       console.info('[Combat2 Regression PASS]', {
         ...report, damageMath, finalGate, presentationGate, specialSupport, rage, guard, multiTarget, legacyRole, legacyDomain, legacyDomainSpecial, legacyDomainParity,
         roster: testRosterReport,

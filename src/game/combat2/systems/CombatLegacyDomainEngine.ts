@@ -1,4 +1,5 @@
 import type { CombatSide } from '../data/CombatPow';
+import { COMBAT_FEATURE_FLAGS } from '../CombatFeatureFlags';
 import type { CombatUnitState } from './CombatState';
 
 export type LegacySimpleDomainId = 'crimson' | 'tide' | 'verdant';
@@ -299,15 +300,16 @@ export class CombatLegacyDomainEngine {
     return {
       ...state,
       simpleActive: state.simpleActive ? { ...state.simpleActive } : null,
-      expansion: state.expansion ? { ...state.expansion } : null
+      expansion: COMBAT_FEATURE_FLAGS.DOMAIN_EXPANSION_ENABLED && state.expansion ? { ...state.expansion } : null
     };
   }
 
   activateSimple(side: CombatSide): LegacyDomainActivationResult {
     const state = this.side[side];
     const id = state.equippedSimple;
+    if (!COMBAT_FEATURE_FLAGS.SIMPLE_DOMAIN_ENABLED) return { ok: false, reason: 'feature-disabled', id };
     if (!id) return { ok: false, reason: 'no-simple-equipped', id: null };
-    if (state.expansion) return { ok: false, reason: 'expansion-active', id };
+    if (COMBAT_FEATURE_FLAGS.DOMAIN_EXPANSION_ENABLED && state.expansion) return { ok: false, reason: 'expansion-active', id };
     if (state.simpleCharges <= 0) return { ok: false, reason: 'no-simple-charges', id };
     state.simpleCharges -= 1;
     state.simpleActive = { id, level: state.simpleLevel, actionsRemaining: 1 };
@@ -318,6 +320,7 @@ export class CombatLegacyDomainEngine {
   activateExpansion(side: CombatSide, mode: LegacyDomainMode): LegacyDomainActivationResult {
     const state = this.side[side];
     const id = state.equippedExpansion;
+    if (!COMBAT_FEATURE_FLAGS.DOMAIN_EXPANSION_ENABLED) return { ok: false, reason: 'feature-disabled', id };
     if (mode !== 'pvp') return { ok: false, reason: 'pvp-only', id };
     if (!id) return { ok: false, reason: 'no-expansion-equipped', id: null };
     if (state.expansionUsed) return { ok: false, reason: 'expansion-already-used', id };
@@ -345,6 +348,7 @@ export class CombatLegacyDomainEngine {
   }
 
   setLimitlessAnswers(side: CombatSide, ownerCorrect: number, enemyWrong: number): void {
+    if (!COMBAT_FEATURE_FLAGS.DOMAIN_EXPANSION_ENABLED) return;
     const expansion = this.side[side].expansion;
     if (!expansion || expansion.id !== 'limitless_void') return;
     expansion.limitlessOwnerCorrect = clamp(Math.floor(ownerCorrect), 0, 10);
@@ -366,7 +370,7 @@ export class CombatLegacyDomainEngine {
     let guardBonus = 0;
     let sureHit = false;
 
-    if (state.expansion) {
+    if (COMBAT_FEATURE_FLAGS.DOMAIN_EXPANSION_ENABLED && state.expansion) {
       const config = LEGACY_EXPANSION_DOMAINS[state.expansion.id];
       const restricted = config.id === 'draw_swords' && FRONT_ROLES.has(roleKey(unit));
       if (!restricted) {
@@ -416,7 +420,7 @@ export class CombatLegacyDomainEngine {
     const totalDamage = Math.max(0, Math.round(Number(damage) || 0));
     if (totalDamage > 0) feedback.push(...this.applyLifesteal(actor, totalDamage));
 
-    const ownerExpansion = this.side[actor.side].expansion;
+    const ownerExpansion = COMBAT_FEATURE_FLAGS.DOMAIN_EXPANSION_ENABLED ? this.side[actor.side].expansion : null;
     if (ownerExpansion) {
       switch (ownerExpansion.id) {
         case 'nine_suns':
@@ -436,7 +440,7 @@ export class CombatLegacyDomainEngine {
       }
     }
 
-    const defenderExpansion = this.side[target.side].expansion;
+    const defenderExpansion = COMBAT_FEATURE_FLAGS.DOMAIN_EXPANSION_ENABLED ? this.side[target.side].expansion : null;
     if (defenderExpansion?.id === 'diamond_guard' && totalDamage > 0) {
       defenderExpansion.guardMarks += 1;
       feedback.push({ kind: 'domain', targetId: target.instanceId, label: `TRẤN KHÍ ${Math.min(3, defenderExpansion.guardMarks)}/3` });
@@ -460,7 +464,7 @@ export class CombatLegacyDomainEngine {
   afterActorAction(actor: CombatUnitState): LegacyDomainFeedback[] {
     const feedback: LegacyDomainFeedback[] = [];
     const state = this.side[actor.side];
-    if (state.expansion?.id === 'draw_swords') feedback.push(...this.drawSword(actor));
+    if (COMBAT_FEATURE_FLAGS.DOMAIN_EXPANSION_ENABLED && state.expansion?.id === 'draw_swords') feedback.push(...this.drawSword(actor));
 
     if (state.simpleActive) {
       state.simpleActive.actionsRemaining -= 1;
@@ -471,7 +475,7 @@ export class CombatLegacyDomainEngine {
         feedback.push({ kind: 'domain', label: `${name} KẾT THÚC` });
       }
     }
-    if (state.expansion) {
+    if (COMBAT_FEATURE_FLAGS.DOMAIN_EXPANSION_ENABLED && state.expansion) {
       state.expansion.actionsRemaining -= 1;
       if (state.expansion.actionsRemaining <= 0) {
         const name = LEGACY_EXPANSION_DOMAINS[state.expansion.id].short;
@@ -539,7 +543,7 @@ export class CombatLegacyDomainEngine {
   }
 
   private infiniteStrikeHit(actor: CombatUnitState, target: CombatUnitState, damage: number, hits: number): LegacyDomainFeedback[] {
-    const expansion = this.side[actor.side].expansion;
+    const expansion = COMBAT_FEATURE_FLAGS.DOMAIN_EXPANSION_ENABLED ? this.side[actor.side].expansion : null;
     if (!expansion || expansion.id !== 'infinite_strike' || damage <= 0 || !target.alive) return [];
     const feedback: LegacyDomainFeedback[] = [];
     expansion.comboHits += Math.max(1, Math.round(hits));
@@ -599,7 +603,7 @@ export class CombatLegacyDomainEngine {
   }
 
   private drawSword(actor: CombatUnitState): LegacyDomainFeedback[] {
-    const expansion = this.side[actor.side].expansion;
+    const expansion = COMBAT_FEATURE_FLAGS.DOMAIN_EXPANSION_ENABLED ? this.side[actor.side].expansion : null;
     if (!expansion || expansion.id !== 'draw_swords') return [];
     const foes = this.activeLiving(otherSide(actor.side));
     if (!foes.length) return [];
@@ -657,7 +661,7 @@ export class CombatLegacyDomainEngine {
   }
 
   private gainSinhQi(side: CombatSide, amount: number): LegacyDomainFeedback[] {
-    const expansion = this.side[side].expansion;
+    const expansion = COMBAT_FEATURE_FLAGS.DOMAIN_EXPANSION_ENABLED ? this.side[side].expansion : null;
     if (!expansion || expansion.id !== 'rebirth_wood' || amount <= 0) return [];
     const feedback: LegacyDomainFeedback[] = [];
     const before = expansion.sinhQi;
@@ -687,7 +691,7 @@ export class CombatLegacyDomainEngine {
   }
 
   private rebirthRescue(side: CombatSide): LegacyDomainFeedback[] {
-    const expansion = this.side[side].expansion;
+    const expansion = COMBAT_FEATURE_FLAGS.DOMAIN_EXPANSION_ENABLED ? this.side[side].expansion : null;
     if (!expansion || expansion.id !== 'rebirth_wood' || expansion.sinhQi < 20) return [];
     const feedback: LegacyDomainFeedback[] = [];
     for (const unit of this.units.filter((candidate) => candidate.side === side && !candidate.alive)) {

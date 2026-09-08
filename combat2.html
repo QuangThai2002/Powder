@@ -38,6 +38,7 @@
   <script>
     (()=>{const staticPorts=new Set(['5500','5501']);const wrongServer=staticPorts.has(location.port)||location.protocol==='file:';if(!wrongServer)return;document.getElementById('combat2-launch-guard')?.classList.add('show');document.documentElement.dataset.combat2LaunchBlocked='static-server';window.POWDER_COMBAT2_LAUNCH_GUARD={version:'2.14.6',blocked:true,reason:'vite-required',current:location.href};})();
   </script>
+  <script src="/js/combat-feature-flags-v1.js?v=task-2b"></script>
   <script src="/js/combat-entry-v177.js"></script>
   <script type="module">if(document.documentElement.dataset.combat2LaunchBlocked!=='static-server') import('/src/game/combat2/bootstrap.ts');</script>
 </body>
