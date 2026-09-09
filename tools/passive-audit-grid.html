@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Powder DEV - Passive Audit Grid</title>
+  <style>
+    :root{color-scheme:dark;--ink:#eaf9ff;--muted:#8fb2c0;--line:#234b59;--panel:#071b24;--cyan:#62dcec;--gold:#ffcf6a;--bad:#ff7784;--ok:#71e6a1}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 50% -20%,#164556 0,#07151d 38%,#030a0e 100%);color:var(--ink);font:14px/1.45 Georgia,'Times New Roman',serif}header{position:sticky;top:0;z-index:3;padding:20px clamp(18px,4vw,54px);background:#06151dee;border-bottom:1px solid var(--line);backdrop-filter:blur(12px)}h1{margin:0;font-size:clamp(24px,4vw,42px);letter-spacing:.04em}header p{margin:5px 0 14px;color:var(--muted)}nav{display:flex;gap:8px;flex-wrap:wrap}button{border:1px solid var(--line);border-radius:999px;padding:8px 13px;background:#0b2632;color:var(--ink);cursor:pointer}button.active{border-color:var(--cyan);color:#07151d;background:var(--cyan)}#summary{color:var(--gold);font-weight:700;margin-left:auto}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px;padding:24px clamp(18px,4vw,54px)}article{display:grid;grid-template-columns:92px 1fr;gap:14px;min-height:190px;padding:14px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(145deg,#0b2632ee,#06151dee);box-shadow:0 16px 40px #0005}article[data-status=PASS]{border-color:#247752}article:not([data-status=PASS]){border-color:#7a3542}.art{width:92px;height:122px;object-fit:cover;border-radius:12px;border:1px solid #416b78;background:#020709}.copy{min-width:0}.copy h2{margin:0;font-size:18px}.copy code{display:block;margin:3px 0 9px;color:var(--cyan);overflow-wrap:anywhere}.copy p{margin:6px 0;color:#bed5dd}.meta{display:grid;gap:5px;margin-top:10px}.meta span{padding:5px 7px;border-radius:7px;background:#031016}.meta b{color:var(--muted)}.status{font-weight:800;color:var(--bad)}article[data-status=PASS] .status{color:var(--ok)}.core{grid-column:1/-1;padding-top:9px;border-top:1px solid var(--line);color:var(--muted)}.core b{color:var(--gold)}[hidden]{display:none!important}
+  </style>
+</head>
+<body>
+  <header><h1>Passive Audit Grid</h1><p>DEV-only diagnostic. Passive và V8.1 Core được hiển thị tách biệt.</p><nav id="filters"></nav></header>
+  <main id="grid" class="grid"></main>
+  <script src="../js/data.js"></script>
+  <script src="../js/master-data-v9.js"></script>
+  <script src="../js/skill-v81-data.js"></script>
+  <script src="../js/world-data-v9.js"></script>
+  <script src="../js/passive-canonical.js"></script>
+  <script src="../js/role-system-v9.js"></script>
+  <script src="../js/starter-evolution-runtime.js"></script>
+  <script src="passive-audit-grid.js"></script>
+</body>
+</html>

@@ -12,7 +12,10 @@
     "test:combat2-damage-math": "node tools/verify-combat2-damage-math.mjs",
     "test:combat2-feature-freeze": "node tools/verify-combat2-feature-freeze.mjs",
     "test:pow-combat2-sync": "node tools/verify-pow-combat2-sync.mjs",
+    "test:pow-canonical-reconciliation": "node tools/verify-pow-canonical-reconciliation.mjs",
     "test:combat2-roster-smoke": "node tools/verify-combat2-roster-smoke.mjs",
+    "test:combat2-passive-triggers": "node tools/verify-combat2-passive-triggers.mjs",
+    "test:combat2-star-action-matrix": "node tools/verify-combat2-star-action-matrix.mjs",
     "assets:audit": "node tools/audit-pow-assets.mjs",
     "check": "npm run typecheck && npm run build && npm run assets:audit"
   },

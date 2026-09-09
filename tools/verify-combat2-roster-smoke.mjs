@@ -1,15 +1,14 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import vm from 'node:vm';
+import { loadPowderCanonicalRuntime } from './lib/load-powder-canonical-runtime.mjs';
 
 const root = new URL('../', import.meta.url);
 const rootPath = fileURLToPath(root);
-const source = (path) => readFile(new URL(path, root), 'utf8');
 
 async function loadRuntime(catalogWindow) {
   const outputDirectory = await mkdtemp(join(tmpdir(), 'powder-combat2-roster-smoke-'));
@@ -132,14 +131,11 @@ function runDuel(runtime, playerPow, enemyPow) {
 }
 
 async function main() {
-  const context = vm.createContext({ window: {}, console });
-  for (const path of ['js/data.js', 'js/skill-v81-data.js', 'js/skill-art-v107.js']) {
-    vm.runInContext(await source(path), context, { filename: path });
-  }
-  const runtime = await loadRuntime(context.window);
-  const sourcePows = context.window.POWDER_DATA.pows;
+  const canonical = await loadPowderCanonicalRuntime(root);
+  const runtime = await loadRuntime(canonical.window);
+  const sourcePows = canonical.runtimeData.pows;
   const previousWindow = globalThis.window;
-  globalThis.window = context.window;
+  globalThis.window = canonical.window;
   try {
     const pows = sourcePows.map((pow) => runtime.combatPowById(pow.id));
     assert.ok(pows.every(Boolean), 'Every canonical Pow must resolve before smoke testing');
