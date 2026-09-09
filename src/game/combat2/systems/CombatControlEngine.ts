@@ -99,6 +99,7 @@ export function cooldownForAbility(
   ability: CombatAbility,
   slot: CombatCooldownSlot
 ): number {
+  if (Number.isFinite(ability.cooldown)) return Math.max(0, Math.floor(Number(ability.cooldown)));
   const status = normalizedStatus(ability.status);
   if (isHardControlStatus(status)) return 2;
   if (status === 'revive' || status === 'resurrection') return 3;

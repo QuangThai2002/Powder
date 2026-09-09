@@ -37,11 +37,17 @@ export interface CombatAbility {
   grievousTier?: GrievousTier;
   status?: string;
   target?: string;
+  targetRule?: string;
   area?: boolean;
   /** Canonical nominal hit count from the legacy catalog when present. */
   hits?: number;
   /** Legacy named mechanic hook (role/domain/special skill semantics). */
   mechanic?: string;
+  manaCost?: number;
+  cooldown?: number;
+  rageCost?: number;
+  coefficients?: Readonly<Record<string, number>>;
+  masterEffects?: Readonly<Record<string, unknown>>;
   description?: string;
   sureHit?: boolean;
   unavoidable?: boolean;
@@ -64,6 +70,27 @@ export interface CombatPassive {
   element?: string;
   description?: string;
   artUrl?: string;
+  mechanic?: CombatPassiveMechanic;
+}
+
+export type CombatPassiveTrigger =
+  | 'ON_BATTLE_START' | 'ON_TURN_START' | 'BEFORE_ACTION' | 'AFTER_ACTION'
+  | 'BEFORE_HIT' | 'AFTER_HIT' | 'ON_CRIT' | 'ON_RECEIVE_DAMAGE'
+  | 'ON_DAMAGE_DEALT' | 'ON_HEAL' | 'ON_SHIELD' | 'ON_STATUS_APPLIED'
+  | 'ON_STATUS_RECEIVED' | 'ON_HP_THRESHOLD' | 'ON_ALLY_DEATH'
+  | 'ON_ENEMY_DEATH' | 'ON_RESERVE_ENTER' | 'ON_KILL' | 'ON_REVIVE'
+  | 'ON_SHIELD_BREAK';
+
+export interface CombatPassiveMechanic {
+  trigger: CombatPassiveTrigger;
+  condition?: Readonly<Record<string, unknown>>;
+  effect: Readonly<Record<string, unknown>>;
+  runtime?: 'LIVE' | 'REQUIRES_COMBO_CONTEXT' | 'REQUIRES_TEAM_CONTEXT' | 'REQUIRES_EXTRA_TURN_CONTEXT';
+}
+
+export interface CombatCore {
+  name: string;
+  description: string;
 }
 
 /**
@@ -104,5 +131,8 @@ export interface CombatPow {
   damageReduction: number;
   abilities: CombatAbilitySet;
   passive?: CombatPassive;
+  /** V8.1 combat identity metadata. This is not the Pow's canonical Passive. */
+  core?: CombatCore;
+  skillStarProgression?: ReadonlyArray<Readonly<Record<string, unknown>>>;
   display: PowDisplayProfile;
 }

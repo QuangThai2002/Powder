@@ -2,6 +2,7 @@ import type {
   CombatAbility,
   CombatAbilitySet,
   CombatPassive,
+  CombatPassiveMechanic,
   CombatPow,
   CombatRarity,
   PowDisplayProfile
@@ -40,8 +41,14 @@ interface CatalogAbility {
   grievousTier?: string;
   status?: string;
   target?: string;
+  targetRule?: string;
   hits?: number;
   specialMechanic?: string;
+  manaCost?: number;
+  cooldown?: number;
+  rageCost?: number;
+  coefficients?: Record<string, number>;
+  masterEffects?: Record<string, unknown>;
   area?: boolean;
   sureHit?: boolean;
   unavoidable?: boolean;
@@ -55,6 +62,7 @@ interface CatalogPassive {
   element?: string;
   description?: string;
   art?: string;
+  mechanic?: CombatPassiveMechanic;
 }
 interface CatalogAbilities {
   basic?: CatalogAbility;
@@ -77,6 +85,7 @@ interface CatalogPow {
   passiveArt?: string;
   stats?: CatalogStats;
   abilities?: CatalogAbilities;
+  skillStarProgression?: Array<Record<string, unknown>>;
 }
 interface PowderCatalog {
   elements?: Record<string, CatalogElement>;
@@ -94,12 +103,20 @@ interface CanonicalPowKit {
 }
 interface CanonicalSkillCatalog { pows?: Record<string, CanonicalPowKit>; }
 interface CanonicalSkillArt { get?: (abilityOrId: string | { id?: string }) => string; }
+interface CanonicalPassiveDefinition extends CombatPassiveMechanic { description?: string; }
+interface CanonicalPassiveCatalog { get?: (id: string) => CanonicalPassiveDefinition | null; }
+interface CanonicalFormResolver {
+  resolveAbility?: (pow: CatalogPow, ability: CatalogAbility, stars: number) => CatalogAbility;
+  statsAt?: (pow: CatalogPow, stars: number) => CatalogStats;
+}
 
 declare global {
   interface Window {
     POWDER_DATA?: PowderCatalog;
     POWDER_SKILL_V81?: CanonicalSkillCatalog;
     POWDER_SKILL_ART?: CanonicalSkillArt;
+    POWDER_PASSIVE_CATALOG?: CanonicalPassiveCatalog;
+    POWDER_FORM_RESOLVER?: CanonicalFormResolver;
   }
 }
 
@@ -166,6 +183,10 @@ const DEFAULT_DISPLAY: PowDisplayProfile = {
 
 function finitePositive(value: number | undefined, fallback: number): number {
   return Number.isFinite(value) && (value as number) > 0 ? (value as number) : fallback;
+}
+
+function finiteNonNegative(value: number | undefined, fallback: number): number {
+  return Number.isFinite(value) && (value as number) >= 0 ? (value as number) : fallback;
 }
 
 function finiteNumber(value: number | undefined, fallback: number): number {
@@ -383,7 +404,7 @@ function normalizeAbility(
     ...(metadata?.description || ability?.description
       ? { description: String(metadata?.description || ability?.description) }
       : {}),
-    power: finitePositive(ability?.power, fallbackPower),
+    power: finiteNonNegative(ability?.power, fallbackPower),
     type,
     damageType,
     scalingStat,
@@ -397,10 +418,16 @@ function normalizeAbility(
       : {}),
     ...(status ? { status } : {}),
     ...(ability?.target ? { target: String(ability.target) } : {}),
+    ...(ability?.targetRule ? { targetRule: String(ability.targetRule) } : {}),
     ...(Number.isFinite(ability?.hits) && Number(ability?.hits) > 0
       ? { hits: Math.floor(Number(ability?.hits)) }
       : {}),
     ...(ability?.specialMechanic ? { mechanic: String(ability.specialMechanic) } : {}),
+    ...(Number.isFinite(ability?.manaCost) ? { manaCost: Math.max(0, Number(ability?.manaCost)) } : {}),
+    ...(Number.isFinite(ability?.cooldown) ? { cooldown: Math.max(0, Math.floor(Number(ability?.cooldown))) } : {}),
+    ...(Number.isFinite(ability?.rageCost) ? { rageCost: Math.max(0, Number(ability?.rageCost)) } : {}),
+    ...(ability?.coefficients ? { coefficients: { ...ability.coefficients } } : {}),
+    ...(ability?.masterEffects ? { masterEffects: { ...ability.masterEffects } } : {}),
     ...(ability?.area ? { area: true } : {}),
     ...(ability?.sureHit ? { sureHit: true } : {}),
     ...(ability?.unavoidable ? { unavoidable: true } : {}),
@@ -412,33 +439,38 @@ function normalizeAbility(
 }
 
 function normalizePassive(pow: CatalogPow, passive: CatalogPassive | undefined): CombatPassive | undefined {
-  const kit = window.POWDER_SKILL_V81?.pows?.[String(pow.id || '')];
-  const hasStructuredStarterPassive = String(pow.id || '').startsWith('starter_') && Boolean(passive?.description);
-  const id = String(hasStructuredStarterPassive ? passive?.id : pow.id ? `${pow.id}.core` : passive?.id || '').trim();
+  const id = String(passive?.id || '').trim();
   if (!id) return undefined;
+  const definition = window.POWDER_PASSIVE_CATALOG?.get?.(id) ?? null;
   return {
     id,
-    name: String(kit?.core || passive?.name || id),
+    name: String(passive?.name || id),
     ...(passive?.element ? { element: String(passive.element) } : {}),
-    ...(passive?.description || kit?.coreDescription
-      ? { description: String(passive?.description || kit?.coreDescription) }
+    ...(passive?.description || definition?.description
+      ? { description: String(passive?.description || definition?.description) }
       : {}),
     ...(pow.passiveArt || passive?.art
       ? { artUrl: `/${String(pow.passiveArt || passive?.art).replace(/^\/+/, '')}` }
+      : {}),
+    ...(passive?.mechanic || definition
+      ? { mechanic: (passive?.mechanic || definition) as CombatPassiveMechanic }
       : {})
   };
 }
 
-function normalizeAbilities(pow: CatalogPow): CombatAbilitySet {
+function normalizeAbilities(pow: CatalogPow, stars: number): CombatAbilitySet {
   const name = String(pow.name || pow.id || 'Pow');
   const skills = Array.isArray(pow.abilities?.skills) ? pow.abilities.skills.slice(0, 2) : [];
+  const resolve = (ability: CatalogAbility | undefined): CatalogAbility | undefined => ability
+    ? window.POWDER_FORM_RESOLVER?.resolveAbility?.(pow, ability, stars) ?? ability
+    : undefined;
   const normalized: CombatAbilitySet = {
-    basic: normalizeAbility(pow, pow.abilities?.basic, `${name} Strike`, 80, 'physical', 0),
+    basic: normalizeAbility(pow, resolve(pow.abilities?.basic), `${name} Strike`, 80, 'physical', 0),
     skills: [
-      normalizeAbility(pow, skills[0], `${name} Skill 1`, 110, 'elemental', 1),
-      normalizeAbility(pow, skills[1], `${name} Skill 2`, 95, 'support', 2)
+      normalizeAbility(pow, resolve(skills[0]), `${name} Skill 1`, 110, 'elemental', 1),
+      normalizeAbility(pow, resolve(skills[1]), `${name} Skill 2`, 95, 'support', 2)
     ],
-    ultimate: normalizeAbility(pow, pow.abilities?.ultimate, `${name} Ultimate`, 175, 'ultimate', 3)
+    ultimate: normalizeAbility(pow, resolve(pow.abilities?.ultimate), `${name} Ultimate`, 175, 'ultimate', 3)
   };
 
   return normalized;
@@ -462,9 +494,12 @@ function isCombatReadyCatalogPow(pow: CatalogPow): boolean {
   return Boolean(id) && isCanonicalPowAsset(asset);
 }
 
-function toCombatPow(pow: CatalogPow): CombatPow {
+function toCombatPow(pow: CatalogPow, requestedStars?: number): CombatPow {
   const id = String(pow.id || '').trim();
-  const stats = pow.stats ?? {};
+  const startStars = Math.max(0, Math.floor(finiteNumber(pow.startStars, 0)));
+  const maxStars = Math.max(startStars, Math.floor(finiteNumber(pow.maxStars, startStars)));
+  const stars = clamp(Math.floor(finiteNumber(requestedStars, startStars)), startStars, maxStars);
+  const stats = window.POWDER_FORM_RESOLVER?.statsAt?.(pow, stars) ?? pow.stats ?? {};
   const hp = finitePositive(stats.hp, 300);
   const attack = finitePositive(stats.atk, 50);
   const abilityPower = finitePositive(stats.ap, attack);
@@ -472,6 +507,7 @@ function toCombatPow(pow: CatalogPow): CombatPow {
   const elementKey = String(pow.element || 'unknown');
   const elementName = String(window.POWDER_DATA?.elements?.[elementKey]?.name || elementKey);
   const passive = normalizePassive(pow, pow.abilities?.passive);
+  const kit = window.POWDER_SKILL_V81?.pows?.[id];
   const roleEvasion = ROLE_EVASION[roleKey] ?? 0;
   const elementEvasion = SPECIAL_EVA_ELEMENTS.has(elementKey) ? 12 : 0;
 
@@ -485,8 +521,8 @@ function toCombatPow(pow: CatalogPow): CombatPow {
     role: String(pow.role || pow.combatRole || 'Không xác định'),
     rarity: normalizeRarity(pow.rarity),
     level: 60,
-    stars: Math.max(0, Math.floor(finiteNumber(pow.startStars, 0))),
-    maxStars: Math.max(0, Math.floor(finiteNumber(pow.maxStars, 0))),
+    stars,
+    maxStars,
     attack,
     abilityPower,
     defense: finitePositive(stats.def, 45),
@@ -504,8 +540,10 @@ function toCombatPow(pow: CatalogPow): CombatPow {
     shieldPower: clamp(finiteNumber(stats.shieldPower, ROLE_SHIELD_POWER[roleKey] ?? 0), 0, 60),
     tenacity: clamp(finiteNumber(stats.tenacity, ROLE_TENACITY[roleKey] ?? 0), 0, 60),
     damageReduction: clamp(finiteNumber(stats.damageReduction, 0), 0, 0.45),
-    abilities: normalizeAbilities(pow),
+    abilities: normalizeAbilities(pow, stars),
     ...(passive ? { passive } : {}),
+    ...(kit?.core ? { core: { name: String(kit.core), description: String(kit.coreDescription || kit.core) } } : {}),
+    ...(Array.isArray(pow.skillStarProgression) ? { skillStarProgression: pow.skillStarProgression.map((stage) => ({ ...stage })) } : {}),
     display: { ...DEFAULT_DISPLAY }
   };
 }
@@ -578,10 +616,10 @@ export const ALL_COMBAT2_STARTER_POWS: CombatPow[] = [
 ];
 
 /** Build an isolated canonical Pow fixture without mutating the active test roster. */
-export function combatPowById(id: string): CombatPow | null {
+export function combatPowById(id: string, stars?: number): CombatPow | null {
   const normalizedId = String(id || '').trim().toLowerCase();
   const source = catalogPows.find((pow) => String(pow.id || '').trim().toLowerCase() === normalizedId);
-  return source && isCombatReadyCatalogPow(source) ? toCombatPow(source) : null;
+  return source && isCombatReadyCatalogPow(source) ? toCombatPow(source, stars) : null;
 }
 
 /** Hydrates only the Pow IDs supplied by a validated Main -> Combat2 request. */
