@@ -1,5 +1,6 @@
 import type { CombatRarity, CombatScalingStat, CritMode } from '../data/CombatPow';
 import type { CombatUnitState } from './CombatState';
+import { CombatPassiveEngine } from './CombatPassiveEngine';
 
 export const AD_CRIT_DEFAULT_MULTIPLIER = 2;
 export const MAGIC_CRIT_MULTIPLIER_CAP = 2;
@@ -37,6 +38,7 @@ export interface LegacyHitResult {
 }
 
 export class CombatLegacyStatEngine {
+  private readonly passives = new CombatPassiveEngine();
   constructor(private readonly random: () => number = Math.random) {}
 
   resolveHit(
@@ -54,9 +56,9 @@ export class CombatLegacyStatEngine {
     }
   ): LegacyHitResult {
     const offense = options.offenseStat === 'attack'
-      ? this.safePositive(actor.pow.attack, 1) * this.safeMultiplier(actor.attackMultiplier)
+      ? this.safePositive(actor.pow.attack, 1) * this.safeMultiplier(actor.attackMultiplier) * this.passives.attackMultiplier(actor)
       : this.safePositive(actor.pow.abilityPower, actor.pow.attack) * this.safeMultiplier(actor.abilityPowerMultiplier);
-    const targetDefense = this.safeNonNegative(target.pow.defense) * this.safeMultiplier(target.defenseMultiplier);
+    const targetDefense = this.safeNonNegative(target.pow.defense) * this.safeMultiplier(target.defenseMultiplier) * this.passives.defenseMultiplier(target);
     const penCap = options.ultimate ? DEF_PEN_ULTIMATE_CAP : DEF_PEN_CAP;
     const lethality = this.safeNonNegative(options.lethality ?? actor.pow.lethality ?? 0);
     const armorPen = this.clamp(options.armorPen ?? actor.pow.defPen, 0, penCap);

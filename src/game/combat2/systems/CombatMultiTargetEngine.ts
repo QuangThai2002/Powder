@@ -1,6 +1,7 @@
 import type { CombatAbility } from '../data/CombatPow';
 import type { CombatUnitState } from './CombatState';
 import type { CombatAbilitySlot, SkillActionResult, SkillActionResolver } from './SkillActionResolver';
+import type { PassiveActionContext } from './CombatPassiveEngine';
 
 export interface MultiTargetResolvedHit {
   target: CombatUnitState;
@@ -112,7 +113,8 @@ export class CombatMultiTargetEngine {
     ability: CombatAbility,
     slot: CombatAbilitySlot,
     units: readonly CombatUnitState[],
-    currentRound: number
+    currentRound: number,
+    passiveContext: PassiveActionContext = {}
   ): MultiTargetCastResult {
     const targets = selectLegacyCastTargets(actor, requestedTarget, ability, units);
     if (!targets.length) throw new Error(`[Combat2] ${ability.name} has no legal multi-target recipients.`);
@@ -138,8 +140,8 @@ export class CombatMultiTargetEngine {
 
       const hitAbility = abilityForHit(ability, index);
       const result = slot === 'ultimate'
-        ? resolver.resolveUltimate(actor, target, hitAbility, currentRound)
-        : resolver.resolve(actor, target, hitAbility, slot, currentRound);
+        ? resolver.resolveUltimate(actor, target, hitAbility, currentRound, passiveContext)
+        : resolver.resolve(actor, target, hitAbility, slot, currentRound, passiveContext);
       hits.push({ target, result });
 
       if (index === 0) {

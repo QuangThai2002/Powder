@@ -12,6 +12,7 @@ import {
   type Combat2BattleResult
 } from '../Combat2BattleHandoff';
 import { ActionPipeline } from '../systems/ActionPipeline';
+import { CombatPassiveEngine } from '../systems/CombatPassiveEngine';
 import {
   abilityHasLegalTarget,
   abilityRequiresDebuffedAlly,
@@ -68,6 +69,7 @@ export class BattleScene extends Phaser.Scene {
   private combatState!: CombatState;
   private turnManager!: TurnManager;
   private actionPipeline!: ActionPipeline;
+  private readonly passiveEngine = new CombatPassiveEngine();
   private basicAttack!: BasicAttackResolver;
   private skillActions!: SkillActionResolver;
   private guard!: CombatGuardEngine;
@@ -92,6 +94,7 @@ export class BattleScene extends Phaser.Scene {
   private academicQuestionIndex = 0;
   private academicQuestionModal: Phaser.GameObjects.Container | null = null;
   private pendingAcademicAction: PendingAcademicAction | null = null;
+  private pendingAcademicCorrect: { actorId: string; correct: boolean } | null = null;
   private academicResponses: Array<{ question: AcademicCombatQuestion; correct: boolean; powId: string }> = [];
 
   constructor() { super('BattleScene'); }
@@ -558,6 +561,7 @@ export class BattleScene extends Phaser.Scene {
       : `CHUA DUNG · Dap an: ${question.answer}${question.explain ? ` · ${question.explain}` : ''}`);
     const pending = this.pendingAcademicAction;
     this.academicResponses.push({ question, correct, powId: pending.actor.pow.id });
+    this.pendingAcademicCorrect = { actorId: pending.actor.instanceId, correct };
     this.time.delayedCall(correct ? 480 : 680, () => {
       if (this.academicQuestionModal !== root) return;
       this.clearAcademicQuestion();
@@ -584,7 +588,9 @@ export class BattleScene extends Phaser.Scene {
       }
       this.showActionBanner(actorView, actor.pow.abilities.basic.name, '#8eeaff');
       if (actorView && targetView) { const p = targetView.getWorldPosition(); await actorView.playAttackLunge(p.x, p.y); }
-      const result = this.basicAttack.resolve(actor, target);
+      const result = this.basicAttack.resolve(actor, target, this.passiveContext(actor));
+      this.applyPassiveAfterAction(actor, target);
+      this.completePassiveAction(actor, target);
       this.handleBossAction(actor, { targetId: target.instanceId });
       this.combatState.sanitizeRuntimeNumbers();
       this.refreshViews();
@@ -631,8 +637,10 @@ export class BattleScene extends Phaser.Scene {
       } else if (actorView) await actorView.playStatusPulse();
 
       const result = slot === 'ultimate'
-        ? this.skillActions.resolveUltimate(actor, target, ability, this.combatState.round)
-        : this.skillActions.resolve(actor, target, ability, slot, this.combatState.round);
+        ? this.skillActions.resolveUltimate(actor, target, ability, this.combatState.round, this.passiveContext(actor))
+        : this.skillActions.resolve(actor, target, ability, slot, this.combatState.round, this.passiveContext(actor));
+      this.applyPassiveAfterAction(actor, target);
+      this.completePassiveAction(actor, target);
       this.handleBossAction(actor, { cleansed: result.cleansed, targetId: target.instanceId });
       if (result.targetSpeedChanged && target.instanceId !== actor.instanceId) this.turnManager.rescheduleUnit(target.instanceId);
       this.combatState.sanitizeRuntimeNumbers();
@@ -725,6 +733,46 @@ export class BattleScene extends Phaser.Scene {
     return { total: shieldDamage + hpDamage, shield: shieldDamage, hp: hpDamage };
   }
 
+  private passiveContext(actor: CombatUnitState): { combo: number; sameElementAllies: number } {
+    return {
+      combo: actor.combo,
+      sameElementAllies: this.combatState.activeLiving(actor.side)
+        .filter((unit) => unit.instanceId !== actor.instanceId && unit.pow.elementKey === actor.pow.elementKey)
+        .length
+    };
+  }
+
+  private completePassiveAction(actor: CombatUnitState, target: CombatUnitState): void {
+    const chance = this.passiveEngine.speedExtraTurnChance(actor, target);
+    if (chance > 0 && Math.random() < chance) {
+      this.turnManager.requestExtraTurn(actor.instanceId);
+      this.showFloatingLabel(this.powViews.get(actor.instanceId), 'LƯỢT PHỤ', '#9de8ff');
+    }
+    const academic = this.pendingAcademicCorrect?.actorId === actor.instanceId
+      ? this.pendingAcademicCorrect.correct
+      : true;
+    actor.combo = this.passiveEngine.advanceCombo(actor.combo, academic);
+    if (this.pendingAcademicCorrect?.actorId === actor.instanceId) this.pendingAcademicCorrect = null;
+  }
+
+  private applyPassiveAfterAction(actor: CombatUnitState, target: CombatUnitState): void {
+    const events = this.passiveEngine.applyAfterAction(
+      actor,
+      target,
+      this.combatState.activeLiving(actor.side),
+      this.passiveContext(actor),
+      Math.random
+    );
+    for (const event of events) {
+      for (const targetId of event.targetIds) {
+        const view = this.powViews.get(targetId);
+        if (event.type === 'heal') this.showFloatingLabel(view, `NỘI TẠI · HỒI +${event.amount || 0}`, '#73f0aa');
+        else if (event.type === 'status') this.showFloatingLabel(view, 'NỘI TẠI · CHOÁNG', '#ffce7a');
+        else this.showFloatingLabel(view, `NỘI TẠI · ${String(event.status || '').toUpperCase()}`, '#9de8ff');
+      }
+    }
+  }
+
   private afterAction(): void { void this.settleAfterAction(); }
 
   private handleBossAction(actor: CombatUnitState, result: { cleansed?: boolean; targetId?: string } = {}): void {
@@ -776,7 +824,9 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private recoverTurnFlow(): void {
-    this.pendingPlayerAction = null; this.destroyActionMenu(); this.destroyUndoMenu(); this.clearTargeting(); this.turnManager.recoverActionLock(); this.afterAction();
+    this.pendingPlayerAction = null;
+    this.pendingAcademicCorrect = null;
+    this.destroyActionMenu(); this.destroyUndoMenu(); this.clearTargeting(); this.turnManager.recoverActionLock(); this.afterAction();
   }
 
   private pickAbilityTarget(actor: CombatUnitState, ability: CombatAbility): CombatUnitState | null {

@@ -1,4 +1,5 @@
 import type { CombatUnitState } from './CombatState';
+import { CombatPassiveEngine, type PassiveActionContext } from './CombatPassiveEngine';
 
 export type DamageKind = 'basic' | 'skill' | 'ultimate';
 export type ElementOutcome = 'immune' | 'strong' | 'resisted' | 'weak' | 'neutral';
@@ -46,11 +47,13 @@ const DEFAULT_ELEMENT_MULTIPLIERS = {
  * regression tests.
  */
 export class CombatIdentityRules {
+  private readonly passives = new CombatPassiveEngine();
   evaluateDamage(
     actor: CombatUnitState,
     target: CombatUnitState,
     kind: DamageKind,
-    abilityType = 'physical'
+    abilityType = 'physical',
+    passiveContext: PassiveActionContext = {}
   ): DamageEvaluation {
     const usesElement = kind !== 'basic' && abilityType.trim().toLowerCase() !== 'physical';
     const element = usesElement
@@ -58,8 +61,8 @@ export class CombatIdentityRules {
       : { multiplier: 1, outcome: 'neutral' as const };
     const roleOutgoing = this.outgoingRoleMultiplier(actor, target, kind);
     const roleIncoming = this.incomingRoleMultiplier(target);
-    const passiveOutgoing = this.outgoingPassiveMultiplier(actor);
-    const passiveIncoming = this.incomingPassiveMultiplier(target);
+    const passiveOutgoing = this.passives.outgoingDamageMultiplier(actor, passiveContext);
+    const passiveIncoming = 1;
     const totalMultiplier = this.clampMultiplier(
       element.multiplier *
         roleOutgoing *
@@ -206,36 +209,6 @@ export class CombatIdentityRules {
     }
 
     return 1;
-  }
-
-  private outgoingPassiveMultiplier(actor: CombatUnitState): number {
-    const passiveId = String(actor.pow.passive?.id || '').trim().toLowerCase();
-
-    if (passiveId === 'missing_hp_atk') {
-      const missingRatio = this.missingHpRatio(actor);
-      return 1 + missingRatio * 0.25;
-    }
-
-    return 1;
-  }
-
-  private incomingPassiveMultiplier(target: CombatUnitState): number {
-    const passiveId = String(target.pow.passive?.id || '').trim().toLowerCase();
-
-    if (passiveId === 'missing_hp_def') {
-      const missingRatio = this.missingHpRatio(target);
-      return Math.max(0.8, 1 - missingRatio * 0.2);
-    }
-
-    return 1;
-  }
-
-  private missingHpRatio(unit: CombatUnitState): number {
-    const maxHp = Number.isFinite(unit.pow.maxHp) && unit.pow.maxHp > 0
-      ? unit.pow.maxHp
-      : 1;
-    const hp = Number.isFinite(unit.hp) ? unit.hp : maxHp;
-    return Math.min(1, Math.max(0, 1 - hp / maxHp));
   }
 
   private elementRule(key: string): ElementCatalogRule | undefined {

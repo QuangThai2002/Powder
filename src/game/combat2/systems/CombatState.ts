@@ -24,6 +24,8 @@ export interface CombatUnitState {
   hp: number;
   /** Unified Combat 2.4+ resource: 0..8 effective Rage points. */
   ragePoints: number;
+  /** Consecutive correct academic actions, matching the legacy 0..5 combo contract. */
+  combo: number;
   shield: number;
   speed: number;
   speedBuffActionsRemaining: number;
@@ -175,6 +177,7 @@ export class CombatState {
     for (const unit of this.units) {
       unit.hp = this.finiteClamp(unit.hp, 0, unit.pow.maxHp, 0);
       unit.ragePoints = sanitizeRagePoints(unit.ragePoints);
+      unit.combo = Math.floor(this.finiteClamp(unit.combo, 0, 5, 0));
       unit.initialInitiative = this.finiteClamp(unit.initialInitiative, 0, 92, 0);
       unit.shield = this.finiteClamp(unit.shield, 0, unit.pow.maxHp * 0.8, 0);
       unit.speed = this.finiteClamp(unit.speed, 1, 9999, unit.pow.speed);
@@ -267,12 +270,14 @@ export class CombatState {
     for (const fallen of defeated) {
       const reviver = this.units.find((unit) =>
         unit.side === side && unit.alive && !unit.passiveUsed &&
-        String(unit.pow.passive?.id || '').toLowerCase() === 'revive_ally_once'
+        (unit.pow.passive?.mechanic?.effect.kind === 'revive' ||
+          String(unit.pow.passive?.id || '').toLowerCase() === 'revive_ally_once')
       );
       if (!reviver) break;
 
       reviver.passiveUsed = true;
-      fallen.hp = Math.max(1, Math.round(fallen.pow.maxHp * 0.3));
+      const reviveRatio = Number(reviver.pow.passive?.mechanic?.effect.coefficient);
+      fallen.hp = Math.max(1, Math.round(fallen.pow.maxHp * (Number.isFinite(reviveRatio) ? reviveRatio : 0.3)));
       fallen.ragePoints = sanitizeRagePoints(fallen.ragePoints);
       fallen.shield = 0;
       this.resetRuntimeEffects(fallen);
@@ -332,6 +337,7 @@ export class CombatState {
       fieldSlot: slot < ACTIVE_TEAM_SIZE ? slot : null,
       hp: pow.hp,
       ragePoints: this.initialRage(options.initialRageByPowId, pow.id),
+      combo: 0,
       shield: 0,
       speed: this.finiteClamp(pow.speed, 1, 9999, 100),
       speedBuffActionsRemaining: 0,

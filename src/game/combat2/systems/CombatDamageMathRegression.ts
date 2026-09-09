@@ -51,7 +51,7 @@ function makeUnit(side: 'player' | 'enemy', powOverrides: Partial<CombatPow> = {
   const pow = makePow(powOverrides);
   return {
     instanceId: `${side}-${pow.id}`, pow, side, slot: 0, fieldSlot: 0,
-    hp: pow.hp, ragePoints: 0, shield: 0, speed: pow.speed,
+    hp: pow.hp, ragePoints: 0, combo: 0, shield: 0, speed: pow.speed,
     speedBuffActionsRemaining: 0, speedDebuffActionsRemaining: 0,
     attackMultiplier: 1, abilityPowerMultiplier: 1, defenseMultiplier: 1,
     attackBuffActionsRemaining: 0, abilityPowerBuffActionsRemaining: 0, defenseBuffActionsRemaining: 0,

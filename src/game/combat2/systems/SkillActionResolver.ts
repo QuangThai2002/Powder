@@ -22,6 +22,7 @@ import {
   grievousReduction,
   strongestGrievousTier
 } from './CombatHealingReduction';
+import type { PassiveActionContext } from './CombatPassiveEngine';
 import {
   ACTION_BASE_RAW_GAIN,
   ULTIMATE_RAGE_COST,
@@ -146,26 +147,28 @@ export class SkillActionResolver {
     target: CombatUnitState,
     ability: CombatAbility,
     slot: CombatSkillSlot,
-    currentRound = 1
+    currentRound = 1,
+    passiveContext: PassiveActionContext = {}
   ): SkillActionResult {
     if (!this.canUse(actor, slot)) {
       throw new Error(`[Combat2] ${actor.pow.name} cannot use ${ability.name}.`);
     }
-    return this.resolveAbility(actor, target, ability, slot, 0, currentRound);
+    return this.resolveAbility(actor, target, ability, slot, 0, currentRound, passiveContext);
   }
 
   resolveUltimate(
     actor: CombatUnitState,
     target: CombatUnitState,
     ability: CombatAbility,
-    currentRound = 1
+    currentRound = 1,
+    passiveContext: PassiveActionContext = {}
   ): SkillActionResult {
     if (!this.canUseUltimate(actor)) {
       throw new Error(`[Combat2] ${actor.pow.name} cannot use ${ability.name}: Rage, silence or cooldown gate is active.`);
     }
 
     actor.ragePoints = spendUltimate(actor.ragePoints);
-    return this.resolveAbility(actor, target, ability, 'ultimate', ULTIMATE_RAGE_COST, currentRound);
+    return this.resolveAbility(actor, target, ability, 'ultimate', ULTIMATE_RAGE_COST, currentRound, passiveContext);
   }
 
   private resolveAbility(
@@ -174,7 +177,8 @@ export class SkillActionResolver {
     ability: CombatAbility,
     abilitySlot: CombatAbilitySlot,
     rageSpent: number,
-    currentRound: number
+    currentRound: number,
+    passiveContext: PassiveActionContext
   ): SkillActionResult {
     const rageBeforeEvent = actor.ragePoints + rageSpent;
     const abilityType = String(ability.type || '').trim().toLowerCase();
@@ -199,7 +203,7 @@ export class SkillActionResolver {
           critChance: 0,
           mitigation: 0
         }
-      : this.applyDamage(actor, target, ability, damageKind);
+      : this.applyDamage(actor, target, ability, damageKind, passiveContext);
 
     const suppressFreezeReapply = damageResult.freezeShattered && parsedStatus.status === 'freeze';
     const statusResult = damageResult.evaded && !noDirectDamage
@@ -235,7 +239,8 @@ export class SkillActionResolver {
     actor: CombatUnitState,
     target: CombatUnitState,
     ability: CombatAbility,
-    kind: 'skill' | 'ultimate'
+    kind: 'skill' | 'ultimate',
+    passiveContext: PassiveActionContext
   ): Pick<SkillActionResult,
     'damage' | 'shieldDamage' | 'hpDamage' | 'identityMultiplier' | 'elementOutcome' |
     'freezeShattered' | 'crit' | 'critMultiplier' | 'evaded' | 'hitChance' | 'critChance' | 'mitigation'> {
@@ -244,7 +249,7 @@ export class SkillActionResolver {
     const offenseStat = this.scalingStatFor(ability, normalizedType);
     const critMode = this.critModeFor(ability, damageType);
     const coefficient = Math.min(5, Math.max(0.1, this.safeStat(ability.power, 100) / 100));
-    const identity = this.identity.evaluateDamage(actor, target, kind, damageType);
+    const identity = this.identity.evaluateDamage(actor, target, kind, damageType, passiveContext);
     const hit = this.legacyStats.resolveHit(actor, target, {
       offenseStat,
       critMode,

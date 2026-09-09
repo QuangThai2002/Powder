@@ -43,6 +43,9 @@ interface PatchableScene extends Phaser.Scene {
   recoverTurnFlow: () => void;
   afterAction: () => void;
   startCombatFlow: () => void;
+  passiveContext: (actor: CombatUnitState) => { combo: number; sameElementAllies: number };
+  applyPassiveAfterAction: (actor: CombatUnitState, target: CombatUnitState) => void;
+  completePassiveAction: (actor: CombatUnitState, target: CombatUnitState) => void;
 }
 
 const PATCH_FLAG = '__powderCombat28MultiTargetInstalled';
@@ -190,8 +193,11 @@ function installMultiResolvePatch(proto: any): void {
         ability,
         slot,
         this.combatState.units,
-        this.combatState.round
+        this.combatState.round,
+        this.passiveContext(actor)
       );
+      this.applyPassiveAfterAction(actor, primaryTarget);
+      this.completePassiveAction(actor, primaryTarget);
       this.combatState.sanitizeRuntimeNumbers();
       this.refreshViews();
 

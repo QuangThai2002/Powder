@@ -14,6 +14,7 @@ export class TurnManager {
   private readonly nextReadyAt = new Map<string, number>();
   private timelineNow = 0;
   private actedThisRound = new Set<string>();
+  private extraTurnRequested = new Set<string>();
 
   constructor(state: CombatState) {
     this.state = state;
@@ -23,6 +24,7 @@ export class TurnManager {
   resetTimeline(): void {
     this.timelineNow = 0;
     this.actedThisRound.clear();
+    this.extraTurnRequested.clear();
     this.nextReadyAt.clear();
     this.state.currentUnitId = null;
     this.state.phase = 'ready';
@@ -80,7 +82,8 @@ export class TurnManager {
       unit.actionLocked = false;
       this.tickActorDurations(unit);
       if (unit.alive && unit.fieldSlot !== null) {
-        this.nextReadyAt.set(unit.instanceId, this.timelineNow + this.intervalFor(unit));
+        const immediate = this.extraTurnRequested.delete(unit.instanceId);
+        this.nextReadyAt.set(unit.instanceId, immediate ? this.timelineNow : this.timelineNow + this.intervalFor(unit));
         this.actedThisRound.add(unit.instanceId);
       } else this.retireUnit(unit.instanceId);
     }
@@ -103,7 +106,15 @@ export class TurnManager {
     this.nextReadyAt.set(unitId, this.timelineNow + this.intervalFor(unit));
   }
 
+  requestExtraTurn(unitId: string): void {
+    const unit = this.state.getUnit(unitId);
+    if (unit?.alive && unit.fieldSlot !== null && this.state.currentUnitId === unitId) {
+      this.extraTurnRequested.add(unitId);
+    }
+  }
+
   retireUnit(unitId: string): void {
+    this.extraTurnRequested.delete(unitId);
     this.nextReadyAt.delete(unitId);
     this.actedThisRound.delete(unitId);
   }

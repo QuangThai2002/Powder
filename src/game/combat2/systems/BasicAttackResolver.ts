@@ -3,6 +3,7 @@ import { FROSTBITE_DAMAGE_MULTIPLIER } from './CombatControlEngine';
 import { CombatIdentityRules } from './CombatIdentityRules';
 import { CombatLegacyStatEngine } from './CombatLegacyStatEngine';
 import { ACTION_BASE_RAW_GAIN, applyRawRageGain } from './CombatRageEngine';
+import type { PassiveActionContext } from './CombatPassiveEngine';
 
 export interface BasicAttackResult {
   damage: number;
@@ -32,11 +33,11 @@ export class BasicAttackResolver {
     this.legacyStats = new CombatLegacyStatEngine(random);
   }
 
-  resolve(attacker: CombatUnitState, target: CombatUnitState): BasicAttackResult {
+  resolve(attacker: CombatUnitState, target: CombatUnitState, passiveContext: PassiveActionContext = {}): BasicAttackResult {
     const basicPower = this.safeStat(attacker.pow.abilities.basic.power, 100);
     const coefficient = Math.min(3, Math.max(0.1, basicPower / 100));
     const targetHpBefore = this.safeHp(target.hp, target.pow.maxHp);
-    const identity = this.identity.evaluateDamage(attacker, target, 'basic', 'physical');
+    const identity = this.identity.evaluateDamage(attacker, target, 'basic', 'physical', passiveContext);
     const hit = this.legacyStats.resolveHit(attacker, target, {
       offenseStat: 'attack',
       critMode: 'natural-ad',
