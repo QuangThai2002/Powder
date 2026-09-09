@@ -7,6 +7,7 @@ function fixedAbility(src,skillMeta,ownerId,slot,unlockStar){
 }
 for(const md of M.pows){
   const p=D.pows.find(x=>x.id===md.id),v=V.pows?.[md.id];if(!p||!v)continue;
+  const canonicalPassive=clone(p.abilities?.passive||null);
   p.officialRole=md.roleLabel;p.officialRoleKey=md.role;p.combatRole=md.role;p.rolePrimary=md.roleLabel;p.role=md.roleLabel;p.roleTags=[md.role];p.element=md.element;p.rarity=md.rarity;
   const native=Math.max(1,Number(v.nativeStar)||Number(md.star)||1),isOldStarter=starterOld.has(p.id);
   p.startStars=isOldStarter?0:native;p.initialStar=p.startStars;p.nativeStar=native;p.maxStars=isOldStarter?1:Math.max(native,Number(v.maxStarWorkbook)||native);
@@ -17,7 +18,8 @@ for(const md of M.pows){
   p.abilities.basic=fixedAbility(a.basic,v.skills?.basic,p.id,'basic',isOldStarter?0:unlockCore);
   p.abilities.skills=[fixedAbility(a.skill1,v.skills?.skill1,p.id,'skill1',unlockCore),fixedAbility(a.skill2,v.skills?.skill2,p.id,'skill2',unlockCore)];
   p.abilities.ultimate=fixedAbility(a.ultimate,v.skills?.ultimate,p.id,'ultimate',unlockCore);
-  p.abilities.passive={id:`${p.id}.core`,name:v.core,description:v.coreDescription||v.core,fixedCore:true,ownerId:p.id,rules:{summary:v.coreDescription||v.core,activation:'Cơ chế bẩm sinh của chính Pow; không phải kỹ năng có thể thay.',effect:v.coreDescription||v.core,notCounted:'Không thể học, copy, chuyển hoặc cấp từ Trang bị/Cổ vật.',limit:'Chỉ thuộc đúng Pow này.',build:v.goodPartners||v.teamRole||'Phối hợp theo core riêng của Pow.'}};
+  if(canonicalPassive){const definition=window.POWDER_PASSIVE_CATALOG?.get?.(canonicalPassive.id);p.abilities.passive={...canonicalPassive,...(!canonicalPassive.description&&definition?.description?{description:definition.description}:{}),...(definition?{mechanic:definition}: {})};}
+  p.core={name:v.core,description:v.coreDescription||v.core,ownerId:p.id};
   delete p.learnedSkills;delete p.inheritedSkills;delete p.copySkill;delete p.skillBook;
   if(p.rarity!=='ancient'){delete p.exclusiveSkill;delete p.abilities.exclusive;}
   const anc=M.ancients?.[p.id];if(anc?.exclusiveAbility){p.exclusiveSkill=clone(anc.exclusiveAbility);p.exclusiveSkill.unlockStar=7;p.exclusiveSkill.ownerId=p.id;p.exclusiveSkill.fixedSkill=true;p.exclusiveSkill.transferable=false;p.exclusiveSkill.learnable=false;p.exclusiveSkill.copyable=false;p.exclusiveSkill.replaceable=false;p.exclusiveSkill.masterVersion='V8.1';p.ancientLaw=anc['Luật/Cơ chế lõi'];p.breakthrough={condition:anc['Điều kiện Đột Phá'],effect:anc['Đột Phá Cổ Thần']};}
