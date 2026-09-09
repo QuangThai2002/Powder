@@ -1,7 +1,28 @@
 [build]
-  publish = "."
+  command = "npm run build && node tools/prepare-netlify-publish.mjs"
+  publish = "dist"
 [build.environment]
   NODE_VERSION = "22"
+[[redirects]]
+  from = "/data/*"
+  to = "/index.html"
+  status = 404
+  force = true
+[[redirects]]
+  from = "/reports/*"
+  to = "/index.html"
+  status = 404
+  force = true
+[[redirects]]
+  from = "/docs/*"
+  to = "/index.html"
+  status = 404
+  force = true
+[[redirects]]
+  from = "/tools/*"
+  to = "/index.html"
+  status = 404
+  force = true
 [[redirects]]
   from = "/admin"
   to = "/admin.html"
