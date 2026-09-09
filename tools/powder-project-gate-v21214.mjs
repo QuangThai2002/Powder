@@ -69,7 +69,7 @@ let manifest=[];
 try{manifest=JSON.parse(boot.slice(manifestStart,manifestEnd))}catch(e){failures.push(`boot manifest parse: ${e.message}`)}
 const declaredHash=boot.match(/MANIFEST_HASH="([0-9a-f]+)"/)?.[1]||'';
 const calculatedHash=crypto.createHash('sha256').update(JSON.stringify(manifest)).digest('hex').slice(0,16);
-check('Boot Loader identity',boot.includes("const VERSION='21.0.4'")&&declaredHash==='9a3d2db0b19ce1a1'&&calculatedHash===declaredHash,`declared=${declaredHash} calculated=${calculatedHash}`);
+check('Boot Loader identity',boot.includes("const VERSION='21.0.5'")&&declaredHash==='e8afa67cf423bc71'&&calculatedHash===declaredHash,`declared=${declaredHash} calculated=${calculatedHash}`);
 
 // Combat 2.4.0 is a staged runtime migration. The signed 21.0.4 Boot manifest
 // remains frozen, while index.html deliberately invalidates only the two Combat
