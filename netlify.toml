@@ -3,31 +3,3 @@
   publish = "dist"
 [build.environment]
   NODE_VERSION = "22"
-[[redirects]]
-  from = "/data/*"
-  to = "/index.html"
-  status = 404
-  force = true
-[[redirects]]
-  from = "/reports/*"
-  to = "/index.html"
-  status = 404
-  force = true
-[[redirects]]
-  from = "/docs/*"
-  to = "/index.html"
-  status = 404
-  force = true
-[[redirects]]
-  from = "/tools/*"
-  to = "/index.html"
-  status = 404
-  force = true
-[[redirects]]
-  from = "/admin"
-  to = "/admin.html"
-  status = 200
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200

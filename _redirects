@@ -1,3 +1,7 @@
+/data/* /index.html 404!
+/reports/* /index.html 404!
+/docs/* /index.html 404!
+/tools/* /index.html 404!
 /admin /admin.html 200
 /account /index.html 200
 /* /index.html 200
