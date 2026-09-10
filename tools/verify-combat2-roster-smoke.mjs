@@ -152,6 +152,23 @@ async function main() {
     assert.ok(pyroon, 'AD Basic compatibility fixture must resolve');
     assert.equal(pyroon.abilities.basic.scalingStat, 'attack', 'Basic without AP metadata must keep ATK scaling');
     assert.equal(pyroon.abilities.basic.damageType, 'physical', 'Basic without magic metadata must keep physical damage');
+
+    const voltkit = runtime.combatPowById('voltkit');
+    assert.ok(voltkit, 'Voltkit must resolve through the Combat2 adapter');
+    assert.equal(voltkit.abilities.ultimate.name, 'Lôi Kích', 'Voltkit Ultimate must use the approved canonical name');
+    assert.equal(voltkit.abilities.ultimate.power, 200, 'Voltkit Ultimate must preserve 200% AP');
+    assert.equal(voltkit.abilities.ultimate.scalingStat, 'ability-power', 'Voltkit Ultimate must scale from AP');
+    assert.equal(voltkit.abilities.ultimate.rageCost, 4, 'Voltkit Ultimate metadata must use canonical Rage cost 4');
+    assert.equal(voltkit.abilities.ultimate.target, 'enemy', 'Voltkit Ultimate must target one enemy');
+    assert.equal(voltkit.abilities.ultimate.area, undefined, 'Voltkit Ultimate must not retain legacy AOE targeting');
+    assert.deepEqual(voltkit.abilities.ultimate.masterEffects, {}, 'Voltkit Ultimate must not retain legacy debuff effects');
+    assert.deepEqual(voltkit.abilities.ultimate.conditionalDamageModifier, {
+      condition: { targetStatus: 'paralysis' },
+      multiplier: 1.35,
+      consumeStatus: false,
+      removeStatus: false,
+      reduceStatusDuration: false
+    }, 'Voltkit Ultimate conditional damage metadata mismatch');
     for (let index = 0; index < pows.length; index += 1) {
       exercisePow(
         runtime,

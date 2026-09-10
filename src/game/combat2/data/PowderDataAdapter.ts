@@ -1,6 +1,7 @@
 import type {
   CombatAbility,
   CombatAbilitySet,
+  CombatConditionalDamageModifier,
   CombatPassive,
   CombatPassiveMechanic,
   CombatPow,
@@ -49,6 +50,13 @@ interface CatalogAbility {
   rageCost?: number;
   coefficients?: Record<string, number>;
   masterEffects?: Record<string, unknown>;
+  conditionalDamageModifier?: {
+    condition?: { targetStatus?: string };
+    multiplier?: number;
+    consumeStatus?: boolean;
+    removeStatus?: boolean;
+    reduceStatusDuration?: boolean;
+  };
   area?: boolean;
   sureHit?: boolean;
   unavoidable?: boolean;
@@ -138,20 +146,48 @@ export const STANDARD_POW_SKILL_COUNT = STANDARD_POW_COUNT * STANDARD_SKILLS_PER
 
 // Approved Phase 2A decisions are projected by stable Pow ID so the internal
 // recovery registry does not need to be bundled into the player build.
-const PHASE_2A_BASIC_METADATA = {
+const PHASE_2A_ABILITY_METADATA = {
   zephyroo: {
-    id: 'zephyroo.basic',
-    name: 'Đánh Gió',
-    description: 'Đánh Gió: gây 70% AP.',
-    power: 70,
-    type: 'magic',
-    damageType: 'magic',
-    scalingStat: 'ability-power',
-    critMode: 'never',
-    coefficients: { abilityPower: 0.7 },
-    masterEffects: {}
+    basic: {
+      id: 'zephyroo.basic',
+      name: 'Đánh Gió',
+      description: 'Đánh Gió: gây 70% AP.',
+      power: 70,
+      type: 'magic',
+      damageType: 'magic',
+      scalingStat: 'ability-power',
+      critMode: 'never',
+      coefficients: { abilityPower: 0.7 },
+      masterEffects: {}
+    }
+  },
+  voltkit: {
+    ultimate: {
+      id: 'voltkit.ultimate',
+      name: 'Lôi Kích',
+      description: 'Lôi Kích: tiêu 4 Nộ. Gây 200% AP lên mục tiêu. Nếu mục tiêu đang Tê Liệt, hit này gây +35% damage; không tiêu, xóa hoặc rút ngắn Tê Liệt.',
+      power: 200,
+      type: 'magic',
+      damageType: 'magic',
+      scalingStat: 'ability-power',
+      critMode: 'never',
+      target: 'enemy',
+      area: false,
+      manaCost: 0,
+      cooldown: 0,
+      rageCost: 4,
+      coefficients: { abilityPower: 2 },
+      masterEffects: {},
+      conditionalDamageModifier: {
+        condition: { targetStatus: 'PARALYSIS' },
+        multiplier: 1.35,
+        consumeStatus: false,
+        removeStatus: false,
+        reduceStatusDuration: false
+      }
+    }
   }
-} satisfies Readonly<Record<string, CanonicalSkillMetadata>>;
+} satisfies Readonly<Record<string, Partial<Record<'basic' | 'skill1' | 'skill2' | 'ultimate', CanonicalSkillMetadata>>>>;
 
 const HOSTILE_SUPPORT_STATUSES = new Set([
   'stun', 'silence', 'paralysis', 'freeze', 'slow', 'burn', 'poison',
@@ -394,15 +430,30 @@ function canonicalSkillVisual(skillIndex: number | undefined): Pick<CombatAbilit
 function canonicalSkillMetadata(pow: CatalogPow, abilityOffset: 0 | 1 | 2 | 3): CanonicalSkillMetadata | undefined {
   const slot = (['basic', 'skill1', 'skill2', 'ultimate'] as const)[abilityOffset];
   const catalogMetadata = window.POWDER_SKILL_V81?.pows?.[String(pow.id || '')]?.skills?.[slot];
-  const approvedBasic = abilityOffset === 0
-    ? PHASE_2A_BASIC_METADATA[String(pow.id || '').trim().toLowerCase() as keyof typeof PHASE_2A_BASIC_METADATA]
-    : undefined;
-  if (!approvedBasic) return catalogMetadata;
+  const powId = String(pow.id || '').trim().toLowerCase() as keyof typeof PHASE_2A_ABILITY_METADATA;
+  const approvedKit = PHASE_2A_ABILITY_METADATA[powId];
+  const approvedMetadata = approvedKit?.[slot as keyof typeof approvedKit] as CanonicalSkillMetadata | undefined;
+  if (!approvedMetadata) return catalogMetadata;
   return {
     ...catalogMetadata,
-    ...approvedBasic,
-    coefficients: { ...catalogMetadata?.coefficients, ...approvedBasic.coefficients },
-    masterEffects: { ...approvedBasic.masterEffects }
+    ...approvedMetadata,
+    coefficients: { ...catalogMetadata?.coefficients, ...approvedMetadata.coefficients },
+    masterEffects: { ...approvedMetadata.masterEffects }
+  };
+}
+
+function normalizeConditionalDamageModifier(
+  modifier: CatalogAbility['conditionalDamageModifier'] | undefined
+): CombatConditionalDamageModifier | undefined {
+  if (!modifier || String(modifier.condition?.targetStatus || '').trim().toLowerCase() !== 'paralysis') return undefined;
+  if (modifier.consumeStatus !== false || modifier.removeStatus !== false || modifier.reduceStatusDuration !== false) return undefined;
+  const multiplier = finitePositive(modifier.multiplier, 1);
+  return {
+    condition: { targetStatus: 'paralysis' },
+    multiplier,
+    consumeStatus: false,
+    removeStatus: false,
+    reduceStatusDuration: false
   };
 }
 
@@ -430,6 +481,14 @@ function normalizeAbility(
   const critMode = metadata?.critMode ?? ability?.critMode;
   const coefficients = metadata?.coefficients ?? ability?.coefficients;
   const masterEffects = metadata?.masterEffects ?? ability?.masterEffects;
+  const conditionalDamageModifier = normalizeConditionalDamageModifier(
+    metadata?.conditionalDamageModifier ?? ability?.conditionalDamageModifier
+  );
+  const target = metadata?.target ?? ability?.target;
+  const manaCost = metadata?.manaCost ?? ability?.manaCost;
+  const cooldown = metadata?.cooldown ?? ability?.cooldown;
+  const rageCost = metadata?.rageCost ?? ability?.rageCost;
+  const area = metadata?.area ?? ability?.area;
   return {
     ...(metadata?.id ? { id: String(metadata.id) } : ability?.id ? { id: String(ability.id) } : {}),
     name: String(metadata?.name || ability?.name || fallbackName),
@@ -451,18 +510,19 @@ function normalizeAbility(
       ? { grievousTier: ability.grievousTier }
       : {}),
     ...(status ? { status } : {}),
-    ...(ability?.target ? { target: String(ability.target) } : {}),
+    ...(target ? { target: String(target) } : {}),
     ...(ability?.targetRule ? { targetRule: String(ability.targetRule) } : {}),
     ...(Number.isFinite(ability?.hits) && Number(ability?.hits) > 0
       ? { hits: Math.floor(Number(ability?.hits)) }
       : {}),
     ...(ability?.specialMechanic ? { mechanic: String(ability.specialMechanic) } : {}),
-    ...(Number.isFinite(ability?.manaCost) ? { manaCost: Math.max(0, Number(ability?.manaCost)) } : {}),
-    ...(Number.isFinite(ability?.cooldown) ? { cooldown: Math.max(0, Math.floor(Number(ability?.cooldown))) } : {}),
-    ...(Number.isFinite(ability?.rageCost) ? { rageCost: Math.max(0, Number(ability?.rageCost)) } : {}),
+    ...(Number.isFinite(manaCost) ? { manaCost: Math.max(0, Number(manaCost)) } : {}),
+    ...(Number.isFinite(cooldown) ? { cooldown: Math.max(0, Math.floor(Number(cooldown))) } : {}),
+    ...(Number.isFinite(rageCost) ? { rageCost: Math.max(0, Number(rageCost)) } : {}),
     ...(coefficients ? { coefficients: { ...coefficients } } : {}),
     ...(masterEffects ? { masterEffects: { ...masterEffects } } : {}),
-    ...(ability?.area ? { area: true } : {}),
+    ...(conditionalDamageModifier ? { conditionalDamageModifier } : {}),
+    ...(area ? { area: true } : {}),
     ...(ability?.sureHit ? { sureHit: true } : {}),
     ...(ability?.unavoidable ? { unavoidable: true } : {}),
     ...(ability?.bypassGuard ? { bypassGuard: true } : {}),

@@ -261,6 +261,7 @@ export class SkillActionResolver {
     const frozen = target.controlStatus === 'freeze' && target.controlActionsRemaining > 0;
     const frostbitten = target.freezeStage === 2 && target.freezeStageActionsRemaining > 0;
     const explicitShatter = Boolean(ability.shatterFrozen) && frozen;
+    const conditionalDamageMultiplier = this.conditionalDamageMultiplier(ability, target);
     const vulnerability = explicitShatter
       ? FREEZE_SHATTER_MULTIPLIER
       : frostbitten
@@ -277,6 +278,7 @@ export class SkillActionResolver {
             identity.totalMultiplier *
             hit.critMultiplier *
             vulnerability *
+            conditionalDamageMultiplier *
             (1 - hit.damageReduction)
           )
         );
@@ -643,6 +645,13 @@ export class SkillActionResolver {
     if (ability.critMode === 'never') return 'never';
     if (damageType === 'physical') return 'natural-ad';
     return ability.critMode === 'magic' ? 'magic' : 'never';
+  }
+
+  private conditionalDamageMultiplier(ability: CombatAbility, target: CombatUnitState): number {
+    const modifier = ability.conditionalDamageModifier;
+    if (!modifier || modifier.condition.targetStatus !== 'paralysis') return 1;
+    if (target.paralysisActionsRemaining <= 0) return 1;
+    return Math.min(5, Math.max(1, this.safeStat(modifier.multiplier, 1)));
   }
 
   private grievousTierFor(ability: CombatAbility, status: string): GrievousTier {

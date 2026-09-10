@@ -13,6 +13,7 @@ import { SkillActionResolver } from './SkillActionResolver';
 export interface CombatDamageMathRegressionReport {
   checks: readonly string[];
   basicScalingChecked: boolean;
+  conditionalDamageChecked: boolean;
   critChecked: boolean;
   defenseChecked: boolean;
   shatterChecked: boolean;
@@ -132,6 +133,44 @@ export function runCombatDamageMathRegression(): CombatDamageMathRegressionRepor
   const adBasic = new BasicAttackResolver(() => 0).resolve(adBasicActor, makeUnit('enemy'));
   assert(adBasic.damage === 120, 'Basic without AP metadata must retain ATK scaling');
 
+  const voltkitUltimate: CombatAbility = {
+    name: 'Lôi Kích', power: 200, type: 'magic', damageType: 'magic',
+    scalingStat: 'ability-power', critMode: 'never', rageCost: 4,
+    coefficients: { abilityPower: 2 },
+    conditionalDamageModifier: {
+      condition: { targetStatus: 'paralysis' }, multiplier: 1.35,
+      consumeStatus: false, removeStatus: false, reduceStatusDuration: false
+    }
+  };
+  const normalVoltkit = makeUnit('player', { abilityPower: 100, critRate: 100 });
+  normalVoltkit.ragePoints = 4;
+  const normalVoltkitTarget = makeUnit('enemy');
+  const normalVoltkitHit = new SkillActionResolver(() => 0).resolveUltimate(
+    normalVoltkit, normalVoltkitTarget, voltkitUltimate
+  );
+  assert(normalVoltkitHit.damage === 200, 'Voltkit Ultimate must deal 200% AP without Paralysis');
+  assert(normalVoltkitHit.rageSpent === 4 && normalVoltkit.ragePoints === 0, 'Voltkit Ultimate must consume exactly 4 Rage');
+  assert(!normalVoltkitHit.crit, 'Voltkit Ultimate must not natural Crit');
+
+  const paralyzedVoltkit = makeUnit('player', { abilityPower: 100, critRate: 100 });
+  paralyzedVoltkit.ragePoints = 4;
+  const paralyzedTarget = makeUnit('enemy');
+  paralyzedTarget.paralysisActionsRemaining = 2;
+  const paralysisSnapshot = {
+    controlStatus: paralyzedTarget.controlStatus,
+    controlActionsRemaining: paralyzedTarget.controlActionsRemaining,
+    paralysisActionsRemaining: paralyzedTarget.paralysisActionsRemaining,
+    controlHistory: [...paralyzedTarget.controlHistory]
+  };
+  const paralyzedVoltkitHit = new SkillActionResolver(() => 0).resolveUltimate(
+    paralyzedVoltkit, paralyzedTarget, voltkitUltimate
+  );
+  assert(paralyzedVoltkitHit.damage === 270, 'Voltkit Ultimate must apply 200% AP x 1.35 against Paralysis');
+  assert(paralyzedTarget.controlStatus === paralysisSnapshot.controlStatus, 'conditional damage must not replace target control status');
+  assert(paralyzedTarget.controlActionsRemaining === paralysisSnapshot.controlActionsRemaining, 'conditional damage must not alter control duration');
+  assert(paralyzedTarget.paralysisActionsRemaining === paralysisSnapshot.paralysisActionsRemaining, 'conditional damage must not consume or reduce Paralysis');
+  assert(JSON.stringify(paralyzedTarget.controlHistory) === JSON.stringify(paralysisSnapshot.controlHistory), 'conditional damage must not mutate control history');
+
   const basicActor = makeUnit('player', { critRate: 100, critDamage: 150 });
   const basicTarget = makeUnit('enemy');
   const basic = new BasicAttackResolver(() => 0).resolve(basicActor, basicTarget);
@@ -222,6 +261,7 @@ export function runCombatDamageMathRegression(): CombatDamageMathRegressionRepor
   return {
     checks: [
       'basic-ap-scaling-70', 'basic-ap-no-natural-crit', 'basic-ad-scaling-compatibility',
+      'voltkit-ultimate-200-ap', 'voltkit-paralysis-damage-135', 'voltkit-paralysis-read-only', 'voltkit-rage-cost-4',
       'basic-ad-natural-crit', 'ad-default-200', 'ap-no-natural-crit', 'magic-crit-permission',
       'magic-crit-160', 'magic-crit-180', 'magic-crit-200', 'magic-crit-cap-200',
       'legendary-ad-cap-250', 'mythic-ad-280', 'mythic-ad-cap-280',
@@ -231,6 +271,7 @@ export function runCombatDamageMathRegression(): CombatDamageMathRegressionRepor
       'grievous-40-60', 'grievous-60-60', 'grievous-never-100'
     ],
     basicScalingChecked: true,
+    conditionalDamageChecked: true,
     critChecked: true,
     defenseChecked: true,
     shatterChecked: true,

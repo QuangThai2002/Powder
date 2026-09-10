@@ -13,6 +13,17 @@ export type CombatScalingStat = 'attack' | 'ability-power';
 export type CritMode = 'natural-ad' | 'magic' | 'never';
 export type GrievousTier = 'grievous-40' | 'grievous-60';
 
+export interface CombatConditionalDamageModifier {
+  condition: {
+    targetStatus: 'paralysis';
+  };
+  multiplier: number;
+  /** Phase 2A conditional damage checks are read-only status predicates. */
+  consumeStatus: false;
+  removeStatus: false;
+  reduceStatusDuration: false;
+}
+
 export interface PowDisplayProfile {
   heightRatio: number;
   scaleAdjust?: number;
@@ -48,6 +59,7 @@ export interface CombatAbility {
   rageCost?: number;
   coefficients?: Readonly<Record<string, number>>;
   masterEffects?: Readonly<Record<string, unknown>>;
+  conditionalDamageModifier?: CombatConditionalDamageModifier;
   description?: string;
   sureHit?: boolean;
   unavoidable?: boolean;
