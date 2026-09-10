@@ -190,6 +190,24 @@ const PHASE_2A_ABILITY_METADATA = {
   }
 } satisfies Readonly<Record<string, Partial<Record<'basic' | 'skill1' | 'skill2' | 'ultimate', CanonicalSkillMetadata>>>>;
 
+const PHASE_2A_PASSIVE_METADATA = {
+  bramblet: {
+    id: 'bramblet_khai_mach',
+    name: 'Khai Mạch',
+    description: 'Đồng minh khác nhận Mạch Khởi: hành động chính thứ 2 nạp Nộ lên 4; Ultimate đầu tiên cấp Khiên 3% Max HP.',
+    mechanic: {
+      trigger: 'ON_BATTLE_START',
+      effect: {
+        kind: 'brambletKhaiMach',
+        mainActionsRequired: 2,
+        chargeTarget: 4,
+        shieldMaxHpRatio: 0.03
+      },
+      runtime: 'LIVE'
+    }
+  }
+} satisfies Readonly<Record<string, CatalogPassive>>;
+
 const HOSTILE_SUPPORT_STATUSES = new Set([
   'stun', 'silence', 'paralysis', 'freeze', 'slow', 'burn', 'poison',
   'anti heal', 'attack down', 'ap down', 'defense down', 'accuracy down'
@@ -541,21 +559,24 @@ function normalizeAbility(
 }
 
 function normalizePassive(pow: CatalogPow, passive: CatalogPassive | undefined): CombatPassive | undefined {
-  const id = String(passive?.id || '').trim();
+  const powId = String(pow.id || '').trim().toLowerCase() as keyof typeof PHASE_2A_PASSIVE_METADATA;
+  const approved = PHASE_2A_PASSIVE_METADATA[powId];
+  const source = approved ? { ...passive, ...approved } : passive;
+  const id = String(source?.id || '').trim();
   if (!id) return undefined;
   const definition = window.POWDER_PASSIVE_CATALOG?.get?.(id) ?? null;
   return {
     id,
-    name: String(passive?.name || id),
-    ...(passive?.element ? { element: String(passive.element) } : {}),
-    ...(passive?.description || definition?.description
-      ? { description: String(passive?.description || definition?.description) }
+    name: String(source?.name || id),
+    ...(source?.element ? { element: String(source.element) } : {}),
+    ...(source?.description || definition?.description
+      ? { description: String(source?.description || definition?.description) }
       : {}),
-    ...(pow.passiveArt || passive?.art
-      ? { artUrl: `/${String(pow.passiveArt || passive?.art).replace(/^\/+/, '')}` }
+    ...(pow.passiveArt || source?.art
+      ? { artUrl: `/${String(pow.passiveArt || source?.art).replace(/^\/+/, '')}` }
       : {}),
-    ...(passive?.mechanic || definition
-      ? { mechanic: (passive?.mechanic || definition) as CombatPassiveMechanic }
+    ...(source?.mechanic || definition
+      ? { mechanic: (source?.mechanic || definition) as CombatPassiveMechanic }
       : {})
   };
 }

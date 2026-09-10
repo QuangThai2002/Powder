@@ -1,5 +1,14 @@
 import type { CombatUnitState } from './CombatState';
 import { effectiveHealingReduction } from './CombatHealingReduction';
+import { chargeRageTo, type RageChargeEvent } from './CombatRageEngine';
+
+const BRAMBLET_KHAI_MACH_PASSIVE_ID = 'bramblet_khai_mach';
+const KHAI_MACH_INITIALIZED = 'khai-mach:initialized';
+const KHAI_MACH_RECIPIENT = 'khai-mach:recipient';
+const KHAI_MACH_CHARGE_PENDING = 'khai-mach:charge-pending';
+const KHAI_MACH_CHARGE_USED = 'khai-mach:charge-used';
+const KHAI_MACH_SHIELD_USED = 'khai-mach:shield-used';
+const KHAI_MACH_MAIN_ACTIONS = 'khai-mach:main-actions';
 
 export type CombatActionOrigin = 'main' | 'follow-up' | 'counter' | 'dot' | 'secondary-hit';
 export type CombatActionType = 'basic' | 'skill' | 'ultimate' | 'status-tick';
@@ -61,17 +70,46 @@ export interface PassiveActionContext {
 }
 
 export interface PassiveRuntimeEvent {
-  type: 'heal' | 'status' | 'team-buff';
+  type: 'heal' | 'status' | 'team-buff' | 'passive-mark' | 'rage-charge' | 'shield';
   passiveId: string;
   targetIds: string[];
   amount?: number;
   status?: string;
+  rageEvents?: readonly RageChargeEvent[];
 }
 
 export class CombatPassiveEngine {
-  applyLifecycle(_event: CombatPassiveLifecycleEvent): PassiveRuntimeEvent[] {
-    // Foundation hook only. Canonical Pow-specific behavior is intentionally not active yet.
+  initializeBattle(units: readonly CombatUnitState[]): PassiveRuntimeEvent[] {
+    const events: PassiveRuntimeEvent[] = [];
+    for (const source of units.filter((unit) => this.isKhaiMachSource(unit))) {
+      if (this.hasFlag(source, KHAI_MACH_INITIALIZED)) continue;
+      this.setFlag(source, KHAI_MACH_INITIALIZED);
+      const recipients = units.filter((unit) => unit.side === source.side && unit.instanceId !== source.instanceId);
+      for (const recipient of recipients) {
+        this.setFlag(recipient, KHAI_MACH_RECIPIENT);
+        this.setFlag(recipient, KHAI_MACH_CHARGE_PENDING);
+      }
+      if (recipients.length > 0) {
+        events.push({
+          type: 'passive-mark',
+          passiveId: BRAMBLET_KHAI_MACH_PASSIVE_ID,
+          targetIds: recipients.map((unit) => unit.instanceId),
+          status: 'mach-khoi'
+        });
+      }
+    }
+    return events;
+  }
+
+  applyLifecycle(event: CombatPassiveLifecycleEvent): PassiveRuntimeEvent[] {
+    if (!this.hasFlag(event.actor, KHAI_MACH_RECIPIENT) || event.provenance.origin !== 'main') return [];
+    if (event.stage === 'after-ultimate-cast') return this.applyKhaiMachUltimateShield(event.actor);
+    if (event.stage === 'after-main-action') return this.applyKhaiMachMainAction(event.actor);
     return [];
+  }
+
+  hasKhaiMach(unit: CombatUnitState): boolean {
+    return this.hasFlag(unit, KHAI_MACH_CHARGE_PENDING);
   }
 
   hasFlag(unit: CombatUnitState, key: string): boolean {
@@ -119,6 +157,53 @@ export class CombatPassiveEngine {
 
   setDesignatedCarry(unit: CombatUnitState, instanceId: string | null): void {
     unit.passiveState.designatedCarryInstanceId = instanceId ? String(instanceId) : null;
+  }
+
+  private applyKhaiMachMainAction(unit: CombatUnitState): PassiveRuntimeEvent[] {
+    if (!this.hasFlag(unit, KHAI_MACH_CHARGE_PENDING) || this.hasFlag(unit, KHAI_MACH_CHARGE_USED)) return [];
+    const count = this.incrementBattleCounter(unit, KHAI_MACH_MAIN_ACTIONS);
+    if (count < 2) return [];
+
+    this.setFlag(unit, KHAI_MACH_CHARGE_PENDING, false);
+    this.setFlag(unit, KHAI_MACH_CHARGE_USED);
+    if (unit.ragePoints >= 4) return [];
+
+    const charge = chargeRageTo(unit.ragePoints, 4);
+    unit.ragePoints = charge.next;
+    return charge.events.length > 0
+      ? [{
+          type: 'rage-charge',
+          passiveId: BRAMBLET_KHAI_MACH_PASSIVE_ID,
+          targetIds: [unit.instanceId],
+          amount: charge.effectiveGain,
+          status: 'mach-khoi',
+          rageEvents: charge.events
+        }]
+      : [];
+  }
+
+  private applyKhaiMachUltimateShield(unit: CombatUnitState): PassiveRuntimeEvent[] {
+    if (this.hasFlag(unit, KHAI_MACH_SHIELD_USED)) return [];
+    this.setFlag(unit, KHAI_MACH_SHIELD_USED);
+    const requested = Math.max(1, Math.round(unit.pow.maxHp * 0.03));
+    const cap = Math.max(1, Math.round(unit.pow.maxHp * 0.8));
+    const previous = unit.shield;
+    unit.shield = Math.min(cap, previous + requested);
+    const amount = Math.max(0, unit.shield - previous);
+    return amount > 0
+      ? [{
+          type: 'shield',
+          passiveId: BRAMBLET_KHAI_MACH_PASSIVE_ID,
+          targetIds: [unit.instanceId],
+          amount,
+          status: 'khai-mach'
+        }]
+      : [];
+  }
+
+  private isKhaiMachSource(unit: CombatUnitState): boolean {
+    return unit.pow.passive?.id === BRAMBLET_KHAI_MACH_PASSIVE_ID &&
+      unit.pow.passive.mechanic?.effect.kind === 'brambletKhaiMach';
   }
 
   advanceCombo(current: number, academicCorrect: boolean): number {

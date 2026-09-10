@@ -6,7 +6,8 @@ import {
   CombatPassiveEngine,
   createCombatActionProvenance,
   isMainDirectDamageAction,
-  type CombatPassiveLifecycleEvent
+  type CombatPassiveLifecycleEvent,
+  type PassiveRuntimeEvent
 } from './CombatPassiveEngine';
 import { chargeRageTo } from './CombatRageEngine';
 import { SkillActionResolver } from './SkillActionResolver';
@@ -226,6 +227,107 @@ export function runCombatPassiveRegression(definitions: Record<string, Definitio
     assert(cast.hits[1].result.provenance.origin === 'secondary-hit', 'later multi-target hits must retain secondary provenance');
     assert(!lifecycleEvents.some((event) => event.provenance.origin === 'secondary-hit'), 'secondary hits must not emit main-action lifecycle');
     foundationChecks.push('multi-target provenance: one main action plus secondary hits');
+  }
+
+  {
+    const khaiMach = {
+      trigger: 'ON_BATTLE_START',
+      effect: {
+        kind: 'brambletKhaiMach', mainActionsRequired: 2, chargeTarget: 4, shieldMaxHpRatio: 0.03
+      },
+      runtime: 'LIVE'
+    } as Definition;
+    const fixture = { trigger: 'BEFORE_HIT', effect: {} } as Definition;
+    const bramblet = pow('bramblet', khaiMach);
+    bramblet.passive = { id: 'bramblet_khai_mach', name: 'Khai Mạch', mechanic: khaiMach };
+    const state = new CombatState(
+      [bramblet, pow('khai-mach-ally-a', fixture), pow('khai-mach-ally-b', fixture)],
+      [pow('khai-mach-target', fixture, 'enemy')]
+    );
+    const [source, ally, highRageAlly] = state.activeLiving('player');
+    const initEvents = engine.initializeBattle(state.units);
+    assert(!engine.hasKhaiMach(source), 'Bramblet must not grant Mạch Khởi to itself');
+    assert(engine.hasKhaiMach(ally) && engine.hasKhaiMach(highRageAlly), 'each other ally must receive Mạch Khởi');
+    assert(initEvents[0]?.type === 'passive-mark' && initEvents[0].targetIds.length === 2, 'battle init must report exactly the other allies');
+    assert(engine.initializeBattle(state.units).length === 0, 'Khai Mạch battle initialization must be idempotent');
+
+    const lifecycle = (
+      actor: CombatUnitState,
+      stage: 'after-main-action' | 'after-ultimate-cast',
+      origin: 'main' | 'follow-up' | 'counter' | 'dot' | 'secondary-hit' = 'main'
+    ): PassiveRuntimeEvent[] => engine.applyLifecycle({
+      stage,
+      actor,
+      provenance: createCombatActionProvenance(
+        actor.instanceId,
+        [state.activeLiving('enemy')[0].instanceId],
+        stage === 'after-ultimate-cast' ? 'ultimate' : origin === 'dot' ? 'status-tick' : 'basic',
+        origin !== 'dot',
+        stage === 'after-ultimate-cast' ? 'Ultimate' : 'Action',
+        { origin }
+      ),
+      round: 1,
+      rageSpent: stage === 'after-ultimate-cast' ? 4 : 0,
+      rageAfter: actor.ragePoints
+    });
+
+    ally.ragePoints = 1;
+    assert(lifecycle(ally, 'after-main-action').length === 0 && ally.ragePoints === 1, 'first main action must not charge Rage');
+    const chargeEvents = lifecycle(ally, 'after-main-action');
+    assert(Number(ally.ragePoints) === 4, 'second main action must charge Rage directly to 4');
+    assert(chargeEvents.length === 1 && chargeEvents[0].type === 'rage-charge', 'second main action must emit one Rage charge event');
+    assert(chargeEvents[0].rageEvents?.length === 1, 'Khai Mạch charge must remain one logical Rage event');
+    assert(!engine.hasKhaiMach(ally), 'Mạch Khởi must be consumed after the second main action');
+    assert(lifecycle(ally, 'after-main-action').length === 0 && Number(ally.ragePoints) === 4, 'consumed Mạch Khởi must not trigger again');
+
+    highRageAlly.ragePoints = 5;
+    lifecycle(highRageAlly, 'after-main-action');
+    lifecycle(highRageAlly, 'after-main-action');
+    assert(highRageAlly.ragePoints === 5 && !engine.hasKhaiMach(highRageAlly), 'Rage at least 4 must not increase, but Mạch Khởi must still be consumed');
+
+    const nonMainState = new CombatState(
+      [bramblet, pow('khai-mach-non-main', fixture)],
+      [pow('khai-mach-non-main-target', fixture, 'enemy')]
+    );
+    const nonMainSource = nonMainState.activeLiving('player')[0];
+    const nonMainAlly = nonMainState.activeLiving('player')[1];
+    engine.initializeBattle(nonMainState.units);
+    nonMainAlly.ragePoints = 1;
+    for (const origin of ['follow-up', 'counter', 'dot', 'secondary-hit'] as const) {
+      engine.applyLifecycle({
+        stage: 'after-main-action', actor: nonMainAlly,
+        provenance: createCombatActionProvenance(nonMainAlly.instanceId, [], origin === 'dot' ? 'status-tick' : 'basic', origin !== 'dot', 'Non-main', { origin }),
+        round: 1, rageSpent: 0, rageAfter: nonMainAlly.ragePoints
+      });
+    }
+    assert(engine.battleCounter(nonMainAlly, 'khai-mach:main-actions') === 0, 'non-main provenance must not increase Khai Mạch action count');
+    assert(engine.hasKhaiMach(nonMainAlly) && !engine.hasKhaiMach(nonMainSource), 'non-main actions must preserve only the ally mark');
+
+    const shieldState = new CombatState(
+      [bramblet, pow('khai-mach-ultimate-ally', fixture)],
+      [pow('khai-mach-ultimate-target', fixture, 'enemy')]
+    );
+    const shieldSource = shieldState.activeLiving('player')[0];
+    const shieldAlly = shieldState.activeLiving('player')[1];
+    const shieldTarget = shieldState.activeLiving('enemy')[0];
+    engine.initializeBattle(shieldState.units);
+    const shieldEvents: PassiveRuntimeEvent[] = [];
+    shieldAlly.ragePoints = 4;
+    new SkillActionResolver(() => 0.99, (event) => shieldEvents.push(...engine.applyLifecycle(event))).resolveUltimate(
+      shieldAlly, shieldTarget, shieldAlly.pow.abilities.ultimate, 1
+    );
+    assert(shieldAlly.shield === 30, 'first ally Ultimate must grant 3% of that ally Max HP as Shield');
+    assert(shieldEvents.filter((event) => event.type === 'shield').length === 1, 'first Ultimate shield must emit once');
+    shieldAlly.ragePoints = 4;
+    shieldAlly.ultimateCooldownActionsRemaining = 0;
+    new SkillActionResolver(() => 0.99, (event) => shieldEvents.push(...engine.applyLifecycle(event))).resolveUltimate(
+      shieldAlly, shieldTarget, shieldAlly.pow.abilities.ultimate, 1
+    );
+    assert(shieldAlly.shield === 30, 'later Ultimates must not grant another Khai Mạch Shield');
+    const sourceShieldBefore = shieldSource.shield;
+    lifecycle(shieldSource, 'after-ultimate-cast');
+    assert(shieldSource.shield === sourceShieldBefore, 'Bramblet must not receive its own Khai Mạch Shield');
+    foundationChecks.push('Bramblet Khai Mạch: init / second main action / atomic charge / first-Ult shield');
   }
 
   {

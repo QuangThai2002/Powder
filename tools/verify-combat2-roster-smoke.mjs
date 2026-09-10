@@ -153,6 +153,14 @@ async function main() {
     assert.equal(pyroon.abilities.basic.scalingStat, 'attack', 'Basic without AP metadata must keep ATK scaling');
     assert.equal(pyroon.abilities.basic.damageType, 'physical', 'Basic without magic metadata must keep physical damage');
 
+    const bramblet = runtime.combatPowById('bramblet');
+    assert.ok(bramblet, 'Bramblet must resolve through the Combat2 adapter');
+    assert.equal(bramblet.passive?.id, 'bramblet_khai_mach', 'Bramblet must not retain the legacy combo passive ID');
+    assert.equal(bramblet.passive?.name, 'Khai Mạch', 'Bramblet must use the approved canonical Passive name');
+    assert.equal(bramblet.passive?.mechanic?.trigger, 'ON_BATTLE_START', 'Khai Mạch must initialize at battle start');
+    assert.equal(bramblet.passive?.mechanic?.effect?.kind, 'brambletKhaiMach', 'Khai Mạch must expose its dedicated Passive mechanic');
+    assert.notEqual(bramblet.passive?.id, 'combo_bonus_damage', 'legacy Bramblet Passive must not leak through the adapter');
+
     const voltkit = runtime.combatPowById('voltkit');
     assert.ok(voltkit, 'Voltkit must resolve through the Combat2 adapter');
     assert.equal(voltkit.abilities.ultimate.name, 'Lôi Kích', 'Voltkit Ultimate must use the approved canonical name');

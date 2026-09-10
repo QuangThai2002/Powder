@@ -170,6 +170,7 @@ export class BattleScene extends Phaser.Scene {
       bossContext: this.handoffRequest?.bossContext,
       ...bootstrapOptions
     });
+    this.passiveEngine.initializeBattle(this.combatState.units);
     this.turnManager = new TurnManager(this.combatState);
     this.bossMode = BossModeController.from(this.combatState, this.turnManager);
     if (this.handoffRequest?.battleMode === 'boss' && !this.bossMode) {
