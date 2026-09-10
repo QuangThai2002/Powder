@@ -12,6 +12,7 @@ import { SkillActionResolver } from './SkillActionResolver';
 
 export interface CombatDamageMathRegressionReport {
   checks: readonly string[];
+  basicScalingChecked: boolean;
   critChecked: boolean;
   defenseChecked: boolean;
   shatterChecked: boolean;
@@ -103,6 +104,34 @@ function applyGrievousSequence(tiers: readonly GrievousTier[]): CombatUnitState 
 }
 
 export function runCombatDamageMathRegression(): CombatDamageMathRegressionReport {
+  const apBasicActor = makeUnit('player', {
+    attack: 20,
+    abilityPower: 100,
+    critRate: 100,
+    abilities: {
+      ...makePow().abilities,
+      basic: {
+        name: 'Đánh Gió', power: 70, type: 'magic', damageType: 'magic',
+        scalingStat: 'ability-power', critMode: 'never', coefficients: { abilityPower: 0.7 }
+      }
+    }
+  });
+  const apBasic = new BasicAttackResolver(() => 0).resolve(apBasicActor, makeUnit('enemy'));
+  assert(apBasic.damage === 70, 'AP Basic must use 70% abilityPower instead of ATK');
+  assert(!apBasic.crit && apBasic.critChance === 0, 'AP Basic must not natural Crit without explicit Magic Crit permission');
+
+  const adBasicActor = makeUnit('player', {
+    attack: 120,
+    abilityPower: 10,
+    critRate: 0,
+    abilities: {
+      ...makePow().abilities,
+      basic: { name: 'AD Basic Fixture', power: 100, type: 'physical' }
+    }
+  });
+  const adBasic = new BasicAttackResolver(() => 0).resolve(adBasicActor, makeUnit('enemy'));
+  assert(adBasic.damage === 120, 'Basic without AP metadata must retain ATK scaling');
+
   const basicActor = makeUnit('player', { critRate: 100, critDamage: 150 });
   const basicTarget = makeUnit('enemy');
   const basic = new BasicAttackResolver(() => 0).resolve(basicActor, basicTarget);
@@ -192,6 +221,7 @@ export function runCombatDamageMathRegression(): CombatDamageMathRegressionRepor
 
   return {
     checks: [
+      'basic-ap-scaling-70', 'basic-ap-no-natural-crit', 'basic-ad-scaling-compatibility',
       'basic-ad-natural-crit', 'ad-default-200', 'ap-no-natural-crit', 'magic-crit-permission',
       'magic-crit-160', 'magic-crit-180', 'magic-crit-200', 'magic-crit-cap-200',
       'legendary-ad-cap-250', 'mythic-ad-280', 'mythic-ad-cap-280',
@@ -200,6 +230,7 @@ export function runCombatDamageMathRegression(): CombatDamageMathRegressionRepor
       'shatter-total-damage-130', 'shatter-no-chill', 'grievous-40-40',
       'grievous-40-60', 'grievous-60-60', 'grievous-never-100'
     ],
+    basicScalingChecked: true,
     critChecked: true,
     defenseChecked: true,
     shatterChecked: true,

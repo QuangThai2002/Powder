@@ -92,7 +92,7 @@ interface PowderCatalog {
   pows?: CatalogPow[];
 }
 
-interface CanonicalSkillMetadata { id?: string; name?: string; description?: string; }
+type CanonicalSkillMetadata = CatalogAbility;
 interface CanonicalPowKit {
   nativeStar?: number;
   maxStarWorkbook?: number;
@@ -135,6 +135,23 @@ const CANONICAL_SKILL_ART_PREFIX = '/assets/skills/v81/';
 export const STANDARD_POW_COUNT = 99;
 export const STANDARD_SKILLS_PER_POW = 4;
 export const STANDARD_POW_SKILL_COUNT = STANDARD_POW_COUNT * STANDARD_SKILLS_PER_POW;
+
+// Approved Phase 2A decisions are projected by stable Pow ID so the internal
+// recovery registry does not need to be bundled into the player build.
+const PHASE_2A_BASIC_METADATA = {
+  zephyroo: {
+    id: 'zephyroo.basic',
+    name: 'Đánh Gió',
+    description: 'Đánh Gió: gây 70% AP.',
+    power: 70,
+    type: 'magic',
+    damageType: 'magic',
+    scalingStat: 'ability-power',
+    critMode: 'never',
+    coefficients: { abilityPower: 0.7 },
+    masterEffects: {}
+  }
+} satisfies Readonly<Record<string, CanonicalSkillMetadata>>;
 
 const HOSTILE_SUPPORT_STATUSES = new Set([
   'stun', 'silence', 'paralysis', 'freeze', 'slow', 'burn', 'poison',
@@ -376,7 +393,17 @@ function canonicalSkillVisual(skillIndex: number | undefined): Pick<CombatAbilit
 
 function canonicalSkillMetadata(pow: CatalogPow, abilityOffset: 0 | 1 | 2 | 3): CanonicalSkillMetadata | undefined {
   const slot = (['basic', 'skill1', 'skill2', 'ultimate'] as const)[abilityOffset];
-  return window.POWDER_SKILL_V81?.pows?.[String(pow.id || '')]?.skills?.[slot];
+  const catalogMetadata = window.POWDER_SKILL_V81?.pows?.[String(pow.id || '')]?.skills?.[slot];
+  const approvedBasic = abilityOffset === 0
+    ? PHASE_2A_BASIC_METADATA[String(pow.id || '').trim().toLowerCase() as keyof typeof PHASE_2A_BASIC_METADATA]
+    : undefined;
+  if (!approvedBasic) return catalogMetadata;
+  return {
+    ...catalogMetadata,
+    ...approvedBasic,
+    coefficients: { ...catalogMetadata?.coefficients, ...approvedBasic.coefficients },
+    masterEffects: { ...approvedBasic.masterEffects }
+  };
 }
 
 function normalizeAbility(
@@ -390,28 +417,35 @@ function normalizeAbility(
   const metadata = canonicalSkillMetadata(pow, abilityOffset);
   const migratedStatus = migrateLegacyStatus(ability?.status);
   const balancedStatus = balancedHardControlStatus(migratedStatus, pow.rosterOrder, abilityOffset);
-  const type = normalizeAbilityType(ability?.type, balancedStatus, fallbackType);
+  const type = normalizeAbilityType(metadata?.type ?? ability?.type, balancedStatus, fallbackType);
   const status = normalizeAbilityStatus(balancedStatus, type);
-  const damageType = ability?.damageType === 'physical' || ability?.damageType === 'magic'
-    ? ability.damageType
-    : type === 'physical' ? 'physical' : 'magic';
-  const scalingStat = ability?.scalingStat === 'attack' || ability?.scalingStat === 'ability-power'
-    ? ability.scalingStat
-    : type === 'physical' ? 'attack' : 'ability-power';
+  const declaredDamageType = metadata?.damageType ?? ability?.damageType;
+  const damageType = declaredDamageType === 'physical' || declaredDamageType === 'magic'
+    ? declaredDamageType
+    : abilityOffset === 0 ? 'physical' : type === 'physical' ? 'physical' : 'magic';
+  const declaredScalingStat = metadata?.scalingStat ?? ability?.scalingStat;
+  const scalingStat = declaredScalingStat === 'attack' || declaredScalingStat === 'ability-power'
+    ? declaredScalingStat
+    : abilityOffset === 0 ? 'attack' : type === 'physical' ? 'attack' : 'ability-power';
+  const critMode = metadata?.critMode ?? ability?.critMode;
+  const coefficients = metadata?.coefficients ?? ability?.coefficients;
+  const masterEffects = metadata?.masterEffects ?? ability?.masterEffects;
   return {
     ...(metadata?.id ? { id: String(metadata.id) } : ability?.id ? { id: String(ability.id) } : {}),
     name: String(metadata?.name || ability?.name || fallbackName),
     ...(metadata?.description || ability?.description
       ? { description: String(metadata?.description || ability?.description) }
       : {}),
-    power: finiteNonNegative(ability?.power, fallbackPower),
+    power: finiteNonNegative(metadata?.power, finiteNonNegative(ability?.power, fallbackPower)),
     type,
     damageType,
     scalingStat,
-    ...(ability?.critMode === 'natural-ad' || ability?.critMode === 'magic' || ability?.critMode === 'never'
-      ? { critMode: ability.critMode }
+    ...(critMode === 'natural-ad' || critMode === 'magic' || critMode === 'never'
+      ? { critMode }
       : {}),
-    ...(Number.isFinite(ability?.magicCritMultiplier) ? { magicCritMultiplier: Number(ability?.magicCritMultiplier) } : {}),
+    ...(Number.isFinite(metadata?.magicCritMultiplier ?? ability?.magicCritMultiplier)
+      ? { magicCritMultiplier: Number(metadata?.magicCritMultiplier ?? ability?.magicCritMultiplier) }
+      : {}),
     ...(ability?.shatterFrozen ? { shatterFrozen: true } : {}),
     ...(ability?.grievousTier === 'grievous-40' || ability?.grievousTier === 'grievous-60'
       ? { grievousTier: ability.grievousTier }
@@ -426,8 +460,8 @@ function normalizeAbility(
     ...(Number.isFinite(ability?.manaCost) ? { manaCost: Math.max(0, Number(ability?.manaCost)) } : {}),
     ...(Number.isFinite(ability?.cooldown) ? { cooldown: Math.max(0, Math.floor(Number(ability?.cooldown))) } : {}),
     ...(Number.isFinite(ability?.rageCost) ? { rageCost: Math.max(0, Number(ability?.rageCost)) } : {}),
-    ...(ability?.coefficients ? { coefficients: { ...ability.coefficients } } : {}),
-    ...(ability?.masterEffects ? { masterEffects: { ...ability.masterEffects } } : {}),
+    ...(coefficients ? { coefficients: { ...coefficients } } : {}),
+    ...(masterEffects ? { masterEffects: { ...masterEffects } } : {}),
     ...(ability?.area ? { area: true } : {}),
     ...(ability?.sureHit ? { sureHit: true } : {}),
     ...(ability?.unavoidable ? { unavoidable: true } : {}),

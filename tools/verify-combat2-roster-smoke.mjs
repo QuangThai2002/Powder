@@ -139,6 +139,19 @@ async function main() {
   try {
     const pows = sourcePows.map((pow) => runtime.combatPowById(pow.id));
     assert.ok(pows.every(Boolean), 'Every canonical Pow must resolve before smoke testing');
+    const zephyroo = runtime.combatPowById('zephyroo');
+    assert.ok(zephyroo, 'Zephyroo must resolve through the Combat2 adapter');
+    assert.equal(zephyroo.abilities.basic.name, 'Đánh Gió', 'Zephyroo Basic must use the approved canonical name');
+    assert.equal(zephyroo.abilities.basic.power, 70, 'Zephyroo Basic must preserve the approved 70% coefficient');
+    assert.equal(zephyroo.abilities.basic.scalingStat, 'ability-power', 'Zephyroo Basic must scale from AP');
+    assert.equal(zephyroo.abilities.basic.damageType, 'magic', 'Zephyroo Basic must preserve magic damage identity');
+    assert.equal(zephyroo.abilities.basic.critMode, 'never', 'Zephyroo Basic must not gain natural Crit');
+    assert.deepEqual(zephyroo.abilities.basic.masterEffects, {}, 'Zephyroo Basic must not retain legacy turn-meter effects');
+
+    const pyroon = runtime.combatPowById('pyroon');
+    assert.ok(pyroon, 'AD Basic compatibility fixture must resolve');
+    assert.equal(pyroon.abilities.basic.scalingStat, 'attack', 'Basic without AP metadata must keep ATK scaling');
+    assert.equal(pyroon.abilities.basic.damageType, 'physical', 'Basic without magic metadata must keep physical damage');
     for (let index = 0; index < pows.length; index += 1) {
       exercisePow(
         runtime,

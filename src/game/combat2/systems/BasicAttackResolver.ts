@@ -1,3 +1,4 @@
+import type { CombatAbility, CombatDamageType, CombatScalingStat, CritMode } from '../data/CombatPow';
 import type { CombatUnitState } from './CombatState';
 import { FROSTBITE_DAMAGE_MULTIPLIER } from './CombatControlEngine';
 import { CombatIdentityRules } from './CombatIdentityRules';
@@ -34,15 +35,20 @@ export class BasicAttackResolver {
   }
 
   resolve(attacker: CombatUnitState, target: CombatUnitState, passiveContext: PassiveActionContext = {}): BasicAttackResult {
-    const basicPower = this.safeStat(attacker.pow.abilities.basic.power, 100);
+    const ability = attacker.pow.abilities.basic;
+    const basicPower = this.safeStat(ability.power, 100);
     const coefficient = Math.min(3, Math.max(0.1, basicPower / 100));
+    const scalingStat = this.scalingStat(ability);
+    const damageType = this.damageType(ability, scalingStat);
+    const critMode = this.critMode(ability, damageType);
     const targetHpBefore = this.safeHp(target.hp, target.pow.maxHp);
-    const identity = this.identity.evaluateDamage(attacker, target, 'basic', 'physical', passiveContext);
+    const identity = this.identity.evaluateDamage(attacker, target, 'basic', damageType, passiveContext);
     const hit = this.legacyStats.resolveHit(attacker, target, {
-      offenseStat: 'attack',
-      critMode: 'natural-ad',
-      unavoidable: Boolean(attacker.pow.abilities.basic.unavoidable || attacker.pow.abilities.basic.sureHit),
-      area: Boolean(attacker.pow.abilities.basic.area)
+      offenseStat: scalingStat,
+      critMode,
+      ...(Number.isFinite(ability.magicCritMultiplier) ? { magicCritMultiplier: ability.magicCritMultiplier } : {}),
+      unavoidable: Boolean(ability.unavoidable || ability.sureHit),
+      area: Boolean(ability.area)
     });
     const frostbitten = target.freezeStage === 2 && target.freezeStageActionsRemaining > 0;
     const vulnerability = frostbitten ? FROSTBITE_DAMAGE_MULTIPLIER : 1;
@@ -97,6 +103,22 @@ export class BasicAttackResolver {
 
   private safeStat(value: number, fallback: number): number {
     return Number.isFinite(value) ? Math.max(0, value) : fallback;
+  }
+
+  private scalingStat(ability: CombatAbility): CombatScalingStat {
+    return ability.scalingStat === 'ability-power' ? 'ability-power' : 'attack';
+  }
+
+  private damageType(ability: CombatAbility, scalingStat: CombatScalingStat): CombatDamageType {
+    if (ability.damageType === 'physical' || ability.damageType === 'magic') return ability.damageType;
+    return scalingStat === 'ability-power' ? 'magic' : 'physical';
+  }
+
+  private critMode(ability: CombatAbility, damageType: CombatDamageType): CritMode {
+    if (ability.critMode === 'natural-ad' || ability.critMode === 'magic' || ability.critMode === 'never') {
+      return ability.critMode;
+    }
+    return damageType === 'physical' ? 'natural-ad' : 'never';
   }
 
   private safeHp(value: number, maxHp: number): number {
