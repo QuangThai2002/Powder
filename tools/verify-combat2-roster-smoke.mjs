@@ -161,7 +161,10 @@ async function main() {
     assert.equal(voltkit.abilities.ultimate.rageCost, 4, 'Voltkit Ultimate metadata must use canonical Rage cost 4');
     assert.equal(voltkit.abilities.ultimate.target, 'enemy', 'Voltkit Ultimate must target one enemy');
     assert.equal(voltkit.abilities.ultimate.area, undefined, 'Voltkit Ultimate must not retain legacy AOE targeting');
-    assert.deepEqual(voltkit.abilities.ultimate.masterEffects, {}, 'Voltkit Ultimate must not retain legacy debuff effects');
+    assert.equal(voltkit.abilities.ultimate.status, undefined, 'Voltkit Ultimate must not retain legacy Slow status');
+    assert.equal(voltkit.abilities.ultimate.statusChance, undefined, 'Voltkit Ultimate must not retain legacy status chance');
+    assert.equal(voltkit.abilities.ultimate.statusDuration, undefined, 'Voltkit Ultimate must not retain legacy status duration');
+    assert.ok(!voltkit.abilities.ultimate.masterEffects?.debuffs, 'Voltkit Ultimate must not retain legacy speed debuffs');
     assert.deepEqual(voltkit.abilities.ultimate.conditionalDamageModifier, {
       condition: { targetStatus: 'paralysis' },
       multiplier: 1.35,
@@ -169,6 +172,42 @@ async function main() {
       removeStatus: false,
       reduceStatusDuration: false
     }, 'Voltkit Ultimate conditional damage metadata mismatch');
+
+    const resolveVoltkitUltimate = (paralysisActionsRemaining) => {
+      const actorPow = {
+        ...voltkit,
+        element: 'Neutral', elementKey: 'neutral', role: 'neutral', abilityPower: 100, critRate: 100
+      };
+      const targetPow = {
+        ...pyroon,
+        id: `voltkit-target-${paralysisActionsRemaining}`,
+        element: 'Neutral', elementKey: 'neutral', role: 'neutral', hp: 1000, maxHp: 1000,
+        defense: 0, damageReduction: 0, evasion: 0, critResist: 0
+      };
+      const state = new runtime.CombatState([actorPow], [targetPow]);
+      const actor = state.activeLiving('player')[0];
+      const target = state.activeLiving('enemy')[0];
+      actor.ragePoints = 4;
+      target.paralysisActionsRemaining = paralysisActionsRemaining;
+      const before = {
+        speedDebuffActionsRemaining: target.speedDebuffActionsRemaining,
+        controlStatus: target.controlStatus,
+        controlActionsRemaining: target.controlActionsRemaining,
+        paralysisActionsRemaining: target.paralysisActionsRemaining,
+        controlHistory: structuredClone(target.controlHistory)
+      };
+      const result = new runtime.SkillActionResolver(() => 0).resolveUltimate(
+        actor, target, actor.pow.abilities.ultimate
+      );
+      assert.equal(target.speedDebuffActionsRemaining, before.speedDebuffActionsRemaining, 'Lôi Kích must not apply legacy Slow');
+      assert.equal(target.controlStatus, before.controlStatus, 'Lôi Kích must not replace control status');
+      assert.equal(target.controlActionsRemaining, before.controlActionsRemaining, 'Lôi Kích must not alter control duration');
+      assert.equal(target.paralysisActionsRemaining, before.paralysisActionsRemaining, 'Lôi Kích must not consume Paralysis');
+      assert.deepEqual(target.controlHistory, before.controlHistory, 'Lôi Kích must not mutate control history');
+      return result;
+    };
+    assert.equal(resolveVoltkitUltimate(0).damage, 200, 'adapter-generated Lôi Kích must deal 200% AP normally');
+    assert.equal(resolveVoltkitUltimate(2).damage, 270, 'adapter-generated Lôi Kích must deal 200% AP x 1.35 to Paralysis');
     for (let index = 0; index < pows.length; index += 1) {
       exercisePow(
         runtime,

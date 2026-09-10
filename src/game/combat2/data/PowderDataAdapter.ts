@@ -57,6 +57,8 @@ interface CatalogAbility {
     removeStatus?: boolean;
     reduceStatusDuration?: boolean;
   };
+  /** Adapter-only marker for an approved ability replacement that rejects legacy effects. */
+  clearLegacyEffects?: boolean;
   area?: boolean;
   sureHit?: boolean;
   unavoidable?: boolean;
@@ -173,11 +175,10 @@ const PHASE_2A_ABILITY_METADATA = {
       critMode: 'never',
       target: 'enemy',
       area: false,
-      manaCost: 0,
       cooldown: 0,
       rageCost: 4,
       coefficients: { abilityPower: 2 },
-      masterEffects: {},
+      clearLegacyEffects: true,
       conditionalDamageModifier: {
         condition: { targetStatus: 'PARALYSIS' },
         multiplier: 1.35,
@@ -466,7 +467,9 @@ function normalizeAbility(
   abilityOffset: 0 | 1 | 2 | 3
 ): CombatAbility {
   const metadata = canonicalSkillMetadata(pow, abilityOffset);
-  const migratedStatus = migrateLegacyStatus(ability?.status);
+  const clearLegacyEffects = metadata?.clearLegacyEffects === true;
+  const legacyEffectSource = clearLegacyEffects ? undefined : ability;
+  const migratedStatus = migrateLegacyStatus(clearLegacyEffects ? undefined : (metadata?.status ?? ability?.status));
   const balancedStatus = balancedHardControlStatus(migratedStatus, pow.rosterOrder, abilityOffset);
   const type = normalizeAbilityType(metadata?.type ?? ability?.type, balancedStatus, fallbackType);
   const status = normalizeAbilityStatus(balancedStatus, type);
@@ -480,12 +483,12 @@ function normalizeAbility(
     : abilityOffset === 0 ? 'attack' : type === 'physical' ? 'attack' : 'ability-power';
   const critMode = metadata?.critMode ?? ability?.critMode;
   const coefficients = metadata?.coefficients ?? ability?.coefficients;
-  const masterEffects = metadata?.masterEffects ?? ability?.masterEffects;
+  const masterEffects = metadata?.masterEffects ?? legacyEffectSource?.masterEffects;
   const conditionalDamageModifier = normalizeConditionalDamageModifier(
     metadata?.conditionalDamageModifier ?? ability?.conditionalDamageModifier
   );
   const target = metadata?.target ?? ability?.target;
-  const manaCost = metadata?.manaCost ?? ability?.manaCost;
+  const manaCost = metadata?.manaCost ?? (clearLegacyEffects ? undefined : ability?.manaCost);
   const cooldown = metadata?.cooldown ?? ability?.cooldown;
   const rageCost = metadata?.rageCost ?? ability?.rageCost;
   const area = metadata?.area ?? ability?.area;
@@ -505,17 +508,22 @@ function normalizeAbility(
     ...(Number.isFinite(metadata?.magicCritMultiplier ?? ability?.magicCritMultiplier)
       ? { magicCritMultiplier: Number(metadata?.magicCritMultiplier ?? ability?.magicCritMultiplier) }
       : {}),
-    ...(ability?.shatterFrozen ? { shatterFrozen: true } : {}),
-    ...(ability?.grievousTier === 'grievous-40' || ability?.grievousTier === 'grievous-60'
-      ? { grievousTier: ability.grievousTier }
+    ...((metadata?.shatterFrozen ?? legacyEffectSource?.shatterFrozen) ? { shatterFrozen: true } : {}),
+    ...((metadata?.grievousTier ?? legacyEffectSource?.grievousTier) === 'grievous-40' ||
+      (metadata?.grievousTier ?? legacyEffectSource?.grievousTier) === 'grievous-60'
+      ? { grievousTier: (metadata?.grievousTier ?? legacyEffectSource?.grievousTier) as 'grievous-40' | 'grievous-60' }
       : {}),
     ...(status ? { status } : {}),
     ...(target ? { target: String(target) } : {}),
-    ...(ability?.targetRule ? { targetRule: String(ability.targetRule) } : {}),
-    ...(Number.isFinite(ability?.hits) && Number(ability?.hits) > 0
-      ? { hits: Math.floor(Number(ability?.hits)) }
+    ...((metadata?.targetRule ?? legacyEffectSource?.targetRule)
+      ? { targetRule: String(metadata?.targetRule ?? legacyEffectSource?.targetRule) }
       : {}),
-    ...(ability?.specialMechanic ? { mechanic: String(ability.specialMechanic) } : {}),
+    ...(Number.isFinite(metadata?.hits ?? legacyEffectSource?.hits) && Number(metadata?.hits ?? legacyEffectSource?.hits) > 0
+      ? { hits: Math.floor(Number(metadata?.hits ?? legacyEffectSource?.hits)) }
+      : {}),
+    ...((metadata?.specialMechanic ?? legacyEffectSource?.specialMechanic)
+      ? { mechanic: String(metadata?.specialMechanic ?? legacyEffectSource?.specialMechanic) }
+      : {}),
     ...(Number.isFinite(manaCost) ? { manaCost: Math.max(0, Number(manaCost)) } : {}),
     ...(Number.isFinite(cooldown) ? { cooldown: Math.max(0, Math.floor(Number(cooldown))) } : {}),
     ...(Number.isFinite(rageCost) ? { rageCost: Math.max(0, Number(rageCost)) } : {}),
@@ -523,11 +531,11 @@ function normalizeAbility(
     ...(masterEffects ? { masterEffects: { ...masterEffects } } : {}),
     ...(conditionalDamageModifier ? { conditionalDamageModifier } : {}),
     ...(area ? { area: true } : {}),
-    ...(ability?.sureHit ? { sureHit: true } : {}),
-    ...(ability?.unavoidable ? { unavoidable: true } : {}),
-    ...(ability?.bypassGuard ? { bypassGuard: true } : {}),
-    ...(ability?.pierceGuard ? { pierceGuard: true } : {}),
-    ...(ability?.bypassFront ? { bypassFront: true } : {}),
+    ...((metadata?.sureHit ?? legacyEffectSource?.sureHit) ? { sureHit: true } : {}),
+    ...((metadata?.unavoidable ?? legacyEffectSource?.unavoidable) ? { unavoidable: true } : {}),
+    ...((metadata?.bypassGuard ?? legacyEffectSource?.bypassGuard) ? { bypassGuard: true } : {}),
+    ...((metadata?.pierceGuard ?? legacyEffectSource?.pierceGuard) ? { pierceGuard: true } : {}),
+    ...((metadata?.bypassFront ?? legacyEffectSource?.bypassFront) ? { bypassFront: true } : {}),
     ...canonicalSkillVisual(standardSkillIndex(pow.rosterOrder, abilityOffset))
   };
 }
