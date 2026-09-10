@@ -1,6 +1,6 @@
 {
   "schemaVersion": "powder-canonical-design-master-recovery-v1",
-  "generatedAt": "2026-09-09T04:10:15.064Z",
+  "generatedAt": "2026-09-10T03:03:49.232Z",
   "status": "REVIEW_REQUIRED",
   "authorityPolicy": [
     "Latest explicit user-locked design",
@@ -10,6 +10,14 @@
     "Current generic runtime as last evidence only"
   ],
   "sources": [
+    {
+      "id": "phase-2a-approved-decisions",
+      "type": "user-approved-design",
+      "file": "Min approval / Phase 2A.2 final proposal",
+      "scope": "36 blocker fields for #1-90",
+      "authority": 1,
+      "evidence": "Explicitly approved values superseding unresolved recovered candidates; runtime remains comparison-only."
+    },
     {
       "id": "implementation-spec-01-90",
       "type": "design-spec",
@@ -73,22 +81,25 @@
     "totalPow": 99,
     "designRecords": 99,
     "runtimeRecords": 99,
-    "resolvedRecords": 63,
-    "pendingRecords": 36,
-    "highConfidenceFullDesign": 63,
-    "partialDesign": 36,
-    "needsDesignDecision": 36,
+    "resolvedRecords": 90,
+    "pendingRecords": 9,
+    "highConfidenceFullDesign": 90,
+    "partialDesign": 9,
+    "needsDesignDecision": 9,
+    "unresolvedFields": 81,
+    "unresolvedFields1To90": 0,
+    "unresolvedFields91To99": 81,
     "designConflict": 0,
-    "passiveCanonicalFound": 87,
-    "starCanonicalFound": 87,
+    "passiveCanonicalFound": 90,
+    "starCanonicalFound": 90,
     "skillCanonicalFound": {
-      "basic": 89,
-      "skill1": 89,
+      "basic": 90,
+      "skill1": 90,
       "skill2": 90,
-      "ultimate": 88
+      "ultimate": 90
     },
-    "baseStatsCanonicalFound": 67,
-    "specialMechanicCanonicalFound": 87,
+    "baseStatsCanonicalFound": 90,
+    "specialMechanicCanonicalFound": 90,
     "pow91To99Source": "PARTIAL"
   },
   "identityMismatches": [
@@ -334,12 +345,11 @@
         "runtimeOrderDivergence": false,
         "runtimeNameDivergence": false
       },
-      "overallStatus": "PARTIAL_DESIGN",
-      "needsDecisionFields": [
-        "baseStats"
-      ],
+      "overallStatus": "HIGH_CONFIDENCE_FULL_DESIGN",
+      "needsDecisionFields": [],
       "designConflictFields": [],
       "runtimeDivergenceFields": [
+        "baseStats",
         "basic",
         "skill1",
         "skill2",
@@ -425,7 +435,7 @@
           "confidence": "HIGH"
         },
         "baseStats": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -458,6 +468,22 @@
                   "critRate": 10
                 }
               }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Pyroon.baseStats",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "sourceText": "HP333 ATK58 DEF44 AP40 SPD46 CRIT10",
+                "parsed": {
+                  "hp": 333,
+                  "attack": 58,
+                  "defense": 44,
+                  "abilityPower": 40,
+                  "speed": 46,
+                  "critRate": 10
+                }
+              }
             }
           ],
           "currentRuntimeValue": {
@@ -469,13 +495,23 @@
             "critRate": 10,
             "critDamage": 200
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Repo cũ: HP333 ATK58 DEF44 AP40 SPD46 Crit10%; stat final chưa khóa lại.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "sourceText": "HP333 ATK58 DEF44 AP40 SPD46 CRIT10",
+            "parsed": {
+              "hp": 333,
+              "attack": 58,
+              "defense": 44,
+              "abilityPower": 40,
+              "speed": 46,
+              "critRate": 10
+            }
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "basic": {
           "status": "CANONICAL_FOUND",
@@ -887,16 +923,15 @@
         "runtimeOrderDivergence": false,
         "runtimeNameDivergence": false
       },
-      "overallStatus": "PARTIAL_DESIGN",
-      "needsDecisionFields": [
-        "baseStats",
-        "ultimate"
-      ],
+      "overallStatus": "HIGH_CONFIDENCE_FULL_DESIGN",
+      "needsDecisionFields": [],
       "designConflictFields": [],
       "runtimeDivergenceFields": [
+        "baseStats",
         "basic",
         "skill1",
         "skill2",
+        "ultimate",
         "passive",
         "starProgression",
         "specialMechanic"
@@ -978,7 +1013,7 @@
           "confidence": "HIGH"
         },
         "baseStats": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -997,6 +1032,22 @@
                 "sourceText": "Chỉ số nền chưa khóa final.",
                 "parsed": {}
               }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Voltkit.baseStats",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "sourceText": "HP285 ATK40 DEF42 AP61 SPD58 CRIT8",
+                "parsed": {
+                  "hp": 285,
+                  "attack": 40,
+                  "defense": 42,
+                  "abilityPower": 61,
+                  "speed": 58,
+                  "critRate": 8
+                }
+              }
             }
           ],
           "currentRuntimeValue": {
@@ -1008,13 +1059,23 @@
             "critRate": 9,
             "critDamage": 200
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Chỉ số nền chưa khóa final.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "sourceText": "HP285 ATK40 DEF42 AP61 SPD58 CRIT8",
+            "parsed": {
+              "hp": 285,
+              "attack": 40,
+              "defense": 42,
+              "abilityPower": 61,
+              "speed": 58,
+              "critRate": 8
+            }
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "basic": {
           "status": "CANONICAL_FOUND",
@@ -1194,7 +1255,7 @@
           "confidence": "HIGH"
         },
         "ultimate": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -1208,14 +1269,37 @@
               }
             },
             {
-              "sourceId": "design-workbook-01-90 + implementation-spec",
-              "location": "01_ALL_POW_01_90 row 3 / ultimate; implementation spec lines 16 and 136",
+              "sourceId": "design-workbook-01-90",
+              "location": "01_ALL_POW_01_90 row 3 / ultimate",
               "dateOrCommit": "2026-09-07",
               "value": {
                 "name": "Lôi Kích",
                 "text": "Lôi Kích: 200% AP; có tương tác mục tiêu Tê Liệt (hệ số bonus cần khóa khi nhập data cuối).",
                 "cooldown": null,
                 "rageCost": 4
+              }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Voltkit.ultimate",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "name": "Lôi Kích",
+                "text": "Lôi Kích: tiêu 4 Nộ. Gây 200% AP lên mục tiêu. Nếu mục tiêu đang Tê Liệt, hit này gây +35% damage; không tiêu, xóa hoặc rút ngắn Tê Liệt. Nếu mục tiêu không Tê Liệt, gây 200% AP bình thường.",
+                "cooldown": null,
+                "rageCost": 4,
+                "coefficients": {
+                  "abilityPower": 2
+                },
+                "conditionalDamageModifier": {
+                  "condition": {
+                    "targetStatus": "PARALYSIS"
+                  },
+                  "multiplier": 1.35,
+                  "consumeStatus": false,
+                  "removeStatus": false,
+                  "reduceStatusDuration": false
+                }
               }
             }
           ],
@@ -1247,13 +1331,30 @@
             },
             "specialMechanic": null
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Ultimate interaction/bonus against Paralysis is explicitly not locked.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "name": "Lôi Kích",
+            "text": "Lôi Kích: tiêu 4 Nộ. Gây 200% AP lên mục tiêu. Nếu mục tiêu đang Tê Liệt, hit này gây +35% damage; không tiêu, xóa hoặc rút ngắn Tê Liệt. Nếu mục tiêu không Tê Liệt, gây 200% AP bình thường.",
+            "cooldown": null,
+            "rageCost": 4,
+            "coefficients": {
+              "abilityPower": 2
+            },
+            "conditionalDamageModifier": {
+              "condition": {
+                "targetStatus": "PARALYSIS"
+              },
+              "multiplier": 1.35,
+              "consumeStatus": false,
+              "removeStatus": false,
+              "reduceStatusDuration": false
+            }
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "passive": {
           "status": "CANONICAL_FOUND",
@@ -3206,13 +3307,12 @@
         "runtimeOrderDivergence": false,
         "runtimeNameDivergence": false
       },
-      "overallStatus": "PARTIAL_DESIGN",
-      "needsDecisionFields": [
-        "basic"
-      ],
+      "overallStatus": "HIGH_CONFIDENCE_FULL_DESIGN",
+      "needsDecisionFields": [],
       "designConflictFields": [],
       "runtimeDivergenceFields": [
         "baseStats",
+        "basic",
         "skill1",
         "skill2",
         "ultimate",
@@ -3363,7 +3463,7 @@
           "confidence": "HIGH"
         },
         "basic": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -3386,6 +3486,20 @@
                 "cooldown": null,
                 "rageCost": null
               }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Zephyroo.basic",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "name": "Đánh Gió",
+                "text": "Đánh Gió: gây 70% AP.",
+                "cooldown": null,
+                "rageCost": null,
+                "coefficients": {
+                  "abilityPower": 0.7
+                }
+              }
             }
           ],
           "currentRuntimeValue": {
@@ -3405,13 +3519,21 @@
             "masterEffects": {},
             "specialMechanic": null
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Basic damage scale must be reviewed as ATK versus AP.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "name": "Đánh Gió",
+            "text": "Đánh Gió: gây 70% AP.",
+            "cooldown": null,
+            "rageCost": null,
+            "coefficients": {
+              "abilityPower": 0.7
+            }
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "skill1": {
           "status": "CANONICAL_FOUND",
@@ -14276,13 +14398,12 @@
         "runtimeOrderDivergence": false,
         "runtimeNameDivergence": false
       },
-      "overallStatus": "PARTIAL_DESIGN",
-      "needsDecisionFields": [
-        "baseStats"
-      ],
+      "overallStatus": "HIGH_CONFIDENCE_FULL_DESIGN",
+      "needsDecisionFields": [],
       "designConflictFields": [],
       "runtimeDivergenceFields": [
         "element",
+        "baseStats",
         "basic",
         "skill1",
         "skill2",
@@ -14368,7 +14489,7 @@
           "confidence": "HIGH"
         },
         "baseStats": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -14399,6 +14520,22 @@
                   "speed": 55
                 }
               }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Cindercore.baseStats",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "sourceText": "HP300 ATK44 DEF45 AP76 SPD55 CRIT8",
+                "parsed": {
+                  "hp": 300,
+                  "attack": 44,
+                  "defense": 45,
+                  "abilityPower": 76,
+                  "speed": 55,
+                  "critRate": 8
+                }
+              }
             }
           ],
           "currentRuntimeValue": {
@@ -14410,13 +14547,23 @@
             "critRate": 24,
             "critDamage": 200
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "HP300 ATK44 DEF45 AP76 SPD55; Crit chưa khóa.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "sourceText": "HP300 ATK44 DEF45 AP76 SPD55 CRIT8",
+            "parsed": {
+              "hp": 300,
+              "attack": 44,
+              "defense": 45,
+              "abilityPower": 76,
+              "speed": 55,
+              "critRate": 8
+            }
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "basic": {
           "status": "CANONICAL_FOUND",
@@ -22988,12 +23135,11 @@
         "runtimeOrderDivergence": false,
         "runtimeNameDivergence": false
       },
-      "overallStatus": "PARTIAL_DESIGN",
-      "needsDecisionFields": [
-        "baseStats"
-      ],
+      "overallStatus": "HIGH_CONFIDENCE_FULL_DESIGN",
+      "needsDecisionFields": [],
       "designConflictFields": [],
       "runtimeDivergenceFields": [
+        "baseStats",
         "basic",
         "skill1",
         "skill2",
@@ -23079,7 +23225,7 @@
           "confidence": "HIGH"
         },
         "baseStats": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -23110,6 +23256,22 @@
                   "critRate": 28
                 }
               }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Ironmantis.baseStats",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "sourceText": "HP350 ATK86 DEF55 AP47 SPD64 CRIT28",
+                "parsed": {
+                  "hp": 350,
+                  "attack": 86,
+                  "defense": 55,
+                  "abilityPower": 47,
+                  "speed": 64,
+                  "critRate": 28
+                }
+              }
             }
           ],
           "currentRuntimeValue": {
@@ -23121,13 +23283,23 @@
             "critRate": 27,
             "critDamage": 200
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Stat final Epic chưa khóa; bản cũ từng dùng HP350 ATK86 DEF55 SPD64 Crit28%.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "sourceText": "HP350 ATK86 DEF55 AP47 SPD64 CRIT28",
+            "parsed": {
+              "hp": 350,
+              "attack": 86,
+              "defense": 55,
+              "abilityPower": 47,
+              "speed": 64,
+              "critRate": 28
+            }
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "basic": {
           "status": "CANONICAL_FOUND",
@@ -23551,12 +23723,11 @@
         "runtimeOrderDivergence": false,
         "runtimeNameDivergence": false
       },
-      "overallStatus": "PARTIAL_DESIGN",
-      "needsDecisionFields": [
-        "baseStats"
-      ],
+      "overallStatus": "HIGH_CONFIDENCE_FULL_DESIGN",
+      "needsDecisionFields": [],
       "designConflictFields": [],
       "runtimeDivergenceFields": [
+        "baseStats",
         "basic",
         "skill1",
         "skill2",
@@ -23642,7 +23813,7 @@
           "confidence": "HIGH"
         },
         "baseStats": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -23661,6 +23832,22 @@
                 "sourceText": "Stat final chưa khóa.",
                 "parsed": {}
               }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Pyrewing.baseStats",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "sourceText": "HP340 ATK87 DEF51 AP46 SPD72 CRIT24",
+                "parsed": {
+                  "hp": 340,
+                  "attack": 87,
+                  "defense": 51,
+                  "abilityPower": 46,
+                  "speed": 72,
+                  "critRate": 24
+                }
+              }
             }
           ],
           "currentRuntimeValue": {
@@ -23672,13 +23859,23 @@
             "critRate": 27,
             "critDamage": 200
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Stat final chưa khóa.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "sourceText": "HP340 ATK87 DEF51 AP46 SPD72 CRIT24",
+            "parsed": {
+              "hp": 340,
+              "attack": 87,
+              "defense": 51,
+              "abilityPower": 46,
+              "speed": 72,
+              "critRate": 24
+            }
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "basic": {
           "status": "CANONICAL_FOUND",
@@ -24083,12 +24280,11 @@
         "runtimeOrderDivergence": false,
         "runtimeNameDivergence": false
       },
-      "overallStatus": "PARTIAL_DESIGN",
-      "needsDecisionFields": [
-        "baseStats"
-      ],
+      "overallStatus": "HIGH_CONFIDENCE_FULL_DESIGN",
+      "needsDecisionFields": [],
       "designConflictFields": [],
       "runtimeDivergenceFields": [
+        "baseStats",
         "basic",
         "skill1",
         "skill2",
@@ -24174,7 +24370,7 @@
           "confidence": "HIGH"
         },
         "baseStats": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -24193,6 +24389,22 @@
                 "sourceText": "Stat final chưa khóa.",
                 "parsed": {}
               }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Thunderhorn.baseStats",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "sourceText": "HP354 ATK84 DEF56 AP47 SPD67 CRIT22",
+                "parsed": {
+                  "hp": 354,
+                  "attack": 84,
+                  "defense": 56,
+                  "abilityPower": 47,
+                  "speed": 67,
+                  "critRate": 22
+                }
+              }
             }
           ],
           "currentRuntimeValue": {
@@ -24204,13 +24416,23 @@
             "critRate": 30,
             "critDamage": 200
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Stat final chưa khóa.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "sourceText": "HP354 ATK84 DEF56 AP47 SPD67 CRIT22",
+            "parsed": {
+              "hp": 354,
+              "attack": 84,
+              "defense": 56,
+              "abilityPower": 47,
+              "speed": 67,
+              "critRate": 22
+            }
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "basic": {
           "status": "CANONICAL_FOUND",
@@ -24640,12 +24862,11 @@
         "runtimeOrderDivergence": false,
         "runtimeNameDivergence": false
       },
-      "overallStatus": "PARTIAL_DESIGN",
-      "needsDecisionFields": [
-        "baseStats"
-      ],
+      "overallStatus": "HIGH_CONFIDENCE_FULL_DESIGN",
+      "needsDecisionFields": [],
       "designConflictFields": [],
       "runtimeDivergenceFields": [
+        "baseStats",
         "basic",
         "skill1",
         "skill2",
@@ -24731,7 +24952,7 @@
           "confidence": "HIGH"
         },
         "baseStats": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -24750,6 +24971,22 @@
                 "sourceText": "Stat final chưa khóa.",
                 "parsed": {}
               }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Arcbison.baseStats",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "sourceText": "HP332 ATK48 DEF52 AP88 SPD62 CRIT10",
+                "parsed": {
+                  "hp": 332,
+                  "attack": 48,
+                  "defense": 52,
+                  "abilityPower": 88,
+                  "speed": 62,
+                  "critRate": 10
+                }
+              }
             }
           ],
           "currentRuntimeValue": {
@@ -24761,13 +24998,23 @@
             "critRate": 30,
             "critDamage": 200
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Stat final chưa khóa.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "sourceText": "HP332 ATK48 DEF52 AP88 SPD62 CRIT10",
+            "parsed": {
+              "hp": 332,
+              "attack": 48,
+              "defense": 52,
+              "abilityPower": 88,
+              "speed": 62,
+              "critRate": 10
+            }
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "basic": {
           "status": "CANONICAL_FOUND",
@@ -25751,12 +25998,11 @@
         "runtimeOrderDivergence": false,
         "runtimeNameDivergence": false
       },
-      "overallStatus": "PARTIAL_DESIGN",
-      "needsDecisionFields": [
-        "baseStats"
-      ],
+      "overallStatus": "HIGH_CONFIDENCE_FULL_DESIGN",
+      "needsDecisionFields": [],
       "designConflictFields": [],
       "runtimeDivergenceFields": [
+        "baseStats",
         "basic",
         "skill1",
         "skill2",
@@ -25842,7 +26088,7 @@
           "confidence": "HIGH"
         },
         "baseStats": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -25861,6 +26107,22 @@
                 "sourceText": "Stat final chưa khóa.",
                 "parsed": {}
               }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Lavarax.baseStats",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "sourceText": "HP324 ATK47 DEF48 AP92 SPD66 CRIT12",
+                "parsed": {
+                  "hp": 324,
+                  "attack": 47,
+                  "defense": 48,
+                  "abilityPower": 92,
+                  "speed": 66,
+                  "critRate": 12
+                }
+              }
             }
           ],
           "currentRuntimeValue": {
@@ -25872,13 +26134,23 @@
             "critRate": 34,
             "critDamage": 200
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Stat final chưa khóa.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "sourceText": "HP324 ATK47 DEF48 AP92 SPD66 CRIT12",
+            "parsed": {
+              "hp": 324,
+              "attack": 47,
+              "defense": 48,
+              "abilityPower": 92,
+              "speed": 66,
+              "critRate": 12
+            }
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "basic": {
           "status": "CANONICAL_FOUND",
@@ -26325,12 +26597,11 @@
         "runtimeOrderDivergence": false,
         "runtimeNameDivergence": false
       },
-      "overallStatus": "PARTIAL_DESIGN",
-      "needsDecisionFields": [
-        "baseStats"
-      ],
+      "overallStatus": "HIGH_CONFIDENCE_FULL_DESIGN",
+      "needsDecisionFields": [],
       "designConflictFields": [],
       "runtimeDivergenceFields": [
+        "baseStats",
         "basic",
         "skill1",
         "skill2",
@@ -26416,7 +26687,7 @@
           "confidence": "HIGH"
         },
         "baseStats": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -26435,6 +26706,22 @@
                 "sourceText": "Stat final chưa khóa.",
                 "parsed": {}
               }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Pebblit.baseStats",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "sourceText": "HP440 ATK61 DEF84 AP44 SPD46 CRIT7",
+                "parsed": {
+                  "hp": 440,
+                  "attack": 61,
+                  "defense": 84,
+                  "abilityPower": 44,
+                  "speed": 46,
+                  "critRate": 7
+                }
+              }
             }
           ],
           "currentRuntimeValue": {
@@ -26446,13 +26733,23 @@
             "critRate": 10,
             "critDamage": 200
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Stat final chưa khóa.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "sourceText": "HP440 ATK61 DEF84 AP44 SPD46 CRIT7",
+            "parsed": {
+              "hp": 440,
+              "attack": 61,
+              "defense": 84,
+              "abilityPower": 44,
+              "speed": 46,
+              "critRate": 7
+            }
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "basic": {
           "status": "CANONICAL_FOUND",
@@ -26908,12 +27205,11 @@
         "runtimeOrderDivergence": false,
         "runtimeNameDivergence": false
       },
-      "overallStatus": "PARTIAL_DESIGN",
-      "needsDecisionFields": [
-        "baseStats"
-      ],
+      "overallStatus": "HIGH_CONFIDENCE_FULL_DESIGN",
+      "needsDecisionFields": [],
       "designConflictFields": [],
       "runtimeDivergenceFields": [
+        "baseStats",
         "basic",
         "skill1",
         "skill2",
@@ -26999,7 +27295,7 @@
           "confidence": "HIGH"
         },
         "baseStats": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -27018,6 +27314,22 @@
                 "sourceText": "Stat final chưa khóa.",
                 "parsed": {}
               }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Tidewarden.baseStats",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "sourceText": "HP452 ATK63 DEF83 AP47 SPD45 CRIT7",
+                "parsed": {
+                  "hp": 452,
+                  "attack": 63,
+                  "defense": 83,
+                  "abilityPower": 47,
+                  "speed": 45,
+                  "critRate": 7
+                }
+              }
             }
           ],
           "currentRuntimeValue": {
@@ -27029,13 +27341,23 @@
             "critRate": 27,
             "critDamage": 200
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Stat final chưa khóa.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "sourceText": "HP452 ATK63 DEF83 AP47 SPD45 CRIT7",
+            "parsed": {
+              "hp": 452,
+              "attack": 63,
+              "defense": 83,
+              "abilityPower": 47,
+              "speed": 45,
+              "critRate": 7
+            }
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "basic": {
           "status": "CANONICAL_FOUND",
@@ -27485,12 +27807,11 @@
         "runtimeOrderDivergence": false,
         "runtimeNameDivergence": false
       },
-      "overallStatus": "PARTIAL_DESIGN",
-      "needsDecisionFields": [
-        "baseStats"
-      ],
+      "overallStatus": "HIGH_CONFIDENCE_FULL_DESIGN",
+      "needsDecisionFields": [],
       "designConflictFields": [],
       "runtimeDivergenceFields": [
+        "baseStats",
         "basic",
         "skill1",
         "skill2",
@@ -27576,7 +27897,7 @@
           "confidence": "HIGH"
         },
         "baseStats": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -27595,6 +27916,22 @@
                 "sourceText": "Stat final chưa khóa.",
                 "parsed": {}
               }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Verdantusk.baseStats",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "sourceText": "HP468 ATK62 DEF86 AP48 SPD42 CRIT7",
+                "parsed": {
+                  "hp": 468,
+                  "attack": 62,
+                  "defense": 86,
+                  "abilityPower": 48,
+                  "speed": 42,
+                  "critRate": 7
+                }
+              }
             }
           ],
           "currentRuntimeValue": {
@@ -27606,13 +27943,23 @@
             "critRate": 29,
             "critDamage": 200
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Stat final chưa khóa.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "sourceText": "HP468 ATK62 DEF86 AP48 SPD42 CRIT7",
+            "parsed": {
+              "hp": 468,
+              "attack": 62,
+              "defense": 86,
+              "abilityPower": 48,
+              "speed": 42,
+              "critRate": 7
+            }
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "basic": {
           "status": "CANONICAL_FOUND",
@@ -28070,12 +28417,11 @@
         "runtimeOrderDivergence": false,
         "runtimeNameDivergence": false
       },
-      "overallStatus": "PARTIAL_DESIGN",
-      "needsDecisionFields": [
-        "baseStats"
-      ],
+      "overallStatus": "HIGH_CONFIDENCE_FULL_DESIGN",
+      "needsDecisionFields": [],
       "designConflictFields": [],
       "runtimeDivergenceFields": [
+        "baseStats",
         "basic",
         "skill1",
         "skill2",
@@ -28161,7 +28507,7 @@
           "confidence": "HIGH"
         },
         "baseStats": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -28180,6 +28526,22 @@
                 "sourceText": "Stat final chưa khóa.",
                 "parsed": {}
               }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Magmafang.baseStats",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "sourceText": "HP398 ATK85 DEF66 AP44 SPD62 CRIT19",
+                "parsed": {
+                  "hp": 398,
+                  "attack": 85,
+                  "defense": 66,
+                  "abilityPower": 44,
+                  "speed": 62,
+                  "critRate": 19
+                }
+              }
             }
           ],
           "currentRuntimeValue": {
@@ -28191,13 +28553,23 @@
             "critRate": 31,
             "critDamage": 200
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Stat final chưa khóa.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "sourceText": "HP398 ATK85 DEF66 AP44 SPD62 CRIT19",
+            "parsed": {
+              "hp": 398,
+              "attack": 85,
+              "defense": 66,
+              "abilityPower": 44,
+              "speed": 62,
+              "critRate": 19
+            }
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "basic": {
           "status": "CANONICAL_FOUND",
@@ -29199,12 +29571,11 @@
         "runtimeOrderDivergence": false,
         "runtimeNameDivergence": false
       },
-      "overallStatus": "PARTIAL_DESIGN",
-      "needsDecisionFields": [
-        "baseStats"
-      ],
+      "overallStatus": "HIGH_CONFIDENCE_FULL_DESIGN",
+      "needsDecisionFields": [],
       "designConflictFields": [],
       "runtimeDivergenceFields": [
+        "baseStats",
         "basic",
         "skill1",
         "skill2",
@@ -29290,7 +29661,7 @@
           "confidence": "HIGH"
         },
         "baseStats": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -29309,6 +29680,22 @@
                 "sourceText": "Stat final chưa khóa.",
                 "parsed": {}
               }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Scorchmane.baseStats",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "sourceText": "HP390 ATK84 DEF65 AP45 SPD65 CRIT21",
+                "parsed": {
+                  "hp": 390,
+                  "attack": 84,
+                  "defense": 65,
+                  "abilityPower": 45,
+                  "speed": 65,
+                  "critRate": 21
+                }
+              }
             }
           ],
           "currentRuntimeValue": {
@@ -29320,13 +29707,23 @@
             "critRate": 27,
             "critDamage": 200
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Stat final chưa khóa.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "sourceText": "HP390 ATK84 DEF65 AP45 SPD65 CRIT21",
+            "parsed": {
+              "hp": 390,
+              "attack": 84,
+              "defense": 65,
+              "abilityPower": 45,
+              "speed": 65,
+              "critRate": 21
+            }
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "basic": {
           "status": "CANONICAL_FOUND",
@@ -29749,12 +30146,11 @@
         "runtimeOrderDivergence": false,
         "runtimeNameDivergence": false
       },
-      "overallStatus": "PARTIAL_DESIGN",
-      "needsDecisionFields": [
-        "baseStats"
-      ],
+      "overallStatus": "HIGH_CONFIDENCE_FULL_DESIGN",
+      "needsDecisionFields": [],
       "designConflictFields": [],
       "runtimeDivergenceFields": [
+        "baseStats",
         "basic",
         "skill1",
         "skill2",
@@ -29840,7 +30236,7 @@
           "confidence": "HIGH"
         },
         "baseStats": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -29859,6 +30255,22 @@
                 "sourceText": "Stat final chưa khóa.",
                 "parsed": {}
               }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Aegiscarab.baseStats",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "sourceText": "HP420 ATK73 DEF84 AP44 SPD50 CRIT12",
+                "parsed": {
+                  "hp": 420,
+                  "attack": 73,
+                  "defense": 84,
+                  "abilityPower": 44,
+                  "speed": 50,
+                  "critRate": 12
+                }
+              }
             }
           ],
           "currentRuntimeValue": {
@@ -29870,13 +30282,23 @@
             "critRate": 27,
             "critDamage": 200
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Stat final chưa khóa.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "sourceText": "HP420 ATK73 DEF84 AP44 SPD50 CRIT12",
+            "parsed": {
+              "hp": 420,
+              "attack": 73,
+              "defense": 84,
+              "abilityPower": 44,
+              "speed": 50,
+              "critRate": 12
+            }
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "basic": {
           "status": "CANONICAL_FOUND",
@@ -30309,12 +30731,11 @@
         "runtimeOrderDivergence": false,
         "runtimeNameDivergence": false
       },
-      "overallStatus": "PARTIAL_DESIGN",
-      "needsDecisionFields": [
-        "baseStats"
-      ],
+      "overallStatus": "HIGH_CONFIDENCE_FULL_DESIGN",
+      "needsDecisionFields": [],
       "designConflictFields": [],
       "runtimeDivergenceFields": [
+        "baseStats",
         "basic",
         "skill1",
         "skill2",
@@ -30400,7 +30821,7 @@
           "confidence": "HIGH"
         },
         "baseStats": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -30419,6 +30840,22 @@
                 "sourceText": "Stat final chưa khóa.",
                 "parsed": {}
               }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Rimehorn.baseStats",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "sourceText": "HP414 ATK76 DEF82 AP43 SPD54 CRIT14",
+                "parsed": {
+                  "hp": 414,
+                  "attack": 76,
+                  "defense": 82,
+                  "abilityPower": 43,
+                  "speed": 54,
+                  "critRate": 14
+                }
+              }
             }
           ],
           "currentRuntimeValue": {
@@ -30430,13 +30867,23 @@
             "critRate": 32,
             "critDamage": 200
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Stat final chưa khóa.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "sourceText": "HP414 ATK76 DEF82 AP43 SPD54 CRIT14",
+            "parsed": {
+              "hp": 414,
+              "attack": 76,
+              "defense": 82,
+              "abilityPower": 43,
+              "speed": 54,
+              "critRate": 14
+            }
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "basic": {
           "status": "CANONICAL_FOUND",
@@ -30895,12 +31342,11 @@
         "runtimeOrderDivergence": false,
         "runtimeNameDivergence": false
       },
-      "overallStatus": "PARTIAL_DESIGN",
-      "needsDecisionFields": [
-        "baseStats"
-      ],
+      "overallStatus": "HIGH_CONFIDENCE_FULL_DESIGN",
+      "needsDecisionFields": [],
       "designConflictFields": [],
       "runtimeDivergenceFields": [
+        "baseStats",
         "basic",
         "skill1",
         "skill2",
@@ -30986,7 +31432,7 @@
           "confidence": "HIGH"
         },
         "baseStats": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -31005,6 +31451,22 @@
                 "sourceText": "Stat final chưa khóa.",
                 "parsed": {}
               }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Tidefang.baseStats",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "sourceText": "HP402 ATK72 DEF78 AP50 SPD54 CRIT11",
+                "parsed": {
+                  "hp": 402,
+                  "attack": 72,
+                  "defense": 78,
+                  "abilityPower": 50,
+                  "speed": 54,
+                  "critRate": 11
+                }
+              }
             }
           ],
           "currentRuntimeValue": {
@@ -31016,13 +31478,23 @@
             "critRate": 28,
             "critDamage": 200
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Stat final chưa khóa.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "sourceText": "HP402 ATK72 DEF78 AP50 SPD54 CRIT11",
+            "parsed": {
+              "hp": 402,
+              "attack": 72,
+              "defense": 78,
+              "abilityPower": 50,
+              "speed": 54,
+              "critRate": 11
+            }
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "basic": {
           "status": "CANONICAL_FOUND",
@@ -31474,12 +31946,11 @@
         "runtimeOrderDivergence": false,
         "runtimeNameDivergence": false
       },
-      "overallStatus": "PARTIAL_DESIGN",
-      "needsDecisionFields": [
-        "baseStats"
-      ],
+      "overallStatus": "HIGH_CONFIDENCE_FULL_DESIGN",
+      "needsDecisionFields": [],
       "designConflictFields": [],
       "runtimeDivergenceFields": [
+        "baseStats",
         "basic",
         "skill1",
         "skill2",
@@ -31565,7 +32036,7 @@
           "confidence": "HIGH"
         },
         "baseStats": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -31584,6 +32055,22 @@
                 "sourceText": "Stat final chưa khóa.",
                 "parsed": {}
               }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Frostwing.baseStats",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "sourceText": "HP340 ATK45 DEF56 AP87 SPD71 CRIT10",
+                "parsed": {
+                  "hp": 340,
+                  "attack": 45,
+                  "defense": 56,
+                  "abilityPower": 87,
+                  "speed": 71,
+                  "critRate": 10
+                }
+              }
             }
           ],
           "currentRuntimeValue": {
@@ -31595,13 +32082,23 @@
             "critRate": 32,
             "critDamage": 200
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Stat final chưa khóa.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "sourceText": "HP340 ATK45 DEF56 AP87 SPD71 CRIT10",
+            "parsed": {
+              "hp": 340,
+              "attack": 45,
+              "defense": 56,
+              "abilityPower": 87,
+              "speed": 71,
+              "critRate": 10
+            }
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "basic": {
           "status": "CANONICAL_FOUND",
@@ -32050,12 +32547,11 @@
         "runtimeOrderDivergence": false,
         "runtimeNameDivergence": false
       },
-      "overallStatus": "PARTIAL_DESIGN",
-      "needsDecisionFields": [
-        "baseStats"
-      ],
+      "overallStatus": "HIGH_CONFIDENCE_FULL_DESIGN",
+      "needsDecisionFields": [],
       "designConflictFields": [],
       "runtimeDivergenceFields": [
+        "baseStats",
         "basic",
         "skill1",
         "skill2",
@@ -32141,7 +32637,7 @@
           "confidence": "HIGH"
         },
         "baseStats": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -32160,6 +32656,22 @@
                 "sourceText": "Stat final chưa khóa.",
                 "parsed": {}
               }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Geoquill.baseStats",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "sourceText": "HP356 ATK46 DEF62 AP84 SPD66 CRIT9",
+                "parsed": {
+                  "hp": 356,
+                  "attack": 46,
+                  "defense": 62,
+                  "abilityPower": 84,
+                  "speed": 66,
+                  "critRate": 9
+                }
+              }
             }
           ],
           "currentRuntimeValue": {
@@ -32171,13 +32683,23 @@
             "critRate": 29,
             "critDamage": 200
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Stat final chưa khóa.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "sourceText": "HP356 ATK46 DEF62 AP84 SPD66 CRIT9",
+            "parsed": {
+              "hp": 356,
+              "attack": 46,
+              "defense": 62,
+              "abilityPower": 84,
+              "speed": 66,
+              "critRate": 9
+            }
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "basic": {
           "status": "CANONICAL_FOUND",
@@ -32609,12 +33131,11 @@
         "runtimeOrderDivergence": false,
         "runtimeNameDivergence": false
       },
-      "overallStatus": "PARTIAL_DESIGN",
-      "needsDecisionFields": [
-        "baseStats"
-      ],
+      "overallStatus": "HIGH_CONFIDENCE_FULL_DESIGN",
+      "needsDecisionFields": [],
       "designConflictFields": [],
       "runtimeDivergenceFields": [
+        "baseStats",
         "basic",
         "skill1",
         "skill2",
@@ -32700,7 +33221,7 @@
           "confidence": "HIGH"
         },
         "baseStats": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -32719,6 +33240,22 @@
                 "sourceText": "Stat final chưa khóa.",
                 "parsed": {}
               }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Bloomlord.baseStats",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "sourceText": "HP372 ATK42 DEF60 AP92 SPD58 CRIT7",
+                "parsed": {
+                  "hp": 372,
+                  "attack": 42,
+                  "defense": 60,
+                  "abilityPower": 92,
+                  "speed": 58,
+                  "critRate": 7
+                }
+              }
             }
           ],
           "currentRuntimeValue": {
@@ -32730,13 +33267,23 @@
             "critRate": 31,
             "critDamage": 200
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Stat final chưa khóa.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "sourceText": "HP372 ATK42 DEF60 AP92 SPD58 CRIT7",
+            "parsed": {
+              "hp": 372,
+              "attack": 42,
+              "defense": 60,
+              "abilityPower": 92,
+              "speed": 58,
+              "critRate": 7
+            }
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "basic": {
           "status": "CANONICAL_FOUND",
@@ -33181,12 +33728,11 @@
         "runtimeOrderDivergence": false,
         "runtimeNameDivergence": false
       },
-      "overallStatus": "PARTIAL_DESIGN",
-      "needsDecisionFields": [
-        "baseStats"
-      ],
+      "overallStatus": "HIGH_CONFIDENCE_FULL_DESIGN",
+      "needsDecisionFields": [],
       "designConflictFields": [],
       "runtimeDivergenceFields": [
+        "baseStats",
         "basic",
         "skill1",
         "skill2",
@@ -33272,7 +33818,7 @@
           "confidence": "HIGH"
         },
         "baseStats": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -33291,6 +33837,22 @@
                 "sourceText": "Stat final chưa khóa.",
                 "parsed": {}
               }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Lumibloom.baseStats",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "sourceText": "HP360 ATK41 DEF56 AP90 SPD62 CRIT8",
+                "parsed": {
+                  "hp": 360,
+                  "attack": 41,
+                  "defense": 56,
+                  "abilityPower": 90,
+                  "speed": 62,
+                  "critRate": 8
+                }
+              }
             }
           ],
           "currentRuntimeValue": {
@@ -33302,13 +33864,23 @@
             "critRate": 27,
             "critDamage": 200
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Stat final chưa khóa.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "sourceText": "HP360 ATK41 DEF56 AP90 SPD62 CRIT8",
+            "parsed": {
+              "hp": 360,
+              "attack": 41,
+              "defense": 56,
+              "abilityPower": 90,
+              "speed": 62,
+              "critRate": 8
+            }
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "basic": {
           "status": "CANONICAL_FOUND",
@@ -33730,12 +34302,11 @@
         "runtimeOrderDivergence": false,
         "runtimeNameDivergence": false
       },
-      "overallStatus": "PARTIAL_DESIGN",
-      "needsDecisionFields": [
-        "baseStats"
-      ],
+      "overallStatus": "HIGH_CONFIDENCE_FULL_DESIGN",
+      "needsDecisionFields": [],
       "designConflictFields": [],
       "runtimeDivergenceFields": [
+        "baseStats",
         "basic",
         "skill1",
         "skill2",
@@ -33821,7 +34392,7 @@
           "confidence": "HIGH"
         },
         "baseStats": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -33840,6 +34411,22 @@
                 "sourceText": "Stat final chưa khóa.",
                 "parsed": {}
               }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Cloudtalon.baseStats",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "sourceText": "HP350 ATK43 DEF55 AP80 SPD74 CRIT10",
+                "parsed": {
+                  "hp": 350,
+                  "attack": 43,
+                  "defense": 55,
+                  "abilityPower": 80,
+                  "speed": 74,
+                  "critRate": 10
+                }
+              }
             }
           ],
           "currentRuntimeValue": {
@@ -33851,13 +34438,23 @@
             "critRate": 27,
             "critDamage": 200
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Stat final chưa khóa.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "sourceText": "HP350 ATK43 DEF55 AP80 SPD74 CRIT10",
+            "parsed": {
+              "hp": 350,
+              "attack": 43,
+              "defense": 55,
+              "abilityPower": 80,
+              "speed": 74,
+              "critRate": 10
+            }
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "basic": {
           "status": "CANONICAL_FOUND",
@@ -34280,12 +34877,11 @@
         "runtimeOrderDivergence": false,
         "runtimeNameDivergence": false
       },
-      "overallStatus": "PARTIAL_DESIGN",
-      "needsDecisionFields": [
-        "baseStats"
-      ],
+      "overallStatus": "HIGH_CONFIDENCE_FULL_DESIGN",
+      "needsDecisionFields": [],
       "designConflictFields": [],
       "runtimeDivergenceFields": [
+        "baseStats",
         "basic",
         "skill1",
         "skill2",
@@ -34371,7 +34967,7 @@
           "confidence": "HIGH"
         },
         "baseStats": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -34390,6 +34986,22 @@
                 "sourceText": "Stat final chưa khóa.",
                 "parsed": {}
               }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Galehart.baseStats",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "sourceText": "HP358 ATK44 DEF58 AP78 SPD72 CRIT9",
+                "parsed": {
+                  "hp": 358,
+                  "attack": 44,
+                  "defense": 58,
+                  "abilityPower": 78,
+                  "speed": 72,
+                  "critRate": 9
+                }
+              }
             }
           ],
           "currentRuntimeValue": {
@@ -34401,13 +35013,23 @@
             "critRate": 27,
             "critDamage": 200
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Stat final chưa khóa.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "sourceText": "HP358 ATK44 DEF58 AP78 SPD72 CRIT9",
+            "parsed": {
+              "hp": 358,
+              "attack": 44,
+              "defense": 58,
+              "abilityPower": 78,
+              "speed": 72,
+              "critRate": 9
+            }
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "basic": {
           "status": "CANONICAL_FOUND",
@@ -34836,12 +35458,11 @@
         "runtimeOrderDivergence": false,
         "runtimeNameDivergence": false
       },
-      "overallStatus": "PARTIAL_DESIGN",
-      "needsDecisionFields": [
-        "baseStats"
-      ],
+      "overallStatus": "HIGH_CONFIDENCE_FULL_DESIGN",
+      "needsDecisionFields": [],
       "designConflictFields": [],
       "runtimeDivergenceFields": [
+        "baseStats",
         "basic",
         "skill1",
         "skill2",
@@ -34927,7 +35548,7 @@
           "confidence": "HIGH"
         },
         "baseStats": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -34946,6 +35567,22 @@
                 "sourceText": "Stat final chưa khóa.",
                 "parsed": {}
               }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Tempestfin.baseStats",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "sourceText": "HP346 ATK42 DEF54 AP82 SPD75 CRIT12",
+                "parsed": {
+                  "hp": 346,
+                  "attack": 42,
+                  "defense": 54,
+                  "abilityPower": 82,
+                  "speed": 75,
+                  "critRate": 12
+                }
+              }
             }
           ],
           "currentRuntimeValue": {
@@ -34957,13 +35594,23 @@
             "critRate": 27,
             "critDamage": 200
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Stat final chưa khóa.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "sourceText": "HP346 ATK42 DEF54 AP82 SPD75 CRIT12",
+            "parsed": {
+              "hp": 346,
+              "attack": 42,
+              "defense": 54,
+              "abilityPower": 82,
+              "speed": 75,
+              "critRate": 12
+            }
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "basic": {
           "status": "CANONICAL_FOUND",
@@ -40686,19 +41333,18 @@
         "runtimeOrderDivergence": true,
         "runtimeNameDivergence": false
       },
-      "overallStatus": "PARTIAL_DESIGN",
-      "needsDecisionFields": [
-        "passive",
-        "starProgression",
-        "specialMechanic"
-      ],
+      "overallStatus": "HIGH_CONFIDENCE_FULL_DESIGN",
+      "needsDecisionFields": [],
       "designConflictFields": [],
       "runtimeDivergenceFields": [
         "baseStats",
         "basic",
         "skill1",
         "skill2",
-        "ultimate"
+        "ultimate",
+        "passive",
+        "starProgression",
+        "specialMechanic"
       ],
       "fields": {
         "rarity": {
@@ -41103,7 +41749,7 @@
           "confidence": "HIGH"
         },
         "passive": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -41121,6 +41767,15 @@
               "value": {
                 "name": "Khai Mạch",
                 "text": "Khai Mạch: đầu trận, toàn bộ đồng minh nhận +1 Nộ raw đúng 1 lần. Khi một đồng minh lần đầu dùng Ultimate trong trận, họ nhận Shield 3% Max HP."
+              }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Bramblet.passive",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "name": "Khai Mạch",
+                "text": "Khai Mạch: Đầu trận, mỗi đồng minh khác nhận 1 Mạch Khởi. Khi một đơn vị có Mạch Khởi hoàn thành hành động chính thứ 2 của họ trong trận, Mạch Khởi của đơn vị đó bị tiêu. Nếu Nộ hiện tại của họ dưới 4, nạp Nộ trực tiếp lên 4/8 trong một logical event; nếu đã có từ 4 Nộ trở lên thì không tăng Nộ. Sau lần đầu đơn vị đó dùng Ultimate trong trận, họ nhận Khiên bằng 3% Max HP của chính họ. Mỗi đơn vị chỉ được kích phần nạp Nộ và phần Khiên một lần mỗi trận. Bramblet không tự nhận Mạch Khởi."
               }
             }
           ],
@@ -41145,16 +41800,19 @@
               "runtime": "LIVE"
             }
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Raw +1 Rage opener must be redesigned under the latest Rage support direction.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "name": "Khai Mạch",
+            "text": "Khai Mạch: Đầu trận, mỗi đồng minh khác nhận 1 Mạch Khởi. Khi một đơn vị có Mạch Khởi hoàn thành hành động chính thứ 2 của họ trong trận, Mạch Khởi của đơn vị đó bị tiêu. Nếu Nộ hiện tại của họ dưới 4, nạp Nộ trực tiếp lên 4/8 trong một logical event; nếu đã có từ 4 Nộ trở lên thì không tăng Nộ. Sau lần đầu đơn vị đó dùng Ultimate trong trận, họ nhận Khiên bằng 3% Max HP của chính họ. Mỗi đơn vị chỉ được kích phần nạp Nộ và phần Khiên một lần mỗi trận. Bramblet không tự nhận Mạch Khởi."
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "starProgression": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -41178,6 +41836,18 @@
                 "3★": "3★ – Mộc Mạch Khai Chiến: lần đầu mỗi đồng minh dùng Ultimate trong trận, họ nhận Mộc Mạch trong chính hành động đó: +8% damage gây ra và sau khi Ultimate kết thúc nhận Shield 5% Max HP.",
                 "4★": "4★ – Cổ Mộc Trấn Giới tiến hóa: ngoài -damage địch và Shield toàn đội, toàn đội nhận 8% DR trong 1 lượt để chống nhịp phản công ngay sau Ultimate.",
                 "5★": "5★ – Khai Mạch Thức Tỉnh: sau mỗi đồng minh lần đầu tiêu hao 4 Nộ để dùng Ultimate, Bramblet nhận 1 Mộc Ấn, max3. Mỗi Ấn tăng 4% hiệu quả Shield/debuff của Bramblet; đủ 3 Ấn, S1 kế tác động toàn bộ địch rồi reset Mộc Ấn."
+              }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Bramblet.starProgression",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "1★": "+9% AP +7% HP.",
+                "2★": "S1 damage 105→115% AP; giảm damage 12→14%.",
+                "3★": "3★ – Mộc Mạch Khai Chiến: Lần đầu mỗi đồng minh dùng Ultimate trong trận, trong chính hành động Ultimate đó họ gây +8% damage. Khi Ultimate kết thúc, Khiên do Khai Mạch cấp sau Ultimate tăng từ 3% → 5% Max HP.",
+                "4★": "4★ – Cổ Mộc Trấn Giới: Ngoài giảm damage địch và Shield toàn đội, toàn đội nhận 8% DR trong 1 lượt để chống nhịp phản công ngay sau Ultimate.",
+                "5★": "5★ – Khai Mạch Thức Tỉnh: Mỗi đồng minh khác khi lần đầu dùng Ultimate trong trận cho Bramblet 1 Mộc Ấn, tối đa 3. Mỗi Mộc Ấn tăng 4% hiệu quả Shield và debuff của Bramblet. Khi đạt 3 Mộc Ấn, S1 kế tiếp tác động toàn bộ địch rồi reset toàn bộ Mộc Ấn."
               }
             }
           ],
@@ -41225,16 +41895,22 @@
               }
             ]
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Raw +1 Rage opener must be redesigned under the latest Rage support direction.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "1★": "+9% AP +7% HP.",
+            "2★": "S1 damage 105→115% AP; giảm damage 12→14%.",
+            "3★": "3★ – Mộc Mạch Khai Chiến: Lần đầu mỗi đồng minh dùng Ultimate trong trận, trong chính hành động Ultimate đó họ gây +8% damage. Khi Ultimate kết thúc, Khiên do Khai Mạch cấp sau Ultimate tăng từ 3% → 5% Max HP.",
+            "4★": "4★ – Cổ Mộc Trấn Giới: Ngoài giảm damage địch và Shield toàn đội, toàn đội nhận 8% DR trong 1 lượt để chống nhịp phản công ngay sau Ultimate.",
+            "5★": "5★ – Khai Mạch Thức Tỉnh: Mỗi đồng minh khác khi lần đầu dùng Ultimate trong trận cho Bramblet 1 Mộc Ấn, tối đa 3. Mỗi Mộc Ấn tăng 4% hiệu quả Shield và debuff của Bramblet. Khi đạt 3 Mộc Ấn, S1 kế tiếp tác động toàn bộ địch rồi reset toàn bộ Mộc Ấn."
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "specialMechanic": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -41255,6 +41931,12 @@
                 "counter": null,
                 "synergy": null
               }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Bramblet.specialMechanic",
+              "dateOrCommit": "2026-09-10",
+              "value": null
             }
           ],
           "currentRuntimeValue": {
@@ -41263,13 +41945,13 @@
             "counter": "Khắc tốt: Tidecrest, Coralyn, Voltfang; Nước/Đất/Sét và đội phụ thuộc nhịp lượt. | Bị khắc: Ignivar/Blazetalon Lửa; Galehowl Gió; Frostpelt Băng; Venomtail Độc. | Giới hạn: Đột Phá II 2 lượt, 1 lần/trận; không tăng tiến độ từ phản kích/truy kích; giảm sát thương cộng dồn cap 50%.",
             "specialStarter": false
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
+          "runtimeDivergence": true,
           "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Raw +1 Rage opener must be redesigned under the latest Rage support direction.",
-          "confidence": "MISSING"
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         }
       }
     },
@@ -41288,19 +41970,18 @@
         "runtimeOrderDivergence": true,
         "runtimeNameDivergence": false
       },
-      "overallStatus": "PARTIAL_DESIGN",
-      "needsDecisionFields": [
-        "passive",
-        "starProgression",
-        "specialMechanic"
-      ],
+      "overallStatus": "HIGH_CONFIDENCE_FULL_DESIGN",
+      "needsDecisionFields": [],
       "designConflictFields": [],
       "runtimeDivergenceFields": [
         "baseStats",
         "basic",
         "skill1",
         "skill2",
-        "ultimate"
+        "ultimate",
+        "passive",
+        "starProgression",
+        "specialMechanic"
       ],
       "fields": {
         "rarity": {
@@ -41683,7 +42364,7 @@
           "confidence": "HIGH"
         },
         "passive": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -41701,6 +42382,15 @@
               "value": {
                 "name": "Điệp Khúc Năng Lượng",
                 "text": "Điệp Khúc Năng Lượng: đầu trận chọn 1 đồng minh chủ lực. Ở các lượt hành động số 1,3,5,7... của Coralyn, người đó nhận +2 Nộ raw. Không áp dụng cho chính Coralyn."
+              }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Coralyn.passive",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "name": "Điệp Khúc Năng Lượng",
+                "text": "Điệp Khúc Năng Lượng: Đầu trận, Coralyn chọn 1 đồng minh khác làm chủ lực. Sau khi Coralyn hoàn thành hành động chính thứ 3 và thứ 6 của mình trong trận, kiểm tra chủ lực. Nếu chủ lực còn sống và đang có dưới 4 Nộ, nạp Nộ của họ trực tiếp lên 8/8 trong một logical event. Nếu tại thời điểm checkpoint chủ lực đã có từ 4 Nộ trở lên hoặc đã bị hạ, checkpoint đó bị bỏ qua và không được dời sang lượt khác. Coralyn không thể chọn chính mình. Tối đa 2 checkpoint mỗi trận."
               }
             }
           ],
@@ -41726,16 +42416,19 @@
               "runtime": "LIVE"
             }
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Periodic Rage grant requires an explicit redesign decision.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "name": "Điệp Khúc Năng Lượng",
+            "text": "Điệp Khúc Năng Lượng: Đầu trận, Coralyn chọn 1 đồng minh khác làm chủ lực. Sau khi Coralyn hoàn thành hành động chính thứ 3 và thứ 6 của mình trong trận, kiểm tra chủ lực. Nếu chủ lực còn sống và đang có dưới 4 Nộ, nạp Nộ của họ trực tiếp lên 8/8 trong một logical event. Nếu tại thời điểm checkpoint chủ lực đã có từ 4 Nộ trở lên hoặc đã bị hạ, checkpoint đó bị bỏ qua và không được dời sang lượt khác. Coralyn không thể chọn chính mình. Tối đa 2 checkpoint mỗi trận."
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "starProgression": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -41759,6 +42452,18 @@
                 "3★": "3★ – Điệp Khúc Bảo Hộ: mỗi lần Nội tại cấp +2 Nộ cho carry, carry nhận Shield 5% Max HP. Nếu đã có Shield trước khi nhận Nộ, thay Shield bằng heal 4% Max HP.",
                 "4★": "4★ – Đại Hợp Xướng tiến hóa: mục tiêu đã bị Slow trước Ultimate ngoài Silence còn bị -15% damage gây ra trong 1 lượt. Không thêm Stun AoE.",
                 "5★": "5★ – Điệp Khúc Cao Trào: sau mỗi 2 lần cấp Nộ thành công cho carry, lần cấp tiếp theo còn cho +12% Speed +10% DEF trong 2 hành động. Bộ đếm sau đó reset."
+              }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Coralyn.starProgression",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "1★": "+10% AP +6% Speed.",
+                "2★": "S1 100→110% AP; Slow 15→18%.",
+                "3★": "3★ – Điệp Khúc Bảo Hộ: Mỗi lần Điệp Khúc Năng Lượng charge 8/8 thành công, chủ lực nhận Shield bằng 5% Max HP. Nếu chủ lực đã có Shield trước khi charge, thay Shield mới bằng heal 4% Max HP.",
+                "4★": "4★ – Đại Hợp Xướng tiến hóa: Mục tiêu đã bị Slow trước Ultimate ngoài Silence còn bị -15% damage gây ra trong 1 lượt. Không thêm Stun AoE.",
+                "5★": "5★ – Điệp Khúc Cao Trào: Khi Điệp Khúc Năng Lượng charge thành công lần thứ 2 trong trận, chủ lực nhận thêm +12% Speed +10% DEF trong 2 hành động."
               }
             }
           ],
@@ -41806,16 +42511,22 @@
               }
             ]
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Periodic Rage grant requires an explicit redesign decision.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "1★": "+10% AP +6% Speed.",
+            "2★": "S1 100→110% AP; Slow 15→18%.",
+            "3★": "3★ – Điệp Khúc Bảo Hộ: Mỗi lần Điệp Khúc Năng Lượng charge 8/8 thành công, chủ lực nhận Shield bằng 5% Max HP. Nếu chủ lực đã có Shield trước khi charge, thay Shield mới bằng heal 4% Max HP.",
+            "4★": "4★ – Đại Hợp Xướng tiến hóa: Mục tiêu đã bị Slow trước Ultimate ngoài Silence còn bị -15% damage gây ra trong 1 lượt. Không thêm Stun AoE.",
+            "5★": "5★ – Điệp Khúc Cao Trào: Khi Điệp Khúc Năng Lượng charge thành công lần thứ 2 trong trận, chủ lực nhận thêm +12% Speed +10% DEF trong 2 hành động."
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "specialMechanic": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -41836,6 +42547,12 @@
                 "counter": null,
                 "synergy": null
               }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Coralyn.specialMechanic",
+              "dateOrCommit": "2026-09-10",
+              "value": null
             }
           ],
           "currentRuntimeValue": {
@@ -41844,13 +42561,13 @@
             "counter": "Khắc tốt: Ignivar, Volcarnos, Stoneback, Blazetalon; Lửa/Dung nham/Đất và đội thiếu Mana. | Bị khắc: Bramblet Lá; Voltfang Sét; Venomtail Độc; Stormcoil Bão; Mana khóa cứng. | Giới hạn: Đột Phá II 2 lượt, 1 lần/trận; không tăng tiến độ từ phản kích/truy kích; giảm sát thương cộng dồn cap 50%.",
             "specialStarter": false
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
+          "runtimeDivergence": true,
           "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Periodic Rage grant requires an explicit redesign decision.",
-          "confidence": "MISSING"
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         }
       }
     },
@@ -43623,20 +44340,19 @@
         "runtimeOrderDivergence": true,
         "runtimeNameDivergence": false
       },
-      "overallStatus": "PARTIAL_DESIGN",
-      "needsDecisionFields": [
-        "skill1",
-        "ultimate",
-        "passive",
-        "starProgression",
-        "specialMechanic"
-      ],
+      "overallStatus": "HIGH_CONFIDENCE_FULL_DESIGN",
+      "needsDecisionFields": [],
       "designConflictFields": [],
       "runtimeDivergenceFields": [
         "element",
         "baseStats",
         "basic",
-        "skill2"
+        "skill1",
+        "skill2",
+        "ultimate",
+        "passive",
+        "starProgression",
+        "specialMechanic"
       ],
       "fields": {
         "rarity": {
@@ -43834,7 +44550,7 @@
           "confidence": "HIGH"
         },
         "skill1": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -43857,6 +44573,26 @@
                 "cooldown": 1,
                 "rageCost": null
               }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Stormcoil.skill1",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "name": "Nhịp Sấm Truyền Lực",
+                "text": "Nhịp Sấm Truyền Lực: gây 105% AP. Chủ lực được Dẫn Điện chỉ định nhận +8% Speed trong 1 hành động và Stormcoil cộng +1 Điện Nhịp cho chủ lực, tối đa 4 Điện Nhịp. CD 1. Kỹ năng không trực tiếp cấp Rage.",
+                "cooldown": 1,
+                "rageCost": null,
+                "coefficients": {
+                  "abilityPower": 1.05
+                },
+                "passiveCounterGain": {
+                  "counterId": "DIEN_NHIP",
+                  "amount": 1,
+                  "max": 4,
+                  "target": "designatedCarry"
+                }
+              }
             }
           ],
           "currentRuntimeValue": {
@@ -43878,13 +44614,27 @@
             },
             "specialMechanic": null
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Raw +1/+2 Rage mechanics require an explicit redesign decision.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "name": "Nhịp Sấm Truyền Lực",
+            "text": "Nhịp Sấm Truyền Lực: gây 105% AP. Chủ lực được Dẫn Điện chỉ định nhận +8% Speed trong 1 hành động và Stormcoil cộng +1 Điện Nhịp cho chủ lực, tối đa 4 Điện Nhịp. CD 1. Kỹ năng không trực tiếp cấp Rage.",
+            "cooldown": 1,
+            "rageCost": null,
+            "coefficients": {
+              "abilityPower": 1.05
+            },
+            "passiveCounterGain": {
+              "counterId": "DIEN_NHIP",
+              "amount": 1,
+              "max": 4,
+              "target": "designatedCarry"
+            }
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "skill2": {
           "status": "CANONICAL_FOUND",
@@ -43945,7 +44695,7 @@
           "confidence": "HIGH"
         },
         "ultimate": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -43959,14 +44709,36 @@
               }
             },
             {
-              "sourceId": "design-workbook-01-90 + implementation-spec",
-              "location": "01_ALL_POW_01_90 row 78 / ultimate; implementation spec lines 16 and 136",
+              "sourceId": "design-workbook-01-90",
+              "location": "01_ALL_POW_01_90 row 78 / ultimate",
               "dateOrCommit": "2026-09-07",
               "value": {
                 "name": "Đại Khúc Lôi Nộ",
                 "text": "Đại Khúc Lôi Nộ: 110% AP toàn địch; carry được chỉ định nhận +2 Nộ raw; toàn đội +10% Speed trong 2 lượt.",
                 "cooldown": null,
                 "rageCost": 4
+              }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Stormcoil.ultimate",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "name": "Đại Khúc Lôi Nộ",
+                "text": "Đại Khúc Lôi Nộ: tiêu 4 Rage. Gây 110% AP lên toàn bộ địch. Toàn đội nhận +10% Speed trong 2 lượt. Nếu chủ lực được Dẫn Điện chỉ định còn sống, Stormcoil cộng +2 Điện Nhịp cho chủ lực, tối đa 4. Ultimate không trực tiếp cấp Rage.",
+                "cooldown": null,
+                "rageCost": 4,
+                "coefficients": {
+                  "abilityPower": 1.1
+                },
+                "target": "allEnemies",
+                "passiveCounterGain": {
+                  "counterId": "DIEN_NHIP",
+                  "amount": 2,
+                  "max": 4,
+                  "target": "designatedCarry",
+                  "timing": "afterUltimateActionConfirmed"
+                }
               }
             }
           ],
@@ -43994,16 +44766,32 @@
             },
             "specialMechanic": null
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Raw +1/+2 Rage mechanics require an explicit redesign decision.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "name": "Đại Khúc Lôi Nộ",
+            "text": "Đại Khúc Lôi Nộ: tiêu 4 Rage. Gây 110% AP lên toàn bộ địch. Toàn đội nhận +10% Speed trong 2 lượt. Nếu chủ lực được Dẫn Điện chỉ định còn sống, Stormcoil cộng +2 Điện Nhịp cho chủ lực, tối đa 4. Ultimate không trực tiếp cấp Rage.",
+            "cooldown": null,
+            "rageCost": 4,
+            "coefficients": {
+              "abilityPower": 1.1
+            },
+            "target": "allEnemies",
+            "passiveCounterGain": {
+              "counterId": "DIEN_NHIP",
+              "amount": 2,
+              "max": 4,
+              "target": "designatedCarry",
+              "timing": "afterUltimateActionConfirmed"
+            }
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "passive": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -44021,6 +44809,27 @@
               "value": {
                 "name": "Dẫn Điện",
                 "text": "Dẫn Điện: đầu trận chọn 1 carry. Mỗi khi carry hoàn thành đủ 2 hành động gây direct damage kể từ lần kích trước, nhận +1 Nộ raw; tối đa 1 lần mỗi vòng. Liên Kích không tính là một hành động riêng cho bộ đếm."
+              }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Stormcoil.passive",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "name": "Dẫn Điện",
+                "text": "Dẫn Điện: Đầu trận, Stormcoil chọn 1 đồng minh khác làm chủ lực. Mỗi khi chủ lực hoàn thành một hành động chính gây direct damage, họ nhận 1 Điện Nhịp, tối đa 4. Phản kích, truy kích, Liên Kích, DOT và các hit phụ không được tính là hành động mới cho bộ đếm. Skill1 của Stormcoil có thể cộng thêm 1 Điện Nhịp và Ultimate của Stormcoil có thể cộng thêm 2 Điện Nhịp theo mô tả riêng. Khi chủ lực có đủ 4 Điện Nhịp, sau một hành động chính của chủ lực và sau khi mọi Rage cost của hành động đó đã được xử lý, nếu Nộ hiện tại của chủ lực dưới 4, tiêu toàn bộ 4 Điện Nhịp và nạp Nộ của chủ lực lên 8/8 trong một logical event. Nếu chủ lực đạt 4 Điện Nhịp khi đang có từ 4 Nộ trở lên, 4 Điện Nhịp được giữ lại cho đến một lần kiểm tra hợp lệ sau đó. Dẫn Điện được kích tối đa 1 lần mỗi vòng và tối đa 2 lần mỗi trận.",
+                "counter": {
+                  "id": "DIEN_NHIP",
+                  "range": [
+                    0,
+                    4
+                  ],
+                  "belongsTo": "passive",
+                  "isRage": false,
+                  "isSpecialMechanic": false,
+                  "triggerLimitPerRound": 1,
+                  "triggerLimitPerBattle": 2
+                }
               }
             }
           ],
@@ -44045,16 +44854,31 @@
               "runtime": "LIVE"
             }
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Raw +1/+2 Rage mechanics require an explicit redesign decision.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "name": "Dẫn Điện",
+            "text": "Dẫn Điện: Đầu trận, Stormcoil chọn 1 đồng minh khác làm chủ lực. Mỗi khi chủ lực hoàn thành một hành động chính gây direct damage, họ nhận 1 Điện Nhịp, tối đa 4. Phản kích, truy kích, Liên Kích, DOT và các hit phụ không được tính là hành động mới cho bộ đếm. Skill1 của Stormcoil có thể cộng thêm 1 Điện Nhịp và Ultimate của Stormcoil có thể cộng thêm 2 Điện Nhịp theo mô tả riêng. Khi chủ lực có đủ 4 Điện Nhịp, sau một hành động chính của chủ lực và sau khi mọi Rage cost của hành động đó đã được xử lý, nếu Nộ hiện tại của chủ lực dưới 4, tiêu toàn bộ 4 Điện Nhịp và nạp Nộ của chủ lực lên 8/8 trong một logical event. Nếu chủ lực đạt 4 Điện Nhịp khi đang có từ 4 Nộ trở lên, 4 Điện Nhịp được giữ lại cho đến một lần kiểm tra hợp lệ sau đó. Dẫn Điện được kích tối đa 1 lần mỗi vòng và tối đa 2 lần mỗi trận.",
+            "counter": {
+              "id": "DIEN_NHIP",
+              "range": [
+                0,
+                4
+              ],
+              "belongsTo": "passive",
+              "isRage": false,
+              "isSpecialMechanic": false,
+              "triggerLimitPerRound": 1,
+              "triggerLimitPerBattle": 2
+            }
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "starProgression": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -44078,6 +44902,18 @@
                 "3★": "3★ – Lôi Nộ Dẫn Hướng: mỗi lần carry nhận Nộ từ Stormcoil, kỹ năng direct damage tiếp theo trong 2 hành động gây +8% damage và người đó +8% Speed trong hành động đó. Không cộng dồn nhiều lần, chỉ refresh.",
                 "4★": "4★ – Đại Khúc Lôi Nộ tiến hóa: carry nhận thêm trạng thái Lôi Nộ trong 2 hành động; Ultimate tiếp theo của carry trong thời gian này gây +12% direct damage và sau cast nhận Shield 6% Max HP.",
                 "5★": "5★ – Dẫn Điện Thức Tỉnh: sau khi carry tiêu 4 Nộ dùng Ultimate, bộ đếm Dẫn Điện lập tức reset. Hành động direct damage đầu tiên sau Ultimate được tính như 2 hành động cho bộ đếm, giúp mở chu kỳ Nộ kế tiếp nhanh hơn nhưng vẫn giữ giới hạn kích Dẫn Điện 1 lần/vòng."
+              }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Stormcoil.starProgression",
+              "dateOrCommit": "2026-09-10",
+              "value": {
+                "1★": "+8% AP +8% Speed.",
+                "2★": "Skill1 105→115% AP; Speed 8→10%.",
+                "3★": "3★ – Lôi Nộ Dẫn Hướng: Mỗi lần Dẫn Điện charge chủ lực lên 8/8 thành công, kỹ năng direct damage tiếp theo của chủ lực trong vòng 2 hành động gây +8% damage và chủ lực nhận +8% Speed trong chính hành động đó. Không cộng dồn; kích mới chỉ refresh thời hạn.",
+                "4★": "4★ – Đại Khúc Lôi Nộ tiến hóa: Khi Stormcoil dùng Đại Khúc Lôi Nộ, chủ lực nhận Lôi Nộ trong 2 hành động. Ultimate tiếp theo của chủ lực trong thời gian này gây +12% direct damage và sau khi cast nhận Shield bằng 6% Max HP.",
+                "5★": "5★ – Dẫn Điện Thức Tỉnh: Ngay sau khi chủ lực tiêu 4 Rage để dùng Ultimate, Điện Nhịp hiện tại của chủ lực reset về 0. Hành động chính gây direct damage đầu tiên sau Ultimate đó cộng 2 Điện Nhịp thay vì 1. Hiệu ứng này không làm vượt cap 4 Điện Nhịp, không bỏ qua giới hạn 1 lần/vòng và không bỏ qua giới hạn 2 lần/trận của Dẫn Điện."
               }
             }
           ],
@@ -44125,16 +44961,22 @@
               }
             ]
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
-          "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Raw +1/+2 Rage mechanics require an explicit redesign decision.",
-          "confidence": "MISSING"
+          "runtimeDivergence": true,
+          "chosenCanonicalValue": {
+            "1★": "+8% AP +8% Speed.",
+            "2★": "Skill1 105→115% AP; Speed 8→10%.",
+            "3★": "3★ – Lôi Nộ Dẫn Hướng: Mỗi lần Dẫn Điện charge chủ lực lên 8/8 thành công, kỹ năng direct damage tiếp theo của chủ lực trong vòng 2 hành động gây +8% damage và chủ lực nhận +8% Speed trong chính hành động đó. Không cộng dồn; kích mới chỉ refresh thời hạn.",
+            "4★": "4★ – Đại Khúc Lôi Nộ tiến hóa: Khi Stormcoil dùng Đại Khúc Lôi Nộ, chủ lực nhận Lôi Nộ trong 2 hành động. Ultimate tiếp theo của chủ lực trong thời gian này gây +12% direct damage và sau khi cast nhận Shield bằng 6% Max HP.",
+            "5★": "5★ – Dẫn Điện Thức Tỉnh: Ngay sau khi chủ lực tiêu 4 Rage để dùng Ultimate, Điện Nhịp hiện tại của chủ lực reset về 0. Hành động chính gây direct damage đầu tiên sau Ultimate đó cộng 2 Điện Nhịp thay vì 1. Hiệu ứng này không làm vượt cap 4 Điện Nhịp, không bỏ qua giới hạn 1 lần/vòng và không bỏ qua giới hạn 2 lần/trận của Dẫn Điện."
+          },
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         },
         "specialMechanic": {
-          "status": "NEEDS_DESIGN_DECISION",
+          "status": "CANONICAL_FOUND",
           "designSources": [
             {
               "sourceId": "design-json-v1.1",
@@ -44155,6 +44997,12 @@
                 "counter": null,
                 "synergy": null
               }
+            },
+            {
+              "sourceId": "phase-2a-approved-decisions",
+              "location": "Stormcoil.specialMechanic",
+              "dateOrCommit": "2026-09-10",
+              "value": null
             }
           ],
           "currentRuntimeValue": {
@@ -44163,13 +45011,13 @@
             "counter": "Khắc tốt: Tidecrest, Coralyn, Galehowl, Bramblet, Frostpelt; Nước/Gió/Lá/Băng và đội spam kỹ năng. | Bị khắc: Stoneback Đất; Ironmane Thép; Nightclaw Bóng tối; đội ít phụ thuộc thanh lượt. | Giới hạn: Đột Phá II 2 lượt, 1 lần/trận; không tăng tiến độ từ phản kích/truy kích; giảm sát thương cộng dồn cap 50%.",
             "specialStarter": false
           },
-          "conflict": "NO",
+          "conflict": "YES",
           "designSourceConflict": false,
-          "runtimeDivergence": false,
+          "runtimeDivergence": true,
           "chosenCanonicalValue": null,
-          "chosenSource": null,
-          "evidence": "Raw +1/+2 Rage mechanics require an explicit redesign decision.",
-          "confidence": "MISSING"
+          "chosenSource": "phase-2a-approved-decisions",
+          "evidence": "Min approved this explicit Phase 2A.2 decision; it supersedes the earlier unresolved candidate without promoting runtime data.",
+          "confidence": "HIGH"
         }
       }
     },
@@ -55057,1019 +55905,6 @@
     }
   ],
   "blockers": [
-    {
-      "powId": "pyroon",
-      "powName": "Pyroon",
-      "runtimeNumber": 1,
-      "designNumber": 1,
-      "missingField": "baseStats",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"sourceText\":\"Repo cũ: HP333 ATK58 DEF44 AP40 SPD46 Crit10%; stat final chưa khóa lại.\",\"parsed\":{\"hp\":333,\"attack\":58,\"defense\":44,\"abilityPower\":40,\"speed\":46,\"critRate\":10}}",
-        "design-workbook-01-90: {\"sourceText\":\"Repo cũ: HP333 ATK58 DEF44 AP40 SPD46 Crit10%; stat final chưa khóa lại.\",\"parsed\":{\"hp\":333,\"attack\":58,\"defense\":44,\"abilityPower\":40,\"speed\":46,\"critRate\":10}}"
-      ],
-      "currentValue": {
-        "hp": 333,
-        "atk": 58,
-        "def": 44,
-        "speed": 46,
-        "ap": 40,
-        "critRate": 10,
-        "critDamage": 200
-      },
-      "whyInsufficient": "Repo cũ: HP333 ATK58 DEF44 AP40 SPD46 Crit10%; stat final chưa khóa lại.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "voltkit",
-      "powName": "Voltkit",
-      "runtimeNumber": 2,
-      "designNumber": 2,
-      "missingField": "baseStats",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"sourceText\":\"Chỉ số nền chưa khóa final.\",\"parsed\":{}}",
-        "design-workbook-01-90: {\"sourceText\":\"Chỉ số nền chưa khóa final.\",\"parsed\":{}}"
-      ],
-      "currentValue": {
-        "hp": 286,
-        "atk": 57,
-        "def": 43,
-        "speed": 51,
-        "ap": 55,
-        "critRate": 9,
-        "critDamage": 200
-      },
-      "whyInsufficient": "Chỉ số nền chưa khóa final.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "voltkit",
-      "powName": "Voltkit",
-      "runtimeNumber": 2,
-      "designNumber": 2,
-      "missingField": "ultimate",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"name\":\"Lôi Kích\",\"text\":\"Lôi Kích: 200% AP; có tương tác mục tiêu Tê Liệt (hệ số bonus cần khóa khi nhập data cuối).\",\"cooldown\":null,\"rageCost\":4}",
-        "design-workbook-01-90 + implementation-spec: {\"name\":\"Lôi Kích\",\"text\":\"Lôi Kích: 200% AP; có tương tác mục tiêu Tê Liệt (hệ số bonus cần khóa khi nhập data cuối).\",\"cooldown\":null,\"rageCost\":4}"
-      ],
-      "currentValue": {
-        "id": "voltkit.ultimate",
-        "name": "Lưới Sét Mèo Con",
-        "description": "100 Nộ, 36 Mana. Gây 118% AP lên toàn bộ kẻ địch. Sau đó tiêu toàn bộ Tĩnh Điện: mỗi tầng gây thêm 16% AP lên chính chủ thể. Kẻ có 3 tầng trước khi tiêu bị Quá Tải 1 lượt: giảm 12% SPEED và 8% thanh lượt; Boss chỉ giảm 6% SPEED và 3% thanh lượt.",
-        "power": 118,
-        "type": "magic",
-        "target": "all-enemies",
-        "manaCost": 36,
-        "cooldown": 0,
-        "rageCost": 100,
-        "status": null,
-        "coefficients": {
-          "ap": 118
-        },
-        "masterEffects": {
-          "debuffs": [
-            {
-              "stat": "speed",
-              "pct": 0.12
-            },
-            {
-              "stat": "speed",
-              "pct": 0.06
-            }
-          ]
-        },
-        "specialMechanic": null
-      },
-      "whyInsufficient": "Ultimate interaction/bonus against Paralysis is explicitly not locked.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "zephyroo",
-      "powName": "Zephyroo",
-      "runtimeNumber": 6,
-      "designNumber": 6,
-      "missingField": "basic",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"name\":\"Đánh Gió\",\"text\":\"Đánh Gió: 75% ATK theo bản chốt cũ (nên rà scale AP khi nhập data final).\",\"cooldown\":null,\"rageCost\":null}",
-        "design-workbook-01-90: {\"name\":\"Đánh Gió\",\"text\":\"Đánh Gió: 75% ATK theo bản chốt cũ (nên rà scale AP khi nhập data final).\",\"cooldown\":null,\"rageCost\":null}"
-      ],
-      "currentValue": {
-        "id": "zephyroo.basic",
-        "name": "Gió Đẩy Nhịp",
-        "description": "Gây 58% AP. Đồng minh có thanh lượt thấp nhất nhận 6% thanh lượt. Nếu đánh trúng kẻ địch có thanh lượt cao nhất, giảm thêm 4% thanh lượt của chúng.",
-        "power": 58,
-        "type": "magic",
-        "target": "enemy",
-        "manaCost": 0,
-        "cooldown": 0,
-        "rageCost": 0,
-        "status": null,
-        "coefficients": {
-          "ap": 58
-        },
-        "masterEffects": {},
-        "specialMechanic": null
-      },
-      "whyInsufficient": "Basic damage scale must be reviewed as ATK versus AP.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "cindercore",
-      "powName": "Cindercore",
-      "runtimeNumber": 25,
-      "designNumber": 25,
-      "missingField": "baseStats",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"sourceText\":\"HP300 ATK44 DEF45 AP76 SPD55; Crit chưa khóa.\",\"parsed\":{\"hp\":300,\"attack\":44,\"defense\":45,\"abilityPower\":76,\"speed\":55}}",
-        "design-workbook-01-90: {\"sourceText\":\"HP300 ATK44 DEF45 AP76 SPD55; Crit chưa khóa.\",\"parsed\":{\"hp\":300,\"attack\":44,\"defense\":45,\"abilityPower\":76,\"speed\":55}}"
-      ],
-      "currentValue": {
-        "hp": 530,
-        "atk": 97,
-        "def": 89,
-        "speed": 85,
-        "ap": 97,
-        "critRate": 24,
-        "critDamage": 200
-      },
-      "whyInsufficient": "HP300 ATK44 DEF45 AP76 SPD55; Crit chưa khóa.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "ironmantis",
-      "powName": "Ironmantis",
-      "runtimeNumber": 40,
-      "designNumber": 40,
-      "missingField": "baseStats",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"sourceText\":\"Stat final Epic chưa khóa; bản cũ từng dùng HP350 ATK86 DEF55 SPD64 Crit28%.\",\"parsed\":{\"hp\":350,\"attack\":86,\"defense\":55,\"speed\":64,\"critRate\":28}}",
-        "design-workbook-01-90: {\"sourceText\":\"Stat final Epic chưa khóa; bản cũ từng dùng HP350 ATK86 DEF55 SPD64 Crit28%.\",\"parsed\":{\"hp\":350,\"attack\":86,\"defense\":55,\"speed\":64,\"critRate\":28}}"
-      ],
-      "currentValue": {
-        "hp": 539,
-        "atk": 121,
-        "def": 109,
-        "speed": 111,
-        "ap": 92,
-        "critRate": 27,
-        "critDamage": 200
-      },
-      "whyInsufficient": "Stat final Epic chưa khóa; bản cũ từng dùng HP350 ATK86 DEF55 SPD64 Crit28%.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "pyrewing",
-      "powName": "Pyrewing",
-      "runtimeNumber": 41,
-      "designNumber": 41,
-      "missingField": "baseStats",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}",
-        "design-workbook-01-90: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}"
-      ],
-      "currentValue": {
-        "hp": 539,
-        "atk": 121,
-        "def": 109,
-        "speed": 111,
-        "ap": 92,
-        "critRate": 27,
-        "critDamage": 200
-      },
-      "whyInsufficient": "Stat final chưa khóa.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "thunderhorn",
-      "powName": "Thunderhorn",
-      "runtimeNumber": 42,
-      "designNumber": 42,
-      "missingField": "baseStats",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}",
-        "design-workbook-01-90: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}"
-      ],
-      "currentValue": {
-        "hp": 621,
-        "atk": 121,
-        "def": 99,
-        "speed": 92,
-        "ap": 106,
-        "critRate": 30,
-        "critDamage": 200
-      },
-      "whyInsufficient": "Stat final chưa khóa.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "arcbison",
-      "powName": "Arcbison",
-      "runtimeNumber": 43,
-      "designNumber": 43,
-      "missingField": "baseStats",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}",
-        "design-workbook-01-90: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}"
-      ],
-      "currentValue": {
-        "hp": 621,
-        "atk": 121,
-        "def": 99,
-        "speed": 92,
-        "ap": 106,
-        "critRate": 30,
-        "critDamage": 200
-      },
-      "whyInsufficient": "Stat final chưa khóa.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "lavarax",
-      "powName": "Lavarax",
-      "runtimeNumber": 45,
-      "designNumber": 45,
-      "missingField": "baseStats",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}",
-        "design-workbook-01-90: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}"
-      ],
-      "currentValue": {
-        "hp": 611,
-        "atk": 125,
-        "def": 106,
-        "speed": 107,
-        "ap": 107,
-        "critRate": 34,
-        "critDamage": 200
-      },
-      "whyInsufficient": "Stat final chưa khóa.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "pebblit",
-      "powName": "Pebblit",
-      "runtimeNumber": 46,
-      "designNumber": 46,
-      "missingField": "baseStats",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}",
-        "design-workbook-01-90: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}"
-      ],
-      "currentValue": {
-        "hp": 423,
-        "atk": 70,
-        "def": 68,
-        "speed": 69,
-        "ap": 60,
-        "critRate": 10,
-        "critDamage": 200
-      },
-      "whyInsufficient": "Stat final chưa khóa.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "tidewarden",
-      "powName": "Tidewarden",
-      "runtimeNumber": 47,
-      "designNumber": 47,
-      "missingField": "baseStats",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}",
-        "design-workbook-01-90: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}"
-      ],
-      "currentValue": {
-        "hp": 639,
-        "atk": 111,
-        "def": 117,
-        "speed": 95,
-        "ap": 120,
-        "critRate": 27,
-        "critDamage": 200
-      },
-      "whyInsufficient": "Stat final chưa khóa.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "verdantusk",
-      "powName": "Verdantusk",
-      "runtimeNumber": 48,
-      "designNumber": 48,
-      "missingField": "baseStats",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}",
-        "design-workbook-01-90: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}"
-      ],
-      "currentValue": {
-        "hp": 678,
-        "atk": 130,
-        "def": 120,
-        "speed": 96,
-        "ap": 103,
-        "critRate": 29,
-        "critDamage": 200
-      },
-      "whyInsufficient": "Stat final chưa khóa.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "magmafang",
-      "powName": "Magmafang",
-      "runtimeNumber": 49,
-      "designNumber": 49,
-      "missingField": "baseStats",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}",
-        "design-workbook-01-90: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}"
-      ],
-      "currentValue": {
-        "hp": 650,
-        "atk": 125,
-        "def": 110,
-        "speed": 106,
-        "ap": 108,
-        "critRate": 31,
-        "critDamage": 200
-      },
-      "whyInsufficient": "Stat final chưa khóa.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "scorchmane",
-      "powName": "Scorchmane",
-      "runtimeNumber": 51,
-      "designNumber": 51,
-      "missingField": "baseStats",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}",
-        "design-workbook-01-90: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}"
-      ],
-      "currentValue": {
-        "hp": 539,
-        "atk": 121,
-        "def": 109,
-        "speed": 111,
-        "ap": 92,
-        "critRate": 27,
-        "critDamage": 200
-      },
-      "whyInsufficient": "Stat final chưa khóa.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "aegiscarab",
-      "powName": "Aegiscarab",
-      "runtimeNumber": 52,
-      "designNumber": 52,
-      "missingField": "baseStats",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}",
-        "design-workbook-01-90: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}"
-      ],
-      "currentValue": {
-        "hp": 539,
-        "atk": 121,
-        "def": 109,
-        "speed": 111,
-        "ap": 92,
-        "critRate": 27,
-        "critDamage": 200
-      },
-      "whyInsufficient": "Stat final chưa khóa.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "rimehorn",
-      "powName": "Rimehorn",
-      "runtimeNumber": 53,
-      "designNumber": 53,
-      "missingField": "baseStats",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}",
-        "design-workbook-01-90: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}"
-      ],
-      "currentValue": {
-        "hp": 648,
-        "atk": 103,
-        "def": 117,
-        "speed": 103,
-        "ap": 112,
-        "critRate": 32,
-        "critDamage": 200
-      },
-      "whyInsufficient": "Stat final chưa khóa.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "tidefang",
-      "powName": "Tidefang",
-      "runtimeNumber": 54,
-      "designNumber": 54,
-      "missingField": "baseStats",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}",
-        "design-workbook-01-90: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}"
-      ],
-      "currentValue": {
-        "hp": 644,
-        "atk": 101,
-        "def": 98,
-        "speed": 103,
-        "ap": 117,
-        "critRate": 28,
-        "critDamage": 200
-      },
-      "whyInsufficient": "Stat final chưa khóa.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "frostwing",
-      "powName": "Frostwing",
-      "runtimeNumber": 55,
-      "designNumber": 55,
-      "missingField": "baseStats",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}",
-        "design-workbook-01-90: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}"
-      ],
-      "currentValue": {
-        "hp": 648,
-        "atk": 103,
-        "def": 117,
-        "speed": 103,
-        "ap": 112,
-        "critRate": 32,
-        "critDamage": 200
-      },
-      "whyInsufficient": "Stat final chưa khóa.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "geoquill",
-      "powName": "Geoquill",
-      "runtimeNumber": 56,
-      "designNumber": 56,
-      "missingField": "baseStats",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}",
-        "design-workbook-01-90: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}"
-      ],
-      "currentValue": {
-        "hp": 649,
-        "atk": 106,
-        "def": 117,
-        "speed": 93,
-        "ap": 125,
-        "critRate": 29,
-        "critDamage": 200
-      },
-      "whyInsufficient": "Stat final chưa khóa.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "bloomlord",
-      "powName": "Bloomlord",
-      "runtimeNumber": 57,
-      "designNumber": 57,
-      "missingField": "baseStats",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}",
-        "design-workbook-01-90: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}"
-      ],
-      "currentValue": {
-        "hp": 690,
-        "atk": 121,
-        "def": 136,
-        "speed": 108,
-        "ap": 139,
-        "critRate": 31,
-        "critDamage": 200
-      },
-      "whyInsufficient": "Stat final chưa khóa.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "lumibloom",
-      "powName": "Lumibloom",
-      "runtimeNumber": 58,
-      "designNumber": 58,
-      "missingField": "baseStats",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}",
-        "design-workbook-01-90: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}"
-      ],
-      "currentValue": {
-        "hp": 539,
-        "atk": 121,
-        "def": 109,
-        "speed": 111,
-        "ap": 92,
-        "critRate": 27,
-        "critDamage": 200
-      },
-      "whyInsufficient": "Stat final chưa khóa.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "cloudtalon",
-      "powName": "Cloudtalon",
-      "runtimeNumber": 59,
-      "designNumber": 59,
-      "missingField": "baseStats",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}",
-        "design-workbook-01-90: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}"
-      ],
-      "currentValue": {
-        "hp": 539,
-        "atk": 121,
-        "def": 109,
-        "speed": 111,
-        "ap": 92,
-        "critRate": 27,
-        "critDamage": 200
-      },
-      "whyInsufficient": "Stat final chưa khóa.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "galehart",
-      "powName": "Galehart",
-      "runtimeNumber": 60,
-      "designNumber": 60,
-      "missingField": "baseStats",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}",
-        "design-workbook-01-90: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}"
-      ],
-      "currentValue": {
-        "hp": 539,
-        "atk": 121,
-        "def": 109,
-        "speed": 111,
-        "ap": 92,
-        "critRate": 27,
-        "critDamage": 200
-      },
-      "whyInsufficient": "Stat final chưa khóa.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "tempestfin",
-      "powName": "Tempestfin",
-      "runtimeNumber": 61,
-      "designNumber": 61,
-      "missingField": "baseStats",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}",
-        "design-workbook-01-90: {\"sourceText\":\"Stat final chưa khóa.\",\"parsed\":{}}"
-      ],
-      "currentValue": {
-        "hp": 539,
-        "atk": 121,
-        "def": 109,
-        "speed": 111,
-        "ap": 92,
-        "critRate": 27,
-        "critDamage": 200
-      },
-      "whyInsufficient": "Stat final chưa khóa.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "bramblet",
-      "powName": "Bramblet",
-      "runtimeNumber": 71,
-      "designNumber": 72,
-      "missingField": "passive",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"name\":\"Khai Mạch\",\"text\":\"Khai Mạch: đầu trận, toàn bộ đồng minh nhận +1 Nộ raw đúng 1 lần. Khi một đồng minh lần đầu dùng Ultimate trong trận, họ nhận Shield 3% Max HP.\"}",
-        "design-workbook-01-90: {\"name\":\"Khai Mạch\",\"text\":\"Khai Mạch: đầu trận, toàn bộ đồng minh nhận +1 Nộ raw đúng 1 lần. Khi một đồng minh lần đầu dùng Ultimate trong trận, họ nhận Shield 3% Max HP.\"}"
-      ],
-      "currentValue": {
-        "id": "combo_bonus_damage",
-        "name": "Bản năng Bramblet",
-        "element": "leaf",
-        "art": "assets/passives/passive-071.webp",
-        "description": "Mỗi điểm combo tăng 8% sát thương, tối đa 32%.",
-        "mechanic": {
-          "description": "Mỗi điểm combo tăng 8% sát thương, tối đa 32%.",
-          "trigger": "BEFORE_HIT",
-          "condition": {
-            "kind": "minimumCombo",
-            "value": 1
-          },
-          "effect": {
-            "kind": "damageMultiplierPerStack",
-            "coefficient": 0.08,
-            "maxBonus": 0.32
-          },
-          "runtime": "LIVE"
-        }
-      },
-      "whyInsufficient": "Raw +1 Rage opener must be redesigned under the latest Rage support direction.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "bramblet",
-      "powName": "Bramblet",
-      "runtimeNumber": 71,
-      "designNumber": 72,
-      "missingField": "starProgression",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"1★\":\"+9% AP +7% HP.\",\"2★\":\"S1 damage 105→115% AP; giảm damage 12→14%.\",\"3★\":\"3★ – Mộc Mạch Khai Chiến: lần đầu mỗi đồng minh dùng Ultimate trong trận, họ nhận Mộc Mạch trong chính hành động đó: +8% damage gây ra và sau khi Ultimate kết thúc nhận Shield 5% Max HP.\",\"4★\":\"4★ – Cổ Mộc Trấn Giới tiến hóa: ngoài -damage địch và Shield toàn đội, toàn đội nhận 8% DR trong 1 lượt để chống nhịp phản công ngay sau Ultimate.\",\"5★\":\"5★ – Khai Mạch Thức Tỉnh: sau mỗi đồng minh lần đầu tiêu hao 4 Nộ để dùng Ultimate, Bramblet nhận 1 Mộc Ấn, max3. Mỗi Ấn tăng 4% hiệu quả Shield/debuff của Bramblet; đủ 3 Ấn, S1 kế tác động toàn bộ địch rồi reset Mộc Ấn.\"}",
-        "design-workbook-01-90: {\"1★\":\"+9% AP +7% HP.\",\"2★\":\"S1 damage 105→115% AP; giảm damage 12→14%.\",\"3★\":\"3★ – Mộc Mạch Khai Chiến: lần đầu mỗi đồng minh dùng Ultimate trong trận, họ nhận Mộc Mạch trong chính hành động đó: +8% damage gây ra và sau khi Ultimate kết thúc nhận Shield 5% Max HP.\",\"4★\":\"4★ – Cổ Mộc Trấn Giới tiến hóa: ngoài -damage địch và Shield toàn đội, toàn đội nhận 8% DR trong 1 lượt để chống nhịp phản công ngay sau Ultimate.\",\"5★\":\"5★ – Khai Mạch Thức Tỉnh: sau mỗi đồng minh lần đầu tiêu hao 4 Nộ để dùng Ultimate, Bramblet nhận 1 Mộc Ấn, max3. Mỗi Ấn tăng 4% hiệu quả Shield/debuff của Bramblet; đủ 3 Ấn, S1 kế tác động toàn bộ địch rồi reset Mộc Ấn.\"}"
-      ],
-      "currentValue": {
-        "startStars": 5,
-        "maxStars": 7,
-        "v81NativeStar": 5,
-        "v81MaxStar": 7,
-        "stages": [
-          {
-            "star": 5,
-            "delta": 0,
-            "stage": "Mốc gốc",
-            "coefficient": 1,
-            "effect": 1,
-            "basic": "Gai Mầm Suy Yếu: giữ nguyên chức năng canonical ở mốc gốc.",
-            "skill1": "Dây Leo Khóa Nhịp: giữ nguyên chức năng canonical ở mốc gốc.",
-            "skill2": "Mộc Kết Giới: giữ nguyên chức năng canonical ở mốc gốc.",
-            "ultimate": "Vạn Mộc Cộng Sinh: giữ nguyên chức năng canonical ở mốc gốc.",
-            "core": "Kit gốc khóa theo core Sinh Trưởng; không thay tên/ID của 4 skill."
-          },
-          {
-            "star": 6,
-            "delta": 1,
-            "stage": "Cường Hóa I",
-            "coefficient": 1.32,
-            "effect": 1.18,
-            "basic": "Gai Mầm Suy Yếu: hệ số trực tiếp mục tiêu ×1.32 so với mốc gốc; hiệu lực số học ×1.18. Tăng số tầng dấu/debuff mềm áp bởi Basic; hard CC không sinh từ Basic nếu kit gốc không có.",
-            "skill1": "Dây Leo Khóa Nhịp: hệ số trực tiếp mục tiêu ×1.32 so với mốc gốc; hiệu lực số học ×1.18. Tăng tầng/target của debuff; hard CC duration không tăng.",
-            "skill2": "Mộc Kết Giới: hệ số trực tiếp mục tiêu ×1.32 so với mốc gốc; hiệu lực số học ×1.18. Tăng số target/stack/debuff mềm; duration hard CC không tăng.",
-            "ultimate": "Vạn Mộc Cộng Sinh: hệ số trực tiếp mục tiêu ×1.32 so với mốc gốc; hiệu lực số học ×1.18. Ultimate tăng số target/tầng/độ mạnh debuff; hard CC Boss vẫn chuyển đổi theo luật.",
-            "core": "Sinh Trưởng: tăng số tầng debuff/dấu và số mục tiêu bị tác động; Skill 2 tăng phạm vi/hiệu lực; debuff mềm có thể tăng thời lượng +1 ở mốc thức tỉnh; Boss rule giữ nguyên."
-          },
-          {
-            "star": 7,
-            "delta": 2,
-            "stage": "Thức Tỉnh",
-            "coefficient": 1.7424000000000002,
-            "effect": 1.3923999999999999,
-            "basic": "Gai Mầm Suy Yếu: hệ số trực tiếp mục tiêu ×1.74 so với mốc gốc; hiệu lực số học ×1.39. Tăng số tầng dấu/debuff mềm áp bởi Basic; hard CC không sinh từ Basic nếu kit gốc không có.",
-            "skill1": "Dây Leo Khóa Nhịp: hệ số trực tiếp mục tiêu ×1.74 so với mốc gốc; hiệu lực số học ×1.39. Tăng tầng/target của debuff; hard CC duration không tăng.",
-            "skill2": "Mộc Kết Giới: hệ số trực tiếp mục tiêu ×1.74 so với mốc gốc; hiệu lực số học ×1.39. Tăng số target/stack/debuff mềm; duration hard CC không tăng.",
-            "ultimate": "Vạn Mộc Cộng Sinh: hệ số trực tiếp mục tiêu ×1.74 so với mốc gốc; hiệu lực số học ×1.39. Ultimate tăng số target/tầng/độ mạnh debuff; hard CC Boss vẫn chuyển đổi theo luật.",
-            "core": "Sinh Trưởng: tăng số tầng debuff/dấu và số mục tiêu bị tác động; Skill 2 tăng phạm vi/hiệu lực; debuff mềm có thể tăng thời lượng +1 ở mốc thức tỉnh; Boss rule giữ nguyên."
-          }
-        ]
-      },
-      "whyInsufficient": "Raw +1 Rage opener must be redesigned under the latest Rage support direction.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "bramblet",
-      "powName": "Bramblet",
-      "runtimeNumber": 71,
-      "designNumber": 72,
-      "missingField": "specialMechanic",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"evolutionType\":null,\"counter\":null,\"synergy\":null}",
-        "design-workbook-01-90: {\"evolutionType\":null,\"counter\":null,\"synergy\":null}"
-      ],
-      "currentValue": {
-        "core": "Sinh Trưởng",
-        "evolutionType": null,
-        "counter": "Khắc tốt: Tidecrest, Coralyn, Voltfang; Nước/Đất/Sét và đội phụ thuộc nhịp lượt. | Bị khắc: Ignivar/Blazetalon Lửa; Galehowl Gió; Frostpelt Băng; Venomtail Độc. | Giới hạn: Đột Phá II 2 lượt, 1 lần/trận; không tăng tiến độ từ phản kích/truy kích; giảm sát thương cộng dồn cap 50%.",
-        "specialStarter": false
-      },
-      "whyInsufficient": "Raw +1 Rage opener must be redesigned under the latest Rage support direction.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "coralyn",
-      "powName": "Coralyn",
-      "runtimeNumber": 72,
-      "designNumber": 73,
-      "missingField": "passive",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"name\":\"Điệp Khúc Năng Lượng\",\"text\":\"Điệp Khúc Năng Lượng: đầu trận chọn 1 đồng minh chủ lực. Ở các lượt hành động số 1,3,5,7... của Coralyn, người đó nhận +2 Nộ raw. Không áp dụng cho chính Coralyn.\"}",
-        "design-workbook-01-90: {\"name\":\"Điệp Khúc Năng Lượng\",\"text\":\"Điệp Khúc Năng Lượng: đầu trận chọn 1 đồng minh chủ lực. Ở các lượt hành động số 1,3,5,7... của Coralyn, người đó nhận +2 Nộ raw. Không áp dụng cho chính Coralyn.\"}"
-      ],
-      "currentValue": {
-        "id": "combo_stun",
-        "name": "Bản năng Coralyn",
-        "element": "water",
-        "art": "assets/passives/passive-072.webp",
-        "description": "Sau hành động ở từ 3 combo, có 35% xác suất gây Choáng mục tiêu trong 1 lượt.",
-        "mechanic": {
-          "description": "Sau hành động ở từ 3 combo, có 35% xác suất gây Choáng mục tiêu trong 1 lượt.",
-          "trigger": "AFTER_ACTION",
-          "condition": {
-            "kind": "minimumCombo",
-            "value": 3
-          },
-          "effect": {
-            "kind": "applyStatus",
-            "status": "stun",
-            "chance": 0.35,
-            "duration": 1
-          },
-          "runtime": "LIVE"
-        }
-      },
-      "whyInsufficient": "Periodic Rage grant requires an explicit redesign decision.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "coralyn",
-      "powName": "Coralyn",
-      "runtimeNumber": 72,
-      "designNumber": 73,
-      "missingField": "starProgression",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"1★\":\"+10% AP +6% Speed.\",\"2★\":\"S1 100→110% AP; Slow 15→18%.\",\"3★\":\"3★ – Điệp Khúc Bảo Hộ: mỗi lần Nội tại cấp +2 Nộ cho carry, carry nhận Shield 5% Max HP. Nếu đã có Shield trước khi nhận Nộ, thay Shield bằng heal 4% Max HP.\",\"4★\":\"4★ – Đại Hợp Xướng tiến hóa: mục tiêu đã bị Slow trước Ultimate ngoài Silence còn bị -15% damage gây ra trong 1 lượt. Không thêm Stun AoE.\",\"5★\":\"5★ – Điệp Khúc Cao Trào: sau mỗi 2 lần cấp Nộ thành công cho carry, lần cấp tiếp theo còn cho +12% Speed +10% DEF trong 2 hành động. Bộ đếm sau đó reset.\"}",
-        "design-workbook-01-90: {\"1★\":\"+10% AP +6% Speed.\",\"2★\":\"S1 100→110% AP; Slow 15→18%.\",\"3★\":\"3★ – Điệp Khúc Bảo Hộ: mỗi lần Nội tại cấp +2 Nộ cho carry, carry nhận Shield 5% Max HP. Nếu đã có Shield trước khi nhận Nộ, thay Shield bằng heal 4% Max HP.\",\"4★\":\"4★ – Đại Hợp Xướng tiến hóa: mục tiêu đã bị Slow trước Ultimate ngoài Silence còn bị -15% damage gây ra trong 1 lượt. Không thêm Stun AoE.\",\"5★\":\"5★ – Điệp Khúc Cao Trào: sau mỗi 2 lần cấp Nộ thành công cho carry, lần cấp tiếp theo còn cho +12% Speed +10% DEF trong 2 hành động. Bộ đếm sau đó reset.\"}"
-      ],
-      "currentValue": {
-        "startStars": 5,
-        "maxStars": 7,
-        "v81NativeStar": 5,
-        "v81MaxStar": 7,
-        "stages": [
-          {
-            "star": 5,
-            "delta": 0,
-            "stage": "Mốc gốc",
-            "coefficient": 1,
-            "effect": 1,
-            "basic": "San Hô Dẫn Lưu: giữ nguyên chức năng canonical ở mốc gốc.",
-            "skill1": "Triều Lưu Đảo Nhịp: giữ nguyên chức năng canonical ở mốc gốc.",
-            "skill2": "San Hô Hộ Mạch: giữ nguyên chức năng canonical ở mốc gốc.",
-            "ultimate": "Đại Hải Điều Luật: giữ nguyên chức năng canonical ở mốc gốc.",
-            "core": "Kit gốc khóa theo core Triều Ấn; không thay tên/ID của 4 skill."
-          },
-          {
-            "star": 6,
-            "delta": 1,
-            "stage": "Cường Hóa I",
-            "coefficient": 1.32,
-            "effect": 1.18,
-            "basic": "San Hô Dẫn Lưu: hệ số trực tiếp mục tiêu ×1.32 so với mốc gốc; hiệu lực số học ×1.18. Tăng số tầng dấu/debuff mềm áp bởi Basic; hard CC không sinh từ Basic nếu kit gốc không có.",
-            "skill1": "Triều Lưu Đảo Nhịp: hệ số trực tiếp mục tiêu ×1.32 so với mốc gốc; hiệu lực số học ×1.18. Tăng tầng/target của debuff; hard CC duration không tăng.",
-            "skill2": "San Hô Hộ Mạch: hệ số trực tiếp mục tiêu ×1.32 so với mốc gốc; hiệu lực số học ×1.18. Tăng số target/stack/debuff mềm; duration hard CC không tăng.",
-            "ultimate": "Đại Hải Điều Luật: hệ số trực tiếp mục tiêu ×1.32 so với mốc gốc; hiệu lực số học ×1.18. Ultimate tăng số target/tầng/độ mạnh debuff; hard CC Boss vẫn chuyển đổi theo luật.",
-            "core": "Triều Ấn: tăng số tầng debuff/dấu và số mục tiêu bị tác động; Skill 2 tăng phạm vi/hiệu lực; debuff mềm có thể tăng thời lượng +1 ở mốc thức tỉnh; Boss rule giữ nguyên."
-          },
-          {
-            "star": 7,
-            "delta": 2,
-            "stage": "Thức Tỉnh",
-            "coefficient": 1.7424000000000002,
-            "effect": 1.3923999999999999,
-            "basic": "San Hô Dẫn Lưu: hệ số trực tiếp mục tiêu ×1.74 so với mốc gốc; hiệu lực số học ×1.39. Tăng số tầng dấu/debuff mềm áp bởi Basic; hard CC không sinh từ Basic nếu kit gốc không có.",
-            "skill1": "Triều Lưu Đảo Nhịp: hệ số trực tiếp mục tiêu ×1.74 so với mốc gốc; hiệu lực số học ×1.39. Tăng tầng/target của debuff; hard CC duration không tăng.",
-            "skill2": "San Hô Hộ Mạch: hệ số trực tiếp mục tiêu ×1.74 so với mốc gốc; hiệu lực số học ×1.39. Tăng số target/stack/debuff mềm; duration hard CC không tăng.",
-            "ultimate": "Đại Hải Điều Luật: hệ số trực tiếp mục tiêu ×1.74 so với mốc gốc; hiệu lực số học ×1.39. Ultimate tăng số target/tầng/độ mạnh debuff; hard CC Boss vẫn chuyển đổi theo luật.",
-            "core": "Triều Ấn: tăng số tầng debuff/dấu và số mục tiêu bị tác động; Skill 2 tăng phạm vi/hiệu lực; debuff mềm có thể tăng thời lượng +1 ở mốc thức tỉnh; Boss rule giữ nguyên."
-          }
-        ]
-      },
-      "whyInsufficient": "Periodic Rage grant requires an explicit redesign decision.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "coralyn",
-      "powName": "Coralyn",
-      "runtimeNumber": 72,
-      "designNumber": 73,
-      "missingField": "specialMechanic",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"evolutionType\":null,\"counter\":null,\"synergy\":null}",
-        "design-workbook-01-90: {\"evolutionType\":null,\"counter\":null,\"synergy\":null}"
-      ],
-      "currentValue": {
-        "core": "Triều Ấn",
-        "evolutionType": null,
-        "counter": "Khắc tốt: Ignivar, Volcarnos, Stoneback, Blazetalon; Lửa/Dung nham/Đất và đội thiếu Mana. | Bị khắc: Bramblet Lá; Voltfang Sét; Venomtail Độc; Stormcoil Bão; Mana khóa cứng. | Giới hạn: Đột Phá II 2 lượt, 1 lần/trận; không tăng tiến độ từ phản kích/truy kích; giảm sát thương cộng dồn cap 50%.",
-        "specialStarter": false
-      },
-      "whyInsufficient": "Periodic Rage grant requires an explicit redesign decision.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "stormcoil",
-      "powName": "Stormcoil",
-      "runtimeNumber": 76,
-      "designNumber": 77,
-      "missingField": "skill1",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"name\":\"Nhịp Sấm Truyền Lực\",\"text\":\"Nhịp Sấm Truyền Lực: 105% AP; carry được chỉ định +1 Nộ raw +8% Speed trong 1 hành động.\",\"cooldown\":1,\"rageCost\":null}",
-        "design-workbook-01-90: {\"name\":\"Nhịp Sấm Truyền Lực\",\"text\":\"Nhịp Sấm Truyền Lực: 105% AP; carry được chỉ định +1 Nộ raw +8% Speed trong 1 hành động.\",\"cooldown\":1,\"rageCost\":null}"
-      ],
-      "currentValue": {
-        "id": "stormcoil.skill1",
-        "name": "Bão Nhịp Phá Lượt",
-        "description": "33 Mana, CD 2. 145% AP toàn tuyến; giảm 7% thanh lượt, nếu khắc hệ Nước/Gió/Lá/Băng giảm thêm 3%.",
-        "power": 145,
-        "type": "magic",
-        "target": "enemy",
-        "manaCost": 33,
-        "cooldown": 2,
-        "rageCost": 0,
-        "status": null,
-        "coefficients": {
-          "ap": 145
-        },
-        "masterEffects": {
-          "meterLoss": 7
-        },
-        "specialMechanic": null
-      },
-      "whyInsufficient": "Raw +1/+2 Rage mechanics require an explicit redesign decision.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "stormcoil",
-      "powName": "Stormcoil",
-      "runtimeNumber": 76,
-      "designNumber": 77,
-      "missingField": "ultimate",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"name\":\"Đại Khúc Lôi Nộ\",\"text\":\"Đại Khúc Lôi Nộ: 110% AP toàn địch; carry được chỉ định nhận +2 Nộ raw; toàn đội +10% Speed trong 2 lượt.\",\"cooldown\":null,\"rageCost\":4}",
-        "design-workbook-01-90 + implementation-spec: {\"name\":\"Đại Khúc Lôi Nộ\",\"text\":\"Đại Khúc Lôi Nộ: 110% AP toàn địch; carry được chỉ định nhận +2 Nộ raw; toàn đội +10% Speed trong 2 lượt.\",\"cooldown\":null,\"rageCost\":4}"
-      ],
-      "currentValue": {
-        "id": "stormcoil.ultimate",
-        "name": "Thiên Lôi Giao Hưởng",
-        "description": "100 Nộ, 52 Mana. 185% AP AOE, địch -12% thanh lượt; đội +12% SPEED 2 lượt. Boss chịu một nửa kéo lượt.",
-        "power": 185,
-        "type": "magic",
-        "target": "enemy",
-        "manaCost": 52,
-        "cooldown": 0,
-        "rageCost": 100,
-        "status": null,
-        "coefficients": {
-          "ap": 185
-        },
-        "masterEffects": {
-          "buffs": [
-            {
-              "stat": "speed",
-              "pct": 0.12
-            }
-          ]
-        },
-        "specialMechanic": null
-      },
-      "whyInsufficient": "Raw +1/+2 Rage mechanics require an explicit redesign decision.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "stormcoil",
-      "powName": "Stormcoil",
-      "runtimeNumber": 76,
-      "designNumber": 77,
-      "missingField": "passive",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"name\":\"Dẫn Điện\",\"text\":\"Dẫn Điện: đầu trận chọn 1 carry. Mỗi khi carry hoàn thành đủ 2 hành động gây direct damage kể từ lần kích trước, nhận +1 Nộ raw; tối đa 1 lần mỗi vòng. Liên Kích không tính là một hành động riêng cho bộ đếm.\"}",
-        "design-workbook-01-90: {\"name\":\"Dẫn Điện\",\"text\":\"Dẫn Điện: đầu trận chọn 1 carry. Mỗi khi carry hoàn thành đủ 2 hành động gây direct damage kể từ lần kích trước, nhận +1 Nộ raw; tối đa 1 lần mỗi vòng. Liên Kích không tính là một hành động riêng cho bộ đếm.\"}"
-      ],
-      "currentValue": {
-        "id": "combo_extra_turn",
-        "name": "Hiệu lệnh phong lôi",
-        "element": "storm",
-        "art": "assets/passives/passive-076.webp",
-        "description": "Khi đủ điều kiện lượt phụ do SPEED, tăng thêm 12% xác suất; tổng xác suất vẫn tối đa 35%.",
-        "mechanic": {
-          "description": "Khi đủ điều kiện lượt phụ do SPEED, tăng thêm 12% xác suất; tổng xác suất vẫn tối đa 35%.",
-          "trigger": "AFTER_ACTION",
-          "condition": {
-            "kind": "speedRatioAbove",
-            "value": 1.15
-          },
-          "effect": {
-            "kind": "extraTurnChance",
-            "coefficient": 0.12,
-            "maxChance": 0.35
-          },
-          "runtime": "LIVE"
-        }
-      },
-      "whyInsufficient": "Raw +1/+2 Rage mechanics require an explicit redesign decision.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "stormcoil",
-      "powName": "Stormcoil",
-      "runtimeNumber": 76,
-      "designNumber": 77,
-      "missingField": "starProgression",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"1★\":\"+8% AP +8% Speed.\",\"2★\":\"S1 105→115% AP; Speed 8→10%.\",\"3★\":\"3★ – Lôi Nộ Dẫn Hướng: mỗi lần carry nhận Nộ từ Stormcoil, kỹ năng direct damage tiếp theo trong 2 hành động gây +8% damage và người đó +8% Speed trong hành động đó. Không cộng dồn nhiều lần, chỉ refresh.\",\"4★\":\"4★ – Đại Khúc Lôi Nộ tiến hóa: carry nhận thêm trạng thái Lôi Nộ trong 2 hành động; Ultimate tiếp theo của carry trong thời gian này gây +12% direct damage và sau cast nhận Shield 6% Max HP.\",\"5★\":\"5★ – Dẫn Điện Thức Tỉnh: sau khi carry tiêu 4 Nộ dùng Ultimate, bộ đếm Dẫn Điện lập tức reset. Hành động direct damage đầu tiên sau Ultimate được tính như 2 hành động cho bộ đếm, giúp mở chu kỳ Nộ kế tiếp nhanh hơn nhưng vẫn giữ giới hạn kích Dẫn Điện 1 lần/vòng.\"}",
-        "design-workbook-01-90: {\"1★\":\"+8% AP +8% Speed.\",\"2★\":\"S1 105→115% AP; Speed 8→10%.\",\"3★\":\"3★ – Lôi Nộ Dẫn Hướng: mỗi lần carry nhận Nộ từ Stormcoil, kỹ năng direct damage tiếp theo trong 2 hành động gây +8% damage và người đó +8% Speed trong hành động đó. Không cộng dồn nhiều lần, chỉ refresh.\",\"4★\":\"4★ – Đại Khúc Lôi Nộ tiến hóa: carry nhận thêm trạng thái Lôi Nộ trong 2 hành động; Ultimate tiếp theo của carry trong thời gian này gây +12% direct damage và sau cast nhận Shield 6% Max HP.\",\"5★\":\"5★ – Dẫn Điện Thức Tỉnh: sau khi carry tiêu 4 Nộ dùng Ultimate, bộ đếm Dẫn Điện lập tức reset. Hành động direct damage đầu tiên sau Ultimate được tính như 2 hành động cho bộ đếm, giúp mở chu kỳ Nộ kế tiếp nhanh hơn nhưng vẫn giữ giới hạn kích Dẫn Điện 1 lần/vòng.\"}"
-      ],
-      "currentValue": {
-        "startStars": 5,
-        "maxStars": 7,
-        "v81NativeStar": 5,
-        "v81MaxStar": 7,
-        "stages": [
-          {
-            "star": 5,
-            "delta": 0,
-            "stage": "Mốc gốc",
-            "coefficient": 1,
-            "effect": 1,
-            "basic": "Lôi Cầm Chấn Nhịp: giữ nguyên chức năng canonical ở mốc gốc.",
-            "skill1": "Bão Nhịp Phá Lượt: giữ nguyên chức năng canonical ở mốc gốc.",
-            "skill2": "Màn Bão Hộ Tuyến: giữ nguyên chức năng canonical ở mốc gốc.",
-            "ultimate": "Thiên Lôi Giao Hưởng: giữ nguyên chức năng canonical ở mốc gốc.",
-            "core": "Kit gốc khóa theo core Điện Nhịp; không thay tên/ID của 4 skill."
-          },
-          {
-            "star": 6,
-            "delta": 1,
-            "stage": "Cường Hóa I",
-            "coefficient": 1.32,
-            "effect": 1.18,
-            "basic": "Lôi Cầm Chấn Nhịp: hệ số trực tiếp mục tiêu ×1.32 so với mốc gốc; hiệu lực số học ×1.18. Tăng Phách/Nhịp nhận từ Basic hoặc cường độ hiệu ứng mở nhịp; không chen thêm lượt.",
-            "skill1": "Bão Nhịp Phá Lượt: hệ số trực tiếp mục tiêu ×1.32 so với mốc gốc; hiệu lực số học ×1.18. Tăng Phách/Khúc và cường độ buff; nếu đã buff toàn team thì thêm hiệu ứng phụ theo core.",
-            "skill2": "Màn Bão Hộ Tuyến: hệ số trực tiếp mục tiêu ×1.32 so với mốc gốc; hiệu lực số học ×1.18. Tăng cường độ Khúc và số lần trigger hợp lệ/vòng; không tạo loop hành động.",
-            "ultimate": "Thiên Lôi Giao Hưởng: hệ số trực tiếp mục tiêu ×1.32 so với mốc gốc; hiệu lực số học ×1.18. Ultimate tăng cường độ/nhịp của toàn đội; không cho extra turn/recursive chorus.",
-            "core": "Điện Nhịp: tăng cap Phách/Nhịp và cường độ Khúc; opener vẫn chỉ kích hoạt một lần; đội đã được buff toàn bộ thì sao cao thêm hiệu ứng phụ/echo thay vì tăng số target; follow-up không recursion."
-          },
-          {
-            "star": 7,
-            "delta": 2,
-            "stage": "Thức Tỉnh",
-            "coefficient": 1.7424000000000002,
-            "effect": 1.3923999999999999,
-            "basic": "Lôi Cầm Chấn Nhịp: hệ số trực tiếp mục tiêu ×1.74 so với mốc gốc; hiệu lực số học ×1.39. Tăng Phách/Nhịp nhận từ Basic hoặc cường độ hiệu ứng mở nhịp; không chen thêm lượt.",
-            "skill1": "Bão Nhịp Phá Lượt: hệ số trực tiếp mục tiêu ×1.74 so với mốc gốc; hiệu lực số học ×1.39. Tăng Phách/Khúc và cường độ buff; nếu đã buff toàn team thì thêm hiệu ứng phụ theo core.",
-            "skill2": "Màn Bão Hộ Tuyến: hệ số trực tiếp mục tiêu ×1.74 so với mốc gốc; hiệu lực số học ×1.39. Tăng cường độ Khúc và số lần trigger hợp lệ/vòng; không tạo loop hành động.",
-            "ultimate": "Thiên Lôi Giao Hưởng: hệ số trực tiếp mục tiêu ×1.74 so với mốc gốc; hiệu lực số học ×1.39. Ultimate tăng cường độ/nhịp của toàn đội; không cho extra turn/recursive chorus.",
-            "core": "Điện Nhịp: tăng cap Phách/Nhịp và cường độ Khúc; opener vẫn chỉ kích hoạt một lần; đội đã được buff toàn bộ thì sao cao thêm hiệu ứng phụ/echo thay vì tăng số target; follow-up không recursion."
-          }
-        ]
-      },
-      "whyInsufficient": "Raw +1/+2 Rage mechanics require an explicit redesign decision.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
-    {
-      "powId": "stormcoil",
-      "powName": "Stormcoil",
-      "runtimeNumber": 76,
-      "designNumber": 77,
-      "missingField": "specialMechanic",
-      "status": "NEEDS_DESIGN_DECISION",
-      "candidateSources": [
-        "design-json-v1.1: {\"evolutionType\":null,\"counter\":null,\"synergy\":null}",
-        "design-workbook-01-90: {\"evolutionType\":null,\"counter\":null,\"synergy\":null}"
-      ],
-      "currentValue": {
-        "core": "Điện Nhịp",
-        "evolutionType": null,
-        "counter": "Khắc tốt: Tidecrest, Coralyn, Galehowl, Bramblet, Frostpelt; Nước/Gió/Lá/Băng và đội spam kỹ năng. | Bị khắc: Stoneback Đất; Ironmane Thép; Nightclaw Bóng tối; đội ít phụ thuộc thanh lượt. | Giới hạn: Đột Phá II 2 lượt, 1 lần/trận; không tăng tiến độ từ phản kích/truy kích; giảm sát thương cộng dồn cap 50%.",
-        "specialStarter": false
-      },
-      "whyInsufficient": "Raw +1/+2 Rage mechanics require an explicit redesign decision.",
-      "neededDecisionOrSource": "Provide or approve a dedicated design value; do not promote current runtime by default."
-    },
     {
       "powId": "noxabyss",
       "powName": "Noxabyss",
