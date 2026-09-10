@@ -166,7 +166,9 @@ export class SkillActionResolver {
     }
     const provenance = this.provenanceFor(actor, target, ability, 'skill', provenanceOverrides);
     const result = this.resolveAbility(actor, target, ability, slot, 0, currentRound, passiveContext, provenance);
-    this.emitLifecycle('after-main-action', actor, provenance, currentRound, 0, result.rageAfter);
+    if (provenance.origin === 'main') {
+      this.emitLifecycle('after-main-action', actor, provenance, currentRound, 0, result.rageAfter);
+    }
     return result;
   }
 
@@ -195,7 +197,9 @@ export class SkillActionResolver {
       provenance
     );
     this.emitLifecycle('after-ultimate-cast', actor, provenance, currentRound, ULTIMATE_RAGE_COST, result.rageAfter);
-    this.emitLifecycle('after-main-action', actor, provenance, currentRound, ULTIMATE_RAGE_COST, result.rageAfter);
+    if (provenance.origin === 'main') {
+      this.emitLifecycle('after-main-action', actor, provenance, currentRound, ULTIMATE_RAGE_COST, result.rageAfter);
+    }
     return result;
   }
 

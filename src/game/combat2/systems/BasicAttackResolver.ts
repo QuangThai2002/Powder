@@ -103,14 +103,16 @@ export class BasicAttackResolver {
       ability.name,
       provenanceOverrides
     );
-    this.lifecycleHook({
-      stage: 'after-main-action',
-      actor: attacker,
-      provenance,
-      round: currentRound,
-      rageSpent: 0,
-      rageAfter: rage.next
-    });
+    if (provenance.origin === 'main') {
+      this.lifecycleHook({
+        stage: 'after-main-action',
+        actor: attacker,
+        provenance,
+        round: currentRound,
+        rageSpent: 0,
+        rageAfter: rage.next
+      });
+    }
 
     return {
       damage,

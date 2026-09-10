@@ -146,6 +146,59 @@ export function runCombatPassiveRegression(definitions: Record<string, Definitio
 
   {
     const fixture = { trigger: 'BEFORE_HIT', effect: {} } as Definition;
+    const emitsMainAction = (origin: 'main' | 'follow-up' | 'counter' | 'dot' | 'secondary-hit'): boolean => {
+      const state = new CombatState([pow(`origin-${origin}`, fixture)], [pow(`target-${origin}`, fixture, 'enemy')]);
+      const actor = state.activeLiving('player')[0];
+      const target = state.activeLiving('enemy')[0];
+      const events: CombatPassiveLifecycleEvent[] = [];
+      new BasicAttackResolver(() => 0.99, (event) => events.push(event)).resolve(
+        actor,
+        target,
+        {},
+        1,
+        {
+          origin,
+          actionType: origin === 'dot' ? 'status-tick' : 'basic',
+          directDamage: origin !== 'dot'
+        }
+      );
+      return events.some((event) => event.stage === 'after-main-action');
+    };
+    const skillEmitsMainAction = (origin: 'main' | 'follow-up' | 'counter' | 'dot' | 'secondary-hit'): boolean => {
+      const state = new CombatState([pow(`skill-origin-${origin}`, fixture)], [pow(`skill-target-${origin}`, fixture, 'enemy')]);
+      const actor = state.activeLiving('player')[0];
+      const target = state.activeLiving('enemy')[0];
+      const events: CombatPassiveLifecycleEvent[] = [];
+      new SkillActionResolver(() => 0.99, (event) => events.push(event)).resolve(
+        actor,
+        target,
+        actor.pow.abilities.skills[0],
+        0,
+        1,
+        {},
+        {
+          origin,
+          actionType: origin === 'dot' ? 'status-tick' : 'skill',
+          directDamage: origin !== 'dot'
+        }
+      );
+      return events.some((event) => event.stage === 'after-main-action');
+    };
+    assert(emitsMainAction('main'), 'main direct action must emit after-main-action');
+    assert(!emitsMainAction('follow-up'), 'follow-up must not emit after-main-action');
+    assert(!emitsMainAction('counter'), 'counter must not emit after-main-action');
+    assert(!emitsMainAction('dot'), 'DOT/status tick must not emit after-main-action');
+    assert(!emitsMainAction('secondary-hit'), 'secondary hit must not emit after-main-action');
+    assert(skillEmitsMainAction('main'), 'main Skill action must emit after-main-action');
+    assert(!skillEmitsMainAction('follow-up'), 'follow-up Skill must not emit after-main-action');
+    assert(!skillEmitsMainAction('counter'), 'counter Skill must not emit after-main-action');
+    assert(!skillEmitsMainAction('dot'), 'DOT Skill provenance must not emit after-main-action');
+    assert(!skillEmitsMainAction('secondary-hit'), 'secondary Skill hit must not emit after-main-action');
+    foundationChecks.push('lifecycle emission: main only, non-main origins suppressed');
+  }
+
+  {
+    const fixture = { trigger: 'BEFORE_HIT', effect: {} } as Definition;
     const actorPow = pow('multi-provenance', fixture);
     actorPow.abilities.skills[0] = {
       name: 'Multi Provenance', power: 50, type: 'physical', damageType: 'physical', target: 'all-enemies', area: true
@@ -157,7 +210,7 @@ export function runCombatPassiveRegression(definitions: Record<string, Definitio
     const actor = state.activeLiving('player')[0];
     const targets = state.activeLiving('enemy');
     const lifecycleEvents: CombatPassiveLifecycleEvent[] = [];
-    new CombatMultiTargetEngine().resolveCast(
+    const cast = new CombatMultiTargetEngine().resolveCast(
       new SkillActionResolver(() => 0.99, (event) => lifecycleEvents.push(event)),
       actor,
       targets[0],
@@ -167,10 +220,11 @@ export function runCombatPassiveRegression(definitions: Record<string, Definitio
       1
     );
     const actionEvents = lifecycleEvents.filter((event) => event.stage === 'after-main-action');
-    assert(actionEvents.length === 2, 'multi-target cast must expose provenance for each resolved hit');
+    assert(actionEvents.length === 1, 'multi-target cast must emit after-main-action exactly once');
     assert(actionEvents[0].provenance.origin === 'main', 'first multi-target hit must represent the main action');
     assert(actionEvents[0].provenance.targetIds.length === 2, 'main multi-target provenance must retain all cast targets');
-    assert(actionEvents[1].provenance.origin === 'secondary-hit', 'later multi-target hits must be secondary, not new main actions');
+    assert(cast.hits[1].result.provenance.origin === 'secondary-hit', 'later multi-target hits must retain secondary provenance');
+    assert(!lifecycleEvents.some((event) => event.provenance.origin === 'secondary-hit'), 'secondary hits must not emit main-action lifecycle');
     foundationChecks.push('multi-target provenance: one main action plus secondary hits');
   }
 
