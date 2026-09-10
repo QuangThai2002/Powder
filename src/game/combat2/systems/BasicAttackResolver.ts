@@ -4,7 +4,13 @@ import { FROSTBITE_DAMAGE_MULTIPLIER } from './CombatControlEngine';
 import { CombatIdentityRules } from './CombatIdentityRules';
 import { CombatLegacyStatEngine } from './CombatLegacyStatEngine';
 import { ACTION_BASE_RAW_GAIN, applyRawRageGain } from './CombatRageEngine';
-import type { PassiveActionContext } from './CombatPassiveEngine';
+import {
+  createCombatActionProvenance,
+  type CombatActionProvenance,
+  type CombatActionProvenanceOverrides,
+  type CombatPassiveLifecycleHook,
+  type PassiveActionContext
+} from './CombatPassiveEngine';
 
 export interface BasicAttackResult {
   damage: number;
@@ -24,17 +30,27 @@ export interface BasicAttackResult {
   hitChance: number;
   critChance: number;
   mitigation: number;
+  provenance: CombatActionProvenance;
 }
 
 export class BasicAttackResolver {
   private readonly identity = new CombatIdentityRules();
   private readonly legacyStats: CombatLegacyStatEngine;
 
-  constructor(random: () => number = () => 0.5) {
+  constructor(
+    random: () => number = () => 0.5,
+    private readonly lifecycleHook: CombatPassiveLifecycleHook = () => {}
+  ) {
     this.legacyStats = new CombatLegacyStatEngine(random);
   }
 
-  resolve(attacker: CombatUnitState, target: CombatUnitState, passiveContext: PassiveActionContext = {}): BasicAttackResult {
+  resolve(
+    attacker: CombatUnitState,
+    target: CombatUnitState,
+    passiveContext: PassiveActionContext = {},
+    currentRound = 1,
+    provenanceOverrides: CombatActionProvenanceOverrides = {}
+  ): BasicAttackResult {
     const ability = attacker.pow.abilities.basic;
     const basicPower = this.safeStat(ability.power, 100);
     const coefficient = Math.min(3, Math.max(0.1, basicPower / 100));
@@ -79,6 +95,22 @@ export class BasicAttackResolver {
 
     const rage = applyRawRageGain(attacker.ragePoints, ACTION_BASE_RAW_GAIN);
     attacker.ragePoints = rage.next;
+    const provenance = createCombatActionProvenance(
+      attacker.instanceId,
+      [target.instanceId],
+      'basic',
+      true,
+      ability.name,
+      provenanceOverrides
+    );
+    this.lifecycleHook({
+      stage: 'after-main-action',
+      actor: attacker,
+      provenance,
+      round: currentRound,
+      rageSpent: 0,
+      rageAfter: rage.next
+    });
 
     return {
       damage,
@@ -97,7 +129,8 @@ export class BasicAttackResolver {
       evaded: hit.evaded,
       hitChance: hit.hitChance,
       critChance: hit.critChance,
-      mitigation: hit.mitigation
+      mitigation: hit.mitigation,
+      provenance
     };
   }
 

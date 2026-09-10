@@ -15,6 +15,29 @@ export interface ControlHistoryEntry {
   sourceKey: string;
 }
 
+export interface CombatPassiveRoundCounter {
+  round: number;
+  value: number;
+}
+
+export interface CombatPassiveStateLedger {
+  flags: Record<string, boolean>;
+  battleCounters: Record<string, number>;
+  roundCounters: Record<string, CombatPassiveRoundCounter>;
+  ownedCounters: Record<string, number>;
+  designatedCarryInstanceId: string | null;
+}
+
+export function createCombatPassiveStateLedger(): CombatPassiveStateLedger {
+  return {
+    flags: {},
+    battleCounters: {},
+    roundCounters: {},
+    ownedCounters: {},
+    designatedCarryInstanceId: null
+  };
+}
+
 export interface CombatUnitState {
   instanceId: string;
   pow: CombatPow;
@@ -74,6 +97,8 @@ export interface CombatUnitState {
   burnActionsRemaining: number;
   poisonStacks: number;
   poisonActionsRemaining: number;
+  /** Battle-local state owned by Passive mechanics, separate from Core and special mechanics. */
+  passiveState: CombatPassiveStateLedger;
   passiveUsed: boolean;
   reviveMarkerActionsRemaining: number;
   alive: boolean;
@@ -222,6 +247,7 @@ export class CombatState {
       unit.burnActionsRemaining = this.safeDuration(unit.burnActionsRemaining);
       unit.poisonStacks = Math.floor(this.finiteClamp(unit.poisonStacks, 0, 3, 0));
       unit.poisonActionsRemaining = this.safeDuration(unit.poisonActionsRemaining);
+      unit.passiveState = this.sanitizePassiveState(unit.passiveState);
       unit.dotDamage = Math.floor(this.finiteClamp(unit.dotDamage, 0, unit.pow.maxHp, 0));
       unit.dotActionsRemaining = this.safeDuration(unit.dotActionsRemaining);
       unit.reviveMarkerActionsRemaining = this.safeDuration(unit.reviveMarkerActionsRemaining);
@@ -380,6 +406,7 @@ export class CombatState {
       burnActionsRemaining: 0,
       poisonStacks: 0,
       poisonActionsRemaining: 0,
+      passiveState: createCombatPassiveStateLedger(),
       passiveUsed: false,
       reviveMarkerActionsRemaining: 0,
       alive: pow.hp > 0,
@@ -415,6 +442,32 @@ export class CombatState {
   private safeFreezeStage(value: number): FreezeStage {
     const safe = Math.floor(this.finiteClamp(value, 0, 2, 0));
     return (safe === 1 || safe === 2 ? safe : 0) as FreezeStage;
+  }
+
+  private sanitizePassiveState(value: CombatPassiveStateLedger | undefined): CombatPassiveStateLedger {
+    if (!value || typeof value !== 'object') return createCombatPassiveStateLedger();
+    const safeCounter = (counter: unknown): number => Math.floor(this.finiteClamp(Number(counter), 0, 9999, 0));
+    const battleCounters = Object.fromEntries(
+      Object.entries(value.battleCounters || {}).map(([key, counter]) => [key, safeCounter(counter)])
+    );
+    const ownedCounters = Object.fromEntries(
+      Object.entries(value.ownedCounters || {}).map(([key, counter]) => [key, safeCounter(counter)])
+    );
+    const roundCounters = Object.fromEntries(
+      Object.entries(value.roundCounters || {}).map(([key, counter]) => [key, {
+        round: Math.max(1, safeCounter(counter?.round)),
+        value: safeCounter(counter?.value)
+      }])
+    );
+    return {
+      flags: Object.fromEntries(Object.entries(value.flags || {}).map(([key, enabled]) => [key, enabled === true])),
+      battleCounters,
+      roundCounters,
+      ownedCounters,
+      designatedCarryInstanceId: typeof value.designatedCarryInstanceId === 'string'
+        ? value.designatedCarryInstanceId
+        : null
+    };
   }
 
   private safeDuration(value: number): number {

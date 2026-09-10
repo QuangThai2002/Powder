@@ -68,6 +68,9 @@ function makeUnit(side: 'player' | 'enemy', powOverrides: Partial<CombatPow> = {
     controlImmunityActionsRemaining: 0, controlHistory: [],
     dotStatus: null, dotDamage: 0, dotActionsRemaining: 0,
     burnDamage: 0, burnActionsRemaining: 0, poisonStacks: 0, poisonActionsRemaining: 0,
+    passiveState: {
+      flags: {}, battleCounters: {}, roundCounters: {}, ownedCounters: {}, designatedCarryInstanceId: null
+    },
     passiveUsed: false, reviveMarkerActionsRemaining: 0, alive: true, actionLocked: false,
     initialInitiative: 42
   };

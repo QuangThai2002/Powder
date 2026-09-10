@@ -1,6 +1,60 @@
 import type { CombatUnitState } from './CombatState';
 import { effectiveHealingReduction } from './CombatHealingReduction';
 
+export type CombatActionOrigin = 'main' | 'follow-up' | 'counter' | 'dot' | 'secondary-hit';
+export type CombatActionType = 'basic' | 'skill' | 'ultimate' | 'status-tick';
+export type CombatPassiveLifecycleStage = 'after-rage-cost' | 'after-ultimate-cast' | 'after-main-action';
+
+export interface CombatActionProvenance {
+  origin: CombatActionOrigin;
+  directDamage: boolean;
+  actorId: string;
+  targetIds: readonly string[];
+  actionType: CombatActionType;
+  abilityName: string | null;
+}
+
+export interface CombatActionProvenanceOverrides {
+  origin?: CombatActionOrigin;
+  directDamage?: boolean;
+  targetIds?: readonly string[];
+  actionType?: CombatActionType;
+  abilityName?: string | null;
+}
+
+export interface CombatPassiveLifecycleEvent {
+  stage: CombatPassiveLifecycleStage;
+  actor: CombatUnitState;
+  provenance: CombatActionProvenance;
+  round: number;
+  rageSpent: number;
+  rageAfter: number;
+}
+
+export type CombatPassiveLifecycleHook = (event: CombatPassiveLifecycleEvent) => void;
+
+export function createCombatActionProvenance(
+  actorId: string,
+  targetIds: readonly string[],
+  actionType: CombatActionType,
+  directDamage: boolean,
+  abilityName: string | null,
+  overrides: CombatActionProvenanceOverrides = {}
+): CombatActionProvenance {
+  return {
+    origin: overrides.origin ?? 'main',
+    directDamage: overrides.directDamage ?? directDamage,
+    actorId,
+    targetIds: [...new Set(overrides.targetIds ?? targetIds)].filter(Boolean),
+    actionType: overrides.actionType ?? actionType,
+    abilityName: overrides.abilityName === undefined ? abilityName : overrides.abilityName
+  };
+}
+
+export function isMainDirectDamageAction(provenance: CombatActionProvenance): boolean {
+  return provenance.origin === 'main' && provenance.directDamage;
+}
+
 export interface PassiveActionContext {
   combo?: number;
   sameElementAllies?: number;
@@ -15,6 +69,58 @@ export interface PassiveRuntimeEvent {
 }
 
 export class CombatPassiveEngine {
+  applyLifecycle(_event: CombatPassiveLifecycleEvent): PassiveRuntimeEvent[] {
+    // Foundation hook only. Canonical Pow-specific behavior is intentionally not active yet.
+    return [];
+  }
+
+  hasFlag(unit: CombatUnitState, key: string): boolean {
+    return unit.passiveState.flags[this.ledgerKey(key)] === true;
+  }
+
+  setFlag(unit: CombatUnitState, key: string, value = true): void {
+    unit.passiveState.flags[this.ledgerKey(key)] = value;
+  }
+
+  battleCounter(unit: CombatUnitState, key: string): number {
+    return unit.passiveState.battleCounters[this.ledgerKey(key)] ?? 0;
+  }
+
+  incrementBattleCounter(unit: CombatUnitState, key: string, amount = 1): number {
+    const normalized = this.ledgerKey(key);
+    const next = this.safeLedgerCounter(this.battleCounter(unit, normalized) + amount);
+    unit.passiveState.battleCounters[normalized] = next;
+    return next;
+  }
+
+  roundCounter(unit: CombatUnitState, key: string, round: number): number {
+    const entry = unit.passiveState.roundCounters[this.ledgerKey(key)];
+    return entry?.round === this.safeRound(round) ? entry.value : 0;
+  }
+
+  incrementRoundCounter(unit: CombatUnitState, key: string, round: number, amount = 1): number {
+    const normalized = this.ledgerKey(key);
+    const safeRound = this.safeRound(round);
+    const next = this.safeLedgerCounter(this.roundCounter(unit, normalized, safeRound) + amount);
+    unit.passiveState.roundCounters[normalized] = { round: safeRound, value: next };
+    return next;
+  }
+
+  ownedCounter(unit: CombatUnitState, key: string): number {
+    return unit.passiveState.ownedCounters[this.ledgerKey(key)] ?? 0;
+  }
+
+  setOwnedCounter(unit: CombatUnitState, key: string, value: number, max = Number.MAX_SAFE_INTEGER): number {
+    const normalized = this.ledgerKey(key);
+    const next = Math.min(this.safeLedgerCounter(max), this.safeLedgerCounter(value));
+    unit.passiveState.ownedCounters[normalized] = next;
+    return next;
+  }
+
+  setDesignatedCarry(unit: CombatUnitState, instanceId: string | null): void {
+    unit.passiveState.designatedCarryInstanceId = instanceId ? String(instanceId) : null;
+  }
+
   advanceCombo(current: number, academicCorrect: boolean): number {
     return academicCorrect ? Math.min(5, Math.max(0, Math.floor(this.number(current))) + 1) : 0;
   }
@@ -127,6 +233,17 @@ export class CombatPassiveEngine {
   }
 
   private number(value: unknown): number { return Number.isFinite(Number(value)) ? Number(value) : 0; }
+  private ledgerKey(value: string): string {
+    const key = String(value || '').trim().toLowerCase();
+    if (!key) throw new Error('[Combat2] Passive ledger key is required.');
+    return key;
+  }
+  private safeLedgerCounter(value: number): number {
+    return Math.min(9999, Math.max(0, Math.floor(this.number(value))));
+  }
+  private safeRound(value: number): number {
+    return Math.max(1, Math.floor(this.number(value)));
+  }
   private safeRandom(random: () => number): number {
     const value = Number(random());
     return Number.isFinite(value) ? Math.min(0.999999, Math.max(0, value)) : 0.5;

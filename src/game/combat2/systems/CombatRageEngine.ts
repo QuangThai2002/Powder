@@ -12,6 +12,22 @@ export interface RageGainResult {
   next: number;
 }
 
+export interface RageChargeEvent {
+  type: 'charge-to';
+  previous: number;
+  target: number;
+  effectiveGain: number;
+  next: number;
+}
+
+export interface RageChargeResult {
+  previous: number;
+  target: number;
+  effectiveGain: number;
+  next: number;
+  events: readonly RageChargeEvent[];
+}
+
 interface RageModel {
   rules: { ready: number; max: number; start: number; actionGain: number; ultimateCost: number };
   sanitizeRagePoints(value: number): number;
@@ -30,3 +46,21 @@ export const RAGE_START_POINTS = model.rules.start;
 export const ACTION_BASE_RAW_GAIN = model.rules.actionGain;
 export const ULTIMATE_RAGE_COST = model.rules.ultimateCost;
 export const { sanitizeRagePoints, totalRawGain, applyRageEvent, applyRawRageGain, canUseUltimate, spendUltimate, rageMarkerStates } = model;
+
+/** Charge is one Passive-owned resource event, not a sequence of synthetic +1 gains. */
+export function chargeRageTo(current: number, target: number): RageChargeResult {
+  const previous = sanitizeRagePoints(current);
+  const requestedTarget = sanitizeRagePoints(target);
+  const next = Math.max(previous, requestedTarget);
+  const effectiveGain = next - previous;
+  const event: RageChargeEvent | null = effectiveGain > 0
+    ? { type: 'charge-to', previous, target: requestedTarget, effectiveGain, next }
+    : null;
+  return {
+    previous,
+    target: requestedTarget,
+    effectiveGain,
+    next,
+    events: event ? [event] : []
+  };
+}

@@ -177,8 +177,11 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
     this.actionPipeline = new ActionPipeline(this.turnManager);
-    this.basicAttack = new BasicAttackResolver(Math.random);
-    this.skillActions = new SkillActionResolver(Math.random);
+    const passiveLifecycle = (event: Parameters<CombatPassiveEngine['applyLifecycle']>[0]) => {
+      this.passiveEngine.applyLifecycle(event);
+    };
+    this.basicAttack = new BasicAttackResolver(Math.random, passiveLifecycle);
+    this.skillActions = new SkillActionResolver(Math.random, passiveLifecycle);
     this.guard = new CombatGuardEngine(Math.random);
     this.presentation = new CombatPresentationDirector(this);
     this.cameras.main.setBackgroundColor('#06111c');
@@ -588,7 +591,7 @@ export class BattleScene extends Phaser.Scene {
       }
       this.showActionBanner(actorView, actor.pow.abilities.basic.name, '#8eeaff');
       if (actorView && targetView) { const p = targetView.getWorldPosition(); await actorView.playAttackLunge(p.x, p.y); }
-      const result = this.basicAttack.resolve(actor, target, this.passiveContext(actor));
+      const result = this.basicAttack.resolve(actor, target, this.passiveContext(actor), this.combatState.round);
       this.applyPassiveAfterAction(actor, target);
       this.completePassiveAction(actor, target);
       this.handleBossAction(actor, { targetId: target.instanceId });

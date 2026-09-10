@@ -1,7 +1,7 @@
 import type { CombatAbility } from '../data/CombatPow';
 import type { CombatUnitState } from './CombatState';
 import type { CombatAbilitySlot, SkillActionResult, SkillActionResolver } from './SkillActionResolver';
-import type { PassiveActionContext } from './CombatPassiveEngine';
+import type { CombatActionProvenanceOverrides, PassiveActionContext } from './CombatPassiveEngine';
 
 export interface MultiTargetResolvedHit {
   target: CombatUnitState;
@@ -139,9 +139,12 @@ export class CombatMultiTargetEngine {
       }
 
       const hitAbility = abilityForHit(ability, index);
+      const provenance: CombatActionProvenanceOverrides = index === 0
+        ? { origin: 'main', targetIds: targets.map((unit) => unit.instanceId) }
+        : { origin: 'secondary-hit', targetIds: [target.instanceId] };
       const result = slot === 'ultimate'
-        ? resolver.resolveUltimate(actor, target, hitAbility, currentRound, passiveContext)
-        : resolver.resolve(actor, target, hitAbility, slot, currentRound, passiveContext);
+        ? resolver.resolveUltimate(actor, target, hitAbility, currentRound, passiveContext, provenance)
+        : resolver.resolve(actor, target, hitAbility, slot, currentRound, passiveContext, provenance);
       hits.push({ target, result });
 
       if (index === 0) {

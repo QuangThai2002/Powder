@@ -22,7 +22,13 @@ import {
   grievousReduction,
   strongestGrievousTier
 } from './CombatHealingReduction';
-import type { PassiveActionContext } from './CombatPassiveEngine';
+import {
+  createCombatActionProvenance,
+  type CombatActionProvenance,
+  type CombatActionProvenanceOverrides,
+  type CombatPassiveLifecycleHook,
+  type PassiveActionContext
+} from './CombatPassiveEngine';
 import {
   ACTION_BASE_RAW_GAIN,
   ULTIMATE_RAGE_COST,
@@ -67,6 +73,7 @@ export interface SkillActionResult {
   hitChance: number;
   critChance: number;
   mitigation: number;
+  provenance: CombatActionProvenance;
 }
 
 interface ParsedStatus {
@@ -100,7 +107,10 @@ export class SkillActionResolver {
   private readonly control: CombatControlEngine;
   private readonly legacyStats: CombatLegacyStatEngine;
 
-  constructor(random: () => number = Math.random) {
+  constructor(
+    random: () => number = Math.random,
+    private readonly lifecycleHook: CombatPassiveLifecycleHook = () => {}
+  ) {
     this.control = new CombatControlEngine(random);
     this.legacyStats = new CombatLegacyStatEngine(random);
   }
@@ -148,12 +158,16 @@ export class SkillActionResolver {
     ability: CombatAbility,
     slot: CombatSkillSlot,
     currentRound = 1,
-    passiveContext: PassiveActionContext = {}
+    passiveContext: PassiveActionContext = {},
+    provenanceOverrides: CombatActionProvenanceOverrides = {}
   ): SkillActionResult {
     if (!this.canUse(actor, slot)) {
       throw new Error(`[Combat2] ${actor.pow.name} cannot use ${ability.name}.`);
     }
-    return this.resolveAbility(actor, target, ability, slot, 0, currentRound, passiveContext);
+    const provenance = this.provenanceFor(actor, target, ability, 'skill', provenanceOverrides);
+    const result = this.resolveAbility(actor, target, ability, slot, 0, currentRound, passiveContext, provenance);
+    this.emitLifecycle('after-main-action', actor, provenance, currentRound, 0, result.rageAfter);
+    return result;
   }
 
   resolveUltimate(
@@ -161,14 +175,28 @@ export class SkillActionResolver {
     target: CombatUnitState,
     ability: CombatAbility,
     currentRound = 1,
-    passiveContext: PassiveActionContext = {}
+    passiveContext: PassiveActionContext = {},
+    provenanceOverrides: CombatActionProvenanceOverrides = {}
   ): SkillActionResult {
     if (!this.canUseUltimate(actor)) {
       throw new Error(`[Combat2] ${actor.pow.name} cannot use ${ability.name}: Rage, silence or cooldown gate is active.`);
     }
-
+    const provenance = this.provenanceFor(actor, target, ability, 'ultimate', provenanceOverrides);
     actor.ragePoints = spendUltimate(actor.ragePoints);
-    return this.resolveAbility(actor, target, ability, 'ultimate', ULTIMATE_RAGE_COST, currentRound, passiveContext);
+    this.emitLifecycle('after-rage-cost', actor, provenance, currentRound, ULTIMATE_RAGE_COST, actor.ragePoints);
+    const result = this.resolveAbility(
+      actor,
+      target,
+      ability,
+      'ultimate',
+      ULTIMATE_RAGE_COST,
+      currentRound,
+      passiveContext,
+      provenance
+    );
+    this.emitLifecycle('after-ultimate-cast', actor, provenance, currentRound, ULTIMATE_RAGE_COST, result.rageAfter);
+    this.emitLifecycle('after-main-action', actor, provenance, currentRound, ULTIMATE_RAGE_COST, result.rageAfter);
+    return result;
   }
 
   private resolveAbility(
@@ -178,7 +206,8 @@ export class SkillActionResolver {
     abilitySlot: CombatAbilitySlot,
     rageSpent: number,
     currentRound: number,
-    passiveContext: PassiveActionContext
+    passiveContext: PassiveActionContext,
+    provenance: CombatActionProvenance
   ): SkillActionResult {
     const rageBeforeEvent = actor.ragePoints + rageSpent;
     const abilityType = String(ability.type || '').trim().toLowerCase();
@@ -231,8 +260,45 @@ export class SkillActionResolver {
       rageSpent,
       rageAfter: rageResult.next,
       cooldownApplied,
-      defeated: !target.alive
+      defeated: !target.alive,
+      provenance
     };
+  }
+
+  private provenanceFor(
+    actor: CombatUnitState,
+    target: CombatUnitState,
+    ability: CombatAbility,
+    actionType: 'skill' | 'ultimate',
+    overrides: CombatActionProvenanceOverrides
+  ): CombatActionProvenance {
+    return createCombatActionProvenance(
+      actor.instanceId,
+      [target.instanceId],
+      actionType,
+      this.isDirectDamageAbility(actor, target, ability),
+      ability.name,
+      overrides
+    );
+  }
+
+  private isDirectDamageAbility(actor: CombatUnitState, target: CombatUnitState, ability: CombatAbility): boolean {
+    const abilityType = String(ability.type || '').trim().toLowerCase();
+    const status = this.parseStatus(ability.status).status;
+    return abilityType !== 'support' &&
+      abilityType !== 'debuff' &&
+      !(actor.instanceId === target.instanceId && SELF_STATUSES.has(status));
+  }
+
+  private emitLifecycle(
+    stage: 'after-rage-cost' | 'after-ultimate-cast' | 'after-main-action',
+    actor: CombatUnitState,
+    provenance: CombatActionProvenance,
+    round: number,
+    rageSpent: number,
+    rageAfter: number
+  ): void {
+    this.lifecycleHook({ stage, actor, provenance, round, rageSpent, rageAfter });
   }
 
   private applyDamage(

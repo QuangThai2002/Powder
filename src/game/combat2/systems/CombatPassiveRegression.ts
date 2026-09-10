@@ -1,7 +1,14 @@
 import type { CombatPassiveMechanic, CombatPow } from '../data/CombatPow';
 import { CombatState, type CombatUnitState } from './CombatState';
 import { CombatMultiTargetEngine } from './CombatMultiTargetEngine';
-import { CombatPassiveEngine } from './CombatPassiveEngine';
+import { BasicAttackResolver } from './BasicAttackResolver';
+import {
+  CombatPassiveEngine,
+  createCombatActionProvenance,
+  isMainDirectDamageAction,
+  type CombatPassiveLifecycleEvent
+} from './CombatPassiveEngine';
+import { chargeRageTo } from './CombatRageEngine';
 import { SkillActionResolver } from './SkillActionResolver';
 
 type Definition = CombatPassiveMechanic & { description?: string };
@@ -43,7 +50,129 @@ function multiTargetComboDamage(combo: number, definition: Definition): number[]
 export function runCombatPassiveRegression(definitions: Record<string, Definition>) {
   const engine = new CombatPassiveEngine();
   const checks: string[] = [];
+  const foundationChecks: string[] = [];
   const requireDefinition = (id: string) => { const value = definitions[id]; assert(value, `${id} definition missing`); return value; };
+
+  {
+    const main = createCombatActionProvenance('actor-a', ['target-a'], 'skill', true, 'Main Hit');
+    const followUp = createCombatActionProvenance(
+      'actor-a', ['target-a'], 'skill', true, 'Follow-up', { origin: 'follow-up' }
+    );
+    const dot = createCombatActionProvenance(
+      'actor-a', ['target-a'], 'status-tick', false, 'Burn', { origin: 'dot' }
+    );
+    const counter = createCombatActionProvenance(
+      'actor-a', ['target-a'], 'basic', true, 'Counter', { origin: 'counter' }
+    );
+    const secondary = createCombatActionProvenance(
+      'actor-a', ['target-b'], 'skill', true, 'Secondary hit', { origin: 'secondary-hit' }
+    );
+    assert(isMainDirectDamageAction(main), 'main direct action provenance must be eligible');
+    assert(!isMainDirectDamageAction(followUp), 'follow-up provenance must not count as a main action');
+    assert(!isMainDirectDamageAction(dot), 'DOT/status tick provenance must not count as direct damage');
+    assert(!isMainDirectDamageAction(counter), 'counter provenance must not count as a main action');
+    assert(!isMainDirectDamageAction(secondary), 'secondary-hit provenance must not count as a main action');
+    assert(main.actorId === 'actor-a' && main.targetIds[0] === 'target-a', 'provenance must preserve actor and target identity');
+    foundationChecks.push('action provenance: main direct / follow-up / counter / DOT / secondary hit');
+  }
+
+  {
+    const fixture = { trigger: 'BEFORE_HIT', effect: {} } as Definition;
+    const state = new CombatState(
+      [pow('ledger-a', fixture), pow('ledger-b', fixture)],
+      [pow('ledger-target', fixture, 'enemy')]
+    );
+    const [first, second] = state.activeLiving('player');
+    engine.setFlag(first, 'mach-khoi');
+    engine.incrementBattleCounter(first, 'main-actions');
+    engine.incrementBattleCounter(first, 'main-actions');
+    engine.incrementRoundCounter(first, 'round-triggers', 1);
+    engine.incrementRoundCounter(first, 'round-triggers', 1);
+    engine.setOwnedCounter(first, 'dien-nhip', 9, 4);
+    engine.setDesignatedCarry(first, second.instanceId);
+
+    assert(engine.hasFlag(first, 'mach-khoi') && !engine.hasFlag(second, 'mach-khoi'), 'per-unit Passive flags must be isolated');
+    assert(engine.battleCounter(first, 'main-actions') === 2 && engine.battleCounter(second, 'main-actions') === 0, 'per-battle counters must be isolated');
+    assert(engine.roundCounter(first, 'round-triggers', 1) === 2, 'per-round counter must persist inside its round');
+    assert(engine.incrementRoundCounter(first, 'round-triggers', 2) === 1, 'per-round counter must reset on a new round');
+    assert(engine.battleCounter(first, 'main-actions') === 2, 'round rollover must not reset per-battle counters');
+    assert(engine.ownedCounter(first, 'dien-nhip') === 4 && engine.ownedCounter(second, 'dien-nhip') === 0, 'Passive-owned counters must be capped and isolated');
+    assert(first.passiveState.designatedCarryInstanceId === second.instanceId, 'designated carry identity must be stored in Passive state');
+    assert(second.passiveState.designatedCarryInstanceId === null, 'designated carry state must not leak to another unit');
+    foundationChecks.push('Passive ledger: flags / battle / round / owned counter / carry');
+  }
+
+  {
+    const toFour = chargeRageTo(1, 4);
+    const alreadyFour = chargeRageTo(4, 4);
+    const toEight = chargeRageTo(6, 8);
+    assert(toFour.next === 4 && toFour.effectiveGain === 3 && toFour.events.length === 1, 'Rage 1 chargeTo4 must be one logical event');
+    assert(alreadyFour.next === 4 && alreadyFour.effectiveGain === 0 && alreadyFour.events.length === 0, 'Rage 4 chargeTo4 must be a no-op');
+    assert(toEight.next === 8 && toEight.effectiveGain === 2 && toEight.events.length === 1, 'Rage 6 chargeTo8 must be one logical event');
+    assert(chargeRageTo(7, 99).next === 8, 'charge-to helper must respect canonical Rage max 8');
+    foundationChecks.push('Rage charge-to: atomic event and max 8');
+  }
+
+  {
+    const fixture = { trigger: 'BEFORE_HIT', effect: {} } as Definition;
+    const state = new CombatState([pow('lifecycle-actor', fixture)], [pow('lifecycle-target', fixture, 'enemy')]);
+    const actor = state.activeLiving('player')[0];
+    const target = state.activeLiving('enemy')[0];
+    const lifecycleEvents: CombatPassiveLifecycleEvent[] = [];
+    const hook = (event: CombatPassiveLifecycleEvent) => lifecycleEvents.push(event);
+
+    new BasicAttackResolver(() => 0.99, hook).resolve(actor, target, {}, 2);
+    assert(lifecycleEvents.length === 1 && lifecycleEvents[0].stage === 'after-main-action', 'Basic must emit one after-main-action hook');
+    assert(lifecycleEvents[0].provenance.actionType === 'basic' && isMainDirectDamageAction(lifecycleEvents[0].provenance), 'Basic hook must carry main direct provenance');
+
+    lifecycleEvents.length = 0;
+    actor.ragePoints = 4;
+    new SkillActionResolver(() => 0.99, hook).resolveUltimate(
+      actor,
+      target,
+      { name: 'Lifecycle Ultimate', power: 100, type: 'ultimate', damageType: 'magic', critMode: 'never' },
+      3
+    );
+    assert(
+      lifecycleEvents.map((event) => event.stage).join(',') === 'after-rage-cost,after-ultimate-cast,after-main-action',
+      'Ultimate lifecycle hooks must preserve Rage-cost/cast/main-action order'
+    );
+    assert(lifecycleEvents[0].rageAfter === 0 && lifecycleEvents.every((event) => event.round === 3), 'lifecycle events must expose post-cost Rage and current round');
+    const ledgerBefore = JSON.stringify(actor.passiveState);
+    const emitted = lifecycleEvents.flatMap((event) => engine.applyLifecycle(event));
+    assert(emitted.length === 0 && JSON.stringify(actor.passiveState) === ledgerBefore, 'foundation lifecycle must not activate Pow-specific mechanics');
+    foundationChecks.push('lifecycle hooks: Basic + Ultimate order, default no-op');
+  }
+
+  {
+    const fixture = { trigger: 'BEFORE_HIT', effect: {} } as Definition;
+    const actorPow = pow('multi-provenance', fixture);
+    actorPow.abilities.skills[0] = {
+      name: 'Multi Provenance', power: 50, type: 'physical', damageType: 'physical', target: 'all-enemies', area: true
+    };
+    const state = new CombatState(
+      [actorPow],
+      [pow('multi-target-a', fixture, 'enemy'), pow('multi-target-b', fixture, 'enemy')]
+    );
+    const actor = state.activeLiving('player')[0];
+    const targets = state.activeLiving('enemy');
+    const lifecycleEvents: CombatPassiveLifecycleEvent[] = [];
+    new CombatMultiTargetEngine().resolveCast(
+      new SkillActionResolver(() => 0.99, (event) => lifecycleEvents.push(event)),
+      actor,
+      targets[0],
+      actor.pow.abilities.skills[0],
+      0,
+      state.units,
+      1
+    );
+    const actionEvents = lifecycleEvents.filter((event) => event.stage === 'after-main-action');
+    assert(actionEvents.length === 2, 'multi-target cast must expose provenance for each resolved hit');
+    assert(actionEvents[0].provenance.origin === 'main', 'first multi-target hit must represent the main action');
+    assert(actionEvents[0].provenance.targetIds.length === 2, 'main multi-target provenance must retain all cast targets');
+    assert(actionEvents[1].provenance.origin === 'secondary-hit', 'later multi-target hits must be secondary, not new main actions');
+    foundationChecks.push('multi-target provenance: one main action plus secondary hits');
+  }
 
   {
     const actor = unit('missing_hp_atk', requireDefinition('missing_hp_atk')); actor.hp = 500;
@@ -112,5 +241,5 @@ export function runCombatPassiveRegression(definitions: Record<string, Definitio
     state.promoteReserves(); assert(!fallenUnit.alive, 'revive once-per-battle negative'); checks.push('revive_ally_once +/-');
   }
 
-  return { checks, definitionCount: Object.keys(definitions).length };
+  return { checks, foundationChecks, definitionCount: Object.keys(definitions).length };
 }
