@@ -161,6 +161,14 @@ async function main() {
     assert.equal(bramblet.passive?.mechanic?.effect?.kind, 'brambletKhaiMach', 'Khai Mạch must expose its dedicated Passive mechanic');
     assert.notEqual(bramblet.passive?.id, 'combo_bonus_damage', 'legacy Bramblet Passive must not leak through the adapter');
 
+    const coralyn = runtime.combatPowById('coralyn');
+    assert.ok(coralyn, 'Coralyn must resolve through the Combat2 adapter');
+    assert.equal(coralyn.passive?.id, 'coralyn_diep_khuc_nang_luong', 'Coralyn must not retain the legacy combo passive ID');
+    assert.equal(coralyn.passive?.name, 'Điệp Khúc Năng Lượng', 'Coralyn must use the approved canonical Passive name');
+    assert.equal(coralyn.passive?.mechanic?.trigger, 'ON_BATTLE_START', 'Điệp Khúc Năng Lượng must initialize at battle start');
+    assert.equal(coralyn.passive?.mechanic?.effect?.kind, 'coralynEnergyChorus', 'Coralyn must expose its dedicated Passive mechanic');
+    assert.notEqual(coralyn.passive?.id, 'combo_stun', 'legacy Coralyn Passive must not leak through the adapter');
+
     const voltkit = runtime.combatPowById('voltkit');
     assert.ok(voltkit, 'Voltkit must resolve through the Combat2 adapter');
     assert.equal(voltkit.abilities.ultimate.name, 'Lôi Kích', 'Voltkit Ultimate must use the approved canonical name');

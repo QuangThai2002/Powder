@@ -9,6 +9,10 @@ const KHAI_MACH_CHARGE_PENDING = 'khai-mach:charge-pending';
 const KHAI_MACH_CHARGE_USED = 'khai-mach:charge-used';
 const KHAI_MACH_SHIELD_USED = 'khai-mach:shield-used';
 const KHAI_MACH_MAIN_ACTIONS = 'khai-mach:main-actions';
+const CORALYN_ENERGY_CHORUS_PASSIVE_ID = 'coralyn_diep_khuc_nang_luong';
+const ENERGY_CHORUS_INITIALIZED = 'diep-khuc:initialized';
+const ENERGY_CHORUS_MAIN_ACTIONS = 'diep-khuc:main-actions';
+const ENERGY_CHORUS_CHECKPOINTS_USED = 'diep-khuc:checkpoints-used';
 
 export type CombatActionOrigin = 'main' | 'follow-up' | 'counter' | 'dot' | 'secondary-hit';
 export type CombatActionType = 'basic' | 'skill' | 'ultimate' | 'status-tick';
@@ -79,7 +83,10 @@ export interface PassiveRuntimeEvent {
 }
 
 export class CombatPassiveEngine {
+  private battleUnitsById = new Map<string, CombatUnitState>();
+
   initializeBattle(units: readonly CombatUnitState[]): PassiveRuntimeEvent[] {
+    this.battleUnitsById = new Map(units.map((unit) => [unit.instanceId, unit]));
     const events: PassiveRuntimeEvent[] = [];
     for (const source of units.filter((unit) => this.isKhaiMachSource(unit))) {
       if (this.hasFlag(source, KHAI_MACH_INITIALIZED)) continue;
@@ -98,14 +105,36 @@ export class CombatPassiveEngine {
         });
       }
     }
+    for (const source of units.filter((unit) => this.isEnergyChorusSource(unit))) {
+      if (this.hasFlag(source, ENERGY_CHORUS_INITIALIZED)) continue;
+      this.setFlag(source, ENERGY_CHORUS_INITIALIZED);
+      const carry = units.find((unit) => (
+        unit.side === source.side && unit.instanceId !== source.instanceId && unit.alive
+      )) ?? null;
+      this.setDesignatedCarry(source, carry?.instanceId ?? null);
+      if (carry) {
+        events.push({
+          type: 'passive-mark',
+          passiveId: CORALYN_ENERGY_CHORUS_PASSIVE_ID,
+          targetIds: [carry.instanceId],
+          status: 'designated-carry'
+        });
+      }
+    }
     return events;
   }
 
   applyLifecycle(event: CombatPassiveLifecycleEvent): PassiveRuntimeEvent[] {
-    if (!this.hasFlag(event.actor, KHAI_MACH_RECIPIENT) || event.provenance.origin !== 'main') return [];
-    if (event.stage === 'after-ultimate-cast') return this.applyKhaiMachUltimateShield(event.actor);
-    if (event.stage === 'after-main-action') return this.applyKhaiMachMainAction(event.actor);
-    return [];
+    if (event.provenance.origin !== 'main') return [];
+    const events: PassiveRuntimeEvent[] = [];
+    if (this.hasFlag(event.actor, KHAI_MACH_RECIPIENT)) {
+      if (event.stage === 'after-ultimate-cast') events.push(...this.applyKhaiMachUltimateShield(event.actor));
+      if (event.stage === 'after-main-action') events.push(...this.applyKhaiMachMainAction(event.actor));
+    }
+    if (event.stage === 'after-main-action' && this.isEnergyChorusSource(event.actor)) {
+      events.push(...this.applyEnergyChorusCheckpoint(event.actor));
+    }
+    return events;
   }
 
   hasKhaiMach(unit: CombatUnitState): boolean {
@@ -204,6 +233,35 @@ export class CombatPassiveEngine {
   private isKhaiMachSource(unit: CombatUnitState): boolean {
     return unit.pow.passive?.id === BRAMBLET_KHAI_MACH_PASSIVE_ID &&
       unit.pow.passive.mechanic?.effect.kind === 'brambletKhaiMach';
+  }
+
+  private applyEnergyChorusCheckpoint(source: CombatUnitState): PassiveRuntimeEvent[] {
+    const actionCount = this.incrementBattleCounter(source, ENERGY_CHORUS_MAIN_ACTIONS);
+    if (actionCount !== 3 && actionCount !== 6) return [];
+
+    const checkpointsUsed = this.incrementBattleCounter(source, ENERGY_CHORUS_CHECKPOINTS_USED);
+    if (checkpointsUsed > 2) return [];
+    const carryId = source.passiveState.designatedCarryInstanceId;
+    const carry = carryId ? this.battleUnitsById.get(carryId) : undefined;
+    if (!carry?.alive || carry.ragePoints >= 4) return [];
+
+    const charge = chargeRageTo(carry.ragePoints, 8);
+    carry.ragePoints = charge.next;
+    return charge.events.length > 0
+      ? [{
+          type: 'rage-charge',
+          passiveId: CORALYN_ENERGY_CHORUS_PASSIVE_ID,
+          targetIds: [carry.instanceId],
+          amount: charge.effectiveGain,
+          status: 'energy-chorus',
+          rageEvents: charge.events
+        }]
+      : [];
+  }
+
+  private isEnergyChorusSource(unit: CombatUnitState): boolean {
+    return unit.pow.passive?.id === CORALYN_ENERGY_CHORUS_PASSIVE_ID &&
+      unit.pow.passive.mechanic?.effect.kind === 'coralynEnergyChorus';
   }
 
   advanceCombo(current: number, academicCorrect: boolean): number {

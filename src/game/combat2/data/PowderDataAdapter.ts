@@ -205,6 +205,21 @@ const PHASE_2A_PASSIVE_METADATA = {
       },
       runtime: 'LIVE'
     }
+  },
+  coralyn: {
+    id: 'coralyn_diep_khuc_nang_luong',
+    name: 'Điệp Khúc Năng Lượng',
+    description: 'Chọn một đồng minh khác làm chủ lực; sau hành động chính thứ 3 và 6, nạp chủ lực dưới 4 Nộ lên 8.',
+    mechanic: {
+      trigger: 'ON_BATTLE_START',
+      effect: {
+        kind: 'coralynEnergyChorus',
+        checkpointActions: [3, 6],
+        chargeTarget: 8,
+        maxCheckpoints: 2
+      },
+      runtime: 'LIVE'
+    }
   }
 } satisfies Readonly<Record<string, CatalogPassive>>;
 

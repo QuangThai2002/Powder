@@ -331,6 +331,121 @@ export function runCombatPassiveRegression(definitions: Record<string, Definitio
   }
 
   {
+    const energyChorus = {
+      trigger: 'ON_BATTLE_START',
+      effect: {
+        kind: 'coralynEnergyChorus', checkpointActions: [3, 6], chargeTarget: 8, maxCheckpoints: 2
+      },
+      runtime: 'LIVE'
+    } as Definition;
+    const fixture = { trigger: 'BEFORE_HIT', effect: {} } as Definition;
+    const coralyn = pow('coralyn', energyChorus);
+    coralyn.passive = {
+      id: 'coralyn_diep_khuc_nang_luong', name: 'Điệp Khúc Năng Lượng', mechanic: energyChorus
+    };
+    const lifecycle = (
+      actor: CombatUnitState,
+      origin: 'main' | 'follow-up' | 'counter' | 'dot' | 'secondary-hit' = 'main'
+    ): PassiveRuntimeEvent[] => engine.applyLifecycle({
+      stage: 'after-main-action',
+      actor,
+      provenance: createCombatActionProvenance(
+        actor.instanceId,
+        [],
+        origin === 'dot' ? 'status-tick' : 'basic',
+        origin !== 'dot',
+        'Action',
+        { origin }
+      ),
+      round: 1,
+      rageSpent: 0,
+      rageAfter: actor.ragePoints
+    });
+
+    const state = new CombatState(
+      [coralyn, pow('chorus-carry-first', fixture), pow('chorus-ally-second', fixture)],
+      [pow('chorus-target', fixture, 'enemy')]
+    );
+    const [source, carry, otherAlly] = state.activeLiving('player');
+    const initEvents = engine.initializeBattle(state.units);
+    assert(source.passiveState.designatedCarryInstanceId === carry.instanceId, 'Coralyn must deterministically select the first other ally as carry');
+    assert(source.passiveState.designatedCarryInstanceId !== source.instanceId, 'Coralyn must never select itself as carry');
+    assert(source.passiveState.designatedCarryInstanceId !== otherAlly.instanceId, 'designated carry selection must preserve roster order');
+    assert(initEvents.length === 1 && initEvents[0].targetIds[0] === carry.instanceId, 'battle init must report the designated carry once');
+    assert(engine.initializeBattle(state.units).length === 0, 'Energy Chorus battle initialization must be idempotent');
+
+    carry.ragePoints = 1;
+    assert(lifecycle(source).length === 0 && carry.ragePoints === 1, 'Coralyn action 1 must not charge the carry');
+    assert(lifecycle(source).length === 0 && carry.ragePoints === 1, 'Coralyn action 2 must not charge the carry');
+    const firstCharge = lifecycle(source);
+    assert(Number(carry.ragePoints) === 8, 'Coralyn action 3 must charge an eligible carry directly to 8');
+    assert(firstCharge.length === 1 && firstCharge[0].type === 'rage-charge', 'action 3 must emit one Rage charge event');
+    assert(firstCharge[0].rageEvents?.length === 1, 'Energy Chorus charge must remain one logical Rage event');
+    assert(lifecycle(source).length === 0, 'Coralyn action 4 must not trigger a checkpoint');
+    assert(lifecycle(source).length === 0, 'Coralyn action 5 must not trigger a checkpoint');
+    carry.ragePoints = 1;
+    const secondCharge = lifecycle(source);
+    assert(Number(carry.ragePoints) === 8, 'Coralyn action 6 must charge an eligible carry directly to 8');
+    assert(secondCharge.length === 1 && secondCharge[0].rageEvents?.length === 1, 'action 6 must emit one logical Rage event');
+    carry.ragePoints = 1;
+    assert(lifecycle(source).length === 0 && carry.ragePoints === 1, 'actions after 6 must not create additional checkpoints');
+    assert(engine.battleCounter(source, 'diep-khuc:checkpoints-used') === 2, 'Energy Chorus must use at most two checkpoints');
+
+    const skippedState = new CombatState(
+      [coralyn, pow('chorus-high-rage-carry', fixture)],
+      [pow('chorus-skip-target', fixture, 'enemy')]
+    );
+    const [skippedSource, highRageCarry] = skippedState.activeLiving('player');
+    engine.initializeBattle(skippedState.units);
+    highRageCarry.ragePoints = 4;
+    lifecycle(skippedSource);
+    lifecycle(skippedSource);
+    assert(lifecycle(skippedSource).length === 0 && highRageCarry.ragePoints === 4, 'Rage at least 4 must skip checkpoint 3');
+    highRageCarry.ragePoints = 1;
+    assert(lifecycle(skippedSource).length === 0 && highRageCarry.ragePoints === 1, 'a skipped checkpoint must not defer to action 4');
+    assert(engine.battleCounter(skippedSource, 'diep-khuc:checkpoints-used') === 1, 'an ineligible checkpoint must still be consumed');
+
+    const defeatedState = new CombatState(
+      [coralyn, pow('chorus-defeated-carry', fixture)],
+      [pow('chorus-defeated-target', fixture, 'enemy')]
+    );
+    const [defeatedSource, defeatedCarry] = defeatedState.activeLiving('player');
+    engine.initializeBattle(defeatedState.units);
+    defeatedCarry.ragePoints = 1;
+    defeatedCarry.hp = 0;
+    defeatedCarry.alive = false;
+    lifecycle(defeatedSource);
+    lifecycle(defeatedSource);
+    assert(lifecycle(defeatedSource).length === 0 && defeatedCarry.ragePoints === 1, 'a defeated carry must skip checkpoint 3');
+    defeatedCarry.hp = defeatedCarry.pow.maxHp;
+    defeatedCarry.alive = true;
+    assert(lifecycle(defeatedSource).length === 0 && defeatedCarry.ragePoints === 1, 'a defeated-carry checkpoint must not defer after revival');
+
+    const nonMainState = new CombatState(
+      [coralyn, pow('chorus-non-main-carry', fixture)],
+      [pow('chorus-non-main-target', fixture, 'enemy')]
+    );
+    const [nonMainSource, nonMainCarry] = nonMainState.activeLiving('player');
+    engine.initializeBattle(nonMainState.units);
+    nonMainCarry.ragePoints = 1;
+    for (const origin of ['follow-up', 'counter', 'dot', 'secondary-hit'] as const) lifecycle(nonMainSource, origin);
+    assert(engine.battleCounter(nonMainSource, 'diep-khuc:main-actions') === 0, 'non-main provenance must not increase Coralyn main-action count');
+    lifecycle(nonMainSource);
+    lifecycle(nonMainSource);
+    const nonMainCharge = lifecycle(nonMainSource);
+    assert(nonMainCarry.ragePoints === 8 && nonMainCharge.length === 1, 'only three real main actions may reach checkpoint 3');
+
+    const soloState = new CombatState([coralyn], [pow('chorus-solo-target', fixture, 'enemy')]);
+    const soloSource = soloState.activeLiving('player')[0];
+    assert(engine.initializeBattle(soloState.units).length === 0, 'Coralyn without another ally must initialize without an event');
+    assert(soloSource.passiveState.designatedCarryInstanceId === null, 'Coralyn without an eligible ally must leave carry unset');
+    lifecycle(soloSource);
+    lifecycle(soloSource);
+    assert(lifecycle(soloSource).length === 0, 'Coralyn without a carry must no-op at checkpoint 3');
+    foundationChecks.push('Coralyn Energy Chorus: deterministic carry / checkpoints 3 and 6 / atomic charge / skip without defer');
+  }
+
+  {
     const actor = unit('missing_hp_atk', requireDefinition('missing_hp_atk')); actor.hp = 500;
     assert(engine.attackMultiplier(actor) === 1.2, 'missing_hp_atk positive trigger'); actor.hp = 1000;
     assert(engine.attackMultiplier(actor) === 1, 'missing_hp_atk negative trigger'); checks.push('missing_hp_atk +/-');
