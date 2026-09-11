@@ -1,3 +1,4 @@
+import type { CombatPassiveCounterGain } from '../data/CombatPow';
 import type { CombatUnitState } from './CombatState';
 import { effectiveHealingReduction } from './CombatHealingReduction';
 import { chargeRageTo, type RageChargeEvent } from './CombatRageEngine';
@@ -13,6 +14,9 @@ const CORALYN_ENERGY_CHORUS_PASSIVE_ID = 'coralyn_diep_khuc_nang_luong';
 const ENERGY_CHORUS_INITIALIZED = 'diep-khuc:initialized';
 const ENERGY_CHORUS_MAIN_ACTIONS = 'diep-khuc:main-actions';
 const ENERGY_CHORUS_CHECKPOINTS_USED = 'diep-khuc:checkpoints-used';
+const STORMCOIL_CONDUCTION_PASSIVE_ID = 'stormcoil_dan_dien';
+const CONDUCTION_INITIALIZED = 'dan-dien:initialized';
+const DIEN_NHIP_COUNTER = 'dien-nhip';
 
 export type CombatActionOrigin = 'main' | 'follow-up' | 'counter' | 'dot' | 'secondary-hit';
 export type CombatActionType = 'basic' | 'skill' | 'ultimate' | 'status-tick';
@@ -25,6 +29,7 @@ export interface CombatActionProvenance {
   targetIds: readonly string[];
   actionType: CombatActionType;
   abilityName: string | null;
+  passiveCounterGain?: CombatPassiveCounterGain;
 }
 
 export interface CombatActionProvenanceOverrides {
@@ -33,6 +38,7 @@ export interface CombatActionProvenanceOverrides {
   targetIds?: readonly string[];
   actionType?: CombatActionType;
   abilityName?: string | null;
+  passiveCounterGain?: CombatPassiveCounterGain;
 }
 
 export interface CombatPassiveLifecycleEvent {
@@ -60,7 +66,8 @@ export function createCombatActionProvenance(
     actorId,
     targetIds: [...new Set(overrides.targetIds ?? targetIds)].filter(Boolean),
     actionType: overrides.actionType ?? actionType,
-    abilityName: overrides.abilityName === undefined ? abilityName : overrides.abilityName
+    abilityName: overrides.abilityName === undefined ? abilityName : overrides.abilityName,
+    ...(overrides.passiveCounterGain ? { passiveCounterGain: { ...overrides.passiveCounterGain } } : {})
   };
 }
 
@@ -74,7 +81,7 @@ export interface PassiveActionContext {
 }
 
 export interface PassiveRuntimeEvent {
-  type: 'heal' | 'status' | 'team-buff' | 'passive-mark' | 'rage-charge' | 'shield';
+  type: 'heal' | 'status' | 'team-buff' | 'passive-mark' | 'passive-counter' | 'rage-charge' | 'shield';
   passiveId: string;
   targetIds: string[];
   amount?: number;
@@ -121,6 +128,23 @@ export class CombatPassiveEngine {
         });
       }
     }
+    for (const source of units.filter((unit) => this.isConductionSource(unit))) {
+      if (this.hasFlag(source, CONDUCTION_INITIALIZED)) continue;
+      this.setFlag(source, CONDUCTION_INITIALIZED);
+      const carry = units.find((unit) => (
+        unit.side === source.side && unit.instanceId !== source.instanceId && unit.alive
+      )) ?? null;
+      this.setDesignatedCarry(source, carry?.instanceId ?? null);
+      if (carry) {
+        this.setOwnedCounter(carry, DIEN_NHIP_COUNTER, 0, 4);
+        events.push({
+          type: 'passive-mark',
+          passiveId: STORMCOIL_CONDUCTION_PASSIVE_ID,
+          targetIds: [carry.instanceId],
+          status: 'designated-carry'
+        });
+      }
+    }
     return events;
   }
 
@@ -133,6 +157,9 @@ export class CombatPassiveEngine {
     }
     if (event.stage === 'after-main-action' && this.isEnergyChorusSource(event.actor)) {
       events.push(...this.applyEnergyChorusCheckpoint(event.actor));
+    }
+    if (this.isConductionSource(event.actor)) {
+      events.push(...this.applyConductionCounterGain(event));
     }
     return events;
   }
@@ -262,6 +289,35 @@ export class CombatPassiveEngine {
   private isEnergyChorusSource(unit: CombatUnitState): boolean {
     return unit.pow.passive?.id === CORALYN_ENERGY_CHORUS_PASSIVE_ID &&
       unit.pow.passive.mechanic?.effect.kind === 'coralynEnergyChorus';
+  }
+
+  private applyConductionCounterGain(event: CombatPassiveLifecycleEvent): PassiveRuntimeEvent[] {
+    const gain = event.provenance.passiveCounterGain;
+    if (!gain || !this.isCounterTiming(event.stage, gain)) return [];
+    const carryId = event.actor.passiveState.designatedCarryInstanceId;
+    const carry = carryId ? this.battleUnitsById.get(carryId) : undefined;
+    if (!carry?.alive || gain.target !== 'designatedCarry') return [];
+
+    const before = this.ownedCounter(carry, DIEN_NHIP_COUNTER);
+    const after = this.setOwnedCounter(carry, DIEN_NHIP_COUNTER, before + gain.amount, Math.min(4, gain.max));
+    if (after <= before) return [];
+    return [{
+      type: 'passive-counter',
+      passiveId: STORMCOIL_CONDUCTION_PASSIVE_ID,
+      targetIds: [carry.instanceId],
+      amount: after - before,
+      status: 'dien-nhip'
+    }];
+  }
+
+  private isCounterTiming(stage: CombatPassiveLifecycleStage, gain: CombatPassiveCounterGain): boolean {
+    if (gain.timing === 'afterMainAction') return stage === 'after-main-action';
+    return gain.timing === 'afterUltimateActionConfirmed' && stage === 'after-ultimate-cast';
+  }
+
+  private isConductionSource(unit: CombatUnitState): boolean {
+    return unit.pow.passive?.id === STORMCOIL_CONDUCTION_PASSIVE_ID &&
+      unit.pow.passive.mechanic?.effect.kind === 'stormcoilConduction';
   }
 
   advanceCombo(current: number, academicCorrect: boolean): number {

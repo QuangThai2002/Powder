@@ -446,6 +446,126 @@ export function runCombatPassiveRegression(definitions: Record<string, Definitio
   }
 
   {
+    const conduction = {
+      trigger: 'ON_BATTLE_START',
+      effect: { kind: 'stormcoilConduction', counterId: 'DIEN_NHIP', counterMin: 0, counterMax: 4 },
+      runtime: 'LIVE'
+    } as Definition;
+    const fixture = { trigger: 'BEFORE_HIT', effect: {} } as Definition;
+    const createStormcoil = (): CombatPow => {
+      const stormcoil = pow('stormcoil', conduction);
+      stormcoil.passive = { id: 'stormcoil_dan_dien', name: 'Dẫn Điện', mechanic: conduction };
+      stormcoil.abilities.skills[0] = {
+        id: 'stormcoil.skill1', name: 'Nhịp Sấm Truyền Lực', power: 105, type: 'magic',
+        damageType: 'magic', scalingStat: 'ability-power', critMode: 'never', cooldown: 1,
+        passiveCounterGain: {
+          counterId: 'DIEN_NHIP', amount: 1, max: 4,
+          target: 'designatedCarry', timing: 'afterMainAction'
+        }
+      };
+      stormcoil.abilities.ultimate = {
+        id: 'stormcoil.ultimate', name: 'Đại Khúc Lôi Nộ', power: 110, type: 'magic',
+        damageType: 'magic', scalingStat: 'ability-power', critMode: 'never', target: 'all-enemies', area: true,
+        rageCost: 4,
+        passiveCounterGain: {
+          counterId: 'DIEN_NHIP', amount: 2, max: 4,
+          target: 'designatedCarry', timing: 'afterUltimateActionConfirmed'
+        }
+      };
+      return stormcoil;
+    };
+
+    const state = new CombatState(
+      [createStormcoil(), pow('conduction-carry-first', fixture), pow('conduction-ally-second', fixture)],
+      [pow('conduction-target', fixture, 'enemy')]
+    );
+    const [source, carry, otherAlly] = state.activeLiving('player');
+    const target = state.activeLiving('enemy')[0];
+    const initEvents = engine.initializeBattle(state.units);
+    assert(source.passiveState.designatedCarryInstanceId === carry.instanceId, 'Stormcoil must deterministically select the first other ally as carry');
+    assert(source.passiveState.designatedCarryInstanceId !== source.instanceId, 'Stormcoil must never select itself as carry');
+    assert(source.passiveState.designatedCarryInstanceId !== otherAlly.instanceId, 'Stormcoil carry selection must preserve roster order');
+    assert(initEvents.length === 1 && initEvents[0].targetIds[0] === carry.instanceId, 'Dẫn Điện init must report its carry once');
+    assert(engine.ownedCounter(carry, 'dien-nhip') === 0 && engine.ownedCounter(source, 'dien-nhip') === 0, 'Điện Nhịp must initialize in the carry Passive ledger');
+
+    const counterEvents: PassiveRuntimeEvent[] = [];
+    const resolver = new SkillActionResolver(() => 0.99, (event) => counterEvents.push(...engine.applyLifecycle(event)));
+    const carryRage = carry.ragePoints = 2;
+    source.ragePoints = 0;
+    const firstSkill = resolver.resolve(source, target, source.pow.abilities.skills[0], 0, 1);
+    assert(engine.ownedCounter(carry, 'dien-nhip') === 1, 'Stormcoil Skill1 must increase Điện Nhịp from 0 to 1');
+    assert(carry.ragePoints === carryRage, 'Stormcoil Skill1 counter gain must not increase carry Rage');
+    const standardSkillRageGain = resolver.previewRawRageGain(source.pow.abilities.skills[0], 0);
+    assert(firstSkill.rawRageGain === standardSkillRageGain && source.ragePoints === standardSkillRageGain && !source.pow.abilities.skills[0].status, 'Skill1 must retain only standard action Rage gain, without a direct Rage effect');
+    assert(counterEvents.filter((event) => event.type === 'passive-counter').length === 1, 'Skill1 must emit one Passive counter event');
+
+    engine.setOwnedCounter(carry, 'dien-nhip', 3, 4);
+    source.skillCooldownActionsRemaining[0] = 0;
+    resolver.resolve(source, target, source.pow.abilities.skills[0], 0, 1);
+    assert(engine.ownedCounter(carry, 'dien-nhip') === 4, 'Stormcoil Skill1 must cap Điện Nhịp at 4');
+    carry.ragePoints = 1;
+    engine.applyLifecycle({
+      stage: 'after-main-action', actor: carry,
+      provenance: createCombatActionProvenance(carry.instanceId, [target.instanceId], 'basic', true, 'Carry Action'),
+      round: 1, rageSpent: 0, rageAfter: carry.ragePoints
+    });
+    assert(carry.ragePoints === 1 && engine.ownedCounter(carry, 'dien-nhip') === 4, 'counter foundation must not enable full Dẫn Điện Rage charge');
+
+    const ultimateState = new CombatState(
+      [createStormcoil(), pow('conduction-ultimate-carry', fixture)],
+      [pow('conduction-ultimate-target-a', fixture, 'enemy'), pow('conduction-ultimate-target-b', fixture, 'enemy')]
+    );
+    const [ultimateSource, ultimateCarry] = ultimateState.activeLiving('player');
+    const ultimateTargets = ultimateState.activeLiving('enemy');
+    engine.initializeBattle(ultimateState.units);
+    engine.setOwnedCounter(ultimateCarry, 'dien-nhip', 3, 4);
+    ultimateCarry.ragePoints = 2;
+    ultimateSource.ragePoints = 4;
+    const ultimateEvents: PassiveRuntimeEvent[] = [];
+    const ultimateCast = new CombatMultiTargetEngine().resolveCast(
+      new SkillActionResolver(() => 0.99, (event) => ultimateEvents.push(...engine.applyLifecycle(event))),
+      ultimateSource,
+      ultimateTargets[0],
+      ultimateSource.pow.abilities.ultimate,
+      'ultimate',
+      ultimateState.units,
+      1
+    );
+    assert(ultimateCast.hits.length === 2, 'Stormcoil Ultimate must resolve all enemies');
+    assert(engine.ownedCounter(ultimateCarry, 'dien-nhip') === 4, 'Stormcoil Ultimate must add 2 Điện Nhịp with cap 4');
+    assert(ultimateEvents.filter((event) => event.type === 'passive-counter').length === 1, 'AOE Ultimate must add its counter exactly once');
+    assert(ultimateSource.ragePoints === 0, 'Stormcoil Ultimate must consume exactly 4 Rage without direct refund');
+    assert(ultimateCarry.ragePoints === 2, 'Stormcoil Ultimate counter gain must not increase carry Rage');
+
+    const deadState = new CombatState(
+      [createStormcoil(), pow('conduction-dead-carry', fixture)],
+      [pow('conduction-dead-target', fixture, 'enemy')]
+    );
+    const [deadSource, deadCarry] = deadState.activeLiving('player');
+    const deadTarget = deadState.activeLiving('enemy')[0];
+    engine.initializeBattle(deadState.units);
+    engine.setOwnedCounter(deadCarry, 'dien-nhip', 1, 4);
+    deadCarry.hp = 0;
+    deadCarry.alive = false;
+    deadSource.ragePoints = 4;
+    new SkillActionResolver(() => 0.99, (event) => engine.applyLifecycle(event)).resolveUltimate(
+      deadSource, deadTarget, deadSource.pow.abilities.ultimate, 1
+    );
+    assert(engine.ownedCounter(deadCarry, 'dien-nhip') === 1, 'Stormcoil Ultimate must not add counter to a defeated carry');
+    assert(deadCarry.ragePoints === 0, 'defeated carry must not receive Rage from Stormcoil Ultimate');
+
+    const soloState = new CombatState([createStormcoil()], [pow('conduction-solo-target', fixture, 'enemy')]);
+    const soloSource = soloState.activeLiving('player')[0];
+    const soloTarget = soloState.activeLiving('enemy')[0];
+    assert(engine.initializeBattle(soloState.units).length === 0, 'solo Stormcoil must initialize without a carry event');
+    assert(soloSource.passiveState.designatedCarryInstanceId === null, 'solo Stormcoil must leave designated carry unset');
+    new SkillActionResolver(() => 0.99, (event) => engine.applyLifecycle(event)).resolve(
+      soloSource, soloTarget, soloSource.pow.abilities.skills[0], 0, 1
+    );
+    foundationChecks.push('Stormcoil Dẫn Điện: carry / Skill1 +1 / Ultimate +2 once / cap 4 / no Rage charge');
+  }
+
+  {
     const actor = unit('missing_hp_atk', requireDefinition('missing_hp_atk')); actor.hp = 500;
     assert(engine.attackMultiplier(actor) === 1.2, 'missing_hp_atk positive trigger'); actor.hp = 1000;
     assert(engine.attackMultiplier(actor) === 1, 'missing_hp_atk negative trigger'); checks.push('missing_hp_atk +/-');

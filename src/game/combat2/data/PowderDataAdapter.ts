@@ -2,6 +2,7 @@ import type {
   CombatAbility,
   CombatAbilitySet,
   CombatConditionalDamageModifier,
+  CombatPassiveCounterGain,
   CombatPassive,
   CombatPassiveMechanic,
   CombatPow,
@@ -56,6 +57,13 @@ interface CatalogAbility {
     consumeStatus?: boolean;
     removeStatus?: boolean;
     reduceStatusDuration?: boolean;
+  };
+  passiveCounterGain?: {
+    counterId?: string;
+    amount?: number;
+    max?: number;
+    target?: string;
+    timing?: string;
   };
   /** Adapter-only marker for an approved ability replacement that rejects legacy effects. */
   clearLegacyEffects?: boolean;
@@ -187,6 +195,53 @@ const PHASE_2A_ABILITY_METADATA = {
         reduceStatusDuration: false
       }
     }
+  },
+  stormcoil: {
+    skill1: {
+      id: 'stormcoil.skill1',
+      name: 'Nhịp Sấm Truyền Lực',
+      description: 'Gây 105% AP. Chủ lực nhận +8% Speed trong 1 hành động và +1 Điện Nhịp, tối đa 4. CD 1.',
+      power: 105,
+      type: 'magic',
+      damageType: 'magic',
+      scalingStat: 'ability-power',
+      critMode: 'never',
+      target: 'enemy',
+      area: false,
+      cooldown: 1,
+      coefficients: { abilityPower: 1.05 },
+      clearLegacyEffects: true,
+      passiveCounterGain: {
+        counterId: 'DIEN_NHIP',
+        amount: 1,
+        max: 4,
+        target: 'designatedCarry',
+        timing: 'afterMainAction'
+      }
+    },
+    ultimate: {
+      id: 'stormcoil.ultimate',
+      name: 'Đại Khúc Lôi Nộ',
+      description: 'Tiêu 4 Nộ. Gây 110% AP lên toàn bộ địch; toàn đội +10% Speed trong 2 lượt. Chủ lực còn sống nhận +2 Điện Nhịp, tối đa 4.',
+      power: 110,
+      type: 'magic',
+      damageType: 'magic',
+      scalingStat: 'ability-power',
+      critMode: 'never',
+      target: 'all-enemies',
+      area: true,
+      cooldown: 0,
+      rageCost: 4,
+      coefficients: { abilityPower: 1.1 },
+      clearLegacyEffects: true,
+      passiveCounterGain: {
+        counterId: 'DIEN_NHIP',
+        amount: 2,
+        max: 4,
+        target: 'designatedCarry',
+        timing: 'afterUltimateActionConfirmed'
+      }
+    }
   }
 } satisfies Readonly<Record<string, Partial<Record<'basic' | 'skill1' | 'skill2' | 'ultimate', CanonicalSkillMetadata>>>>;
 
@@ -217,6 +272,21 @@ const PHASE_2A_PASSIVE_METADATA = {
         checkpointActions: [3, 6],
         chargeTarget: 8,
         maxCheckpoints: 2
+      },
+      runtime: 'LIVE'
+    }
+  },
+  stormcoil: {
+    id: 'stormcoil_dan_dien',
+    name: 'Dẫn Điện',
+    description: 'Chọn một đồng minh khác làm chủ lực và quản lý Điện Nhịp của chủ lực trong phạm vi 0–4.',
+    mechanic: {
+      trigger: 'ON_BATTLE_START',
+      effect: {
+        kind: 'stormcoilConduction',
+        counterId: 'DIEN_NHIP',
+        counterMin: 0,
+        counterMax: 4
       },
       runtime: 'LIVE'
     }
@@ -491,6 +561,21 @@ function normalizeConditionalDamageModifier(
   };
 }
 
+function normalizePassiveCounterGain(
+  gain: CatalogAbility['passiveCounterGain'] | undefined
+): CombatPassiveCounterGain | undefined {
+  if (!gain || String(gain.counterId || '').trim().toUpperCase() !== 'DIEN_NHIP') return undefined;
+  if (gain.target !== 'designatedCarry') return undefined;
+  if (gain.timing !== 'afterMainAction' && gain.timing !== 'afterUltimateActionConfirmed') return undefined;
+  return {
+    counterId: 'DIEN_NHIP',
+    amount: Math.max(0, Math.floor(finiteNumber(gain.amount, 0))),
+    max: Math.max(0, Math.floor(finiteNumber(gain.max, 4))),
+    target: 'designatedCarry',
+    timing: gain.timing
+  };
+}
+
 function normalizeAbility(
   pow: CatalogPow,
   ability: CatalogAbility | undefined,
@@ -519,6 +604,9 @@ function normalizeAbility(
   const masterEffects = metadata?.masterEffects ?? legacyEffectSource?.masterEffects;
   const conditionalDamageModifier = normalizeConditionalDamageModifier(
     metadata?.conditionalDamageModifier ?? ability?.conditionalDamageModifier
+  );
+  const passiveCounterGain = normalizePassiveCounterGain(
+    metadata?.passiveCounterGain ?? legacyEffectSource?.passiveCounterGain
   );
   const target = metadata?.target ?? ability?.target;
   const manaCost = metadata?.manaCost ?? (clearLegacyEffects ? undefined : ability?.manaCost);
@@ -563,6 +651,7 @@ function normalizeAbility(
     ...(coefficients ? { coefficients: { ...coefficients } } : {}),
     ...(masterEffects ? { masterEffects: { ...masterEffects } } : {}),
     ...(conditionalDamageModifier ? { conditionalDamageModifier } : {}),
+    ...(passiveCounterGain ? { passiveCounterGain } : {}),
     ...(area ? { area: true } : {}),
     ...((metadata?.sureHit ?? legacyEffectSource?.sureHit) ? { sureHit: true } : {}),
     ...((metadata?.unavoidable ?? legacyEffectSource?.unavoidable) ? { unavoidable: true } : {}),
@@ -646,6 +735,7 @@ function toCombatPow(pow: CatalogPow, requestedStars?: number): CombatPow {
   const elementName = String(window.POWDER_DATA?.elements?.[elementKey]?.name || elementKey);
   const passive = normalizePassive(pow, pow.abilities?.passive);
   const kit = window.POWDER_SKILL_V81?.pows?.[id];
+  const suppressLegacyCore = id.toLowerCase() === 'stormcoil' && passive?.id === 'stormcoil_dan_dien';
   const roleEvasion = ROLE_EVASION[roleKey] ?? 0;
   const elementEvasion = SPECIAL_EVA_ELEMENTS.has(elementKey) ? 12 : 0;
 
@@ -680,7 +770,9 @@ function toCombatPow(pow: CatalogPow, requestedStars?: number): CombatPow {
     damageReduction: clamp(finiteNumber(stats.damageReduction, 0), 0, 0.45),
     abilities: normalizeAbilities(pow, stars),
     ...(passive ? { passive } : {}),
-    ...(kit?.core ? { core: { name: String(kit.core), description: String(kit.coreDescription || kit.core) } } : {}),
+    ...(kit?.core && !suppressLegacyCore
+      ? { core: { name: String(kit.core), description: String(kit.coreDescription || kit.core) } }
+      : {}),
     ...(Array.isArray(pow.skillStarProgression) ? { skillStarProgression: pow.skillStarProgression.map((stage) => ({ ...stage })) } : {}),
     display: { ...DEFAULT_DISPLAY }
   };

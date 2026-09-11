@@ -282,7 +282,10 @@ export class SkillActionResolver {
       actionType,
       this.isDirectDamageAbility(actor, target, ability),
       ability.name,
-      overrides
+      {
+        ...(ability.passiveCounterGain ? { passiveCounterGain: ability.passiveCounterGain } : {}),
+        ...overrides
+      }
     );
   }
 

@@ -24,6 +24,14 @@ export interface CombatConditionalDamageModifier {
   reduceStatusDuration: false;
 }
 
+export interface CombatPassiveCounterGain {
+  counterId: string;
+  amount: number;
+  max: number;
+  target: 'designatedCarry';
+  timing: 'afterMainAction' | 'afterUltimateActionConfirmed';
+}
+
 export interface PowDisplayProfile {
   heightRatio: number;
   scaleAdjust?: number;
@@ -60,6 +68,7 @@ export interface CombatAbility {
   coefficients?: Readonly<Record<string, number>>;
   masterEffects?: Readonly<Record<string, unknown>>;
   conditionalDamageModifier?: CombatConditionalDamageModifier;
+  passiveCounterGain?: CombatPassiveCounterGain;
   description?: string;
   sureHit?: boolean;
   unavoidable?: boolean;

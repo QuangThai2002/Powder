@@ -169,6 +169,32 @@ async function main() {
     assert.equal(coralyn.passive?.mechanic?.effect?.kind, 'coralynEnergyChorus', 'Coralyn must expose its dedicated Passive mechanic');
     assert.notEqual(coralyn.passive?.id, 'combo_stun', 'legacy Coralyn Passive must not leak through the adapter');
 
+    const stormcoil = runtime.combatPowById('stormcoil');
+    assert.ok(stormcoil, 'Stormcoil must resolve through the Combat2 adapter');
+    assert.equal(stormcoil.passive?.id, 'stormcoil_dan_dien', 'Stormcoil must not retain its legacy combo passive ID');
+    assert.equal(stormcoil.passive?.name, 'Dẫn Điện', 'Stormcoil must use the approved canonical Passive name');
+    assert.equal(stormcoil.passive?.mechanic?.effect?.kind, 'stormcoilConduction', 'Dẫn Điện must expose its dedicated Passive mechanic');
+    assert.equal(stormcoil.passive?.mechanic?.effect?.counterMax, 4, 'Dẫn Điện counter metadata must cap Điện Nhịp at 4');
+    assert.equal(stormcoil.core, undefined, 'Stormcoil must not expose legacy Điện Nhịp Core as canonical state');
+    assert.equal(stormcoil.abilities.skills[0].name, 'Nhịp Sấm Truyền Lực', 'Stormcoil Skill1 must use its canonical name');
+    assert.equal(stormcoil.abilities.skills[0].power, 105, 'Stormcoil Skill1 must preserve 105% AP');
+    assert.equal(stormcoil.abilities.skills[0].cooldown, 1, 'Stormcoil Skill1 must preserve CD 1');
+    assert.equal(stormcoil.abilities.skills[0].mechanic, undefined, 'Stormcoil Skill1 must not use a legacy special mechanic');
+    assert.deepEqual(stormcoil.abilities.skills[0].passiveCounterGain, {
+      counterId: 'DIEN_NHIP', amount: 1, max: 4,
+      target: 'designatedCarry', timing: 'afterMainAction'
+    }, 'Stormcoil Skill1 counter metadata mismatch');
+    assert.equal(stormcoil.abilities.ultimate.name, 'Đại Khúc Lôi Nộ', 'Stormcoil Ultimate must use its canonical name');
+    assert.equal(stormcoil.abilities.ultimate.power, 110, 'Stormcoil Ultimate must preserve 110% AP');
+    assert.equal(stormcoil.abilities.ultimate.target, 'all-enemies', 'Stormcoil Ultimate must target all enemies');
+    assert.equal(stormcoil.abilities.ultimate.area, true, 'Stormcoil Ultimate must retain AOE targeting');
+    assert.equal(stormcoil.abilities.ultimate.rageCost, 4, 'Stormcoil Ultimate metadata must use canonical Rage cost 4');
+    assert.equal(stormcoil.abilities.ultimate.mechanic, undefined, 'Stormcoil Ultimate must not use a legacy special mechanic');
+    assert.deepEqual(stormcoil.abilities.ultimate.passiveCounterGain, {
+      counterId: 'DIEN_NHIP', amount: 2, max: 4,
+      target: 'designatedCarry', timing: 'afterUltimateActionConfirmed'
+    }, 'Stormcoil Ultimate counter metadata mismatch');
+
     const voltkit = runtime.combatPowById('voltkit');
     assert.ok(voltkit, 'Voltkit must resolve through the Combat2 adapter');
     assert.equal(voltkit.abilities.ultimate.name, 'Lôi Kích', 'Voltkit Ultimate must use the approved canonical name');
