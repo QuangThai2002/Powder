@@ -65,6 +65,8 @@ export interface CombatAbility {
   manaCost?: number;
   cooldown?: number;
   rageCost?: number;
+  /** Defaults to standard action gain; canonical abilities may explicitly grant no Rage. */
+  rageGainMode?: 'standard' | 'none';
   coefficients?: Readonly<Record<string, number>>;
   masterEffects?: Readonly<Record<string, unknown>>;
   conditionalDamageModifier?: CombatConditionalDamageModifier;

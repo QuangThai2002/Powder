@@ -458,6 +458,7 @@ export function runCombatPassiveRegression(definitions: Record<string, Definitio
       stormcoil.abilities.skills[0] = {
         id: 'stormcoil.skill1', name: 'Nhịp Sấm Truyền Lực', power: 105, type: 'magic',
         damageType: 'magic', scalingStat: 'ability-power', critMode: 'never', cooldown: 1,
+        rageGainMode: 'none',
         passiveCounterGain: {
           counterId: 'DIEN_NHIP', amount: 1, max: 4,
           target: 'designatedCarry', timing: 'afterMainAction'
@@ -491,18 +492,20 @@ export function runCombatPassiveRegression(definitions: Record<string, Definitio
     const counterEvents: PassiveRuntimeEvent[] = [];
     const resolver = new SkillActionResolver(() => 0.99, (event) => counterEvents.push(...engine.applyLifecycle(event)));
     const carryRage = carry.ragePoints = 2;
-    source.ragePoints = 0;
+    const sourceRage = source.ragePoints = 3;
     const firstSkill = resolver.resolve(source, target, source.pow.abilities.skills[0], 0, 1);
     assert(engine.ownedCounter(carry, 'dien-nhip') === 1, 'Stormcoil Skill1 must increase Điện Nhịp from 0 to 1');
     assert(carry.ragePoints === carryRage, 'Stormcoil Skill1 counter gain must not increase carry Rage');
-    const standardSkillRageGain = resolver.previewRawRageGain(source.pow.abilities.skills[0], 0);
-    assert(firstSkill.rawRageGain === standardSkillRageGain && source.ragePoints === standardSkillRageGain && !source.pow.abilities.skills[0].status, 'Skill1 must retain only standard action Rage gain, without a direct Rage effect');
+    assert(firstSkill.rawRageGain === 0 && firstSkill.rageGained === 0 && source.ragePoints === sourceRage, 'Stormcoil Skill1 must not increase Stormcoil Rage');
     assert(counterEvents.filter((event) => event.type === 'passive-counter').length === 1, 'Skill1 must emit one Passive counter event');
 
     engine.setOwnedCounter(carry, 'dien-nhip', 3, 4);
     source.skillCooldownActionsRemaining[0] = 0;
+    const secondSourceRage = source.ragePoints;
+    const secondCarryRage = carry.ragePoints;
     resolver.resolve(source, target, source.pow.abilities.skills[0], 0, 1);
     assert(engine.ownedCounter(carry, 'dien-nhip') === 4, 'Stormcoil Skill1 must cap Điện Nhịp at 4');
+    assert(source.ragePoints === secondSourceRage && carry.ragePoints === secondCarryRage, 'Stormcoil Skill1 counter cap must not alter Stormcoil or carry Rage');
     carry.ragePoints = 1;
     engine.applyLifecycle({
       stage: 'after-main-action', actor: carry,

@@ -49,6 +49,7 @@ interface CatalogAbility {
   manaCost?: number;
   cooldown?: number;
   rageCost?: number;
+  rageGainMode?: string;
   coefficients?: Record<string, number>;
   masterEffects?: Record<string, unknown>;
   conditionalDamageModifier?: {
@@ -209,6 +210,7 @@ const PHASE_2A_ABILITY_METADATA = {
       target: 'enemy',
       area: false,
       cooldown: 1,
+      rageGainMode: 'none',
       coefficients: { abilityPower: 1.05 },
       clearLegacyEffects: true,
       passiveCounterGain: {
@@ -612,6 +614,7 @@ function normalizeAbility(
   const manaCost = metadata?.manaCost ?? (clearLegacyEffects ? undefined : ability?.manaCost);
   const cooldown = metadata?.cooldown ?? ability?.cooldown;
   const rageCost = metadata?.rageCost ?? ability?.rageCost;
+  const rageGainMode = metadata?.rageGainMode ?? legacyEffectSource?.rageGainMode;
   const area = metadata?.area ?? ability?.area;
   return {
     ...(metadata?.id ? { id: String(metadata.id) } : ability?.id ? { id: String(ability.id) } : {}),
@@ -648,6 +651,7 @@ function normalizeAbility(
     ...(Number.isFinite(manaCost) ? { manaCost: Math.max(0, Number(manaCost)) } : {}),
     ...(Number.isFinite(cooldown) ? { cooldown: Math.max(0, Math.floor(Number(cooldown))) } : {}),
     ...(Number.isFinite(rageCost) ? { rageCost: Math.max(0, Number(rageCost)) } : {}),
+    ...(rageGainMode === 'none' ? { rageGainMode: 'none' as const } : {}),
     ...(coefficients ? { coefficients: { ...coefficients } } : {}),
     ...(masterEffects ? { masterEffects: { ...masterEffects } } : {}),
     ...(conditionalDamageModifier ? { conditionalDamageModifier } : {}),

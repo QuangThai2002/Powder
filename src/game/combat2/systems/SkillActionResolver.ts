@@ -148,6 +148,7 @@ export class SkillActionResolver {
   }
 
   previewRawRageGain(ability: CombatAbility, slot: CombatAbilitySlot): number {
+    if (ability.rageGainMode === 'none') return 0;
     const bonus = this.resourceBonusRaw(ability.status);
     return (slot === 'ultimate' ? 0 : ACTION_BASE_RAW_GAIN) + bonus;
   }
@@ -244,9 +245,10 @@ export class SkillActionResolver {
       : suppressFreezeReapply
         ? this.emptyStatusResult(null)
         : this.applyStatus(actor, target, ability, currentRound, damageResult.damage);
+    const rageGainDisabled = ability.rageGainMode === 'none';
     const rageResult = applyRageEvent(rageBeforeEvent, [
-      abilitySlot === 'ultimate' ? 0 : ACTION_BASE_RAW_GAIN,
-      this.resourceBonusRaw(ability.status)
+      abilitySlot === 'ultimate' || rageGainDisabled ? 0 : ACTION_BASE_RAW_GAIN,
+      rageGainDisabled ? 0 : this.resourceBonusRaw(ability.status)
     ], rageSpent);
     const rawRageGain = rageResult.rawGain;
     actor.ragePoints = rageResult.next;

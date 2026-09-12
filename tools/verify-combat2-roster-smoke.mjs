@@ -179,6 +179,7 @@ async function main() {
     assert.equal(stormcoil.abilities.skills[0].name, 'Nhịp Sấm Truyền Lực', 'Stormcoil Skill1 must use its canonical name');
     assert.equal(stormcoil.abilities.skills[0].power, 105, 'Stormcoil Skill1 must preserve 105% AP');
     assert.equal(stormcoil.abilities.skills[0].cooldown, 1, 'Stormcoil Skill1 must preserve CD 1');
+    assert.equal(stormcoil.abilities.skills[0].rageGainMode, 'none', 'Stormcoil Skill1 must explicitly disable action Rage gain');
     assert.equal(stormcoil.abilities.skills[0].mechanic, undefined, 'Stormcoil Skill1 must not use a legacy special mechanic');
     assert.deepEqual(stormcoil.abilities.skills[0].passiveCounterGain, {
       counterId: 'DIEN_NHIP', amount: 1, max: 4,
