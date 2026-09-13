@@ -506,13 +506,82 @@ export function runCombatPassiveRegression(definitions: Record<string, Definitio
     resolver.resolve(source, target, source.pow.abilities.skills[0], 0, 1);
     assert(engine.ownedCounter(carry, 'dien-nhip') === 4, 'Stormcoil Skill1 must cap Điện Nhịp at 4');
     assert(source.ragePoints === secondSourceRage && carry.ragePoints === secondCarryRage, 'Stormcoil Skill1 counter cap must not alter Stormcoil or carry Rage');
-    carry.ragePoints = 1;
-    engine.applyLifecycle({
-      stage: 'after-main-action', actor: carry,
-      provenance: createCombatActionProvenance(carry.instanceId, [target.instanceId], 'basic', true, 'Carry Action'),
-      round: 1, rageSpent: 0, rageAfter: carry.ragePoints
+
+    const conductionLifecycle = (
+      actor: CombatUnitState,
+      targetId: string,
+      round: number,
+      origin: 'main' | 'follow-up' | 'counter' | 'dot' | 'secondary-hit' = 'main',
+      directDamage = true
+    ): PassiveRuntimeEvent[] => engine.applyLifecycle({
+      stage: 'after-main-action',
+      actor,
+      provenance: createCombatActionProvenance(
+        actor.instanceId,
+        [targetId],
+        origin === 'dot' ? 'status-tick' : 'basic',
+        directDamage,
+        'Conduction Checkpoint',
+        { origin }
+      ),
+      round,
+      rageSpent: 0,
+      rageAfter: actor.ragePoints
     });
-    assert(carry.ragePoints === 1 && engine.ownedCounter(carry, 'dien-nhip') === 4, 'counter foundation must not enable full Dẫn Điện Rage charge');
+
+    carry.ragePoints = 1;
+    const firstCharge = conductionLifecycle(carry, target.instanceId, 1);
+    assert(carry.ragePoints === 8, 'four Điện Nhịp must charge the designated carry directly to 8 Rage');
+    assert(engine.ownedCounter(carry, 'dien-nhip') === 0, 'a successful Dẫn Điện trigger must consume Điện Nhịp');
+    assert(firstCharge.length === 1 && firstCharge[0].type === 'rage-charge' && firstCharge[0].rageEvents?.length === 1, 'Dẫn Điện must emit one atomic Rage charge event');
+    assert(engine.battleCounter(source, 'dan-dien:battle-triggers') === 1, 'Dẫn Điện must record one battle trigger');
+    assert(engine.roundCounter(source, 'dan-dien:round-triggers', 1) === 1, 'Dẫn Điện must record one trigger in the current round');
+
+    engine.setOwnedCounter(carry, 'dien-nhip', 4, 4);
+    carry.ragePoints = 1;
+    assert(conductionLifecycle(carry, target.instanceId, 1).length === 0, 'Dẫn Điện must not trigger twice in one round');
+    assert(carry.ragePoints === 1 && engine.ownedCounter(carry, 'dien-nhip') === 4, 'round limit must preserve ready counter and Rage state');
+    const secondCharge = conductionLifecycle(carry, target.instanceId, 2);
+    assert(secondCharge.length === 1 && Number(carry.ragePoints) === 8 && engine.ownedCounter(carry, 'dien-nhip') === 0, 'Dẫn Điện must allow its second trigger in a later round');
+    assert(engine.battleCounter(source, 'dan-dien:battle-triggers') === 2 && engine.roundCounter(source, 'dan-dien:round-triggers', 2) === 1, 'Dẫn Điện trigger limits must live in source Passive state');
+
+    engine.setOwnedCounter(carry, 'dien-nhip', 4, 4);
+    carry.ragePoints = 1;
+    assert(conductionLifecycle(carry, target.instanceId, 3).length === 0, 'Dẫn Điện must not trigger more than twice per battle');
+    assert(carry.ragePoints === 1 && engine.ownedCounter(carry, 'dien-nhip') === 4, 'battle limit must preserve ready counter and Rage state');
+
+    const blockedState = new CombatState(
+      [createStormcoil(), pow('conduction-blocked-carry', fixture)],
+      [pow('conduction-blocked-target', fixture, 'enemy')]
+    );
+    const [blockedSource, blockedCarry] = blockedState.activeLiving('player');
+    const blockedTarget = blockedState.activeLiving('enemy')[0];
+    engine.initializeBattle(blockedState.units);
+    engine.setOwnedCounter(blockedCarry, 'dien-nhip', 4, 4);
+    blockedCarry.ragePoints = 1;
+    for (const origin of ['follow-up', 'counter', 'dot', 'secondary-hit'] as const) {
+      assert(conductionLifecycle(blockedCarry, blockedTarget.instanceId, 1, origin, origin !== 'dot').length === 0, `${origin} must not trigger Dẫn Điện`);
+    }
+    assert(conductionLifecycle(blockedCarry, blockedTarget.instanceId, 1, 'main', false).length === 0, 'a non-direct main action must not trigger Dẫn Điện');
+    assert(blockedCarry.ragePoints === 1 && engine.ownedCounter(blockedCarry, 'dien-nhip') === 4, 'ineligible actions must not consume counter or charge Rage');
+    assert(engine.battleCounter(blockedSource, 'dan-dien:battle-triggers') === 0, 'ineligible actions must not consume the battle trigger limit');
+    engine.setOwnedCounter(blockedCarry, 'dien-nhip', 3, 4);
+    assert(conductionLifecycle(blockedCarry, blockedTarget.instanceId, 1).length === 0, 'Điện Nhịp below 4 must not trigger Dẫn Điện');
+    assert(blockedCarry.ragePoints === 1 && engine.ownedCounter(blockedCarry, 'dien-nhip') === 3, 'below-threshold checks must preserve counter and Rage');
+
+    const cappedState = new CombatState(
+      [createStormcoil(), pow('conduction-capped-carry', fixture)],
+      [pow('conduction-capped-target', fixture, 'enemy')]
+    );
+    const [cappedSource, cappedCarry] = cappedState.activeLiving('player');
+    const cappedTarget = cappedState.activeLiving('enemy')[0];
+    engine.initializeBattle(cappedState.units);
+    engine.setOwnedCounter(cappedCarry, 'dien-nhip', 4, 4);
+    cappedCarry.ragePoints = 8;
+    const cappedCharge = conductionLifecycle(cappedCarry, cappedTarget.instanceId, 1);
+    assert(cappedCharge.length === 1 && cappedCharge[0].amount === 0 && cappedCharge[0].rageEvents?.length === 0, 'Rage 8 must resolve Dẫn Điện without exceeding the cap');
+    assert(cappedCarry.ragePoints === 8 && engine.ownedCounter(cappedCarry, 'dien-nhip') === 0, 'Rage 8 trigger must still consume Điện Nhịp');
+    assert(engine.battleCounter(cappedSource, 'dan-dien:battle-triggers') === 1, 'Rage 8 trigger must still consume a battle trigger');
 
     const ultimateState = new CombatState(
       [createStormcoil(), pow('conduction-ultimate-carry', fixture)],
@@ -556,6 +625,10 @@ export function runCombatPassiveRegression(definitions: Record<string, Definitio
     );
     assert(engine.ownedCounter(deadCarry, 'dien-nhip') === 1, 'Stormcoil Ultimate must not add counter to a defeated carry');
     assert(deadCarry.ragePoints === 0, 'defeated carry must not receive Rage from Stormcoil Ultimate');
+    engine.setOwnedCounter(deadCarry, 'dien-nhip', 4, 4);
+    deadCarry.ragePoints = 1;
+    assert(conductionLifecycle(deadCarry, deadTarget.instanceId, 1).length === 0, 'a defeated designated carry must not trigger Dẫn Điện');
+    assert(deadCarry.ragePoints === 1 && engine.ownedCounter(deadCarry, 'dien-nhip') === 4, 'defeated carry checks must preserve counter and Rage');
 
     const soloState = new CombatState([createStormcoil()], [pow('conduction-solo-target', fixture, 'enemy')]);
     const soloSource = soloState.activeLiving('player')[0];
@@ -565,7 +638,8 @@ export function runCombatPassiveRegression(definitions: Record<string, Definitio
     new SkillActionResolver(() => 0.99, (event) => engine.applyLifecycle(event)).resolve(
       soloSource, soloTarget, soloSource.pow.abilities.skills[0], 0, 1
     );
-    foundationChecks.push('Stormcoil Dẫn Điện: carry / Skill1 +1 / Ultimate +2 once / cap 4 / no Rage charge');
+    assert(conductionLifecycle(soloSource, soloTarget.instanceId, 1).length === 0, 'Stormcoil without a designated carry must not crash or self-trigger');
+    foundationChecks.push('Stormcoil Dẫn Điện: counter gain / atomic charge-to-8 / consume / round and battle limits');
   }
 
   {

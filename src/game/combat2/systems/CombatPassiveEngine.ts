@@ -17,6 +17,8 @@ const ENERGY_CHORUS_CHECKPOINTS_USED = 'diep-khuc:checkpoints-used';
 const STORMCOIL_CONDUCTION_PASSIVE_ID = 'stormcoil_dan_dien';
 const CONDUCTION_INITIALIZED = 'dan-dien:initialized';
 const DIEN_NHIP_COUNTER = 'dien-nhip';
+const CONDUCTION_BATTLE_TRIGGERS = 'dan-dien:battle-triggers';
+const CONDUCTION_ROUND_TRIGGERS = 'dan-dien:round-triggers';
 
 export type CombatActionOrigin = 'main' | 'follow-up' | 'counter' | 'dot' | 'secondary-hit';
 export type CombatActionType = 'basic' | 'skill' | 'ultimate' | 'status-tick';
@@ -160,6 +162,9 @@ export class CombatPassiveEngine {
     }
     if (this.isConductionSource(event.actor)) {
       events.push(...this.applyConductionCounterGain(event));
+    }
+    if (event.stage === 'after-main-action' && isMainDirectDamageAction(event.provenance)) {
+      events.push(...this.applyConductionCharge(event.actor, event.round));
     }
     return events;
   }
@@ -313,6 +318,32 @@ export class CombatPassiveEngine {
   private isCounterTiming(stage: CombatPassiveLifecycleStage, gain: CombatPassiveCounterGain): boolean {
     if (gain.timing === 'afterMainAction') return stage === 'after-main-action';
     return gain.timing === 'afterUltimateActionConfirmed' && stage === 'after-ultimate-cast';
+  }
+
+  private applyConductionCharge(carry: CombatUnitState, round: number): PassiveRuntimeEvent[] {
+    if (!carry.alive || this.ownedCounter(carry, DIEN_NHIP_COUNTER) < 4) return [];
+    const source = [...this.battleUnitsById.values()].find((unit) => (
+      this.isConductionSource(unit) &&
+      unit.side === carry.side &&
+      unit.passiveState.designatedCarryInstanceId === carry.instanceId
+    ));
+    if (!source) return [];
+    if (this.battleCounter(source, CONDUCTION_BATTLE_TRIGGERS) >= 2) return [];
+    if (this.roundCounter(source, CONDUCTION_ROUND_TRIGGERS, round) >= 1) return [];
+
+    this.setOwnedCounter(carry, DIEN_NHIP_COUNTER, 0, 4);
+    this.incrementBattleCounter(source, CONDUCTION_BATTLE_TRIGGERS);
+    this.incrementRoundCounter(source, CONDUCTION_ROUND_TRIGGERS, round);
+    const charge = chargeRageTo(carry.ragePoints, 8);
+    carry.ragePoints = charge.next;
+    return [{
+      type: 'rage-charge',
+      passiveId: STORMCOIL_CONDUCTION_PASSIVE_ID,
+      targetIds: [carry.instanceId],
+      amount: charge.effectiveGain,
+      status: 'dan-dien',
+      rageEvents: charge.events
+    }];
   }
 
   private isConductionSource(unit: CombatUnitState): boolean {
