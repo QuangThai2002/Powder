@@ -114,15 +114,15 @@
   }
 
   function getPool(resultRarity) {
-    return ELIGIBILITY.filterPlayerPows(D.pows).filter((pow) => pow.rarity === resultRarity);
+    return ELIGIBILITY.filterPlayerAcquisitionPows(D.pows).filter((pow) => pow.rarity === resultRarity);
   }
 
   function powPickWeight(pow) {
-    return ELIGIBILITY.isPlayerEligible(pow) ? 1 : 0;
+    return ELIGIBILITY.isPlayerAcquisitionEligible(pow) ? 1 : 0;
   }
 
   function pickPow(list, random = Math.random) {
-    const pool = ELIGIBILITY.filterPlayerPows(Array.isArray(list) ? list : []);
+    const pool = ELIGIBILITY.filterPlayerAcquisitionPows(Array.isArray(list) ? list : []);
     if (!pool.length) return null;
     const total = pool.reduce((sum, pow) => sum + powPickWeight(pow), 0);
     let cursor = Math.max(0, Math.min(0.999999999, Number(random()))) * total;
@@ -181,7 +181,7 @@
     const rolledRarity = rollRarity(ballRarity);
     const pool = getPool(rolledRarity);
     const filtered = pool.filter((pow) => pow.id !== avoidId);
-    return pickPow(filtered.length ? filtered : pool) || ELIGIBILITY.filterPlayerPows(D.pows)[0];
+    return pickPow(filtered.length ? filtered : pool) || ELIGIBILITY.filterPlayerAcquisitionPows(D.pows)[0];
   }
 
   function buildReel(result, count = 30, winningIndex = 25) {
@@ -552,7 +552,7 @@
   function play(result, options = {}) {
     clearTimers();
 
-    if (!result?.pow || !ELIGIBILITY.isPlayerEligible(result.pow)) {
+    if (!result?.pow || !ELIGIBILITY.isPlayerAcquisitionEligible(result.pow)) {
       console.warn("[PowBall] blocked non-player-eligible reveal.");
       return false;
     }

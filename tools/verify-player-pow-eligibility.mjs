@@ -3,37 +3,34 @@ import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 
 const root = new URL('../', import.meta.url);
-const context = {
-  console,
-  crypto: globalThis.crypto,
-  setTimeout,
-  clearTimeout,
-  URL,
-  location: { pathname: '/', href: 'http://localhost/' },
-  document: {
-    addEventListener() {},
-    querySelector() { return null; },
-    documentElement: { classList: { toggle() {} } },
-  },
-};
-context.window = context;
-vm.createContext(context);
+function createContext() {
+  const context = {
+    console,
+    crypto: globalThis.crypto,
+    setTimeout,
+    clearTimeout,
+    URL,
+    location: { pathname: '/', href: 'http://localhost/' },
+    document: {
+      addEventListener() {},
+      querySelector() { return null; },
+      documentElement: { classList: { toggle() {} } },
+    },
+  };
+  context.window = context;
+  vm.createContext(context);
+  return context;
+}
 
-async function load(path) {
+async function load(context, path) {
   const source = await readFile(new URL(path, root), 'utf8');
   vm.runInContext(source, context, { filename: path });
 }
 
-await load('js/data.js');
-await load('js/player-pow-eligibility-v1.js');
+const context = createContext();
+await load(context, 'js/data.js');
 
 const D = context.POWDER_DATA;
-const policy = context.POWDER_PLAYER_POW_ELIGIBILITY_V1;
-assert.equal(policy.diagnostics().canonicalTotal, 99);
-assert.equal(policy.diagnostics().playerVisible, 90);
-assert.equal(policy.diagnostics().hidden, 9);
-assert.equal(policy.diagnostics().valid, true);
-
 const hiddenIds = [
   'noxabyss',
   'frostmaw',
@@ -45,8 +42,6 @@ const hiddenIds = [
   'starter_water_aquelion',
   'starter_leaf_sylvion',
 ];
-assert.equal(hiddenIds.filter((id) => !policy.isPlayerEligible(id)).length, 9);
-
 const roleMutationIds = [
   'voltfang', 'ignivar', 'volcarnos', 'stoneback', 'tidecrest', 'blazetalon',
   'venomtail', 'frostpelt', 'ironmane', 'bramblet', 'coralyn', 'sunfeather',
@@ -60,13 +55,37 @@ for (const id of roleMutationIds) {
   pow.maxStars = 7;
 }
 assert.equal(D.pows.filter((pow) => Number(pow.maxStars) >= 7 || pow.specialStarter === true).length, 38);
+await load(context, 'js/player-pow-eligibility-v1.js');
+const policy = context.POWDER_PLAYER_POW_ELIGIBILITY_V1;
+assert.deepEqual(Array.from(policy.diagnostics().canonicalHiddenIds), hiddenIds);
+assert.equal(policy.diagnostics().exactHiddenIds, true);
 assert.equal(policy.diagnostics().canonicalTotal, 99);
 assert.equal(policy.diagnostics().playerVisible, 90);
 assert.equal(policy.diagnostics().hidden, 9);
 assert.equal(policy.diagnostics().valid, true);
 assert.equal(policy.isPlayerEligible('voltfang'), true);
+assert.equal(policy.isPlayerAcquisitionEligible('starter_fire_flarion'), false);
+assert.equal(policy.isPlayerAcquisitionEligible('voltfang'), true);
 
-await load('js/adventure-data.js');
+const swapContext = createContext();
+await load(swapContext, 'js/data.js');
+const swapData = swapContext.POWDER_DATA;
+const hiddenBeforeSwap = swapData.pows.find((pow) => pow.id === 'noxabyss');
+const visibleBeforeSwap = swapData.pows.find((pow) => pow.id === 'voltkit');
+hiddenBeforeSwap.maxStars = 1;
+hiddenBeforeSwap.specialStarter = false;
+visibleBeforeSwap.maxStars = 7;
+visibleBeforeSwap.specialStarter = true;
+assert.equal(swapData.pows.filter((pow) => Number(pow.maxStars) >= 7 || pow.specialStarter === true).length, 9);
+await load(swapContext, 'js/player-pow-eligibility-v1.js');
+const swapPolicy = swapContext.POWDER_PLAYER_POW_ELIGIBILITY_V1;
+assert.equal(swapPolicy.diagnostics().valid, true);
+assert.deepEqual(Array.from(swapPolicy.diagnostics().canonicalHiddenIds), hiddenIds);
+assert.equal(swapPolicy.isPlayerEligible('noxabyss'), false);
+assert.equal(swapPolicy.isPlayerEligible('voltkit'), true);
+assert.equal(swapPolicy.diagnostics().exactHiddenIds, true);
+
+await load(context, 'js/adventure-data.js');
 const stages = context.POWDER_ADVENTURE_DATA.islands.flatMap((island) => island.stages);
 const rawHiddenStageCount = stages.filter((stage) => policy.containsHiddenPow(stage.enemyIds)).length;
 assert.equal(stages.length, 230);
@@ -77,11 +96,23 @@ assert.equal(stages.filter((stage) => policy.containsHiddenPow(stage.enemyIds)).
 assert.equal(policy.resolvePlayerPowId('noxabyss'), 'umbrael');
 assert.equal(policy.resolvePlayerPowId('tempestrix'), 'zephyrion');
 
-await load('js/powball-system.js');
+await load(context, 'js/powball-system.js');
 const powball = context.POWBALL_SYSTEM;
+const expectedDropRates = {
+  common: [{ rarity: 'common', chance: 90 }, { rarity: 'rare', chance: 10 }],
+  rare: [{ rarity: 'common', chance: 22 }, { rarity: 'rare', chance: 70 }, { rarity: 'super_rare', chance: 8 }],
+  super_rare: [{ rarity: 'rare', chance: 30 }, { rarity: 'super_rare', chance: 64 }, { rarity: 'epic', chance: 6 }],
+  epic: [{ rarity: 'super_rare', chance: 34 }, { rarity: 'epic', chance: 62 }, { rarity: 'legendary', chance: 4 }],
+  legendary: [{ rarity: 'super_rare', chance: 9 }, { rarity: 'epic', chance: 35 }, { rarity: 'legendary', chance: 55 }, { rarity: 'mythic', chance: 1 }],
+  mythic: [{ rarity: 'epic', chance: 10 }, { rarity: 'legendary', chance: 60 }, { rarity: 'mythic', chance: 29.95 }, { rarity: 'ancient', chance: 0.05 }],
+  ancient: [{ rarity: 'legendary', chance: 30 }, { rarity: 'mythic', chance: 40 }, { rarity: 'ancient', chance: 30 }],
+};
+assert.deepEqual(JSON.parse(JSON.stringify(powball.DROP_RATES)), expectedDropRates);
+const dropRatesBeforeRoll = JSON.stringify(powball.DROP_RATES);
 assert.equal(powball.validateRates().length, 0);
 for (const rarity of powball.RARITY_ORDER) {
-  assert.equal(powball.getPool(rarity).some((pow) => !policy.isPlayerEligible(pow)), false);
+  assert.equal(powball.getPool(rarity).some((pow) => !policy.isPlayerAcquisitionEligible(pow)), false);
+  assert.equal(powball.getPool(rarity).some((pow) => policy.canonicalSpecialStarterIds.includes(pow.id)), false);
   const rates = powball.getRates(rarity);
   assert.ok(rates.length > 0, `empty effective rates for ${rarity}`);
   assert.ok(Math.abs(rates.reduce((sum, row) => sum + row.chance, 0) - 100) < 0.0001);
@@ -89,9 +120,10 @@ for (const rarity of powball.RARITY_ORDER) {
     const random = () => (index + 0.5) / 1000;
     const rolledRarity = powball.rollRarity(rarity, random);
     const result = powball.pickPow(powball.getPool(rolledRarity), random);
-    assert.ok(result && policy.isPlayerEligible(result), `${rarity} produced hidden Pow`);
+    assert.ok(result && policy.isPlayerAcquisitionEligible(result), `${rarity} produced hidden or starter Pow`);
   }
 }
+assert.equal(JSON.stringify(powball.DROP_RATES), dropRatesBeforeRoll, 'DROP_RATES must remain immutable through roll logic');
 assert.equal(powball.getPool('ancient').length, 0);
 assert.equal(powball.getConfiguredRates('ancient').some((row) => row.rarity === 'ancient'), true);
 assert.equal(powball.getRates('ancient').some((row) => row.rarity === 'ancient'), false);
@@ -122,7 +154,7 @@ context.POWDER_COMBAT2_BOSS_BOOTSTRAP = {
   build: (_stage, input) => ({ playerRoster: input.playerIds, enemyRoster: input.enemyIds }),
 };
 context.POWDER_BOSS_ENCOUNTER_V1860 = { encounter: () => ({ phases: [] }) };
-await load('js/combat-entry-v177.js');
+await load(context, 'js/combat-entry-v177.js');
 const entry = context.POWDER_COMBAT_ENTRY_V177;
 const pve = entry.createPvePilotRequest({
   id: 'audit-stage', islandId: 1, number: 1, enemyIds: ['noxabyss', 'pyroon'],

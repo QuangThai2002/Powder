@@ -7,6 +7,25 @@
   }
 
   const normalizeId = (value) => String(value || "").trim().toLowerCase();
+  // These IDs are the approved canonical authority; runtime roster attributes are mutable.
+  const CANONICAL_HIDDEN_IDS = Object.freeze([
+    "noxabyss",
+    "frostmaw",
+    "magmorax",
+    "venomarch",
+    "luxarion",
+    "tempestrix",
+    "starter_fire_flarion",
+    "starter_water_aquelion",
+    "starter_leaf_sylvion",
+  ]);
+  const CANONICAL_SPECIAL_STARTER_IDS = Object.freeze([
+    "starter_fire_flarion",
+    "starter_water_aquelion",
+    "starter_leaf_sylvion",
+  ]);
+  const canonicalHiddenIdSet = new Set(CANONICAL_HIDDEN_IDS);
+  const canonicalSpecialStarterIdSet = new Set(CANONICAL_SPECIAL_STARTER_IDS);
   const snapshot = D.pows.map((pow, index) => Object.freeze({
     id: normalizeId(pow?.id),
     element: String(pow?.element || ""),
@@ -15,18 +34,23 @@
     index,
   }));
   const byId = new Map(snapshot.map((pow) => [pow.id, pow]));
+  const uniqueIds = byId.size === snapshot.length && snapshot.every((pow) => pow.id);
   const hiddenIds = new Set(snapshot
-    .filter((pow) => pow.maxStars >= 7 || pow.specialStarter)
+    .filter((pow) => canonicalHiddenIdSet.has(pow.id))
     .map((pow) => pow.id));
   const playerIds = new Set(snapshot
-    .filter((pow) => !hiddenIds.has(pow.id))
+    .filter((pow) => !canonicalHiddenIdSet.has(pow.id))
     .map((pow) => pow.id));
+  const exactHiddenIds = hiddenIds.size === CANONICAL_HIDDEN_IDS.length
+    && CANONICAL_HIDDEN_IDS.every((id) => hiddenIds.has(id));
 
   const invariant = Object.freeze({
     canonicalTotal: snapshot.length,
     playerVisible: playerIds.size,
     hidden: hiddenIds.size,
-    valid: snapshot.length === 99 && playerIds.size === 90 && hiddenIds.size === 9,
+    canonicalHiddenIds: [...CANONICAL_HIDDEN_IDS],
+    exactHiddenIds,
+    valid: uniqueIds && snapshot.length === 99 && playerIds.size === 90 && hiddenIds.size === 9 && exactHiddenIds,
   });
 
   // Player runtime fails closed if this stable pre-mutation catalog invariant drifts.
@@ -38,6 +62,16 @@
 
   function filterPlayerPows(list) {
     return (Array.isArray(list) ? list : []).filter(isPlayerEligible);
+  }
+
+  function isPlayerAcquisitionEligible(value) {
+    if (!isPlayerEligible(value)) return false;
+    const id = normalizeId(typeof value === "object" ? value?.id : value);
+    return !canonicalSpecialStarterIdSet.has(id);
+  }
+
+  function filterPlayerAcquisitionPows(list) {
+    return (Array.isArray(list) ? list : []).filter(isPlayerAcquisitionEligible);
   }
 
   const preferredReplacement = Object.freeze({
@@ -104,8 +138,12 @@
   window.POWDER_PLAYER_POW_ELIGIBILITY_V1 = Object.freeze({
     version: "1.0.0",
     diagnostics: () => ({ ...invariant }),
+    canonicalHiddenIds: CANONICAL_HIDDEN_IDS,
+    canonicalSpecialStarterIds: CANONICAL_SPECIAL_STARTER_IDS,
     isPlayerEligible,
     filterPlayerPows,
+    isPlayerAcquisitionEligible,
+    filterPlayerAcquisitionPows,
     filterPlayerHistory,
     containsHiddenPow,
     resolvePlayerPowId,
