@@ -37,9 +37,13 @@ function decorate(scene: PatchableScene, actor: CombatUnitState): void {
   const role = scene.add.text(-deckWidth / 2 + 20, -deckHeight / 2 + 39, `${actor.pow.role} · CHỌN KỸ NĂNG`, {
     fontFamily: COMBAT_BODY_FONT, fontSize: '10px', color: '#9fc6d2', fontStyle: 'bold'
   }).setOrigin(0, 0);
-  const rage = Math.max(0, Math.round(Number((actor as any).rage) || 0));
-  const resource = scene.add.text(deckWidth / 2 - 20, -deckHeight / 2 + 25, `NỘ ${rage}/100`, {
-    fontFamily: COMBAT_DISPLAY_FONT, fontSize: '11px', color: rage >= 100 ? '#ffe07a' : '#8fe8ff', fontStyle: 'bold'
+  const rage = Math.max(0, Math.round(Number(actor.ragePoints) || 0));
+  const mana = Math.max(0, Math.round(Number(actor.manaPoints ?? 100) || 0));
+  const maxMana = Math.max(1, Math.round(Number(actor.maxManaPoints ?? 100) || 100));
+  const usesMana = actor.pow.abilities.skills.some((ability) => ability?.usesMana === true) || actor.pow.abilities.ultimate.usesMana === true;
+  const resourceLabel = usesMana ? `NỘ ${rage}/8 · MANA ${mana}/${maxMana}` : `NỘ ${rage}/8`;
+  const resource = scene.add.text(deckWidth / 2 - 20, -deckHeight / 2 + 25, resourceLabel, {
+    fontFamily: COMBAT_DISPLAY_FONT, fontSize: '11px', color: rage >= 4 ? '#ffe07a' : '#8fe8ff', fontStyle: 'bold'
   }).setOrigin(1, 0.5);
   root.add([name, role, resource]);
 

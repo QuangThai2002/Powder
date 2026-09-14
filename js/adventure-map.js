@@ -20,7 +20,8 @@ function stageUnlocked(stage,p=progress()){
 }
 function prepPassed(stage,p=progress()){return !!p.stagePrep?.[stage.id]?.passed;}
 function stageDone(stage,p=progress()){return !!p.stageWins?.[stage.id];}
-function learningGate(stage){return app()?.getDungeonLearningGate?.(stage)||{ready:true,requirement:{RequiredLessonIDs:[],RequiredConceptIDs:[],RequiredMastery:0,Rank:0,Curriculum:{}},masteries:[],missingLessons:[],weak:[],rankOk:true}}
+function isFreeCombatOnboarding(stage){return String(stage?.id||'')==='1-1'&&Number(stage?.islandId)===1&&Number(stage?.number)===1;}
+function learningGate(stage){if(isFreeCombatOnboarding(stage))return{ready:true,onboardingCombat:true,requirement:{RequiredLessonIDs:[],RequiredConceptIDs:[],RequiredMastery:0,Rank:0,Curriculum:{}},masteries:[],missingLessons:[],weak:[],rankOk:true};return app()?.getDungeonLearningGate?.(stage)||{ready:true,requirement:{RequiredLessonIDs:[],RequiredConceptIDs:[],RequiredMastery:0,Rank:0,Curriculum:{}},masteries:[],missingLessons:[],weak:[],rankOk:true}}
 function teamAverageLevel(){const s=app()?.getSave?.()||{},ids=(s.team||[]).filter(id=>s.owned?.[id]);if(!ids.length&&s.starterId)ids.push(s.starterId);return Math.max(1,Math.round(ids.reduce((a,id)=>a+Number(s.owned?.[id]?.level||1),0)/Math.max(1,ids.length)));}
 function teamAverageStars(){const s=app()?.getSave?.()||{},ids=(s.team||[]).filter(id=>s.owned?.[id]);if(!ids.length&&s.starterId)ids.push(s.starterId);return Math.max(0,Math.round(ids.reduce((a,id)=>a+Number(s.owned?.[id]?.stars||0),0)/Math.max(1,ids.length)));}
 function enemyLevel(stage){return Math.min(100,Math.max(stage.recommendedLevel,Math.round(teamAverageLevel()*(stage.adaptive||1))));}

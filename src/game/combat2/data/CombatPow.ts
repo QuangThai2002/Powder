@@ -32,6 +32,39 @@ export interface CombatPassiveCounterGain {
   timing: 'afterMainAction' | 'afterUltimateActionConfirmed';
 }
 
+export type CombatPyroonMechanic =
+  | {
+      kind: 'focus-basic';
+      focusCap: number;
+      sameTargetGain: number;
+      critGain: number;
+      actionGainCap: number;
+    }
+  | {
+      kind: 'focus-pierce';
+      focusRequired: number;
+      damagePerFocus: number;
+      guaranteedCritAt: number;
+      consumeAllFocus: true;
+    }
+  | {
+      kind: 'fire-bait';
+      durationActions: number;
+      triggerLimit: number;
+      procAttackRatio: number;
+      burnPerTrigger: number;
+      focusOnFinalTrigger: number;
+    }
+  | {
+      kind: 'seven-rays';
+      shots: number;
+      shotAttackRatio: number;
+      nextShotCritBonus: number;
+      guaranteedFinalCritAtFocus: number;
+      retarget: 'lowest-hp';
+      preferFireBait: true;
+    };
+
 export interface PowDisplayProfile {
   heightRatio: number;
   scaleAdjust?: number;
@@ -71,6 +104,10 @@ export interface CombatAbility {
   masterEffects?: Readonly<Record<string, unknown>>;
   conditionalDamageModifier?: CombatConditionalDamageModifier;
   passiveCounterGain?: CombatPassiveCounterGain;
+  /** Canonical Pyroon Core/skill behavior. Never inferred from tooltip text. */
+  pyroonMechanic?: CombatPyroonMechanic;
+  /** Mana is enforced only for abilities that opt into the canonical contract. */
+  usesMana?: true;
   description?: string;
   sureHit?: boolean;
   unavoidable?: boolean;

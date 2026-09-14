@@ -3,6 +3,7 @@ import type { CombatUnitState } from './CombatState';
 import { FROSTBITE_DAMAGE_MULTIPLIER } from './CombatControlEngine';
 import { CombatIdentityRules } from './CombatIdentityRules';
 import { CombatLegacyStatEngine } from './CombatLegacyStatEngine';
+import { CombatPyroonEngine, type PyroonMechanicDamageEvent } from './CombatPyroonEngine';
 import { ACTION_BASE_RAW_GAIN, applyRawRageGain } from './CombatRageEngine';
 import {
   createCombatActionProvenance,
@@ -31,17 +32,22 @@ export interface BasicAttackResult {
   critChance: number;
   mitigation: number;
   provenance: CombatActionProvenance;
+  focusGained: number;
+  focusAfter: number;
+  mechanicEvents: readonly PyroonMechanicDamageEvent[];
 }
 
 export class BasicAttackResolver {
   private readonly identity = new CombatIdentityRules();
   private readonly legacyStats: CombatLegacyStatEngine;
+  private readonly pyroon: CombatPyroonEngine;
 
   constructor(
     random: () => number = () => 0.5,
     private readonly lifecycleHook: CombatPassiveLifecycleHook = () => {}
   ) {
     this.legacyStats = new CombatLegacyStatEngine(random);
+    this.pyroon = new CombatPyroonEngine(random);
   }
 
   resolve(
@@ -49,7 +55,8 @@ export class BasicAttackResolver {
     target: CombatUnitState,
     passiveContext: PassiveActionContext = {},
     currentRound = 1,
-    provenanceOverrides: CombatActionProvenanceOverrides = {}
+    provenanceOverrides: CombatActionProvenanceOverrides = {},
+    battleUnits: readonly CombatUnitState[] = []
   ): BasicAttackResult {
     const ability = attacker.pow.abilities.basic;
     const basicPower = this.safeStat(ability.power, 100);
@@ -57,6 +64,15 @@ export class BasicAttackResolver {
     const scalingStat = this.scalingStat(ability);
     const damageType = this.damageType(ability, scalingStat);
     const critMode = this.critMode(ability, damageType);
+    const provenance = createCombatActionProvenance(
+      attacker.instanceId,
+      [target.instanceId],
+      'basic',
+      true,
+      ability.name,
+      provenanceOverrides
+    );
+    const focusSnapshot = this.pyroon.beginBasic(attacker, target, ability, provenance);
     const targetHpBefore = this.safeHp(target.hp, target.pow.maxHp);
     const identity = this.identity.evaluateDamage(attacker, target, 'basic', damageType, passiveContext);
     const hit = this.legacyStats.resolveHit(attacker, target, {
@@ -92,17 +108,19 @@ export class BasicAttackResolver {
     target.hp = targetHpAfter;
     target.alive = targetHpAfter > 0;
     const freezeShattered = false;
+    const focusGained = this.pyroon.completeBasic(
+      attacker,
+      target,
+      ability,
+      focusSnapshot,
+      hit.hit && damage > 0,
+      hit.crit
+    );
+    const mechanicEvents = this.pyroon.resolveFireBait(attacker, target, provenance, damage, battleUnits);
+    this.pyroon.completeMainAction(attacker, provenance);
 
     const rage = applyRawRageGain(attacker.ragePoints, ACTION_BASE_RAW_GAIN);
     attacker.ragePoints = rage.next;
-    const provenance = createCombatActionProvenance(
-      attacker.instanceId,
-      [target.instanceId],
-      'basic',
-      true,
-      ability.name,
-      provenanceOverrides
-    );
     if (provenance.origin === 'main') {
       this.lifecycleHook({
         stage: 'after-main-action',
@@ -132,7 +150,10 @@ export class BasicAttackResolver {
       hitChance: hit.hitChance,
       critChance: hit.critChance,
       mitigation: hit.mitigation,
-      provenance
+      provenance,
+      focusGained,
+      focusAfter: this.pyroon.getFocus(attacker),
+      mechanicEvents
     };
   }
 

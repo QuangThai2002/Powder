@@ -28,6 +28,20 @@ export interface CombatPassiveStateLedger {
   designatedCarryInstanceId: string | null;
 }
 
+export interface CombatCoreMarkState {
+  kind: 'pyroon-fire-bait';
+  sourceInstanceId: string;
+  remainingActions: number;
+  remainingTriggers: number;
+  triggerCount: number;
+}
+
+export interface CombatCoreStateLedger {
+  counters: Record<string, number>;
+  values: Record<string, string | number | boolean | null>;
+  marks: Record<string, CombatCoreMarkState>;
+}
+
 export function createCombatPassiveStateLedger(): CombatPassiveStateLedger {
   return {
     flags: {},
@@ -36,6 +50,18 @@ export function createCombatPassiveStateLedger(): CombatPassiveStateLedger {
     ownedCounters: {},
     designatedCarryInstanceId: null
   };
+}
+
+export function createCombatCoreStateLedger(): CombatCoreStateLedger {
+  return { counters: {}, values: {}, marks: {} };
+}
+
+export function ensureCombatCoreState(unit: CombatUnitState): CombatCoreStateLedger {
+  if (!unit.coreState || typeof unit.coreState !== 'object') unit.coreState = createCombatCoreStateLedger();
+  unit.coreState.counters ||= {};
+  unit.coreState.values ||= {};
+  unit.coreState.marks ||= {};
+  return unit.coreState;
 }
 
 export interface CombatUnitState {
@@ -47,6 +73,9 @@ export interface CombatUnitState {
   hp: number;
   /** Unified Combat 2.4+ resource: 0..8 effective Rage points. */
   ragePoints: number;
+  /** Canonical ability Mana is opt-in; legacy abilities remain Rage-only. */
+  manaPoints?: number;
+  maxManaPoints?: number;
   /** Consecutive correct academic actions, matching the legacy 0..5 combo contract. */
   combo: number;
   shield: number;
@@ -99,6 +128,8 @@ export interface CombatUnitState {
   poisonActionsRemaining: number;
   /** Battle-local state owned by Passive mechanics, separate from Core and special mechanics. */
   passiveState: CombatPassiveStateLedger;
+  /** Battle-local Core state. It must never be stored in Passive or specialMechanic state. */
+  coreState?: CombatCoreStateLedger;
   passiveUsed: boolean;
   reviveMarkerActionsRemaining: number;
   alive: boolean;
@@ -202,6 +233,8 @@ export class CombatState {
     for (const unit of this.units) {
       unit.hp = this.finiteClamp(unit.hp, 0, unit.pow.maxHp, 0);
       unit.ragePoints = sanitizeRagePoints(unit.ragePoints);
+      unit.maxManaPoints = Math.floor(this.finiteClamp(unit.maxManaPoints ?? 100, 0, 999, 100));
+      unit.manaPoints = Math.floor(this.finiteClamp(unit.manaPoints ?? unit.maxManaPoints, 0, unit.maxManaPoints, unit.maxManaPoints));
       unit.combo = Math.floor(this.finiteClamp(unit.combo, 0, 5, 0));
       unit.initialInitiative = this.finiteClamp(unit.initialInitiative, 0, 92, 0);
       unit.shield = this.finiteClamp(unit.shield, 0, unit.pow.maxHp * 0.8, 0);
@@ -248,6 +281,7 @@ export class CombatState {
       unit.poisonStacks = Math.floor(this.finiteClamp(unit.poisonStacks, 0, 3, 0));
       unit.poisonActionsRemaining = this.safeDuration(unit.poisonActionsRemaining);
       unit.passiveState = this.sanitizePassiveState(unit.passiveState);
+      unit.coreState = this.sanitizeCoreState(unit.coreState);
       unit.dotDamage = Math.floor(this.finiteClamp(unit.dotDamage, 0, unit.pow.maxHp, 0));
       unit.dotActionsRemaining = this.safeDuration(unit.dotActionsRemaining);
       unit.reviveMarkerActionsRemaining = this.safeDuration(unit.reviveMarkerActionsRemaining);
@@ -363,6 +397,8 @@ export class CombatState {
       fieldSlot: slot < ACTIVE_TEAM_SIZE ? slot : null,
       hp: pow.hp,
       ragePoints: this.initialRage(options.initialRageByPowId, pow.id),
+      manaPoints: 100,
+      maxManaPoints: 100,
       combo: 0,
       shield: 0,
       speed: this.finiteClamp(pow.speed, 1, 9999, 100),
@@ -407,6 +443,7 @@ export class CombatState {
       poisonStacks: 0,
       poisonActionsRemaining: 0,
       passiveState: createCombatPassiveStateLedger(),
+      coreState: createCombatCoreStateLedger(),
       passiveUsed: false,
       reviveMarkerActionsRemaining: 0,
       alive: pow.hp > 0,
@@ -437,6 +474,30 @@ export class CombatState {
         round: Math.floor(entry.round),
         sourceKey: String(entry.sourceKey || entry.status).trim().toLowerCase() || entry.status
       }));
+  }
+
+  private sanitizeCoreState(value: CombatCoreStateLedger | undefined): CombatCoreStateLedger {
+    const source = value && typeof value === 'object' ? value : createCombatCoreStateLedger();
+    const counters: Record<string, number> = {};
+    for (const [key, raw] of Object.entries(source.counters || {})) {
+      counters[String(key)] = Math.floor(this.finiteClamp(Number(raw), 0, Number.MAX_SAFE_INTEGER, 0));
+    }
+    const values: CombatCoreStateLedger['values'] = {};
+    for (const [key, raw] of Object.entries(source.values || {})) {
+      if (raw === null || ['string', 'number', 'boolean'].includes(typeof raw)) values[String(key)] = raw;
+    }
+    const marks: CombatCoreStateLedger['marks'] = {};
+    for (const [key, raw] of Object.entries(source.marks || {})) {
+      if (!raw || raw.kind !== 'pyroon-fire-bait' || !raw.sourceInstanceId) continue;
+      marks[String(key)] = {
+        kind: 'pyroon-fire-bait',
+        sourceInstanceId: String(raw.sourceInstanceId),
+        remainingActions: this.safeDuration(raw.remainingActions),
+        remainingTriggers: this.safeDuration(raw.remainingTriggers),
+        triggerCount: this.safeDuration(raw.triggerCount)
+      };
+    }
+    return { counters, values, marks };
   }
 
   private safeFreezeStage(value: number): FreezeStage {

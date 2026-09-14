@@ -609,6 +609,10 @@ export class PowView {
     if (unit.abilityPowerBuffActionsRemaining > 0 && unit.abilityPowerMultiplier > 1) return 'TĂNG AP';
     if (unit.defenseBuffActionsRemaining > 0 && unit.defenseMultiplier > 1) return 'TĂNG THỦ';
     if (unit.speedBuffActionsRemaining > 0) return 'TĂNG TỐC';
+    const focus = Math.min(3, Math.max(0, Math.floor(unit.coreState?.counters['pyroon:focus'] ?? 0)));
+    if (focus > 0) return `TẬP TRUNG ×${focus}`;
+    const fireBait = Object.values(unit.coreState?.marks ?? {}).find((mark) => mark.kind === 'pyroon-fire-bait');
+    if (fireBait) return `MỒI LỬA · ${fireBait.remainingTriggers}`;
     if (unit.shield > 0) return `KHIÊN ${Math.round(unit.shield)}`;
     return '';
   }

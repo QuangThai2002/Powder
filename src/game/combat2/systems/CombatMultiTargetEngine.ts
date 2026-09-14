@@ -125,6 +125,8 @@ export class CombatMultiTargetEngine {
       actor.skillCooldownActionsRemaining[1]
     ];
     const initialUltimateCooldown = actor.ultimateCooldownActionsRemaining;
+    const initialMana = actor.manaPoints;
+    const initialMaxMana = actor.maxManaPoints;
 
     let committedRage = initialRage;
     let committedSkillCooldowns: [number, number] = [...initialSkillCooldowns];
@@ -136,6 +138,8 @@ export class CombatMultiTargetEngine {
         actor.ragePoints = initialRage;
         actor.skillCooldownActionsRemaining = [...initialSkillCooldowns];
         actor.ultimateCooldownActionsRemaining = initialUltimateCooldown;
+        actor.manaPoints = initialMana;
+        actor.maxManaPoints = initialMaxMana;
       }
 
       const hitAbility = abilityForHit(ability, index);
@@ -143,8 +147,8 @@ export class CombatMultiTargetEngine {
         ? { origin: 'main', targetIds: targets.map((unit) => unit.instanceId) }
         : { origin: 'secondary-hit', targetIds: [target.instanceId] };
       const result = slot === 'ultimate'
-        ? resolver.resolveUltimate(actor, target, hitAbility, currentRound, passiveContext, provenance)
-        : resolver.resolve(actor, target, hitAbility, slot, currentRound, passiveContext, provenance);
+        ? resolver.resolveUltimate(actor, target, hitAbility, currentRound, passiveContext, provenance, units)
+        : resolver.resolve(actor, target, hitAbility, slot, currentRound, passiveContext, provenance, units);
       hits.push({ target, result });
 
       if (index === 0) {

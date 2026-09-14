@@ -53,6 +53,8 @@ export class CombatLegacyStatEngine {
       ultimate?: boolean;
       unavoidable?: boolean;
       area?: boolean;
+      /** Explicit canonical mechanics may force a Crit without changing Crit Rate. */
+      forceCrit?: boolean;
     }
   ): LegacyHitResult {
     const offense = options.offenseStat === 'attack'
@@ -89,7 +91,7 @@ export class CombatLegacyStatEngine {
     // Preserve the legacy RNG stream: every landed hit consumes one Crit roll,
     // even when the typed mode makes the final Crit chance zero.
     const critRoll = hit ? this.safeRandom() : 1;
-    const crit = critEligible && critRoll < critChance;
+    const crit = hit && critEligible && (Boolean(options.forceCrit) || critRoll < critChance);
     const critMultiplier = !crit
       ? 1
       : options.critMode === 'magic'

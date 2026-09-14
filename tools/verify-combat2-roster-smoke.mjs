@@ -96,6 +96,9 @@ function exercisePow(runtime, pow, allyPow, enemyPow, enemyAllyPow) {
     const state = makeState();
     const actor = state.activeLiving('player')[0];
     const target = actionTarget(runtime, state, actor, ability);
+    if (ability.pyroonMechanic?.kind === 'focus-pierce') {
+      actor.coreState.counters['pyroon:focus'] = ability.pyroonMechanic.focusRequired;
+    }
     const result = new runtime.SkillActionResolver(() => 0.99).resolve(actor, target, ability, slot);
     assert.ok(Number.isFinite(result.damage) && Number.isFinite(result.healed), `${pow.id}.skill${slot + 1}: invalid result`);
     assertFiniteState(state, `${pow.id}.skill${slot + 1}`);

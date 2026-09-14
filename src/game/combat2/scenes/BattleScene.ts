@@ -592,7 +592,7 @@ export class BattleScene extends Phaser.Scene {
       }
       this.showActionBanner(actorView, actor.pow.abilities.basic.name, '#8eeaff');
       if (actorView && targetView) { const p = targetView.getWorldPosition(); await actorView.playAttackLunge(p.x, p.y); }
-      const result = this.basicAttack.resolve(actor, target, this.passiveContext(actor), this.combatState.round);
+      const result = this.basicAttack.resolve(actor, target, this.passiveContext(actor), this.combatState.round, {}, this.combatState.units);
       this.applyPassiveAfterAction(actor, target);
       this.completePassiveAction(actor, target);
       this.handleBossAction(actor, { targetId: target.instanceId });
@@ -641,8 +641,8 @@ export class BattleScene extends Phaser.Scene {
       } else if (actorView) await actorView.playStatusPulse();
 
       const result = slot === 'ultimate'
-        ? this.skillActions.resolveUltimate(actor, target, ability, this.combatState.round, this.passiveContext(actor))
-        : this.skillActions.resolve(actor, target, ability, slot, this.combatState.round, this.passiveContext(actor));
+        ? this.skillActions.resolveUltimate(actor, target, ability, this.combatState.round, this.passiveContext(actor), {}, this.combatState.units)
+        : this.skillActions.resolve(actor, target, ability, slot, this.combatState.round, this.passiveContext(actor), {}, this.combatState.units);
       this.applyPassiveAfterAction(actor, target);
       this.completePassiveAction(actor, target);
       this.handleBossAction(actor, { cleansed: result.cleansed, targetId: target.instanceId });
@@ -652,7 +652,14 @@ export class BattleScene extends Phaser.Scene {
       if (result.revived) { this.restoreRevivedReserve(target); this.showFloatingLabel(this.powViews.get(target.instanceId), 'HỒI SINH · 35% HP', '#73f0aa'); }
       this.presentation.showElementOutcome(targetView, result.elementOutcome);
       if (slot === 'ultimate') await this.presentation.playUltimateImpact(targetView, actor.pow.elementKey, selfTargeted);
-      if (result.evaded && targetView && !selfTargeted) this.showFloatingLabel(targetView, 'NÉ TRÁNH', '#d8f3ff');
+      if (result.hitResults.length > 0) {
+        for (const hit of result.hitResults) {
+          const hitView = this.powViews.get(hit.targetId);
+          if (!hitView || hit.evaded || selfTargeted) continue;
+          await hitView.playHit();
+          this.showDamageNumber(hitView, hit.hpDamage, hit.shieldDamage, hit.defeated, hit.crit);
+        }
+      } else if (result.evaded && targetView && !selfTargeted) this.showFloatingLabel(targetView, 'NÉ TRÁNH', '#d8f3ff');
       else if (result.damage > 0 && targetView && !selfTargeted) {
         await targetView.playHit();
         this.showDamageNumber(targetView, result.hpDamage, result.shieldDamage, result.defeated, result.crit);
@@ -667,6 +674,9 @@ export class BattleScene extends Phaser.Scene {
       }
       if (result.rageSpent > 0) this.showFloatingLabel(actorView, `NỘ -${result.rageSpent} · CÒN ${result.rageAfter}`, '#ffcc8a');
       else this.showRageGain(actorView, result.rageGained, result.rawRageGain);
+      if (result.manaSpent > 0) this.showFloatingLabel(actorView, `MANA -${result.manaSpent} · CÒN ${result.manaAfter}`, '#83eaff');
+      if (result.focusSpent > 0) this.showFloatingLabel(actorView, `TẬP TRUNG -${result.focusSpent}`, '#ffd36a');
+      if (result.focusAfter > 0 && result.focusSpent === 0) this.showFloatingLabel(actorView, `TẬP TRUNG ×${result.focusAfter}`, '#ffd36a');
       await this.wait(slot === 'ultimate' ? 760 : 360);
       return true;
     });
@@ -993,11 +1003,21 @@ export class BattleScene extends Phaser.Scene {
     if (this.skillActions.isSilenced(actor)) return 'CÂM LẶNG · CHỈ ĐÁNH THƯỜNG';
     const cooldown = this.skillActions.cooldownRemaining(actor, slot);
     if (cooldown > 0) return `CD ${cooldown} LƯỢT`;
+    const manaCost = this.skillActions.previewManaCost(ability);
+    const manaLabel = manaCost > 0
+      ? `MANA ${this.skillActions.currentMana(actor)}/${Math.max(1, Math.round(actor.maxManaPoints ?? 100))} · -${manaCost}`
+      : '';
+    const focusRequired = ability.pyroonMechanic?.kind === 'focus-pierce'
+      ? ability.pyroonMechanic.focusRequired
+      : 0;
     if (slot === 'ultimate') {
-      if (actor.ragePoints < ULTIMATE_RAGE_COST) return `CẦN ${ULTIMATE_RAGE_COST} NỘ`;
-      return `TỐN ${ULTIMATE_RAGE_COST} NỘ · ${this.actionTargetLabel(ability)}`;
+      if (actor.ragePoints < ULTIMATE_RAGE_COST) return `${manaLabel ? `${manaLabel} · ` : ''}CẦN ${ULTIMATE_RAGE_COST} NỘ`;
+      return `${manaLabel ? `${manaLabel} · ` : ''}TỐN ${ULTIMATE_RAGE_COST} NỘ · ${this.actionTargetLabel(ability)}`;
     }
-    return `+${this.skillActions.previewRawRageGain(ability, slot)} NỘ · ${this.actionTargetLabel(ability)}`;
+    if (focusRequired > 0 && (actor.coreState?.counters['pyroon:focus'] ?? 0) < focusRequired) {
+      return `${manaLabel ? `${manaLabel} · ` : ''}CẦN ${focusRequired} TẬP TRUNG`;
+    }
+    return `${manaLabel ? `${manaLabel} · ` : `+${this.skillActions.previewRawRageGain(ability, slot)} NỘ · `}${this.actionTargetLabel(ability)}`;
   }
 
   private abilityTag(ability: CombatAbility): string {

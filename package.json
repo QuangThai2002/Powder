@@ -15,6 +15,8 @@
     "test:pow-canonical-reconciliation": "node tools/verify-pow-canonical-reconciliation.mjs",
     "test:combat2-roster-smoke": "node tools/verify-combat2-roster-smoke.mjs",
     "test:combat2-passive-triggers": "node tools/verify-combat2-passive-triggers.mjs",
+    "test:combat2-pyroon": "node tools/verify-combat2-pyroon.mjs",
+    "test:player-test-readiness": "node tools/verify-player-test-readiness.mjs",
     "test:combat2-star-action-matrix": "node tools/verify-combat2-star-action-matrix.mjs",
     "test:player-pow-eligibility": "node tools/verify-player-pow-eligibility.mjs",
     "assets:audit": "node tools/audit-pow-assets.mjs",

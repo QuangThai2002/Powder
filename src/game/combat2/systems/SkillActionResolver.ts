@@ -15,6 +15,7 @@ import {
   isHardControlStatus
 } from './CombatControlEngine';
 import { CombatLegacyStatEngine } from './CombatLegacyStatEngine';
+import { CombatPyroonEngine, type PyroonMechanicDamageEvent } from './CombatPyroonEngine';
 import {
   GRIEVOUS_40,
   GRIEVOUS_60,
@@ -39,6 +40,18 @@ import {
 
 export type CombatSkillSlot = 0 | 1;
 export type CombatAbilitySlot = CombatSkillSlot | 'ultimate';
+
+export interface CombatResolvedAbilityHit {
+  shot: number;
+  targetId: string;
+  damage: number;
+  shieldDamage: number;
+  hpDamage: number;
+  crit: boolean;
+  evaded: boolean;
+  defeated: boolean;
+  damageMultiplier: number;
+}
 
 export interface SkillActionResult {
   abilitySlot: CombatAbilitySlot;
@@ -74,6 +87,22 @@ export interface SkillActionResult {
   critChance: number;
   mitigation: number;
   provenance: CombatActionProvenance;
+  manaSpent: number;
+  manaAfter: number;
+  focusSpent: number;
+  focusAfter: number;
+  hitResults: readonly CombatResolvedAbilityHit[];
+  mechanicEvents: readonly PyroonMechanicDamageEvent[];
+}
+
+type DamageResolution = Pick<SkillActionResult,
+  'damage' | 'shieldDamage' | 'hpDamage' | 'identityMultiplier' | 'elementOutcome' |
+  'freezeShattered' | 'crit' | 'critMultiplier' | 'evaded' | 'hitChance' | 'critChance' | 'mitigation'>;
+
+interface SevenRaysResolution {
+  damage: DamageResolution;
+  hits: readonly CombatResolvedAbilityHit[];
+  mechanicEvents: readonly PyroonMechanicDamageEvent[];
 }
 
 interface ParsedStatus {
@@ -106,6 +135,7 @@ export class SkillActionResolver {
   private readonly identity = new CombatIdentityRules();
   private readonly control: CombatControlEngine;
   private readonly legacyStats: CombatLegacyStatEngine;
+  private readonly pyroon: CombatPyroonEngine;
 
   constructor(
     random: () => number = Math.random,
@@ -113,17 +143,21 @@ export class SkillActionResolver {
   ) {
     this.control = new CombatControlEngine(random);
     this.legacyStats = new CombatLegacyStatEngine(random);
+    this.pyroon = new CombatPyroonEngine(random);
   }
 
   canUse(actor: CombatUnitState, slot: CombatSkillSlot): boolean {
-    return actor.alive && actor.silenceActionsRemaining <= 0 && this.cooldownRemaining(actor, slot) <= 0;
+    const ability = actor.pow.abilities.skills[slot];
+    return actor.alive && actor.silenceActionsRemaining <= 0 && this.cooldownRemaining(actor, slot) <= 0 &&
+      Boolean(ability) && this.pyroon.canUse(actor, ability);
   }
 
   canUseUltimate(actor: CombatUnitState): boolean {
     return actor.alive &&
       actor.silenceActionsRemaining <= 0 &&
       actor.ultimateCooldownActionsRemaining <= 0 &&
-      rageCanUseUltimate(actor.ragePoints);
+      rageCanUseUltimate(actor.ragePoints) &&
+      this.pyroon.canUse(actor, actor.pow.abilities.ultimate);
   }
 
   isSilenced(actor: CombatUnitState): boolean {
@@ -147,6 +181,14 @@ export class SkillActionResolver {
     return ULTIMATE_RAGE_COST;
   }
 
+  previewManaCost(ability: CombatAbility): number {
+    return this.pyroon.manaCost(ability);
+  }
+
+  currentMana(actor: CombatUnitState): number {
+    return this.pyroon.mana(actor);
+  }
+
   previewRawRageGain(ability: CombatAbility, slot: CombatAbilitySlot): number {
     if (ability.rageGainMode === 'none') return 0;
     const bonus = this.resourceBonusRaw(ability.status);
@@ -160,13 +202,15 @@ export class SkillActionResolver {
     slot: CombatSkillSlot,
     currentRound = 1,
     passiveContext: PassiveActionContext = {},
-    provenanceOverrides: CombatActionProvenanceOverrides = {}
+    provenanceOverrides: CombatActionProvenanceOverrides = {},
+    battleUnits: readonly CombatUnitState[] = []
   ): SkillActionResult {
     if (!this.canUse(actor, slot)) {
       throw new Error(`[Combat2] ${actor.pow.name} cannot use ${ability.name}.`);
     }
     const provenance = this.provenanceFor(actor, target, ability, 'skill', provenanceOverrides);
-    const result = this.resolveAbility(actor, target, ability, slot, 0, currentRound, passiveContext, provenance);
+    const result = this.resolveAbility(actor, target, ability, slot, 0, currentRound, passiveContext, provenance, battleUnits);
+    this.pyroon.completeMainAction(actor, provenance);
     if (provenance.origin === 'main') {
       this.emitLifecycle('after-main-action', actor, provenance, currentRound, 0, result.rageAfter);
     }
@@ -179,7 +223,8 @@ export class SkillActionResolver {
     ability: CombatAbility,
     currentRound = 1,
     passiveContext: PassiveActionContext = {},
-    provenanceOverrides: CombatActionProvenanceOverrides = {}
+    provenanceOverrides: CombatActionProvenanceOverrides = {},
+    battleUnits: readonly CombatUnitState[] = []
   ): SkillActionResult {
     if (!this.canUseUltimate(actor)) {
       throw new Error(`[Combat2] ${actor.pow.name} cannot use ${ability.name}: Rage, silence or cooldown gate is active.`);
@@ -195,8 +240,10 @@ export class SkillActionResolver {
       ULTIMATE_RAGE_COST,
       currentRound,
       passiveContext,
-      provenance
+      provenance,
+      battleUnits
     );
+    this.pyroon.completeMainAction(actor, provenance);
     this.emitLifecycle('after-ultimate-cast', actor, provenance, currentRound, ULTIMATE_RAGE_COST, result.rageAfter);
     if (provenance.origin === 'main') {
       this.emitLifecycle('after-main-action', actor, provenance, currentRound, ULTIMATE_RAGE_COST, result.rageAfter);
@@ -212,8 +259,13 @@ export class SkillActionResolver {
     rageSpent: number,
     currentRound: number,
     passiveContext: PassiveActionContext,
-    provenance: CombatActionProvenance
+    provenance: CombatActionProvenance,
+    battleUnits: readonly CombatUnitState[]
   ): SkillActionResult {
+    const manaSpent = this.pyroon.spendMana(actor, ability);
+    const focusSpent = ability.pyroonMechanic?.kind === 'focus-pierce'
+      ? this.pyroon.consumeFocusForPierce(actor, ability, target)
+      : 0;
     const rageBeforeEvent = actor.ragePoints + rageSpent;
     const abilityType = String(ability.type || '').trim().toLowerCase();
     const parsedStatus = this.parseStatus(ability.status);
@@ -222,7 +274,11 @@ export class SkillActionResolver {
       abilityType === 'debuff' ||
       (actor.instanceId === target.instanceId && SELF_STATUSES.has(parsedStatus.status));
     const damageKind = abilitySlot === 'ultimate' ? 'ultimate' : 'skill';
-    const damageResult = noDirectDamage
+    const focusPierce = ability.pyroonMechanic?.kind === 'focus-pierce' ? ability.pyroonMechanic : null;
+    const sevenRays = ability.pyroonMechanic?.kind === 'seven-rays'
+      ? this.resolveSevenRays(actor, target, ability, passiveContext, provenance, battleUnits)
+      : null;
+    const damageResult = sevenRays?.damage ?? (noDirectDamage
       ? {
           damage: 0,
           shieldDamage: 0,
@@ -237,14 +293,26 @@ export class SkillActionResolver {
           critChance: 0,
           mitigation: 0
         }
-      : this.applyDamage(actor, target, ability, damageKind, passiveContext);
+      : this.applyDamage(actor, target, ability, damageKind, passiveContext, {
+          totalDamageMultiplier: focusPierce ? 1 + focusSpent * focusPierce.damagePerFocus : 1,
+          forceCrit: Boolean(focusPierce && focusSpent >= focusPierce.guaranteedCritAt)
+        }));
 
     const suppressFreezeReapply = damageResult.freezeShattered && parsedStatus.status === 'freeze';
-    const statusResult = damageResult.evaded && !noDirectDamage
+    let statusResult = sevenRays
+      ? this.emptyStatusResult(null)
+      : damageResult.evaded && !noDirectDamage
       ? this.emptyStatusResult('evade')
       : suppressFreezeReapply
         ? this.emptyStatusResult(null)
         : this.applyStatus(actor, target, ability, currentRound, damageResult.damage);
+    if (ability.pyroonMechanic?.kind === 'fire-bait') {
+      const placed = this.pyroon.placeFireBait(actor, target, ability);
+      statusResult = this.emptyStatusResult(placed ? 'mồi lửa' : null);
+    }
+    const mechanicEvents = sevenRays?.mechanicEvents ?? (
+      noDirectDamage ? [] : this.pyroon.resolveFireBait(actor, target, provenance, damageResult.damage, battleUnits)
+    );
     const rageGainDisabled = ability.rageGainMode === 'none';
     const rageResult = applyRageEvent(rageBeforeEvent, [
       abilitySlot === 'ultimate' || rageGainDisabled ? 0 : ACTION_BASE_RAW_GAIN,
@@ -267,7 +335,13 @@ export class SkillActionResolver {
       rageAfter: rageResult.next,
       cooldownApplied,
       defeated: !target.alive,
-      provenance
+      provenance,
+      manaSpent,
+      manaAfter: this.pyroon.mana(actor),
+      focusSpent,
+      focusAfter: this.pyroon.getFocus(actor),
+      hitResults: sevenRays?.hits ?? [],
+      mechanicEvents
     };
   }
 
@@ -315,10 +389,9 @@ export class SkillActionResolver {
     target: CombatUnitState,
     ability: CombatAbility,
     kind: 'skill' | 'ultimate',
-    passiveContext: PassiveActionContext
-  ): Pick<SkillActionResult,
-    'damage' | 'shieldDamage' | 'hpDamage' | 'identityMultiplier' | 'elementOutcome' |
-    'freezeShattered' | 'crit' | 'critMultiplier' | 'evaded' | 'hitChance' | 'critChance' | 'mitigation'> {
+    passiveContext: PassiveActionContext,
+    options: { totalDamageMultiplier?: number; forceCrit?: boolean } = {}
+  ): DamageResolution {
     const normalizedType = String(ability.type || '').trim().toLowerCase();
     const damageType = this.damageTypeFor(ability, normalizedType);
     const offenseStat = this.scalingStatFor(ability, normalizedType);
@@ -329,6 +402,7 @@ export class SkillActionResolver {
       offenseStat,
       critMode,
       magicCritMultiplier: ability.magicCritMultiplier,
+      forceCrit: Boolean(options.forceCrit),
       ultimate: kind === 'ultimate',
       unavoidable: Boolean(ability.unavoidable || ability.sureHit),
       area: Boolean(ability.area)
@@ -354,6 +428,7 @@ export class SkillActionResolver {
             hit.critMultiplier *
             vulnerability *
             conditionalDamageMultiplier *
+            Math.max(0, Number(options.totalDamageMultiplier ?? 1) || 0) *
             (1 - hit.damageReduction)
           )
         );
@@ -363,6 +438,7 @@ export class SkillActionResolver {
 
     target.shield = Math.max(0, shieldBefore - shieldDamage);
     target.hp = Math.max(0, target.hp - hpDamage);
+    target.alive = target.hp > 0;
     const freezeShattered = explicitShatter && damage > 0;
     if (freezeShattered) this.control.breakFreeze(target);
 
@@ -380,6 +456,112 @@ export class SkillActionResolver {
       critChance: hit.critChance,
       mitigation: hit.mitigation
     };
+  }
+
+  private resolveSevenRays(
+    actor: CombatUnitState,
+    requestedTarget: CombatUnitState,
+    ability: CombatAbility,
+    passiveContext: PassiveActionContext,
+    provenance: CombatActionProvenance,
+    battleUnits: readonly CombatUnitState[]
+  ): SevenRaysResolution {
+    const mechanic = ability.pyroonMechanic;
+    if (mechanic?.kind !== 'seven-rays') {
+      throw new Error(`[Combat2] ${ability.name} is not configured as a seven-rays ability.`);
+    }
+
+    const units = battleUnits.length > 0 ? battleUnits : [actor, requestedTarget];
+    const firstTarget = this.pyroon.preferredUltimateTarget(actor, requestedTarget, units);
+    const empty: DamageResolution = {
+      damage: 0,
+      shieldDamage: 0,
+      hpDamage: 0,
+      identityMultiplier: 1,
+      elementOutcome: 'neutral',
+      freezeShattered: false,
+      crit: false,
+      critMultiplier: 1,
+      evaded: false,
+      hitChance: 1,
+      critChance: 0,
+      mitigation: 0
+    };
+    if (!firstTarget) return { damage: empty, hits: [], mechanicEvents: [] };
+
+    // Resolve each ray through the normal damage pipeline. The clone prevents
+    // the multi-hit loop from spending resources or recursing into this mechanic.
+    const {
+      hits: _hits,
+      pyroonMechanic: _pyroonMechanic,
+      usesMana: _usesMana,
+      manaCost: _manaCost,
+      ...shotAbilityBase
+    } = ability;
+    const shotAbility: CombatAbility = {
+      ...shotAbilityBase,
+      power: mechanic.shotAttackRatio * 100
+    };
+    const hits: CombatResolvedAbilityHit[] = [];
+    const mechanicEvents: PyroonMechanicDamageEvent[] = [];
+    let lockedTarget = firstTarget;
+    let nextShotBonus = 1;
+    let aggregate = { ...empty };
+    const focusBefore = this.pyroon.getFocus(actor);
+
+    for (let shot = 1; shot <= Math.max(1, Math.floor(mechanic.shots)); shot += 1) {
+      const currentTarget = shot === 1
+        ? firstTarget
+        : this.pyroon.nextUltimateTarget(actor, lockedTarget, units);
+      if (!currentTarget) break;
+
+      const forceCrit = shot === Math.max(1, Math.floor(mechanic.shots)) &&
+        focusBefore >= mechanic.guaranteedFinalCritAtFocus;
+      const resolution = this.applyDamage(
+        actor,
+        currentTarget,
+        shotAbility,
+        'ultimate',
+        passiveContext,
+        { totalDamageMultiplier: nextShotBonus, forceCrit }
+      );
+      hits.push({
+        shot,
+        targetId: currentTarget.instanceId,
+        damage: resolution.damage,
+        shieldDamage: resolution.shieldDamage,
+        hpDamage: resolution.hpDamage,
+        crit: resolution.crit,
+        evaded: resolution.evaded,
+        defeated: !currentTarget.alive,
+        damageMultiplier: nextShotBonus
+      });
+      aggregate = {
+        damage: aggregate.damage + resolution.damage,
+        shieldDamage: aggregate.shieldDamage + resolution.shieldDamage,
+        hpDamage: aggregate.hpDamage + resolution.hpDamage,
+        identityMultiplier: shot === 1 ? resolution.identityMultiplier : aggregate.identityMultiplier,
+        elementOutcome: shot === 1 ? resolution.elementOutcome : aggregate.elementOutcome,
+        freezeShattered: aggregate.freezeShattered || resolution.freezeShattered,
+        crit: aggregate.crit || resolution.crit,
+        critMultiplier: resolution.crit ? Math.max(aggregate.critMultiplier, resolution.critMultiplier) : aggregate.critMultiplier,
+        evaded: shot === 1 ? resolution.evaded : aggregate.evaded && resolution.evaded,
+        hitChance: shot === 1 ? resolution.hitChance : aggregate.hitChance,
+        critChance: shot === 1 ? resolution.critChance : aggregate.critChance,
+        mitigation: shot === 1 ? resolution.mitigation : aggregate.mitigation
+      };
+      mechanicEvents.push(...this.pyroon.resolveFireBait(
+        actor,
+        currentTarget,
+        provenance,
+        resolution.damage,
+        units
+      ));
+      nextShotBonus = resolution.crit ? 1 + mechanic.nextShotCritBonus : 1;
+      lockedTarget = currentTarget;
+    }
+
+    return { damage: aggregate, hits, mechanicEvents };
   }
 
   private applyStatus(

@@ -3,6 +3,7 @@ import type {
   CombatAbilitySet,
   CombatConditionalDamageModifier,
   CombatPassiveCounterGain,
+  CombatPyroonMechanic,
   CombatPassive,
   CombatPassiveMechanic,
   CombatPow,
@@ -66,6 +67,8 @@ interface CatalogAbility {
     target?: string;
     timing?: string;
   };
+  pyroonMechanic?: CombatPyroonMechanic;
+  usesMana?: boolean;
   /** Adapter-only marker for an approved ability replacement that rejects legacy effects. */
   clearLegacyEffects?: boolean;
   area?: boolean;
@@ -158,6 +161,104 @@ export const STANDARD_POW_SKILL_COUNT = STANDARD_POW_COUNT * STANDARD_SKILLS_PER
 // Approved Phase 2A decisions are projected by stable Pow ID so the internal
 // recovery registry does not need to be bundled into the player build.
 const PHASE_2A_ABILITY_METADATA = {
+  pyroon: {
+    basic: {
+      id: 'pyroon.basic',
+      name: 'Hỏa Tiễn Thăm Dò',
+      description: 'Gây 82% ATK lên mục tiêu hợp lệ. Nếu đánh liên tiếp cùng mục tiêu, nhận 1 Tập Trung; chí mạng nhận thêm 1, tối đa 2 mỗi hành động.',
+      power: 82,
+      type: 'physical',
+      damageType: 'physical',
+      scalingStat: 'attack',
+      critMode: 'natural-ad',
+      target: 'enemy',
+      manaCost: 0,
+      cooldown: 0,
+      coefficients: { attack: 0.82 },
+      clearLegacyEffects: true,
+      pyroonMechanic: {
+        kind: 'focus-basic',
+        focusCap: 3,
+        sameTargetGain: 1,
+        critGain: 1,
+        actionGainCap: 2
+      }
+    },
+    skill1: {
+      id: 'pyroon.skill1',
+      name: 'Xuyên Tâm Hỏa Tuyến',
+      description: '22 Mana, CD 2; cần ít nhất 1 Tập Trung. Gây 118% ATK, tiêu toàn bộ Tập Trung và tăng 14% total damage mỗi tầng. Đủ 3 tầng thì chắc chắn chí mạng.',
+      power: 118,
+      type: 'physical',
+      damageType: 'physical',
+      scalingStat: 'attack',
+      critMode: 'natural-ad',
+      target: 'enemy',
+      manaCost: 22,
+      cooldown: 2,
+      coefficients: { attack: 1.18 },
+      clearLegacyEffects: true,
+      usesMana: true,
+      pyroonMechanic: {
+        kind: 'focus-pierce',
+        focusRequired: 1,
+        damagePerFocus: 0.14,
+        guaranteedCritAt: 3,
+        consumeAllFocus: true
+      }
+    },
+    skill2: {
+      id: 'pyroon.skill2',
+      name: 'Mồi Lửa Tập Kích',
+      description: '30 Mana, CD 3; đặt Mồi Lửa trong 2 lượt. Hai lần sát thương trực tiếp đầu tiên của đồng minh gây thêm 18% ATK của Pyroon và Thiêu Đốt; lần hai cho Pyroon 1 Tập Trung.',
+      power: 0,
+      type: 'debuff',
+      damageType: 'physical',
+      scalingStat: 'attack',
+      critMode: 'never',
+      target: 'enemy',
+      manaCost: 30,
+      cooldown: 3,
+      coefficients: {},
+      clearLegacyEffects: true,
+      usesMana: true,
+      pyroonMechanic: {
+        kind: 'fire-bait',
+        durationActions: 2,
+        triggerLimit: 2,
+        procAttackRatio: 0.18,
+        burnPerTrigger: 1,
+        focusOnFinalTrigger: 1
+      }
+    },
+    ultimate: {
+      id: 'pyroon.ultimate',
+      name: 'Vũ Điệu Bảy Tia',
+      description: '4 Nộ, 32 Mana; bắn 5 phát, mỗi phát 48% ATK. Mục tiêu bị hạ thì chuyển sang địch thấp HP nhất; chí mạng làm phát kế +12% damage; đủ 3 Tập Trung bảo đảm phát cuối chí mạng.',
+      power: 48,
+      type: 'physical',
+      damageType: 'physical',
+      scalingStat: 'attack',
+      critMode: 'natural-ad',
+      target: 'enemy',
+      hits: 5,
+      manaCost: 32,
+      cooldown: 0,
+      rageCost: 4,
+      coefficients: { attack: 0.48 },
+      clearLegacyEffects: true,
+      usesMana: true,
+      pyroonMechanic: {
+        kind: 'seven-rays',
+        shots: 5,
+        shotAttackRatio: 0.48,
+        nextShotCritBonus: 0.12,
+        guaranteedFinalCritAtFocus: 3,
+        retarget: 'lowest-hp',
+        preferFireBait: true
+      }
+    }
+  },
   zephyroo: {
     basic: {
       id: 'zephyroo.basic',
@@ -656,6 +757,8 @@ function normalizeAbility(
     ...(masterEffects ? { masterEffects: { ...masterEffects } } : {}),
     ...(conditionalDamageModifier ? { conditionalDamageModifier } : {}),
     ...(passiveCounterGain ? { passiveCounterGain } : {}),
+    ...(metadata?.pyroonMechanic ? { pyroonMechanic: { ...metadata.pyroonMechanic } } : {}),
+    ...(metadata?.usesMana === true ? { usesMana: true as const } : {}),
     ...(area ? { area: true } : {}),
     ...((metadata?.sureHit ?? legacyEffectSource?.sureHit) ? { sureHit: true } : {}),
     ...((metadata?.unavoidable ?? legacyEffectSource?.unavoidable) ? { unavoidable: true } : {}),

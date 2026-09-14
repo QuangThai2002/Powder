@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadPowderCanonicalRuntime } from './lib/load-powder-canonical-runtime.mjs';
 
 const root = new URL('../', import.meta.url);
 const outputDirectory = await mkdtemp(join(tmpdir(), 'powder-combat2-damage-math-'));
@@ -24,8 +25,9 @@ try {
   ], { stdio: 'pipe' });
 
   const require = createRequire(join(outputDirectory, 'loader.cjs'));
+  const canonical = await loadPowderCanonicalRuntime(root);
   const previousWindow = globalThis.window;
-  globalThis.window = { POWDER_DATA: { elements: {} } };
+  globalThis.window = canonical.window;
   try {
     const modulePath = join(
       outputDirectory,
