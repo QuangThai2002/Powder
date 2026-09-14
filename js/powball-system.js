@@ -3,6 +3,8 @@
 
   const D = window.POWDER_DATA;
   if (!D) throw new Error("POWDER_DATA chưa sẵn sàng cho Pow Ball System.");
+  const ELIGIBILITY = window.POWDER_PLAYER_POW_ELIGIBILITY_V1;
+  if (!ELIGIBILITY) throw new Error("Player Pow eligibility chưa sẵn sàng cho Pow Ball System.");
 
   const RARITY_ORDER = [
     "common",
@@ -68,19 +70,34 @@
   const powRevealAsset=(asset)=>{const s=String(asset||'');return window.POWDER_COMBAT_ASSETS?.[s]||(s.includes('assets/pow-beta12/')?s.replace('assets/pow-beta12/','assets/pow-combat-512/'):s);};
   const powReelAsset=(asset)=>{const s=String(asset||'');return window.POWDER_THUMBNAILS?.[s]||powRevealAsset(s);};
 
-  function getRates(ballRarity) {
+  function getConfiguredRates(ballRarity) {
     return DROP_RATES[ballRarity] || DROP_RATES.common;
+  }
+
+  function getRates(ballRarity) {
+    const available = getConfiguredRates(ballRarity)
+      .filter((item) => getPool(item.rarity).length > 0);
+    const total = available.reduce((sum, item) => sum + Number(item.chance || 0), 0);
+    if (total <= 0) return [];
+    return available.map((item) => Object.freeze({
+      ...item,
+      configuredChance: item.chance,
+      chance: (Number(item.chance) / total) * 100,
+    }));
   }
 
   function validateRates() {
     const errors = [];
     for (const ball of RARITY_ORDER) {
+      const configured = getConfiguredRates(ball);
       const rates = getRates(ball);
+      const configuredTotal = configured.reduce((sum, item) => sum + Number(item.chance || 0), 0);
       const total = rates.reduce((sum, item) => sum + Number(item.chance || 0), 0);
+      if (Math.abs(configuredTotal - 100) > 0.0001) errors.push(`${ball}: tổng tỷ lệ cấu hình ${configuredTotal}%`);
       if (Math.abs(total - 100) > 0.0001) errors.push(`${ball}: tổng tỷ lệ ${total}%`);
       for (const item of rates) {
         if (!RARITY_ORDER.includes(item.rarity)) errors.push(`${ball}: phẩm chất không hợp lệ ${item.rarity}`);
-        if (!D.pows.some((pow) => pow.rarity === item.rarity)) errors.push(`${ball}: không có Pow ${item.rarity}`);
+        if (!getPool(item.rarity).length) errors.push(`${ball}: không có Pow player-eligible ${item.rarity}`);
       }
     }
     return errors;
@@ -97,17 +114,15 @@
   }
 
   function getPool(resultRarity) {
-    return D.pows.filter((pow) => pow.rarity === resultRarity);
+    return ELIGIBILITY.filterPlayerPows(D.pows).filter((pow) => pow.rarity === resultRarity);
   }
 
-  // Exactly three special evolution Pows are summon-only and each has 1/3 the pick weight
-  // of a normal Pow after result rarity is rolled. They are rare, not unobtainable.
   function powPickWeight(pow) {
-    return pow?.specialStarter ? (1 / 3) : 1;
+    return ELIGIBILITY.isPlayerEligible(pow) ? 1 : 0;
   }
 
   function pickPow(list, random = Math.random) {
-    const pool = (Array.isArray(list) ? list : []).filter(Boolean);
+    const pool = ELIGIBILITY.filterPlayerPows(Array.isArray(list) ? list : []);
     if (!pool.length) return null;
     const total = pool.reduce((sum, pow) => sum + powPickWeight(pow), 0);
     let cursor = Math.max(0, Math.min(0.999999999, Number(random()))) * total;
@@ -143,7 +158,7 @@
         const rarity = rarityInfo(item.rarity);
         return `<div class="powball-rate-row" style="--drop-color:${rarity.frame}"><span><i></i>${escapeHtml(rarity.name)}</span><b>${formatChance(item.chance)}</b></div>`;
       })
-      .join("")}<div class="powball-special-rate-note"><span>✦ 3 POW ĐẶC BIỆT</span><b>Trọng số 1/3 mỗi Pow</b><small>Vẫn nhận được qua PowBall · không nằm trong lựa chọn khởi đầu</small></div></div>`;
+      .join("")}<div class="powball-special-rate-note"><span>✦ POOL NGƯỜI CHƠI</span><b>Chỉ Pow đủ điều kiện xuất hiện</b><small>Tỷ lệ được chuẩn hóa khi một phẩm chất không có Pow hợp lệ.</small></div></div>`;
   }
 
   function ballPreviewMarkup(ballRarity) {
@@ -166,7 +181,7 @@
     const rolledRarity = rollRarity(ballRarity);
     const pool = getPool(rolledRarity);
     const filtered = pool.filter((pow) => pow.id !== avoidId);
-    return pickPow(filtered.length ? filtered : pool) || D.pows[0];
+    return pickPow(filtered.length ? filtered : pool) || ELIGIBILITY.filterPlayerPows(D.pows)[0];
   }
 
   function buildReel(result, count = 30, winningIndex = 25) {
@@ -537,6 +552,11 @@
   function play(result, options = {}) {
     clearTimers();
 
+    if (!result?.pow || !ELIGIBILITY.isPlayerEligible(result.pow)) {
+      console.warn("[PowBall] blocked non-player-eligible reveal.");
+      return false;
+    }
+
     const modal = $("#summonModal");
     const sequence = $("#summonSequence");
     const reveal = $("#summonReveal");
@@ -760,6 +780,7 @@
   window.POWBALL_SYSTEM = Object.freeze({
     RARITY_ORDER,
     DROP_RATES,
+    getConfiguredRates,
     getRates,
     getDuration,
     getPool,

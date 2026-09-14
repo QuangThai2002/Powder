@@ -2,7 +2,8 @@
   'use strict';
   const D=window.POWDER_DATA;
   const G=window.POWDER_GROWTH_V143;
-  if(!D)return;
+  const ELIGIBILITY=window.POWDER_PLAYER_POW_ELIGIBILITY_V1;
+  if(!D||!ELIGIBILITY)return;
   const esc=value=>String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
   const fmt=value=>Math.max(0,Math.floor(Number(value)||0)).toLocaleString('vi-VN');
   const pct=value=>Math.max(0,Math.min(100,Math.round(Number(value)||0)));
@@ -13,7 +14,7 @@
   const itemThumb=asset=>window.POWDER_ITEM_THUMBNAILS?.[asset]||asset;
   const powThumb=asset=>window.POWDER_THUMBNAILS?.[asset]||asset;
   const rankAsset=id=>`assets/ranks/rank-${id}.webp?v=14200`;
-  const rarityCount=Object.fromEntries(D.rarities.map(r=>[r.id,D.pows.filter(p=>p.rarity===r.id).length]));
+  const rarityCount=Object.fromEntries(D.rarities.map(r=>[r.id,ELIGIBILITY.filterPlayerPows(D.pows).filter(p=>p.rarity===r.id).length]));
   const ballPoolCount=c=>(window.POWBALL_SYSTEM?.getRates?.(c.rarity)||c.dropRates||[]).reduce((n,r)=>n+(rarityCount[r.rarity]||0),0);
   const chance=v=>Number.isInteger(Number(v))?`${Number(v)}%`:`${Number(v).toFixed(2).replace(/0+$/,'').replace(/\.$/,'')}%`;
   let selectedBallId=null;
@@ -37,7 +38,7 @@
     const idx=D.chests.indexOf(c),r=rarity(c.rarity),unlocked=idx<=Number(save.rank||0),owned=Number(save.chestsOwned?.[c.id]??save.chestsOwned?.[c.rarity])||0,pity=Number(save.pity?.[c.id])||0;
     const totalBalls=D.chests.reduce((n,x)=>n+(Number(save.chestsOwned?.[x.id]??save.chestsOwned?.[x.rarity])||0),0);
     const unlockedCount=Math.min(D.chests.length,Math.max(1,(Number(save.rank)||0)+1));
-    const history=Array.isArray(save.chestHistory)?save.chestHistory:[];
+    const history=ELIGIBILITY.filterPlayerHistory(save.chestHistory);
     const summary=`
       <article><span>🔮</span><div><small>PowBall đang có</small><b>${fmt(totalBalls)}</b></div></article>
       <article><span><img class="currency-icon-img" src="assets/items/ui-compact/military-coin.webp" alt="Coin"></span><div><small>Coin hiện tại</small><b>${fmt(coins)}</b></div></article>
@@ -50,7 +51,7 @@
       <div class="pb142-ball-info"><div class="pb142-title-row"><div><p class="eyebrow">POWBALL</p><h2>${esc(ballName(c))}</h2><p>Kho khoảng <b>${pool} Pow</b>. Chọn PowBall để xem tỷ lệ, pity và những Pow có thể xuất hiện.</p></div><span class="pb142-owned" style="color:${esc(r.frame)}"><small>SỞ HỮU</small><b>${owned}</b></span></div>
       <div class="pb142-meta-grid"><span><small>Giá mở</small><b>${fmt(c.coin)} Coin</b></span><span><small>Bảo đảm Pow mới</small><b>${pity}/${fmt(c.pity)}</b></span><span><small>Điều kiện</small><b>${esc(c.requirement||'—')}</b></span><span><small>Pow có thể xuất hiện</small><b>${pool} Pow</b></span></div>
       <div class="pb142-pity"><div><span>Bảo đảm Pow mới</span><b>${pity}/${fmt(c.pity)}</b></div><i><b style="width:${Math.min(100,(pity/Math.max(1,Number(c.pity)||1))*100)}%"></b></i></div>
-      <div class="pb142-rates"><div class="pb142-block-head"><b>Tỷ lệ phẩm chất</b><small>3 Pow đặc biệt xuất hiện hiếm hơn Pow thường.</small></div>${rateRows(c)}</div>
+      <div class="pb142-rates"><div class="pb142-block-head"><b>Tỷ lệ phẩm chất</b><small>Chỉ hiển thị pool Pow hợp lệ cho người chơi.</small></div>${rateRows(c)}</div>
       <div class="pb142-open-row"><button class="btn primary" data-powball-open="${esc(c.id)}" ${canOpen?'':'disabled'}>${!unlocked?'🔒 Chưa đủ cấp Tamer':owned<=0?'Chưa có PowBall':!priceOk?'Không đủ Coin':'Mở PowBall'}</button><span>${unlocked?'Đã mở quyền sử dụng':'Cần '+esc(c.requirement||'rank phù hợp')} · ${fmt(c.coin)} Coin/lượt</span></div>
       </div></article>`;
     const historyMarkup=history.length?[...history].reverse().slice(0,8).map(h=>{const p=D.pows.find(x=>x.id===h.powId),rr=rarity(h.rarity),ball=rarity(h.ballRarity||h.chestId||h.rarity),upgrade=window.POWBALL_SYSTEM?.isUpgrade?.(h.ballRarity||h.chestId||h.rarity,h.rarity);return `<div class="pb142-history-item ${upgrade?'is-upgrade':''}"><img src="${esc(powThumb(p?.asset||'assets/ui/powder-logo-project.webp'))}" alt="" loading="lazy" decoding="async"><span><b>${esc(p?.name||h.powId)}${h.shiny?' ✨':''}</b><small>${esc(ball.name)} PowBall → <em style="color:${esc(rr.frame)}">${esc(rr.name)}</em>${upgrade?' · Vượt cấp':''}</small></span><time>${new Date(h.time||Date.now()).toLocaleString('vi-VN')}</time></div>`}).join(''):'<div class="pb142-empty"><span>◌</span><b>Chưa có lịch sử mở</b><small>Lần mở PowBall đầu tiên sẽ được ghi tại đây.</small></div>';

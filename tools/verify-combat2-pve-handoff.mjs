@@ -247,6 +247,11 @@ function createRuntime() {
       { id: 'enemy-2', maxStars: 7, stats: { hp: 160, atk: 28, ap: 35, def: 24, speed: 31 } },
       { id: 'enemy-3', maxStars: 7, stats: { hp: 175, atk: 34, ap: 29, def: 26, speed: 29 } }
     ] },
+    POWDER_PLAYER_POW_ELIGIBILITY_V1: {
+      isPlayerEligible: (pow) => Boolean(pow?.id),
+      sanitizeStage: (stage) => plain(stage),
+      containsHiddenPow: () => false,
+    },
     POWDER_POWER_CURVE_V8: { enemyGradeBase: 1.35 },
     POWDER_ENGINE: { createCombatant: (pow, owned = {}, options = {}) => {
       const scale = Math.max(0.1, Number(options.scale) || 1);
