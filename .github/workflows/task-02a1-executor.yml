@@ -58,9 +58,9 @@ jobs:
           const grantEnd=',claimJourneyMilestone,';
           const grantReplacement="grantBattleRewards:({battleId='',rewardId='',coins=0,exp=0,wins=0}={})=>{const SEC=window.POWDER_SECURE_ECONOMY_V152;if(SEC?.hasAccount?.())return{ok:false,coins:P.coins,exp:P.exp,wins:P.wins,knowledge:P.knowledge||0,serverProtected:true,rewardLocked:true};const authority=window.POWDER_PLAYER_STATE_AUTHORITY_V1;if(typeof authority?.applyOfflineBattleReward!=='function')return{ok:false,reason:'player-state-authority-unavailable',coins:P.coins,exp:P.exp,wins:P.wins,knowledge:P.knowledge||0,serverProtected:false};const result=authority.applyOfflineBattleReward({authorityMode:'offline',snapshot:P,battleId:String(battleId||''),rewardId:String(rewardId||''),coins,exp,wins});if(result?.ok!==true)return{...result,coins:P.coins,exp:P.exp,wins:P.wins,knowledge:P.knowledge||0,serverProtected:false};P=result.snapshot;renderWallet();if(view==='home')renderHome();else if(view==='tamer')renderRanks();return{...result,coins:P.coins,exp:P.exp,wins:P.wins,knowledge:P.knowledge||0,serverProtected:false}},claimJourneyMilestone,";
           replaceRange('js/app.js',grantStart,grantEnd,grantReplacement);
-          const oldCall="window.POWDER_APP?.grantBattleRewards?.({coins:Math.max(0,Number(reward.coins)||0),exp:Math.max(0,Number(reward.exp)||0),wins:Math.max(0,Number(reward.wins)||1)})";
-          const newCall="window.POWDER_APP?.grantBattleRewards?.({battleId:result.value.battleId,rewardId:String(reward.rewardId||''),coins:Math.max(0,Number(reward.coins)||0),exp:Math.max(0,Number(reward.exp)||0),wins:Math.max(0,Number(reward.wins)||1)})";
-          replaceExact('js/combat-entry-v177.js',oldCall,newCall);
+          const oldSend="send:async()=>{const before=window.POWDER_APP?.getSave?.()||{},value=window.POWDER_APP?.grantBattleRewards?.({coins:Math.max(0,Number(reward.coins)||0),exp:Math.max(0,Number(reward.exp)||0),wins:Math.max(0,Number(reward.wins)||1)});if(value?.ok!==true||value?.serverProtected===true)throw new Error('reward-authority-rejected');";
+          const newSend="send:async()=>{const battleRewardPayload={coins:Math.max(0,Number(reward.coins)||0),exp:Math.max(0,Number(reward.exp)||0),wins:Math.max(0,Number(reward.wins)||1)};Object.defineProperties(battleRewardPayload,{battleId:{value:result.value.battleId,enumerable:false},rewardId:{value:String(reward.rewardId||''),enumerable:false}});const before=window.POWDER_APP?.getSave?.()||{},value=window.POWDER_APP?.grantBattleRewards?.(battleRewardPayload);if(value?.ok!==true||value?.serverProtected===true)throw new Error('reward-authority-rejected');";
+          replaceExact('js/combat-entry-v177.js',oldSend,newSend);
           const bootTag='<script defer src="js/boot-loader-v21004.js?v=player-readiness-v1"></script>';
           const authorityTag='<script defer src="js/player-state-authority-v1.js?v=02a1"></script>';
           replaceExact('index.html',bootTag,authorityTag+bootTag);
@@ -114,7 +114,8 @@ jobs:
           git diff --name-only
           grep -q "POWDER_PLAYER_STATE_AUTHORITY_V1" js/app.js
           ! grep -Fq "P.coins=Math.max(0,P.coins+coins);P.exp=Math.max(0,P.exp+Math.floor(Number(exp)||0));P.wins=Math.max(0,P.wins+Math.floor(Number(wins)||0));" js/app.js
-          grep -Fq "battleId:result.value.battleId,rewardId:String(reward.rewardId||'')" js/combat-entry-v177.js
+          grep -Fq "battleId:{value:result.value.battleId,enumerable:false}" js/combat-entry-v177.js
+          grep -Fq "rewardId:{value:String(reward.rewardId||''),enumerable:false}" js/combat-entry-v177.js
           python - <<'PY'
           from pathlib import Path
           idx=Path('index.html').read_text()
