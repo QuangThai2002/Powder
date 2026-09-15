@@ -1,0 +1,154 @@
+name: Task 02A-1 executor
+
+on:
+  push:
+    branches:
+      - work/adventure-combat-entry-user-test-v1
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout target branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify branch lineage
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ github.ref_name }}" = "work/adventure-combat-entry-user-test-v1"
+          git merge-base --is-ancestor f4960c442d6833cd499bdba7b03f09a7f66a8e74 HEAD
+          test -z "$(git status --short)"
+
+      - name: Patch Main, settlement caller, and load order
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp js/app.js /tmp/app.js.before-02a1
+          cp js/combat-entry-v177.js /tmp/combat-entry-v177.js.before-02a1
+          cp index.html /tmp/index.html.before-02a1
+          node <<'NODE'
+          const fs=require('fs');
+          function replaceRange(file,start,end,replacement){
+            const src=fs.readFileSync(file,'utf8');
+            const first=src.indexOf(start), second=src.indexOf(start,first+1);
+            if(first<0||second>=0)throw new Error(`${file}: start anchor count != 1`);
+            const stop=src.indexOf(end,first+start.length), stop2=src.indexOf(end,stop+end.length);
+            if(stop<0||stop2>=0)throw new Error(`${file}: end anchor count != 1`);
+            fs.writeFileSync(file,src.slice(0,first)+replacement+src.slice(stop+end.length));
+          }
+          function replaceExact(file,from,to){
+            const src=fs.readFileSync(file,'utf8');
+            const parts=src.split(from);
+            if(parts.length!==2)throw new Error(`${file}: exact anchor count ${parts.length-1}, expected 1`);
+            fs.writeFileSync(file,parts[0]+to+parts[1]);
+          }
+          const storageStart="let storageRecoverySource='';function atomicStorageJson(";
+          const storageEnd='const bossDefaults=';
+          const storageReplacement="let storageRecoverySource='';function playerStateAuthority(){return window.POWDER_PLAYER_STATE_AUTHORITY_V1}function atomicStorageJson(key,value){const authority=playerStateAuthority();if(!authority?.atomicCommit||key!==C.storageKey){console.error('[Powder player state authority] atomicCommit unavailable');return false}let snapshot=value;try{if(typeof snapshot==='string')snapshot=JSON.parse(snapshot)}catch(err){console.error('[Powder player state authority] invalid snapshot',err);return false}const result=authority.atomicCommit(snapshot,{storageKey:key,reason:'main-save'});return result?.ok===true}function loadJsonWithRecovery(key){const authority=playerStateAuthority();if(!authority?.loadSnapshot||key!==C.storageKey){console.error('[Powder player state authority] loadSnapshot unavailable');return{}}const result=authority.loadSnapshot({storageKey:key});storageRecoverySource=String(result?.recoverySource||'');return result?.snapshot&&typeof result.snapshot==='object'?result.snapshot:{}}const bossDefaults=";
+          replaceRange('js/app.js',storageStart,storageEnd,storageReplacement);
+          const grantStart='grantBattleRewards:({coins=0,exp=0,wins=0}={})=>{';
+          const grantEnd=',claimJourneyMilestone,';
+          const grantReplacement="grantBattleRewards:({battleId='',rewardId='',coins=0,exp=0,wins=0}={})=>{const SEC=window.POWDER_SECURE_ECONOMY_V152;if(SEC?.hasAccount?.())return{ok:false,coins:P.coins,exp:P.exp,wins:P.wins,knowledge:P.knowledge||0,serverProtected:true,rewardLocked:true};const authority=window.POWDER_PLAYER_STATE_AUTHORITY_V1;if(typeof authority?.applyOfflineBattleReward!=='function')return{ok:false,reason:'player-state-authority-unavailable',coins:P.coins,exp:P.exp,wins:P.wins,knowledge:P.knowledge||0,serverProtected:false};const result=authority.applyOfflineBattleReward({authorityMode:'offline',snapshot:P,battleId:String(battleId||''),rewardId:String(rewardId||''),coins,exp,wins});if(result?.ok!==true)return{...result,coins:P.coins,exp:P.exp,wins:P.wins,knowledge:P.knowledge||0,serverProtected:false};P=result.snapshot;renderWallet();if(view==='home')renderHome();else if(view==='tamer')renderRanks();return{...result,coins:P.coins,exp:P.exp,wins:P.wins,knowledge:P.knowledge||0,serverProtected:false}},claimJourneyMilestone,";
+          replaceRange('js/app.js',grantStart,grantEnd,grantReplacement);
+          const oldCall="window.POWDER_APP?.grantBattleRewards?.({coins:Math.max(0,Number(reward.coins)||0),exp:Math.max(0,Number(reward.exp)||0),wins:Math.max(0,Number(reward.wins)||1)})";
+          const newCall="window.POWDER_APP?.grantBattleRewards?.({battleId:result.value.battleId,rewardId:String(reward.rewardId||''),coins:Math.max(0,Number(reward.coins)||0),exp:Math.max(0,Number(reward.exp)||0),wins:Math.max(0,Number(reward.wins)||1)})";
+          replaceExact('js/combat-entry-v177.js',oldCall,newCall);
+          const bootTag='<script defer src="js/boot-loader-v21004.js?v=player-readiness-v1"></script>';
+          const authorityTag='<script defer src="js/player-state-authority-v1.js?v=02a1"></script>';
+          replaceExact('index.html',bootTag,authorityTag+bootTag);
+          NODE
+
+          node --check js/player-state-authority-v1.js
+          node --check tools/verify-player-state-authority-v1.mjs
+          node --check js/app.js
+          node --check js/combat-entry-v177.js
+
+          test "$(git diff --numstat -- js/app.js | awk '{print $1+$2}')" -lt 20
+          test "$(git diff --numstat -- js/combat-entry-v177.js | awk '{print $1+$2}')" -lt 10
+          test "$(git diff --numstat -- index.html | awk '{print $1+$2}')" -lt 10
+          git diff --check
+          git diff -- js/app.js js/combat-entry-v177.js index.html
+
+      - name: Check production patch scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t changed < <(git diff --name-only | sort)
+          printf 'Changed before validation:\n%s\n' "${changed[*]}"
+          expected=$'index.html\njs/app.js\njs/combat-entry-v177.js'
+          actual="$(printf '%s\n' "${changed[@]}")"
+          test "$actual" = "$expected"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Targeted authority verifier
+        run: node tools/verify-player-state-authority-v1.mjs
+
+      - name: Combat2 PVE handoff regression
+        run: node tools/verify-combat2-pve-handoff.mjs
+
+      - name: Player test readiness regression
+        run: node tools/verify-player-test-readiness.mjs
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Final diff checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          git status --short
+          git diff --name-only
+          grep -q "POWDER_PLAYER_STATE_AUTHORITY_V1" js/app.js
+          ! grep -Fq "P.coins=Math.max(0,P.coins+coins);P.exp=Math.max(0,P.exp+Math.floor(Number(exp)||0));P.wins=Math.max(0,P.wins+Math.floor(Number(wins)||0));" js/app.js
+          grep -Fq "battleId:result.value.battleId,rewardId:String(reward.rewardId||'')" js/combat-entry-v177.js
+          python - <<'PY'
+          from pathlib import Path
+          idx=Path('index.html').read_text()
+          assert idx.count('js/player-state-authority-v1.js') == 1
+          assert idx.index('js/player-state-authority-v1.js') < idx.index('js/boot-loader-v21004.js')
+          assert 'js/player-state-authority-v1.js' not in Path('combat2.html').read_text()
+          PY
+
+      - name: Upload validated task files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: task-02a1-validated-files
+          if-no-files-found: error
+          path: |
+            js/player-state-authority-v1.js
+            tools/verify-player-state-authority-v1.mjs
+            js/app.js
+            js/combat-entry-v177.js
+            index.html
+
+      - name: Commit validated implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "QuangThai2002"
+          git config user.email "134858800+QuangThai2002@users.noreply.github.com"
+          git rm .github/workflows/task-02a1-executor.yml
+          mapfile -t changed < <(git status --short | sed -E 's/^.. //' | sort)
+          printf 'Commit scope:\n%s\n' "${changed[*]}"
+          expected=$'.github/workflows/task-02a1-executor.yml\nindex.html\njs/app.js\njs/combat-entry-v177.js'
+          actual="$(printf '%s\n' "${changed[@]}")"
+          test "$actual" = "$expected"
+          git add index.html js/app.js js/combat-entry-v177.js
+          git diff --cached --check
+          git commit -m "refactor(state): extract shared offline battle reward authority"
+          git push origin HEAD:work/adventure-combat-entry-user-test-v1
