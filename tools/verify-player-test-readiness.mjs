@@ -128,7 +128,7 @@ sourceContracts.push(
 
 assert.match(adventureSource, /function isFreeCombatOnboarding\(stage\)/);
 assert.match(adventureSource, /RequiredLessonIDs:\[\],RequiredConceptIDs:\[\],RequiredMastery:0/);
-assert.match(adventureSource, /if\(!gate\.ready\)\{startStudy\(stage\);return;\}/);
+assert.match(adventureSource, /if\(!gate\.ready\)\{startStudy\(stage\);return/);
 sourceContracts.push(
   'Adventure 1-1 has the explicit no-learning onboarding contract',
   'later Adventure stages retain the learning gate before combat entry'

@@ -26,6 +26,7 @@ export type Combat2BattleResult = Readonly<{
   battleMode: Combat2BattleMode;
   result: Combat2BattleResultKind;
   survivingState: Record<string, unknown>;
+  battleSummary: Record<string, unknown>;
   rewardOutcome: Record<string, unknown>;
   academicOutcome: Record<string, unknown>;
   progressionOutcome: Record<string, unknown>;
@@ -107,6 +108,7 @@ export function createCombat2BattleResult(
   input: Readonly<{
     result: Combat2BattleResultKind;
     survivingState: Record<string, unknown>;
+    battleSummary?: Record<string, unknown>;
     academicResponses: Combat2AcademicResponse[];
     bossOutcome?: Record<string, unknown>;
   }>
@@ -120,6 +122,7 @@ export function createCombat2BattleResult(
     battleMode: request.battleMode,
     result: input.result,
     survivingState: input.survivingState,
+    battleSummary: input.battleSummary ?? {},
     rewardOutcome: { rewardId: request.rewardContext.rewardId ?? null, eligible: input.result === 'victory', applied: false },
     academicOutcome: {
       authority: request.academicContext.authority ?? null,

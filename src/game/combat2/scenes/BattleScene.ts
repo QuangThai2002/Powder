@@ -98,6 +98,9 @@ export class BattleScene extends Phaser.Scene {
   private playerTeam: CombatPow[] = COMBAT2_STARTER_ROSTER.player;
   private enemyTeam: CombatPow[] = COMBAT2_STARTER_ROSTER.enemy;
   private resultOverlay: Phaser.GameObjects.Container | null = null;
+  private battleStartedAt = 0;
+  private turnCount = 0;
+  private readonly battleContributions = new Map<string, { damageDealt: number; damageTaken: number; healingDone: number; shieldDone: number; shieldAbsorbed: number }>();
   private actionBanner: Phaser.GameObjects.Text | null = null;
   private academicQuestions: AcademicCombatQuestion[] = [];
   private academicQuestionIndex = 0;
@@ -249,6 +252,7 @@ export class BattleScene extends Phaser.Scene {
   private startCombatFlow(): void {
     if (this.flowStarted) return;
     this.flowStarted = true;
+    this.battleStartedAt = Date.now();
     this.beginNextTurn();
   }
 
@@ -266,6 +270,7 @@ export class BattleScene extends Phaser.Scene {
     this.turnText.setVisible(true);
     const actor = this.turnManager.beginNextTurn();
     if (!actor) { this.turnText.setText('Không tìm được lượt hợp lệ'); return; }
+    this.turnCount++;
     this.roundText.setText(`VÒNG ${this.combatState.round}`);
     this.turnText.setText(`LƯỢT · ${actor.pow.name}`).setColor(actor.side === 'player' ? COMBAT_COLORS.player : COMBAT_COLORS.enemy);
     this.powViews.get(actor.instanceId)?.setActiveTurn(true);
@@ -602,6 +607,7 @@ export class BattleScene extends Phaser.Scene {
       this.showActionBanner(actorView, actor.pow.abilities.basic.name, '#8eeaff');
       if (actorView && targetView) { const p = targetView.getWorldPosition(); await actorView.playAttackLunge(p.x, p.y); }
       const result = this.basicAttack.resolve(actor, target, this.passiveContext(actor), this.combatState.round, {}, this.combatState.units);
+      this.recordBattleDamage(actor, target, result.hpDamage, result.shieldDamage);
       this.applyPassiveAfterAction(actor, target);
       this.completePassiveAction(actor, target);
       this.handleBossAction(actor, { targetId: target.instanceId });
@@ -653,6 +659,15 @@ export class BattleScene extends Phaser.Scene {
       const result = slot === 'ultimate'
         ? this.skillActions.resolveUltimate(actor, target, ability, this.combatState.round, this.passiveContext(actor), {}, this.combatState.units)
         : this.skillActions.resolve(actor, target, ability, slot, this.combatState.round, this.passiveContext(actor), {}, this.combatState.units);
+      if (result.hitResults.length) {
+        for (const hit of result.hitResults) {
+          const hitTarget = this.combatState.getUnit(hit.targetId);
+          if (hitTarget) this.recordBattleDamage(actor, hitTarget, hit.hpDamage, hit.shieldDamage);
+        }
+      } else this.recordBattleDamage(actor, target, result.hpDamage, result.shieldDamage);
+      const contribution = this.battleContribution(actor);
+      contribution.healingDone += Math.max(0, result.healed);
+      contribution.shieldDone += Math.max(0, result.shieldGranted);
       this.applyPassiveAfterAction(actor, target);
       this.completePassiveAction(actor, target);
       this.handleBossAction(actor, { cleansed: result.cleansed, targetId: target.instanceId });
@@ -941,6 +956,7 @@ export class BattleScene extends Phaser.Scene {
     for (const event of events) {
       const source = this.combatState.units.find((unit) => unit.instanceId === event.sourceId);
       const target = this.combatState.units.find((unit) => unit.instanceId === event.targetId);
+      if(source&&target)this.recordBattleDamage(source,target,event.hpDamage,event.shieldDamage);
       const targetView = this.powViews.get(event.targetId);
       if (targetView) await targetView.playHit();
       for (const cue of buildPyroonMechanicPresentation(
@@ -964,6 +980,40 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private pickTarget(side: CombatSide): CombatUnitState | null { return this.combatState.activeLiving(side).sort((a, b) => (a.fieldSlot ?? 99) - (b.fieldSlot ?? 99))[0] ?? null; }
+
+  private battleContribution(unit: CombatUnitState): { damageDealt: number; damageTaken: number; healingDone: number; shieldDone: number; shieldAbsorbed: number } {
+    let row = this.battleContributions.get(unit.instanceId);
+    if (!row) {
+      row = { damageDealt: 0, damageTaken: 0, healingDone: 0, shieldDone: 0, shieldAbsorbed: 0 };
+      this.battleContributions.set(unit.instanceId, row);
+    }
+    return row;
+  }
+
+  private recordBattleDamage(actor: CombatUnitState, target: CombatUnitState, hpDamage: number, shieldDamage: number): void {
+    const hp = Math.max(0, Number(hpDamage) || 0);
+    const shield = Math.max(0, Number(shieldDamage) || 0);
+    this.battleContribution(actor).damageDealt += hp + shield;
+    this.battleContribution(target).damageTaken += hp;
+    this.battleContribution(target).shieldAbsorbed += shield;
+  }
+
+  private battleSummary(): Record<string, unknown> {
+    const players = this.combatState.units.filter(unit => unit.side === 'player').map(unit => ({
+      powId: unit.pow.id,
+      ...this.battleContribution(unit),
+      survived: unit.alive
+    }));
+    const enemies = this.combatState.units.filter(unit => unit.side === 'enemy').map(unit => ({ powId: unit.pow.id, survived: unit.alive }));
+    return {
+      turnCount: this.turnCount,
+      durationMs: this.battleStartedAt ? Math.max(0, Date.now() - this.battleStartedAt) : null,
+      roundCount: this.combatState.round,
+      coverage: 'resolved-direct-actions',
+      players,
+      enemies
+    };
+  }
 
   private finishBattle(): void {
     this.destroyActionMenu(); this.destroyUndoMenu(); this.clearTargeting(); this.clearTurnHighlights(); this.refreshViews();
@@ -995,6 +1045,7 @@ export class BattleScene extends Phaser.Scene {
     return createCombat2BattleResult(request, {
       result: kind,
       survivingState: { player: survivors('player'), enemy: survivors('enemy'), round: this.combatState.round },
+      battleSummary: this.battleSummary(),
       academicResponses: this.academicResponses,
       bossOutcome: this.bossMode?.snapshot()
     });
@@ -1010,19 +1061,25 @@ export class BattleScene extends Phaser.Scene {
     }
     const win = kind === 'victory';
     const root = this.add.container(this.scale.width / 2, this.scale.height / 2).setDepth(200);
-    const plate = this.add.rectangle(0, 0, Math.min(this.scale.width * 0.78, 720), 276, 0x071621, 0.985).setStrokeStyle(3, win ? 0x73f0aa : 0xff7282, 0.9);
-    const title = this.add.text(0, -78, win ? 'CHIEN THANG' : 'THAT BAI', { fontFamily: COMBAT_DISPLAY_FONT, fontSize: '38px', color: win ? '#9affc4' : '#ffacb6', fontStyle: 'bold' }).setOrigin(0.5);
-    const mode = this.add.text(0, -28, `KET QUA ${this.handoffRequest.battleMode.toUpperCase()} · VONG ${this.combatState.round}`, { fontFamily: COMBAT_BODY_FONT, fontSize: '17px', color: '#d7e8ee', fontStyle: 'bold' }).setOrigin(0.5);
-    const note = this.add.text(0, 14, win ? 'Ket qua da san sang de Main xu ly phan thuong mot lan.' : 'Khong co phan thuong khi that bai.', { fontFamily: COMBAT_BODY_FONT, fontSize: '16px', color: '#b8ced8', align: 'center', wordWrap: { width: 540 } }).setOrigin(0.5);
-    const button = this.add.rectangle(0, 90, 250, 50, win ? 0x287a58 : 0x8a3444, 0.95).setStrokeStyle(1, 0xf1f7f5, 0.85).setInteractive({ useHandCursor: true });
-    const buttonLabel = this.add.text(0, 90, 'VE PHIEU LUU', { fontFamily: COMBAT_BODY_FONT, fontSize: '18px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+    const summary = this.battleSummary();
+    const players = summary.players as Array<{ powId: string; damageDealt: number; damageTaken: number; healingDone: number; shieldDone: number; survived: boolean }>;
+    const duration = typeof summary.durationMs === 'number' ? `${Math.floor(summary.durationMs / 60000)}:${String(Math.floor(summary.durationMs / 1000) % 60).padStart(2, '0')}` : 'không có';
+    const totals = players.reduce((row, unit) => ({ dealt: row.dealt + unit.damageDealt, taken: row.taken + unit.damageTaken, healed: row.healed + unit.healingDone, shield: row.shield + unit.shieldDone }), { dealt: 0, taken: 0, healed: 0, shield: 0 });
+    const plate = this.add.rectangle(0, 0, Math.min(this.scale.width * 0.88, 760), 430, 0x071621, 0.985).setStrokeStyle(3, win ? 0x73f0aa : 0xff7282, 0.9);
+    const title = this.add.text(0, -172, win ? 'CHIẾN THẮNG' : 'THẤT BẠI', { fontFamily: COMBAT_DISPLAY_FONT, fontSize: '34px', color: win ? '#9affc4' : '#ffacb6', fontStyle: 'bold' }).setOrigin(0.5);
+    const mode = this.add.text(0, -123, `${this.handoffRequest.battleMode.toUpperCase()} · ${summary.turnCount} lượt · ${duration}`, { fontFamily: COMBAT_BODY_FONT, fontSize: '17px', color: '#d7e8ee', fontStyle: 'bold' }).setOrigin(0.5);
+    const stats = this.add.text(0, -68, `Sát thương trực tiếp ${totals.dealt} · Nhận ${totals.taken}\nHồi phục ${totals.healed} · Tạo khiên ${totals.shield}`, { fontFamily: COMBAT_BODY_FONT, fontSize: '17px', color: '#e5f5fa', align: 'center' }).setOrigin(0.5);
+    const roster = this.add.text(0, 22, players.map(row => `${row.powId}: ${row.survived ? 'còn sống' : 'bị hạ'} · sát thương ${row.damageDealt}`).join('\n').slice(0, 500), { fontFamily: COMBAT_BODY_FONT, fontSize: '15px', color: '#b8ced8', align: 'center', wordWrap: { width: 650 } }).setOrigin(0.5);
+    const note = this.add.text(0, 115, win ? 'Thống kê không gồm DOT. Phần thưởng hiện sau khi Main xác nhận.' : 'Thống kê không gồm DOT. Không có phần thưởng khi thất bại.', { fontFamily: COMBAT_BODY_FONT, fontSize: '15px', color: '#b8ced8', align: 'center', wordWrap: { width: 580 } }).setOrigin(0.5);
+    const button = this.add.rectangle(0, 169, 250, 50, win ? 0x287a58 : 0x8a3444, 0.95).setStrokeStyle(1, 0xf1f7f5, 0.85).setInteractive({ useHandCursor: true });
+    const buttonLabel = this.add.text(0, 169, 'XEM KẾT QUẢ', { fontFamily: COMBAT_BODY_FONT, fontSize: '18px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
     button.on('pointerup', () => {
       this.stopBattleMusic();
       this.tweens.killAll();
       this.input.removeAllListeners();
       returnCombat2ResultToMain(result);
     });
-    root.add([plate, title, mode, note, button, buttonLabel]);
+    root.add([plate, title, mode, stats, roster, note, button, buttonLabel]);
     this.resultOverlay = root;
   }
 

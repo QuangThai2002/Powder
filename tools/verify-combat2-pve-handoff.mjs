@@ -205,7 +205,7 @@ function createRuntime() {
   const restoredContexts = [];
   const shownViews = [];
   const legacyStarts = [];
-  const saveState = { team: ['hero-1'], lessonsDone: ['lesson-1'], rank: 3, owned: {
+  const saveState = { starterId: 'hero-1', team: ['hero-1'], lessonsDone: ['lesson-1'], rank: 3, coins: 100, exp: 10, wins: 0, owned: {
     'hero-1': { level: 42, stars: 2, shiny: false },
     'hero-2': { level: 38, stars: 1, shiny: true },
     'hero-3': { level: 55, stars: 4, shiny: false }
@@ -262,14 +262,19 @@ function createRuntime() {
       getSave: () => plain(saveState),
       getDungeonLearningGate: () => ({ requirement }),
       getCombatQuestionPool: () => [question, { ...question, id: 'academic-q-invalid', lessonId: 'lesson-x' }],
-      grantLearningProgress: (entry) => { learning.push(entry); return { ok: true }; },
-      grantBattleRewards: (entry) => { rewards.push(entry); return { ok: true }; },
+      grantLearningProgress: (entry) => { learning.push(entry); return window.POWDER_SECURE_ECONOMY_V152?.hasAccount?.() ? { serverProtected: true } : { ok: true }; },
+      grantBattleRewards: (entry) => { rewards.push(entry); if(window.POWDER_SECURE_ECONOMY_V152?.hasAccount?.())return { ok: false, serverProtected: true, rewardLocked: true };saveState.coins+=entry.coins;saveState.exp+=entry.exp;saveState.wins+=entry.wins;return { ok: true, coins: saveState.coins, exp: saveState.exp, wins: saveState.wins }; },
       onBossCombatFinished: (entry) => { bossSettlements.push(entry); return { ok: true, reward: entry.win ? { coins: 5 } : null }; },
       showView: (view) => { shownViews.push(view); }
     },
     POWDER_ADVENTURE: {
       onBattleFinished: (entry) => { adventureResults.push(entry); },
-      restoreCombatContext: (entry) => { restoredContexts.push(entry); }
+      restoreCombatContext: (entry) => { restoredContexts.push(entry); },
+      learningGate: (stage) => String(stage?.id || '') === '1-1' ? {
+        ready: true,
+        onboardingCombat: true,
+        requirement: { RequiredLessonIDs: [], RequiredConceptIDs: [], RequiredMastery: 0, Rank: 0, Curriculum: {} }
+      } : { requirement }
     },
     POWDER_BATTLE_PLAYER_V177: {
       startEncounter: (...args) => { legacyStarts.push(args); return true; }
@@ -316,6 +321,13 @@ function stage() {
   };
 }
 
+function onboardingStage() {
+  return {
+    id: '1-1', islandId: 1, number: 1, kind: 'normal', enemyIds: ['enemy-1'], enemyCount: 1,
+    scale: 1, initiative: 0, rewards: { coins: 25, exp: 15 }
+  };
+}
+
 function bossStage() {
   return {
     id: 'challenge-boss-daily', islandId: 1, kind: 'boss', bossChallengeId: 'daily',
@@ -344,6 +356,20 @@ async function main() {
   const handoff = runtime.window.POWDER_COMBAT2_HANDOFF;
   const { CombatState, TurnManager, BossModeController } = bossRuntime;
   assert.deepEqual(plain(entry.combat2Cutover), { pve: true, boss: true, legacyFallback: false }, 'PvE and Boss entry must be cut over to Combat2');
+  const onboarding = entry.createPvePilotRequest(onboardingStage());
+  assert.equal(onboarding.ok, true, 'fresh 1-1 must create a PvE request');
+  assert.equal(onboarding.value.academicContext.onboardingCombat, true, '1-1 must use the onboarding gate');
+  assert.deepEqual(plain({
+    lessons: onboarding.value.academicContext.requiredLessonIds,
+    concepts: onboarding.value.academicContext.requiredConceptIds,
+    mastery: onboarding.value.academicContext.requiredMastery,
+    rank: onboarding.value.academicContext.rank
+  }), { lessons: [], concepts: [], mastery: 0, rank: 0 }, '1-1 must be free of academic prerequisites');
+  const savedTeam = [...runtime.saveState.team];
+  runtime.saveState.team = [];
+  const starterOnly = entry.createPvePilotRequest(onboardingStage());
+  assert.deepEqual(plain(starterOnly.value.playerTeam), ['hero-1'], 'starter-only formation must be valid');
+  runtime.saveState.team = savedTeam;
   const pow = (id, hp, speed = 100) => ({ id, name: id, hp, maxHp: hp, speed, passive: null });
   const bossController = (type, config) => {
     const state = new CombatState([pow('hero-mechanic', 100)], [pow(`boss-${type}`, 1000)], {
@@ -406,10 +432,17 @@ async function main() {
   assert.equal(runtime.legacyStarts.length, 0, 'eligible PvE must not invoke the legacy renderer');
 
   runtime.window.POWDER_ONLINE_V150 = { hasSession: () => true };
-  assert.equal(entry.startMap(stage()), false, 'ineligible online PvE must fail closed instead of launching legacy Combat');
+  const onlineLaunch = entry.startMap(stage(), { structured: true });
+  assert.equal(onlineLaunch.ok, true, 'logged-in Online PvE must launch Combat2');
+  assert.equal(entry.getLastEntryResult().ok, true, 'online launch must expose a structured success result');
   assert.equal(entry.startBoss(bossStage()), false, 'ineligible online Boss must fail closed instead of launching legacy Combat');
   assert.equal(runtime.legacyStarts.length, 0, 'rejected Combat2 entries must not invoke the legacy renderer');
   delete runtime.window.POWDER_ONLINE_V150;
+
+  const invalidEntry = entry.startMap({ id: '', islandId: 0 }, { structured: true });
+  assert.equal(invalidEntry.ok, false, 'invalid map entry must return a structured failure');
+  assert.equal(invalidEntry.reason, 'invalid-stage');
+  assert.ok(invalidEntry.errors.length > 0, 'invalid map entry must explain the failure');
 
   const request = handoff.readBattleRequest();
   assert.equal(request.ok, true, 'BattleRequest must be stored before Combat2 navigation');
@@ -459,14 +492,27 @@ async function main() {
   assert.equal(handoff.returnToMain(result).ok, true, 'Combat2 must publish BattleResult before return');
   assert.equal(runtime.window.location.pathname, '/', 'Combat2 return must target Main');
 
+  runtime.window.POWDER_SECURE_ECONOMY_V152 = { hasAccount: () => true };
+  const onlineBlocked = await handoff.settleReturnedResult();
+  assert.equal(onlineBlocked.ok, false, 'Online reward without server authority must not settle');
+  assert.equal(onlineBlocked.reason, 'online-reward-authority-unavailable');
+  assert.equal(runtime.learning.length, 0, 'Online academic result must not be locally settled');
+  assert.equal(runtime.rewards.length, 0, 'Online protected reward must not be journaled as success');
+  assert.equal(handoff.readBattleResult().ok, true, 'failed Online settlement must keep BattleResult');
+  runtime.window.POWDER_SECURE_ECONOMY_V152 = { hasAccount: () => false };
   const settled = await handoff.settleReturnedResult();
   assert.equal(settled.ok, true);
   assert.equal(settled.duplicate, false);
   assert.equal(runtime.learning.length, 2, 'every academic response must settle once');
   assert.equal(runtime.rewards.length, 1, 'victory reward must settle once');
-  assert.deepEqual(plain(runtime.rewards[0]), { coins: 25, exp: 15, wins: 1 });
+  assert.deepEqual(plain(runtime.rewards[0]), { coins: 25, exp: 15, wins: 1 }, 'offline reward must preserve the request payload');
+  assert.deepEqual(plain(settled.rewardOutcome), { coins: 25, exp: 15, wins: 1 }, 'receipt amounts must equal the actual save delta');
+  assert.equal(runtime.saveState.coins, 125);
+  assert.equal(runtime.saveState.exp, 25);
   assert.equal(runtime.adventureResults.length, 1, 'Adventure must receive the battle result once');
   assert.deepEqual(plain(runtime.adventureResults[0].summary.players), [{ knowledgeActions: 2, knowledgeSum: 1 }]);
+  assert.deepEqual(runtime.shownViews, [], 'result screen must precede Adventure return');
+  handoff.continueBattleResult(result);
   assert.deepEqual(runtime.shownViews, ['adventure']);
   assert.equal(runtime.restoredContexts[0].stageId, 'island-1-stage-1');
   assert.equal(handoff.readBattleRequest().ok, false, 'settled request must be consumed');
@@ -479,6 +525,7 @@ async function main() {
   assert.equal(duplicate.duplicate, true);
   assert.equal(runtime.learning.length, 2, 'duplicate result must not re-settle academics');
   assert.equal(runtime.rewards.length, 1, 'duplicate result must not re-grant rewards');
+  handoff.continueBattleResult(result);
   assert.equal(handoff.readBattleRequest().ok, false, 'duplicate result must still be consumed');
   assert.equal(handoff.readBattleResult().ok, false, 'duplicate result must still be consumed');
 
@@ -575,6 +622,7 @@ async function main() {
   assert.equal(runtime.bossSettlements[0].id, 'daily');
   assert.equal(runtime.bossSettlements[0].win, true);
   assert.equal(runtime.rewards.length, 1, 'Boss must not use PvE reward settlement');
+  handoff.continueBattleResult(bossResult);
   assert.equal(runtime.shownViews.at(-1), 'boss');
 
   assert.equal(handoff.storeBattleRequest(liveBossRequest.value).ok, true);
