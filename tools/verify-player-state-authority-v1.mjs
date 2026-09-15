@@ -94,8 +94,9 @@ assert.ok(grantBody.includes('snapshot:P'),'grantBattleRewards must pass current
 assert.ok(grantBody.includes('P=result.snapshot'),'Main must sync P from authority result');
 assert.ok(!/P\.(?:coins|exp|wins)\s*(?:\+\+|--|[+\-*/]?=)/.test(grantBody),'direct battle reward mutation remains in Main');
 assert.ok(app.includes('atomicCommit')&&app.includes('loadSnapshot'),'Main storage wrappers must delegate shared authority');
-assert.ok(entry.includes('battleId:result.value.battleId'),'current PVE settlement caller must plumb battleId');
-assert.ok(/rewardId:String\(reward\.rewardId\|\|['"]{2}\)/.test(entry),'current PVE settlement caller must plumb rewardId');
+assert.ok(entry.includes('battleId:{value:result.value.battleId'),'current PVE settlement caller must plumb battleId');
+assert.ok(entry.includes("rewardId:{value:String(reward.rewardId||'')"),'current PVE settlement caller must plumb rewardId');
+assert.ok(entry.includes('enumerable:false'),'battle identity plumbing must preserve the legacy enumerable reward payload shape');
 const authorityIndex=index.indexOf('js/player-state-authority-v1.js'),bootIndex=index.indexOf('js/boot-loader-v21004.js'),appIndex=loader.indexOf('js/app.js');assert.ok(authorityIndex>=0&&bootIndex>=0&&authorityIndex<bootIndex&&appIndex>=0,'authority must load before the boot loader can execute app.js');
 assert.equal(app.includes("P.coins=Math.max(0,P.coins+coins);P.exp=Math.max(0,P.exp+Math.floor(Number(exp)||0));P.wins=Math.max(0,P.wins+Math.floor(Number(wins)||0));"),false,'legacy generic battle writer remains');
 
