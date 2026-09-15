@@ -10,6 +10,7 @@ import type {
   CombatRarity,
   PowDisplayProfile
 } from './CombatPow';
+import { ULTIMATE_RAGE_COST, formatPlayerRageCost, toPlayerRagePoints } from '../systems/CombatRageEngine';
 
 interface CatalogElement { name?: string; }
 interface CatalogStats {
@@ -234,7 +235,6 @@ const PHASE_2A_ABILITY_METADATA = {
     ultimate: {
       id: 'pyroon.ultimate',
       name: 'Vũ Điệu Bảy Tia',
-      description: '4 Nộ, 32 Mana; bắn 5 phát, mỗi phát 48% ATK. Mục tiêu bị hạ thì chuyển sang địch thấp HP nhất; chí mạng làm phát kế +12% damage; đủ 3 Tập Trung bảo đảm phát cuối chí mạng.',
       power: 48,
       type: 'physical',
       damageType: 'physical',
@@ -277,7 +277,7 @@ const PHASE_2A_ABILITY_METADATA = {
     ultimate: {
       id: 'voltkit.ultimate',
       name: 'Lôi Kích',
-      description: 'Lôi Kích: tiêu 4 Nộ. Gây 200% AP lên mục tiêu. Nếu mục tiêu đang Tê Liệt, hit này gây +35% damage; không tiêu, xóa hoặc rút ngắn Tê Liệt.',
+      description: `Lôi Kích: tiêu ${formatPlayerRageCost(ULTIMATE_RAGE_COST)}. Gây 200% AP lên mục tiêu. Nếu mục tiêu đang Tê Liệt, hit này gây +35% damage; không tiêu, xóa hoặc rút ngắn Tê Liệt.`,
       power: 200,
       type: 'magic',
       damageType: 'magic',
@@ -325,7 +325,7 @@ const PHASE_2A_ABILITY_METADATA = {
     ultimate: {
       id: 'stormcoil.ultimate',
       name: 'Đại Khúc Lôi Nộ',
-      description: 'Tiêu 4 Nộ. Gây 110% AP lên toàn bộ địch; toàn đội +10% Speed trong 2 lượt. Chủ lực còn sống nhận +2 Điện Nhịp, tối đa 4.',
+      description: `Tiêu ${formatPlayerRageCost(ULTIMATE_RAGE_COST)}. Gây 110% AP lên toàn bộ địch; toàn đội +10% Speed trong 2 lượt. Chủ lực còn sống nhận +2 Điện Nhịp, tối đa 4.`,
       power: 110,
       type: 'magic',
       damageType: 'magic',
@@ -367,7 +367,7 @@ const PHASE_2A_PASSIVE_METADATA = {
   coralyn: {
     id: 'coralyn_diep_khuc_nang_luong',
     name: 'Điệp Khúc Năng Lượng',
-    description: 'Chọn một đồng minh khác làm chủ lực; sau hành động chính thứ 3 và 6, nạp chủ lực dưới 4 Nộ lên 8.',
+    description: `Chọn một đồng minh khác làm chủ lực; sau hành động chính thứ 3 và 6, nạp chủ lực dưới ${toPlayerRagePoints(4)} Nộ lên ${toPlayerRagePoints(8)}.`,
     mechanic: {
       trigger: 'ON_BATTLE_START',
       effect: {

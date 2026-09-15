@@ -2,7 +2,14 @@ import Phaser from 'phaser';
 import type { CombatAbility } from '../data/CombatPow';
 import { abilityHasLegalTarget } from '../systems/CombatAbilityTargeting';
 import type { CombatUnitState } from '../systems/CombatState';
-import { ACTION_BASE_RAW_GAIN, ULTIMATE_RAGE_COST, canUseUltimate } from '../systems/CombatRageEngine';
+import {
+  ACTION_BASE_RAW_GAIN,
+  ULTIMATE_RAGE_COST,
+  canUseUltimate,
+  formatPlayerRageBalance,
+  formatPlayerRageCost,
+  toPlayerRagePoints
+} from '../systems/CombatRageEngine';
 import { createCombat2201UltimateReadyCircle } from '../vfx/Combat2201HighFantasyAnimeVfx';
 import { COMBAT_BODY_FONT, COMBAT_DISPLAY_FONT } from './CombatTheme';
 
@@ -95,7 +102,7 @@ function statusExplanation(ability: CombatAbility): string {
     purify: 'Thanh Tẩy toàn bộ hiệu ứng xấu đang hỗ trợ.',
     revive: 'Hồi sinh đồng minh đã gục với 35% HP tối đa.',
     resurrection: 'Hồi sinh đồng minh đã gục với 35% HP tối đa.',
-    'rage gain': 'Nhận thêm 1 Nộ thô ngoài Nộ cơ bản của hành động.'
+    'rage gain': `Nhận thêm ${toPlayerRagePoints(1)} Nộ ngoài Nộ cơ bản của hành động.`
   };
   return map[status] ?? status.toUpperCase();
 }
@@ -190,7 +197,7 @@ function lockedAction(reason: string): ActionAvailability {
 
 function basicAvailability(scene: PatchableScene): ActionAvailability {
   return scene.combatState.activeLiving('enemy').length > 0
-    ? { enabled: true, resource: `+${ACTION_BASE_RAW_GAIN} NỘ · CHỌN ĐỊCH` }
+    ? { enabled: true, resource: `+${toPlayerRagePoints(ACTION_BASE_RAW_GAIN)} NỘ · CHỌN ĐỊCH` }
     : lockedAction('KHÔNG CÓ POW ĐỊCH');
 }
 
@@ -208,7 +215,7 @@ function actionAvailability(
 
   if (slot === 'ultimate' && actor.ragePoints < ULTIMATE_RAGE_COST) {
     const rage = Math.max(0, Math.floor(actor.ragePoints));
-    return lockedAction(`CẦN ${ULTIMATE_RAGE_COST} NỘ · ${rage}/${ULTIMATE_RAGE_COST}`);
+    return lockedAction(`CẦN ${formatPlayerRageCost(ULTIMATE_RAGE_COST)} · ${formatPlayerRageBalance(rage)}`);
   }
 
   if (!abilityHasLegalTarget(ability, actor, scene.combatState.units)) return lockedAction('KHÔNG CÓ MỤC TIÊU');
@@ -260,7 +267,7 @@ function createSharedSkillOverlay(this: PatchableScene, actor: CombatUnitState):
     fontFamily: COMBAT_DISPLAY_FONT, fontSize: compact ? '16px' : '19px', color: '#f8e9bd', fontStyle: 'bold', stroke: '#06111c', strokeThickness: 3,
     fixedWidth: Math.max(220, width - 40), align: 'center'
   }).setOrigin(0.5);
-  const subtitle = this.add.text(width / 2, overlayTop + 39, `${actor.pow.role} · ${actor.pow.element} · NỘ ${Math.max(0, Math.floor(actor.ragePoints))}/${ULTIMATE_RAGE_COST}`, {
+  const subtitle = this.add.text(width / 2, overlayTop + 39, `${actor.pow.role} · ${actor.pow.element} · ${formatPlayerRageBalance(actor.ragePoints)}`, {
     fontFamily: COMBAT_BODY_FONT, fontSize: compact ? '10px' : '12px', color: '#a9cbd3', fontStyle: 'bold',
     fixedWidth: Math.max(220, width - 40), align: 'center'
   }).setOrigin(0.5);

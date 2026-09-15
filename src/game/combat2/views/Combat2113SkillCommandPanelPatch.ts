@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import type { CombatUnitState } from '../systems/CombatState';
+import { RAGE_READY_POINTS, formatPlayerRageBalance } from '../systems/CombatRageEngine';
 import { COMBAT_BODY_FONT, COMBAT_DISPLAY_FONT } from './CombatTheme';
 
 interface PatchableScene extends Phaser.Scene {
@@ -41,9 +42,9 @@ function decorate(scene: PatchableScene, actor: CombatUnitState): void {
   const mana = Math.max(0, Math.round(Number(actor.manaPoints ?? 100) || 0));
   const maxMana = Math.max(1, Math.round(Number(actor.maxManaPoints ?? 100) || 100));
   const usesMana = actor.pow.abilities.skills.some((ability) => ability?.usesMana === true) || actor.pow.abilities.ultimate.usesMana === true;
-  const resourceLabel = usesMana ? `NỘ ${rage}/8 · MANA ${mana}/${maxMana}` : `NỘ ${rage}/8`;
+  const resourceLabel = usesMana ? `${formatPlayerRageBalance(rage)} · MANA ${mana}/${maxMana}` : formatPlayerRageBalance(rage);
   const resource = scene.add.text(deckWidth / 2 - 20, -deckHeight / 2 + 25, resourceLabel, {
-    fontFamily: COMBAT_DISPLAY_FONT, fontSize: '11px', color: rage >= 4 ? '#ffe07a' : '#8fe8ff', fontStyle: 'bold'
+    fontFamily: COMBAT_DISPLAY_FONT, fontSize: '11px', color: rage >= RAGE_READY_POINTS ? '#ffe07a' : '#8fe8ff', fontStyle: 'bold'
   }).setOrigin(1, 0.5);
   root.add([name, role, resource]);
 

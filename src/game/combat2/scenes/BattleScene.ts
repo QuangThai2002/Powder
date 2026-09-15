@@ -27,9 +27,18 @@ import {
 } from '../systems/CombatControlEngine';
 import { CombatGuardEngine } from '../systems/CombatGuardEngine';
 import { effectiveHealingReduction } from '../systems/CombatHealingReduction';
+import type { PyroonMechanicDamageEvent } from '../systems/CombatPyroonEngine';
+import { buildPyroonMechanicPresentation } from '../systems/CombatPyroonPresentation';
 import { BossModeController } from '../systems/BossModeController';
 import { CombatState, type CombatUnitState } from '../systems/CombatState';
-import { ACTION_BASE_RAW_GAIN, ULTIMATE_RAGE_COST } from '../systems/CombatRageEngine';
+import {
+  ACTION_BASE_RAW_GAIN,
+  ULTIMATE_RAGE_COST,
+  formatPlayerRageCost,
+  formatPlayerRageGain,
+  formatPlayerRageSpend,
+  toPlayerRagePoints
+} from '../systems/CombatRageEngine';
 import { SkillActionResolver, type CombatAbilitySlot, type CombatSkillSlot } from '../systems/SkillActionResolver';
 import { TurnManager } from '../systems/TurnManager';
 import { CombatPresentationDirector } from '../views/CombatPresentationDirector';
@@ -343,7 +352,7 @@ export class BattleScene extends Phaser.Scene {
     const skill2 = actor.pow.abilities.skills[1];
     const ultimate = actor.pow.abilities.ultimate;
     const actions: ActionMenuItem[] = [
-      { label: 'ĐÒN CƠ BẢN', detail: this.shortName(basic.name, 26), resource: `+${ACTION_BASE_RAW_GAIN} NỘ`, glyph: '◆', tag: 'ATK', iconKey: basic.iconKey, color: 0x0b5268, enabled: this.combatState.activeLiving('enemy').length > 0, run: () => this.beginPlayerActionSelection(actor, 'basic') },
+      { label: 'ĐÒN CƠ BẢN', detail: this.shortName(basic.name, 26), resource: `+${toPlayerRagePoints(ACTION_BASE_RAW_GAIN)} NỘ`, glyph: '◆', tag: 'ATK', iconKey: basic.iconKey, color: 0x0b5268, enabled: this.combatState.activeLiving('enemy').length > 0, run: () => this.beginPlayerActionSelection(actor, 'basic') },
       { label: 'KỸ NĂNG I', detail: this.shortName(skill1.name, 26), resource: this.abilityResourceText(actor, skill1, 0), glyph: 'I', tag: this.abilityTag(skill1), iconKey: skill1.iconKey, color: 0x315d78, enabled: this.skillActions.canUse(actor, 0) && abilityHasLegalTarget(skill1, actor, this.combatState.units), run: () => this.beginPlayerActionSelection(actor, 0) },
       { label: 'KỸ NĂNG II', detail: this.shortName(skill2.name, 26), resource: this.abilityResourceText(actor, skill2, 1), glyph: 'II', tag: this.abilityTag(skill2), iconKey: skill2.iconKey, color: 0x493b78, enabled: this.skillActions.canUse(actor, 1) && abilityHasLegalTarget(skill2, actor, this.combatState.units), run: () => this.beginPlayerActionSelection(actor, 1) },
       { label: 'TUYỆT KỸ', detail: this.shortName(ultimate.name, 26), resource: this.abilityResourceText(actor, ultimate, 'ultimate'), glyph: '✦', tag: 'ULT', iconKey: ultimate.iconKey, color: 0x70472b, enabled: this.skillActions.canUseUltimate(actor) && abilityHasLegalTarget(ultimate, actor, this.combatState.units), run: () => this.beginPlayerActionSelection(actor, 'ultimate') }
@@ -606,6 +615,7 @@ export class BattleScene extends Phaser.Scene {
           if (result.freezeShattered) this.showFloatingLabel(targetView, 'PHÁ BĂNG · +30%', '#8eeaff');
         }
       }
+      await this.presentPyroonMechanicEvents(result.mechanicEvents);
       this.showRageGain(actorView, result.rageGained, result.rawRageGain);
       await this.wait(300);
       return true;
@@ -664,6 +674,7 @@ export class BattleScene extends Phaser.Scene {
         await targetView.playHit();
         this.showDamageNumber(targetView, result.hpDamage, result.shieldDamage, result.defeated, result.crit);
       }
+      await this.presentPyroonMechanicEvents(result.mechanicEvents);
       if (result.freezeShattered) this.showFloatingLabel(targetView, 'PHÁ BĂNG · +30%', '#8eeaff');
       if (result.healed > 0) this.showFloatingLabel(this.isSelfStatus(result.statusLabel || '') ? actorView : targetView, `HỒI +${result.healed}`, '#73f0aa');
       if (result.shieldGranted > 0) this.showFloatingLabel(this.isSelfStatus(result.statusLabel || '') ? actorView : targetView, `KHIÊN +${result.shieldGranted}`, '#8edfff');
@@ -672,7 +683,7 @@ export class BattleScene extends Phaser.Scene {
         const statusView = this.isSelfStatus(result.statusLabel) ? actorView : targetView;
         this.showFloatingLabel(statusView, this.statusDisplayName(result.statusLabel), this.statusLabelColor(result.statusLabel));
       }
-      if (result.rageSpent > 0) this.showFloatingLabel(actorView, `NỘ -${result.rageSpent} · CÒN ${result.rageAfter}`, '#ffcc8a');
+      if (result.rageSpent > 0) this.showFloatingLabel(actorView, formatPlayerRageSpend(result.rageSpent, result.rageAfter), '#ffcc8a');
       else this.showRageGain(actorView, result.rageGained, result.rawRageGain);
       if (result.manaSpent > 0) this.showFloatingLabel(actorView, `MANA -${result.manaSpent} · CÒN ${result.manaAfter}`, '#83eaff');
       if (result.focusSpent > 0) this.showFloatingLabel(actorView, `TẬP TRUNG -${result.focusSpent}`, '#ffd36a');
@@ -923,7 +934,29 @@ export class BattleScene extends Phaser.Scene {
 
   private showRageGain(view: PowView | undefined, gained: number, raw: number): void {
     if (!view || gained <= 0) return;
-    this.showFloatingLabel(view, gained < raw ? `NỘ +${gained} · DƯ ×50%` : `NỘ +${gained}`, '#6ed9ff');
+    this.showFloatingLabel(view, gained < raw ? `${formatPlayerRageGain(gained)} · DƯ ×50%` : formatPlayerRageGain(gained), '#6ed9ff');
+  }
+
+  private async presentPyroonMechanicEvents(events: readonly PyroonMechanicDamageEvent[]): Promise<void> {
+    for (const event of events) {
+      const source = this.combatState.units.find((unit) => unit.instanceId === event.sourceId);
+      const target = this.combatState.units.find((unit) => unit.instanceId === event.targetId);
+      const targetView = this.powViews.get(event.targetId);
+      if (targetView) await targetView.playHit();
+      for (const cue of buildPyroonMechanicPresentation(
+        event,
+        source?.pow.name || 'Pyroon',
+        target?.pow.name || 'mục tiêu'
+      )) {
+        const view = this.powViews.get(cue.unitId);
+        if (cue.kind === 'damage') {
+          if (view) this.showDamageNumber(view, cue.hpDamage, cue.shieldDamage, cue.defeated, false);
+        } else {
+          this.showFloatingLabel(view, cue.label, cue.color);
+        }
+      }
+      await this.wait(140);
+    }
   }
 
   private floatAndDestroy(text: Phaser.GameObjects.Text, duration: number): void {
@@ -1011,13 +1044,14 @@ export class BattleScene extends Phaser.Scene {
       ? ability.pyroonMechanic.focusRequired
       : 0;
     if (slot === 'ultimate') {
-      if (actor.ragePoints < ULTIMATE_RAGE_COST) return `${manaLabel ? `${manaLabel} · ` : ''}CẦN ${ULTIMATE_RAGE_COST} NỘ`;
-      return `${manaLabel ? `${manaLabel} · ` : ''}TỐN ${ULTIMATE_RAGE_COST} NỘ · ${this.actionTargetLabel(ability)}`;
+      const rageCostLabel = formatPlayerRageCost(ULTIMATE_RAGE_COST);
+      if (actor.ragePoints < ULTIMATE_RAGE_COST) return `CẦN ${rageCostLabel}${manaLabel ? ` · ${manaLabel}` : ''}`;
+      return `TỐN ${rageCostLabel}${manaLabel ? ` · ${manaLabel}` : ''} · ${this.actionTargetLabel(ability)}`;
     }
     if (focusRequired > 0 && (actor.coreState?.counters['pyroon:focus'] ?? 0) < focusRequired) {
       return `${manaLabel ? `${manaLabel} · ` : ''}CẦN ${focusRequired} TẬP TRUNG`;
     }
-    return `${manaLabel ? `${manaLabel} · ` : `+${this.skillActions.previewRawRageGain(ability, slot)} NỘ · `}${this.actionTargetLabel(ability)}`;
+    return `${manaLabel ? `${manaLabel} · ` : `+${toPlayerRagePoints(this.skillActions.previewRawRageGain(ability, slot))} NỘ · `}${this.actionTargetLabel(ability)}`;
   }
 
   private abilityTag(ability: CombatAbility): string {

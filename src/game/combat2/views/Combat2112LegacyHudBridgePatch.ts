@@ -8,7 +8,7 @@ import {
   type LegacySimpleLevel
 } from '../systems/CombatLegacyDomainEngine';
 import type { CombatUnitState } from '../systems/CombatState';
-import { ULTIMATE_RAGE_COST } from '../systems/CombatRageEngine';
+import { formatPlayerRageBalance } from '../systems/CombatRageEngine';
 import { COMBAT_BODY_FONT, COMBAT_DISPLAY_FONT } from './CombatTheme';
 
 interface DomainApi {
@@ -91,7 +91,7 @@ function refreshTurnHud(scene: PatchableScene): void {
   const rage = Math.max(0, Math.floor(Number(actor.ragePoints) || 0));
   scene.__legacyTurnHudTitle2112.setText(`VÒNG ${Math.max(1, Number(scene.combatState.round) || 1)} · ${side}`);
   scene.__legacyTurnHudDetail2112
-    .setText(`${actor.pow.name} · NỘ ${rage}/${ULTIMATE_RAGE_COST}`)
+    .setText(`${actor.pow.name} · ${formatPlayerRageBalance(rage)}`)
     .setColor(actor.side === 'player' ? '#83e9ff' : '#ff9eab');
 }
 

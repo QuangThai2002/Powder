@@ -26,6 +26,8 @@ export interface PyroonMechanicDamageEvent {
   triggerIndex: number;
   focusGained: number;
   focusAfter: number;
+  burnRefreshed: boolean;
+  markEnded: boolean;
   elementOutcome: ElementOutcome;
   defeated: boolean;
 }
@@ -200,12 +202,14 @@ export class CombatPyroonEngine {
       target.shield = Math.max(0, shieldBefore - shieldDamage);
       target.hp = Math.max(0, target.hp - hpDamage);
       target.alive = target.hp > 0;
+      const burnRefreshed = target.burnActionsRemaining > 0 && target.burnDamage > 0;
       this.applyBurn(source, target, damage);
 
       const focusBefore = this.getFocus(source);
       const focusAfter = mark.triggerCount >= mechanic.triggerLimit
         ? this.setFocus(source, focusBefore + mechanic.focusOnFinalTrigger)
         : focusBefore;
+      const markEnded = mark.remainingTriggers <= 0;
       events.push({
         kind: 'pyroon-fire-bait',
         sourceId: source.instanceId,
@@ -217,10 +221,12 @@ export class CombatPyroonEngine {
         triggerIndex: mark.triggerCount,
         focusGained: focusAfter - focusBefore,
         focusAfter,
+        burnRefreshed,
+        markEnded,
         elementOutcome: identity.outcome,
         defeated: !target.alive
       });
-      if (mark.remainingTriggers <= 0) delete ensureCombatCoreState(target).marks[key];
+      if (markEnded) delete ensureCombatCoreState(target).marks[key];
     }
     return events;
   }

@@ -9,6 +9,7 @@ import {
   selectLegacyCastTargets
 } from '../systems/CombatMultiTargetEngine';
 import type { CombatUnitState } from '../systems/CombatState';
+import { formatPlayerRageSpend } from '../systems/CombatRageEngine';
 import type { CombatAbilitySlot } from '../systems/SkillActionResolver';
 import { COMBAT_DISPLAY_FONT } from './CombatTheme';
 
@@ -34,6 +35,7 @@ interface PatchableScene extends Phaser.Scene {
   showFloatingLabel: (view: any, label: string, color: string) => void;
   showDamageNumber: (view: any, hp: number, shield: number, defeated: boolean, crit?: boolean) => void;
   showRageGain: (view: any, gained: number, raw: number) => void;
+  presentPyroonMechanicEvents: (events: readonly any[]) => Promise<void>;
   restoreRevivedReserve: (unit: CombatUnitState) => void;
   refreshViews: () => void;
   isSelfStatus: (status: string) => boolean;
@@ -141,6 +143,7 @@ async function showTargetFeedback(
     const statusView = selfStatus ? actorView : targetView;
     scene.showFloatingLabel(statusView, scene.statusDisplayName(result.statusLabel), scene.statusLabelColor(result.statusLabel));
   }
+  await scene.presentPyroonMechanicEvents(result.mechanicEvents || []);
 }
 
 function installMultiResolvePatch(proto: any): void {
@@ -209,7 +212,7 @@ function installMultiResolvePatch(proto: any): void {
       }
 
       const resource = cast.primary;
-      if (resource.rageSpent > 0) this.showFloatingLabel(actorView, `NỘ -${resource.rageSpent} · CÒN ${resource.rageAfter}`, '#ffcc8a');
+      if (resource.rageSpent > 0) this.showFloatingLabel(actorView, formatPlayerRageSpend(resource.rageSpent, resource.rageAfter), '#ffcc8a');
       else this.showRageGain(actorView, resource.rageGained, resource.rawRageGain);
       await this.wait(slot === 'ultimate' ? 820 : 430);
       return true;

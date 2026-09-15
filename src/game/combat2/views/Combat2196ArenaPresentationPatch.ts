@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import type { CombatAbility } from '../data/CombatPow';
 import type { CombatUnitState } from '../systems/CombatState';
+import { RAGE_READY_POINTS, formatPlayerRageBalance } from '../systems/CombatRageEngine';
 import { powVfxDepth } from '../vfx/CombatNightVfxLayout';
 import { CombatPresentationDirector } from './CombatPresentationDirector';
 import { COMBAT_BODY_FONT, COMBAT_DISPLAY_FONT } from './CombatTheme';
@@ -397,10 +398,10 @@ function decorateActionDeck(scene: PatchableScene, actor: CombatUnitState): void
     const overflow = rage >= i + 5;
     root.add(scene.add.rectangle(markerX + i * (compact ? 18 : 22), compact ? 8 : 9, compact ? 12 : 15, 5, overflow ? 0xff6675 : palette.main, filled ? 0.96 : 0.2));
   }
-  root.add(scene.add.text(panelWidth / 2 - 18, -11, `NỘ ${rage}/8`, {
+  root.add(scene.add.text(panelWidth / 2 - 18, -11, formatPlayerRageBalance(rage), {
     fontFamily: COMBAT_DISPLAY_FONT,
     fontSize: compact ? '10px' : '11px',
-    color: rage >= 4 ? '#ffe58b' : palette.text,
+    color: rage >= RAGE_READY_POINTS ? '#ffe58b' : palette.text,
     fontStyle: 'bold'
   }).setOrigin(1, 0.5));
 
