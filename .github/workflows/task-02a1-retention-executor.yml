@@ -26,20 +26,7 @@ jobs:
 
       - name: Apply retention patch
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('tools/task-02a1-retention-executor.mjs')
-          s=p.read_text()
-          old="""if(!verifier.includes(helperAnchor))throw new Error('verifier helper anchor missing');
-verifier=verifier.replace(helperAnchor,helperAnchor+\"function reward(authority,input){reward.clock+=1;return authority.applyOfflineBattleReward({battleCreatedAt:reward.clock,...input});}\\nreward.clock=1000;\\n\");
-verifier=verifier.replace(/([A-Za-z_$][\\w$]*)\\.applyOfflineBattleReward\\(/g,'reward($1,');"""
-          new="""if(!verifier.includes(helperAnchor))throw new Error('verifier helper anchor missing');
-verifier=verifier.replace(/([A-Za-z_$][\\w$]*)\\.applyOfflineBattleReward\\(/g,'reward($1,');
-verifier=verifier.replace(helperAnchor,helperAnchor+\"function reward(authority,input){reward.clock+=1;return authority.applyOfflineBattleReward({battleCreatedAt:reward.clock,...input});}\\nreward.clock=1000;\\n\");"""
-          if old not in s:
-              raise SystemExit('executor transform-order anchor missing')
-          p.write_text(s.replace(old,new))
-          PY
+          python -c "from pathlib import Path; p=Path('tools/task-02a1-retention-executor.mjs'); s=p.read_text(); a=\"verifier=verifier.replace(helperAnchor,helperAnchor+\\\"function reward(authority,input){reward.clock+=1;return authority.applyOfflineBattleReward({battleCreatedAt:reward.clock,...input});}\\\\nreward.clock=1000;\\\\n\\\");\\nverifier=verifier.replace(/([A-Za-z_$][\\\\w$]*)\\\\.applyOfflineBattleReward\\\\(/g,'reward($1,');\"; b=\"verifier=verifier.replace(/([A-Za-z_$][\\\\w$]*)\\\\.applyOfflineBattleReward\\\\(/g,'reward($1,');\\nverifier=verifier.replace(helperAnchor,helperAnchor+\\\"function reward(authority,input){reward.clock+=1;return authority.applyOfflineBattleReward({battleCreatedAt:reward.clock,...input});}\\\\nreward.clock=1000;\\\\n\\\");\"; assert a in s, 'executor transform-order anchor missing'; p.write_text(s.replace(a,b))"
           node tools/task-02a1-retention-executor.mjs
           git checkout -- tools/task-02a1-retention-executor.mjs
 
