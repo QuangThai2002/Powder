@@ -26,7 +26,7 @@ jobs:
 
       - name: Apply retention patch
         run: |
-          python -c "from pathlib import Path; p=Path('tools/task-02a1-retention-executor.mjs'); s=p.read_text(); a=\"verifier=verifier.replace(helperAnchor,helperAnchor+\\\"function reward(authority,input){reward.clock+=1;return authority.applyOfflineBattleReward({battleCreatedAt:reward.clock,...input});}\\\\nreward.clock=1000;\\\\n\\\");\\nverifier=verifier.replace(/([A-Za-z_$][\\\\w$]*)\\\\.applyOfflineBattleReward\\\\(/g,'reward($1,');\"; b=\"verifier=verifier.replace(/([A-Za-z_$][\\\\w$]*)\\\\.applyOfflineBattleReward\\\\(/g,'reward($1,');\\nverifier=verifier.replace(helperAnchor,helperAnchor+\\\"function reward(authority,input){reward.clock+=1;return authority.applyOfflineBattleReward({battleCreatedAt:reward.clock,...input});}\\\\nreward.clock=1000;\\\\n\\\");\"; assert a in s, 'executor transform-order anchor missing'; p.write_text(s.replace(a,b))"
+          python -c "from pathlib import Path; p=Path('tools/task-02a1-retention-executor.mjs'); lines=p.read_text().splitlines(True); a=next(i for i,x in enumerate(lines) if x.startswith('verifier=verifier.replace(helperAnchor')); b=next(i for i,x in enumerate(lines) if x.startswith('verifier=verifier.replace(/([A-Za-z_$]')); lines[a],lines[b]=lines[b],lines[a]; p.write_text(''.join(lines))"
           node tools/task-02a1-retention-executor.mjs
           git checkout -- tools/task-02a1-retention-executor.mjs
 
