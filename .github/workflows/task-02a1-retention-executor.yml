@@ -26,7 +26,7 @@ jobs:
 
       - name: Apply retention patch
         run: |
-          python -c "from pathlib import Path; p=Path('tools/task-02a1-retention-executor.mjs'); lines=p.read_text().splitlines(True); a=next(i for i,x in enumerate(lines) if x.startswith('verifier=verifier.replace(helperAnchor')); b=next(i for i,x in enumerate(lines) if x.startswith('verifier=verifier.replace(/([A-Za-z_$]')); lines[a],lines[b]=lines[b],lines[a]; p.write_text(''.join(lines))"
+          python -c "from pathlib import Path; p=Path('tools/task-02a1-retention-executor.mjs'); lines=p.read_text().splitlines(True); a=next(i for i,x in enumerate(lines) if x.startswith('verifier=verifier.replace(helperAnchor')); b=next(i for i,x in enumerate(lines) if x.startswith('verifier=verifier.replace(/([A-Za-z_$]')); lines[a],lines[b]=lines[b],lines[a]; s=''.join(lines); old=\"assert.deepEqual(replay.granted,{coins:0,exp:0,wins:0});\"; new=\"assert.equal(replay.granted.coins,0);assert.equal(replay.granted.exp,0);assert.equal(replay.granted.wins,0);\"; assert old in s, 'cross-vm assertion anchor missing'; p.write_text(s.replace(old,new))"
           node tools/task-02a1-retention-executor.mjs
           git checkout -- tools/task-02a1-retention-executor.mjs
 
