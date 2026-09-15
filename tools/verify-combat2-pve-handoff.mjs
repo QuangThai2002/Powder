@@ -227,6 +227,7 @@ function createRuntime() {
     options: ['Xin chào', 'Cảm ơn', 'Tạm biệt'],
     explain: 'Lời chào cơ bản.'
   };
+  const secondQuestion = { ...question, id: 'academic-q-2', prompt: 'Cảm ơn nghĩa là gì?' };
   const dailyBossConfig = {
     id: 'daily', thresholds: [0.5], phasePower: 1.12, phaseSpeed: 1.06, phaseShield: 0.08,
     signature: { id: 'blood_hunt', name: 'Huyết Liệp', cadence: [3, 2], effect: { kind: 'mark-lowest-hp', status: 'Boss Mark', turns: 2 } }
@@ -258,11 +259,12 @@ function createRuntime() {
       const stats = pow.stats || {};
       return { stats: Object.fromEntries(Object.entries(stats).map(([key, value]) => [key, Math.max(1, Math.round(Number(value) * scale))])) };
     } },
+    POWDER_COMBAT_ACADEMIC_AUTHORITY_V1: { applyOfflineCombatAcademicOutcome: () => ({ ok: true }) },
     POWDER_APP: {
       getSave: () => plain(saveState),
       getDungeonLearningGate: () => ({ requirement }),
-      getCombatQuestionPool: () => [question, { ...question, id: 'academic-q-invalid', lessonId: 'lesson-x' }],
-      grantLearningProgress: (entry) => { learning.push(entry); return window.POWDER_SECURE_ECONOMY_V152?.hasAccount?.() ? { serverProtected: true } : { ok: true }; },
+      getCombatQuestionPool: () => [question, secondQuestion, { ...question, id: 'academic-q-invalid', lessonId: 'lesson-x' }],
+      applyCombatAcademicOutcome: (entry) => { learning.push(entry); return window.POWDER_SECURE_ECONOMY_V152?.hasAccount?.() ? { ok: false, serverProtected: true } : { ok: true, applied: { responses: entry.responses.length } }; },
       grantBattleRewards: (entry) => { rewards.push(entry); if(window.POWDER_SECURE_ECONOMY_V152?.hasAccount?.())return { ok: false, serverProtected: true, rewardLocked: true };saveState.coins+=entry.coins;saveState.exp+=entry.exp;saveState.wins+=entry.wins;return { ok: true, coins: saveState.coins, exp: saveState.exp, wins: saveState.wins }; },
       onBossCombatFinished: (entry) => { bossSettlements.push(entry); return { ok: true, reward: entry.win ? { coins: 5 } : null }; },
       showView: (view) => { shownViews.push(view); }
@@ -449,7 +451,7 @@ async function main() {
   assert.equal(request.value.battleMode, 'pve');
   assert.equal(request.value.academicContext.requiresActionQuestions, true);
   assert.equal(request.value.academicContext.authority, 'main-learning');
-  assert.equal(request.value.academicContext.allowedQuestionPool.length, 1, 'snapshot must exclude ineligible questions');
+  assert.equal(request.value.academicContext.allowedQuestionPool.length, 2, 'snapshot must exclude ineligible questions');
   assert.equal(request.value.rosterContext.source, 'legacy-pve-boundary', 'PvE must snapshot final stats before Combat2 boot');
   assert.equal(request.value.rosterContext.playerRoster.length, 1, 'PvE player snapshot must match the selected team');
   assert.equal(request.value.rosterContext.enemyRoster.length, 1, 'PvE enemy snapshot must match the stage roster');
@@ -471,7 +473,7 @@ async function main() {
     'PvE initiative snapshot must be applied before the first turn');
 
   const eligibleQuestions = contract.academicQuestionsFromContext(request.value.academicContext);
-  assert.equal(eligibleQuestions.length, 1, 'Combat2 must accept Main snapshot questions only when lesson/concept match');
+  assert.equal(eligibleQuestions.length, 2, 'Combat2 must accept Main snapshot questions only when lesson/concept match');
   assert.equal(eligibleQuestions[0].id, runtime.question.id);
   assert.equal(contract.academicQuestionsFromContext({
     ...request.value.academicContext,
@@ -483,7 +485,7 @@ async function main() {
     survivingState: { player: [{ id: 'hero-1', hp: 100 }], enemy: [], round: 2 },
     academicResponses: [
       { question: eligibleQuestions[0], correct: true, powId: 'hero-1' },
-      { question: eligibleQuestions[0], correct: false, powId: 'hero-1' }
+      { question: eligibleQuestions[1], correct: false, powId: 'hero-1' }
     ]
   });
   assert.equal(result.academicOutcome.summary.answered, 2);
@@ -503,7 +505,10 @@ async function main() {
   const settled = await handoff.settleReturnedResult();
   assert.equal(settled.ok, true);
   assert.equal(settled.duplicate, false);
-  assert.equal(runtime.learning.length, 2, 'every academic response must settle once');
+  assert.equal(runtime.learning.length, 1, 'academic responses must settle in one batch');
+  assert.equal(runtime.learning[0].battleId, result.battleId);
+  assert.equal(runtime.learning[0].battleCreatedAt, request.value.createdAt);
+  assert.deepEqual(plain(runtime.learning[0].responses.map(x=>x.question.id)),['academic-q-1','academic-q-2']);
   assert.equal(runtime.rewards.length, 1, 'victory reward must settle once');
   assert.deepEqual(plain(runtime.rewards[0]), { coins: 25, exp: 15, wins: 1 }, 'offline reward must preserve the request payload');
   assert.deepEqual(plain(settled.rewardOutcome), { coins: 25, exp: 15, wins: 1 }, 'receipt amounts must equal the actual save delta');
@@ -523,7 +528,7 @@ async function main() {
   const duplicate = await handoff.settleReturnedResult();
   assert.equal(duplicate.ok, true);
   assert.equal(duplicate.duplicate, true);
-  assert.equal(runtime.learning.length, 2, 'duplicate result must not re-settle academics');
+  assert.equal(runtime.learning.length, 1, 'duplicate result must not re-settle academics');
   assert.equal(runtime.rewards.length, 1, 'duplicate result must not re-grant rewards');
   handoff.continueBattleResult(result);
   assert.equal(handoff.readBattleRequest().ok, false, 'duplicate result must still be consumed');
@@ -545,7 +550,7 @@ async function main() {
   const rejected = await handoff.settleReturnedResult();
   assert.equal(rejected.ok, false);
   assert.equal(rejected.reason, 'academic-question-not-allowed');
-  assert.equal(runtime.learning.length, 2, 'foreign academic questions must not grant learning progress');
+  assert.equal(runtime.learning.length, 1, 'foreign academic questions must not grant learning progress');
   assert.equal(runtime.rewards.length, 1, 'foreign academic questions must not grant rewards');
 
   runtime.saveState.team = ['hero-1', 'hero-2', 'hero-3'];

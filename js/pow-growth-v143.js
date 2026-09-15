@@ -24,6 +24,8 @@
     return Math.max(0,Math.round(base*(1+rank*.22)*gradeMultiplier(score)*lessonModeMultiplier(mode)));
   }
   function combatExp(rank=0){const r=Math.max(0,Math.min(6,Math.floor(Number(rank)||0)));return{primary:12+r*2,team:4+r}}
+  function normalizePowProgress(pow,owned){if(!pow||!owned)return owned;const cap=levelCapForStars(owned.stars);owned.level=Math.max(1,Math.min(cap,Math.floor(Number(owned.level)||1)));owned.powExp=Math.max(0,Math.floor(Number(owned.powExp)||0));if(owned.level>=cap)owned.powExp=0;else owned.powExp=Math.min(owned.powExp,xpToNextLevel(owned.level)-1);return owned}
+  function addPowExperience(pow,owned,amount){if(!pow||!owned)return{gained:0,levels:0,level:0,cap:0};normalizePowProgress(pow,owned);let remaining=Math.max(0,Math.floor(Number(amount)||0)),gained=0,levels=0,cap=levelCapForStars(owned.stars);while(remaining>0&&owned.level<cap){const need=xpToNextLevel(owned.level),take=Math.min(remaining,need-owned.powExp);owned.powExp+=take;remaining-=take;gained+=take;if(owned.powExp>=need){owned.level++;owned.powExp=0;levels++}}if(owned.level>=cap)owned.powExp=0;return{gained,levels,level:owned.level,cap,overflow:remaining}}
   function stageForLevel(level){const l=Math.max(1,Math.floor(Number(level)||1));if(l<=5)return{key:'quick',name:'Khởi động',range:'Lv.1–5'};if(l<=20)return{key:'foundation',name:'Nền tảng',range:'Lv.6–20'};if(l<=40)return{key:'training',name:'Rèn luyện',range:'Lv.21–40'};if(l<=60)return{key:'advanced',name:'Nâng cao',range:'Lv.41–60'};if(l<=80)return{key:'master',name:'Tinh thông',range:'Lv.61–80'};return{key:'apex',name:'Đỉnh cao',range:'Lv.81–100'}}
   const bands=Object.freeze([
     {range:'Lv.1–5',xp:xpFromLevelToLevel(1,5),note:'Lên nhanh để thử Pow mới.'},
@@ -33,5 +35,5 @@
     {range:'Lv.61–80',xp:xpFromLevelToLevel(60,80),note:'PowCandy chỉ còn là nguồn bổ trợ.'},
     {range:'Lv.81–100',xp:xpFromLevelToLevel(80,100),note:'Cấp cao phản ánh thời gian học thực sự.'}
   ]);
-  window.POWDER_GROWTH_V143={version:'17.7.2',STAR_CAPS,CANDY_EXP,CANDY_EXP_BY_TYPE,DIFFICULTY_BASE,levelCapForStars,xpToNextLevel,xpFromLevelToLevel,xpFromOneToLevel,gradeMultiplier,lessonModeMultiplier,lessonExp,combatExp,stageForLevel,bands};
+  window.POWDER_GROWTH_V143={version:'17.7.2',STAR_CAPS,CANDY_EXP,CANDY_EXP_BY_TYPE,DIFFICULTY_BASE,levelCapForStars,xpToNextLevel,xpFromLevelToLevel,xpFromOneToLevel,gradeMultiplier,lessonModeMultiplier,lessonExp,combatExp,normalizePowProgress,addPowExperience,stageForLevel,bands};
 })();
