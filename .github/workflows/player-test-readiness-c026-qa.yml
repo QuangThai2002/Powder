@@ -1,0 +1,71 @@
+name: Player Test Readiness C026 QA
+
+on:
+  push:
+    branches:
+      - qa/player-test-readiness-c026
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact feature SHA
+        uses: actions/checkout@v4
+        with:
+          ref: c026cb8b01072a65dff2faaa2f870ff93dfd4498
+          fetch-depth: 0
+
+      - name: Assert feature SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected='c026cb8b01072a65dff2faaa2f870ff93dfd4498'
+          actual="$(git rev-parse HEAD)"
+          printf 'HEAD: %s\n' "$actual"
+          test "$actual" = "$expected"
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Combat2 damage math
+        run: npm run test:combat2-damage-math
+
+      - name: Combat2 roster smoke
+        run: npm run test:combat2-roster-smoke
+
+      - name: Combat2 passive triggers
+        run: npm run test:combat2-passive-triggers
+
+      - name: Combat2 feature freeze
+        run: npm run test:combat2-feature-freeze
+
+      - name: Combat2 handoff
+        run: npm run test:combat2-handoff
+
+      - name: Combat2 Pyroon
+        run: npm run test:combat2-pyroon
+
+      - name: Player Pow eligibility
+        run: npm run test:player-pow-eligibility
+
+      - name: Player test readiness
+        run: npm run test:player-test-readiness
+
+      - name: Feature diff check
+        shell: bash
+        run: git diff --check 9db2128afb786fb0a118738de59e3308a373121c c026cb8b01072a65dff2faaa2f870ff93dfd4498
