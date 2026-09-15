@@ -57,9 +57,50 @@ function assertBalances(actual,coins,exp,wins,label){assert.equal(actual.coins,c
   storage.failRule=(key,value)=>key===journalKey&&value.includes('"state":"committed"');
   const first=authority.applyOfflineBattleReward({authorityMode:'offline',snapshot:baseSave(),battleId:'battle-crash',rewardId:'reward-crash',coins:120,exp:4,wins:1});
   assert.equal(first.ok,true);assertBalances(persisted(storage),620,14,3,'crash-window player save');assert.ok(storage.getItem(`${STORAGE_KEY}_combat_reward_tx_v1`),'transaction marker must survive simulated crash');
+  assert.equal(persisted(storage).saveMeta.lastBattleRewardTx.battleId,'battle-crash');
   storage.failRule=null;const reloaded=boot(storage);const loaded=reloaded.loadSnapshot();assertBalances(loaded.snapshot,620,14,3,'reconciled snapshot');assert.equal(storage.getItem(`${STORAGE_KEY}_combat_reward_tx_v1`),null,'transaction marker should clear after reconciliation');
   const duplicate=reloaded.applyOfflineBattleReward({authorityMode:'offline',snapshot:loaded.snapshot,battleId:'battle-crash',rewardId:'reward-crash',coins:120,exp:4,wins:1});
   assert.equal(duplicate.duplicate,true);assertBalances(duplicate.snapshot,620,14,3,'crash duplicate prevention');
+}
+
+// Spending after an applied reward cannot erase its transaction identity.
+{
+  const storage=new FakeStorage();seedStorage(storage,baseSave());let authority=boot(storage);
+  const journalKey=`${STORAGE_KEY}_combat_reward_journal_v1`,txKey=`${STORAGE_KEY}_combat_reward_tx_v1`;
+  storage.failRule=(key,value)=>key===journalKey&&value.includes('"state":"committed"');
+  const a=authority.applyOfflineBattleReward({authorityMode:'offline',snapshot:baseSave(),battleId:'battle-spend-A',coins:120,exp:0,wins:0});
+  assert.equal(a.ok,true);assertBalances(persisted(storage),620,10,2,'reward before spend');
+  const marker=persisted(storage).saveMeta.lastBattleRewardTx;
+  assert.equal(marker.battleId,'battle-spend-A');assert.ok(marker.transactionId);
+  const spent=persisted(storage);spent.coins=420;spent.saveMeta={...spent.saveMeta,lastSavedAt:marker.appliedAt+1,lastReason:'coin-spend'};
+  assert.equal(authority.atomicCommit(spent).ok,true);assertBalances(persisted(storage),420,10,2,'spend after reward');
+  authority=boot(storage);const loaded=authority.loadSnapshot();assertBalances(loaded.snapshot,420,10,2,'reload after spend');
+  assert.equal(loaded.snapshot.saveMeta.lastBattleRewardTx.transactionId,marker.transactionId);
+  assert.ok(storage.getItem(txKey),'unresolved technical transaction must survive journal failure');
+  const receipt=authority.readBattleRewardReceipt('battle-spend-A');assert.equal(receipt?.duplicate,true);assertBalances(receipt.snapshot,420,10,2,'reconstructed receipt');
+  const duplicate=authority.applyOfflineBattleReward({authorityMode:'offline',snapshot:loaded.snapshot,battleId:'battle-spend-A',coins:120});
+  assert.equal(duplicate.ok,true);assert.equal(duplicate.duplicate,true);assertBalances(duplicate.snapshot,420,10,2,'duplicate after spend');
+  const blocked=authority.applyOfflineBattleReward({authorityMode:'offline',snapshot:loaded.snapshot,battleId:'battle-spend-B',coins:25});
+  assert.equal(blocked.ok,false);assert.equal(blocked.reason,'battle-reward-recovery-pending');assertBalances(persisted(storage),420,10,2,'different battle blocked');
+  assert.equal(persisted(storage).saveMeta.lastBattleRewardTx.transactionId,marker.transactionId,'unresolved marker must not be overwritten');
+  storage.failRule=null;authority=boot(storage);const reconciled=authority.loadSnapshot();
+  assert.equal(storage.getItem(txKey),null);assert.equal(authority.readBattleRewardReceipt('battle-spend-A')?.duplicate,true);
+  const b=authority.applyOfflineBattleReward({authorityMode:'offline',snapshot:reconciled.snapshot,battleId:'battle-spend-B',coins:25});
+  assert.equal(b.ok,true);assert.equal(b.duplicate,false);assertBalances(b.snapshot,445,10,2,'different battle after recovery');
+  assert.equal(b.snapshot.saveMeta.lastBattleRewardTx.battleId,'battle-spend-B');
+}
+
+// Pre-marker prototype transactions remain ambiguous; arithmetic balances never authorize replay.
+{
+  const storage=new FakeStorage();seedStorage(storage,baseSave(620));const authority=boot(storage);
+  storage.setItem(`${STORAGE_KEY}_combat_reward_tx_v1`,JSON.stringify({battleId:'legacy-A',transactionId:'legacy-tx',after:{coins:620},granted:{coins:120}}));
+  const result=authority.applyOfflineBattleReward({authorityMode:'offline',snapshot:persisted(storage),battleId:'legacy-A',coins:120});
+  assert.equal(result.ok,false);assert.equal(result.reason,'battle-reward-recovery-ambiguous');assertBalances(persisted(storage),620,10,2,'legacy ambiguity');
+  assert.ok(storage.getItem(`${STORAGE_KEY}_combat_reward_tx_v1`));
+  storage.setItem(`${STORAGE_KEY}_combat_reward_tx_v1`,'{broken');
+  const corrupt=authority.applyOfflineBattleReward({authorityMode:'offline',snapshot:persisted(storage),battleId:'legacy-B',coins:1});
+  assert.equal(corrupt.ok,false);assert.equal(corrupt.reason,'battle-reward-recovery-ambiguous');
+  assert.equal(storage.getItem(`${STORAGE_KEY}_combat_reward_tx_v1`),'{broken');
 }
 
 // 8: all non-offline authority modes fail closed.
