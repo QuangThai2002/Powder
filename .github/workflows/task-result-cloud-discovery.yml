@@ -34,3 +34,4 @@ jobs:
             echo "--- $sha ---"
             git show --name-only --format='%H %s' "$sha" | sed '/^$/d' | head -n 80
           done
+          echo '=== END DISCOVERY ==='
