@@ -39,13 +39,25 @@ jobs:
       - name: Apply Result and Cloud lifecycle fix
         run: python tools/task-result-cloud-lifecycle-executor.py
 
+      - name: Align PVE regression with explicit authority policy
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('tools/verify-combat2-pve-handoff.mjs')
+          s=p.read_text()
+          old="""  runtime.window.POWDER_SECURE_ECONOMY_V152 = { hasAccount: () => true };\n  const onlineBlocked = await handoff.settleReturnedResult();\n  assert.equal(onlineBlocked.ok, false, 'Online reward without server authority must not settle');\n  assert.equal(onlineBlocked.reason, 'online-reward-authority-unavailable');\n  assert.equal(runtime.learning.length, 0, 'Online academic result must not be locally settled');\n  assert.equal(runtime.rewards.length, 0, 'Online protected reward must not be journaled as success');\n  assert.equal(handoff.readBattleResult().ok, true, 'failed Online settlement must keep BattleResult');\n  runtime.window.POWDER_SECURE_ECONOMY_V152 = { hasAccount: () => false };\n  const settled = await handoff.settleReturnedResult();\n"""
+          new="""  runtime.window.POWDER_SECURE_ECONOMY_V152 = { hasAccount: () => true };\n  const settled = await handoff.settleReturnedResult();\n  assert.equal(settled.ok, true, 'Login/account presence alone must not classify normal Adventure PVE as server-authoritative');\n"""
+          if s.count(old)!=1: raise SystemExit(f'PVE authority regression anchor count {s.count(old)}')
+          p.write_text(s.replace(old,new,1))
+          PY
+
       - name: Refresh canonical boot manifest
         run: node tools/refresh-canonical-reconciliation-boot.mjs
 
       - name: Verify implementation scope and syntax
         run: |
           actual="$(git status --short | sed -E 's/^.. //' | sort)"
-          expected=$'js/boot-loader-v21004.js\njs/combat-entry-v177.js\njs/combat-result-controller-v1.js\njs/online-foundation-v150.js\ntools/task-result-cloud-lifecycle-executor.py\ntools/verify-combat-result-cloud-lifecycle-v1.mjs\ntools/verify-combat-result-final-flow-v1.mjs'
+          expected=$'js/boot-loader-v21004.js\njs/combat-entry-v177.js\njs/combat-result-controller-v1.js\njs/online-foundation-v150.js\ntools/task-result-cloud-lifecycle-executor.py\ntools/verify-combat-result-cloud-lifecycle-v1.mjs\ntools/verify-combat-result-final-flow-v1.mjs\ntools/verify-combat2-pve-handoff.mjs'
           printf 'Implementation scope:\n%s\n' "$actual"
           test "$actual" = "$expected"
           node --check js/combat-entry-v177.js
@@ -53,6 +65,7 @@ jobs:
           node --check js/online-foundation-v150.js
           node --check tools/verify-combat-result-final-flow-v1.mjs
           node --check tools/verify-combat-result-cloud-lifecycle-v1.mjs
+          node --check tools/verify-combat2-pve-handoff.mjs
           git diff --check
 
       - name: Install dependencies
@@ -109,7 +122,7 @@ jobs:
           git checkout -- tools/task-result-cloud-lifecycle-executor.py
           git rm .github/workflows/task-result-cloud-discovery.yml tools/task-result-cloud-lifecycle-executor.py
           actual="$(git status --short | sed -E 's/^.. //' | sort)"
-          expected=$'.github/workflows/task-result-cloud-discovery.yml\njs/boot-loader-v21004.js\njs/combat-entry-v177.js\njs/combat-result-controller-v1.js\njs/online-foundation-v150.js\ntools/task-result-cloud-lifecycle-executor.py\ntools/verify-combat-result-cloud-lifecycle-v1.mjs\ntools/verify-combat-result-final-flow-v1.mjs'
+          expected=$'.github/workflows/task-result-cloud-discovery.yml\njs/boot-loader-v21004.js\njs/combat-entry-v177.js\njs/combat-result-controller-v1.js\njs/online-foundation-v150.js\ntools/task-result-cloud-lifecycle-executor.py\ntools/verify-combat-result-cloud-lifecycle-v1.mjs\ntools/verify-combat-result-final-flow-v1.mjs\ntools/verify-combat2-pve-handoff.mjs'
           printf 'Final commit scope:\n%s\n' "$actual"
           test "$actual" = "$expected"
           git add -A
