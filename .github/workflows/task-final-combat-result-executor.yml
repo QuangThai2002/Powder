@@ -58,8 +58,21 @@ jobs:
           node tools/task-final-combat-result-executor.mjs
           python - <<'PY'
           from pathlib import Path
+          entry=Path('js/combat-entry-v177.js')
+          es=entry.read_text()
+          old_ctx="restoreContext(result.value.returnContext);return{ok:true,duplicate:true,reconciled:true,receipt:clone(finalReceipt)}"
+          new_ctx="restoreContext(request.value.returnContext);return{ok:true,duplicate:true,reconciled:true,receipt:clone(finalReceipt)}"
+          if es.count(old_ctx)!=1:
+              raise SystemExit(f'expected one completed-PVE context anchor, got {es.count(old_ctx)}')
+          entry.write_text(es.replace(old_ctx,new_ctx))
+
           p=Path('tools/verify-combat-result-final-flow-v1.mjs')
           s=p.read_text()
+          old_h="const checks=[];const check=(name,fn)=>{fn();checks.push(name)};"
+          new_h="const checks=[],pending=[];const check=(name,fn)=>{const value=fn();if(value&&typeof value.then==='function')pending.push(Promise.resolve(value).then(()=>checks.push(name)));else checks.push(name)};"
+          if old_h not in s:
+              raise SystemExit('async verifier harness anchor missing')
+          s=s.replace(old_h,new_h)
           old="check('8 Academic Reward Progression order',()=>assert.ok(settleBody.indexOf('applyOfflineCombatAcademicOutcome')<settleBody.indexOf('applyOfflineBattleReward')&&settleBody.indexOf('applyOfflineBattleReward')<settleBody.indexOf('applyOfflineAdventureVictory')));"
           new="check('8 Academic Reward Progression order',()=>assert.ok(settleBody.indexOf('academic.applyOfflineCombatAcademicOutcome({')<settleBody.indexOf('player.applyOfflineBattleReward({')&&settleBody.indexOf('player.applyOfflineBattleReward({')<settleBody.indexOf('progress.applyOfflineAdventureVictory({')));"
           if old not in s:
@@ -68,7 +81,12 @@ jobs:
           a=s.index("check('35 boot manifest matches combat entry'")
           b=s.index("\ncheck('36 combat2 stays lightweight'",a)
           replacement="""check('35 boot manifest matches combat entry',()=>{const marker='const MANIFEST=',start=boot.indexOf(marker),end=boot.indexOf(';\\nconst SCRIPT_ORDER=',start);assert.ok(start>=0&&end>start);const manifest=JSON.parse(boot.slice(start+marker.length,end)),row=manifest.find(x=>x.u==='js/combat-entry-v177.js');assert.ok(row);const bytes=fs.readFileSync(path.join(root,row.u));assert.equal(row.s,bytes.length);assert.equal(row.r,crypto.createHash('sha256').update(bytes).digest('hex').slice(0,12))});"""
-          p.write_text(s[:a]+replacement+s[b:])
+          s=s[:a]+replacement+s[b:]
+          old_log="console.log('verify-combat-result-final-flow-v1: PASS',checks.length,'checks');"
+          new_log="await Promise.all(pending);console.log('verify-combat-result-final-flow-v1: PASS',checks.length,'checks');"
+          if old_log not in s:
+              raise SystemExit('verifier completion anchor missing')
+          p.write_text(s.replace(old_log,new_log))
           PY
           git checkout -- tools/task-final-combat-result-executor.mjs
 
@@ -122,6 +140,7 @@ jobs:
           grep -Fq "sourceContext:{kind:'adventure',stage:clone(stage),stageId:String(stage?.id||''),authorityMode}" js/combat-entry-v177.js
           grep -Fq 'POWDER_COMBAT_RESULT_PRESENTATION_V2=Object.freeze({playerResultRows,selectBattleMvp})' js/combat-entry-v177.js
           grep -Fq "readFinalCombatReceipt(result.value.battleId)" js/combat-entry-v177.js
+          grep -Fq "restoreContext(request.value.returnContext)" js/combat-entry-v177.js
           grep -Fq "applyOfflineCombatAcademicOutcome" js/combat-result-controller-v1.js
           grep -Fq "applyOfflineBattleReward" js/combat-result-controller-v1.js
           grep -Fq "applyOfflineAdventureVictory" js/combat-result-controller-v1.js
