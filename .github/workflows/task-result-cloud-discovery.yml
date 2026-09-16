@@ -1,4 +1,4 @@
-name: Result Cloud Discovery
+name: Result Cloud Lifecycle Fix
 
 on:
   push:
@@ -7,31 +7,99 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  discover:
+  fix:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout target branch
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Verify expected base ancestry
-        run: git merge-base --is-ancestor 2d1fb6fd89a3204a0cf212832b5a286cb90b201f HEAD
-      - name: Discover cloud runtime and history
-        shell: bash
+
+      - name: Verify base ancestry and clean checkout
         run: |
-          echo '=== CANDIDATE FILES ==='
-          find js tools -type f | sort | grep -Ei '(online|cloud|sync|account|auth|save)' || true
-          echo '=== SYMBOL LOCATIONS ==='
-          grep -RInE 'POWDER_ONLINE_V150|showConflict|keepLocal|fingerprint\(|lastSavedAt|Chọn tiến độ muốn tiếp tục|hydrate\(|cloud.{0,30}save|save.{0,30}cloud' js index.html tools --exclude-dir=node_modules | head -n 500 || true
-          echo '=== CLOUD HISTORY ==='
-          git log --all --date=iso --pretty=format:'%H%x09%ad%x09%s' --regexp-ignore-case --grep='cloud' --grep='online-v150' --grep='sync conflict' --grep='save reconciliation' -n 120
-          echo
-          echo '=== HISTORY FILES ==='
-          for sha in $(git log --all --pretty=format:'%H' --regexp-ignore-case --grep='cloud' --grep='online-v150' --grep='sync conflict' --grep='save reconciliation' -n 20); do
-            echo "--- $sha ---"
-            git show --name-only --format='%H %s' "$sha" | sed '/^$/d' | head -n 80
-          done
-          echo '=== END DISCOVERY ==='
+          git merge-base --is-ancestor 2d1fb6fd89a3204a0cf212832b5a286cb90b201f HEAD
+          test -z "$(git status --short)"
+
+      - name: Apply Result and Cloud lifecycle fix
+        run: python tools/task-result-cloud-lifecycle-executor.py
+
+      - name: Refresh canonical boot manifest
+        run: node tools/refresh-canonical-reconciliation-boot.mjs
+
+      - name: Verify implementation scope and syntax
+        run: |
+          actual="$(git status --short | sed -E 's/^.. //' | sort)"
+          expected=$'js/boot-loader-v21004.js\njs/combat-entry-v177.js\njs/combat-result-controller-v1.js\njs/online-foundation-v150.js\ntools/verify-combat-result-cloud-lifecycle-v1.mjs\ntools/verify-combat-result-final-flow-v1.mjs'
+          printf 'Implementation scope:\n%s\n' "$actual"
+          test "$actual" = "$expected"
+          node --check js/combat-entry-v177.js
+          node --check js/combat-result-controller-v1.js
+          node --check js/online-foundation-v150.js
+          node --check tools/verify-combat-result-final-flow-v1.mjs
+          node --check tools/verify-combat-result-cloud-lifecycle-v1.mjs
+          git diff --check
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Player State authority
+        run: node tools/verify-player-state-authority-v1.mjs
+
+      - name: Combat Academic authority
+        run: node tools/verify-combat-academic-authority-v1.mjs
+
+      - name: Adventure Progression authority
+        run: node tools/verify-adventure-progression-authority-v1.mjs
+
+      - name: Final Result lifecycle
+        run: node tools/verify-combat-result-final-flow-v1.mjs
+
+      - name: Cloud canonical lifecycle
+        run: node tools/verify-combat-result-cloud-lifecycle-v1.mjs
+
+      - name: PVE handoff regression
+        run: node tools/verify-combat2-pve-handoff.mjs
+
+      - name: Player readiness regression
+        run: node tools/verify-player-test-readiness.mjs
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Static ownership audit
+        run: |
+          git diff --check
+          ! grep -Fq 'function nextReadiness' js/combat-result-controller-v1.js
+          ! grep -Eq 'runtimePveAuthorityMode[^\n]*(hasSession|hasAccount)' js/combat-entry-v177.js
+          grep -Fq 'acknowledged:false,acknowledgedAt:null' js/combat-result-controller-v1.js
+          grep -Fq 'acknowledged:true,acknowledgedAt:Date.now()' js/combat-result-controller-v1.js
+          grep -Fq "finalReceipt.acknowledged===true" js/combat-entry-v177.js
+          grep -Fq "pendingAcknowledgement:true" js/combat-entry-v177.js
+          grep -Fq "PENDING_SYNC_KEY='powder_online_pending_sync_v150'" js/online-foundation-v150.js
+          grep -Fq 'function canonicalGameplayState' js/online-foundation-v150.js
+          hydrate="$(sed -n '/async function hydrate()/,/function schedule(/p' js/online-foundation-v150.js)"
+          ! grep -Fq 'showConflict(' <<< "$hydrate"
+          ! grep -Fq 'function keepLocal(' js/online-foundation-v150.js
+          grep -Fq 'function recoverUseLocal' js/online-foundation-v150.js
+          grep -Fq 'function recoverUseCloud' js/online-foundation-v150.js
+
+      - name: Commit validated fix
+        run: |
+          git config user.name "QuangThai2002"
+          git config user.email "134858800+QuangThai2002@users.noreply.github.com"
+          git rm .github/workflows/task-result-cloud-discovery.yml tools/task-result-cloud-lifecycle-executor.py
+          actual="$(git status --short | sed -E 's/^.. //' | sort)"
+          expected=$'.github/workflows/task-result-cloud-discovery.yml\njs/boot-loader-v21004.js\njs/combat-entry-v177.js\njs/combat-result-controller-v1.js\njs/online-foundation-v150.js\ntools/task-result-cloud-lifecycle-executor.py\ntools/verify-combat-result-cloud-lifecycle-v1.mjs\ntools/verify-combat-result-final-flow-v1.mjs'
+          printf 'Final commit scope:\n%s\n' "$actual"
+          test "$actual" = "$expected"
+          git add -A
+          git diff --cached --check
+          git commit -m "fix(result): simplify pve confirmation and cloud lifecycle"
+          git push origin HEAD:work/adventure-combat-entry-user-test-v1
