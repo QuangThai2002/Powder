@@ -119,14 +119,11 @@ jobs:
       - name: Final Combat Result flow
         run: node tools/verify-combat-result-final-flow-v1.mjs
 
-      - name: Combat2 PVE handoff regression
+      - name: Combat2 PVE handoff and Boss regression
         run: node tools/verify-combat2-pve-handoff.mjs
 
       - name: Player Test Readiness regression
         run: node tools/verify-player-test-readiness.mjs
-
-      - name: Combat final and Boss regression
-        run: node tools/powder-combat-final-contract-v2164.mjs
 
       - name: Typecheck
         run: npm run typecheck
