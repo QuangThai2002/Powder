@@ -24,6 +24,18 @@ jobs:
           git merge-base --is-ancestor 2d1fb6fd89a3204a0cf212832b5a286cb90b201f HEAD
           test -z "$(git status --short)"
 
+      - name: Repair executor authority call scope
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('tools/task-result-cloud-lifecycle-executor.py')
+          s=p.read_text()
+          old="s = replace_once(s, \"const authorityMode=runtimePveAuthorityMode(options?.authorityMode);\", \"const authorityMode=runtimePveAuthorityMode(options?.authorityMode,stage);\", 'entry authority call')"
+          new="old_call=\"const authorityMode=runtimePveAuthorityMode(options?.authorityMode);\"\nnew_call=\"const authorityMode=runtimePveAuthorityMode(options?.authorityMode,stage);\"\nidx=s.find(old_call)\nif idx<0: raise SystemExit('entry authority call: anchor missing')\ns=s[:idx]+s[idx:].replace(old_call,new_call,1)"
+          if s.count(old)!=1: raise SystemExit(f'executor repair anchor count {s.count(old)}')
+          p.write_text(s.replace(old,new,1))
+          PY
+
       - name: Apply Result and Cloud lifecycle fix
         run: python tools/task-result-cloud-lifecycle-executor.py
 
@@ -33,7 +45,7 @@ jobs:
       - name: Verify implementation scope and syntax
         run: |
           actual="$(git status --short | sed -E 's/^.. //' | sort)"
-          expected=$'js/boot-loader-v21004.js\njs/combat-entry-v177.js\njs/combat-result-controller-v1.js\njs/online-foundation-v150.js\ntools/verify-combat-result-cloud-lifecycle-v1.mjs\ntools/verify-combat-result-final-flow-v1.mjs'
+          expected=$'js/boot-loader-v21004.js\njs/combat-entry-v177.js\njs/combat-result-controller-v1.js\njs/online-foundation-v150.js\ntools/task-result-cloud-lifecycle-executor.py\ntools/verify-combat-result-cloud-lifecycle-v1.mjs\ntools/verify-combat-result-final-flow-v1.mjs'
           printf 'Implementation scope:\n%s\n' "$actual"
           test "$actual" = "$expected"
           node --check js/combat-entry-v177.js
@@ -94,6 +106,7 @@ jobs:
         run: |
           git config user.name "QuangThai2002"
           git config user.email "134858800+QuangThai2002@users.noreply.github.com"
+          git checkout -- tools/task-result-cloud-lifecycle-executor.py
           git rm .github/workflows/task-result-cloud-discovery.yml tools/task-result-cloud-lifecycle-executor.py
           actual="$(git status --short | sed -E 's/^.. //' | sort)"
           expected=$'.github/workflows/task-result-cloud-discovery.yml\njs/boot-loader-v21004.js\njs/combat-entry-v177.js\njs/combat-result-controller-v1.js\njs/online-foundation-v150.js\ntools/task-result-cloud-lifecycle-executor.py\ntools/verify-combat-result-cloud-lifecycle-v1.mjs\ntools/verify-combat-result-final-flow-v1.mjs'
