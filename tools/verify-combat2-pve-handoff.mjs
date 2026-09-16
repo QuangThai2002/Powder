@@ -265,8 +265,8 @@ function createRuntime() {
       getSave: () => plain(saveState),
       getDungeonLearningGate: () => ({ requirement }),
       getCombatQuestionPool: () => [question, secondQuestion, { ...question, id: 'academic-q-invalid', lessonId: 'lesson-x' }],
-      applyCombatAcademicOutcome: (entry) => { learning.push(entry); return window.POWDER_SECURE_ECONOMY_V152?.hasAccount?.() ? { ok: false, serverProtected: true } : { ok: true, applied: { responses: entry.responses.length } }; },
-      grantBattleRewards: (entry) => { rewards.push(entry); if(window.POWDER_SECURE_ECONOMY_V152?.hasAccount?.())return { ok: false, serverProtected: true, rewardLocked: true };saveState.coins+=entry.coins;saveState.exp+=entry.exp;saveState.wins+=entry.wins;return { ok: true, coins: saveState.coins, exp: saveState.exp, wins: saveState.wins }; },
+      applyCombatAcademicOutcome: (entry) => { learning.push(entry); return { ok: true, applied: { responses: entry.responses.length } }; },
+      grantBattleRewards: (entry) => { rewards.push(entry); saveState.coins+=entry.coins;saveState.exp+=entry.exp;saveState.wins+=entry.wins;return { ok: true, coins: saveState.coins, exp: saveState.exp, wins: saveState.wins }; },
       applyAdventureBattleOutcome: (entry) => { adventureResults.push(entry); return { ok: true, progressionApplied: true }; },
       onBossCombatFinished: (entry) => { bossSettlements.push(entry); return { ok: true, reward: entry.win ? { coins: 5 } : null }; },
       showView: (view) => { shownViews.push(view); }
@@ -496,14 +496,9 @@ async function main() {
   assert.equal(runtime.window.location.pathname, '/', 'Combat2 return must target Main');
 
   runtime.window.POWDER_SECURE_ECONOMY_V152 = { hasAccount: () => true };
-  const onlineBlocked = await handoff.settleReturnedResult();
-  assert.equal(onlineBlocked.ok, false, 'Online reward without server authority must not settle');
-  assert.equal(onlineBlocked.reason, 'online-reward-authority-unavailable');
-  assert.equal(runtime.learning.length, 0, 'Online academic result must not be locally settled');
-  assert.equal(runtime.rewards.length, 0, 'Online protected reward must not be journaled as success');
-  assert.equal(handoff.readBattleResult().ok, true, 'failed Online settlement must keep BattleResult');
-  runtime.window.POWDER_SECURE_ECONOMY_V152 = { hasAccount: () => false };
+  assert.equal(request.value.sourceContext.authorityMode, 'offline', 'logged-in normal Adventure PVE must remain offline authority without explicit server proof');
   const settled = await handoff.settleReturnedResult();
+  assert.equal(settled.ok, true, 'Login/account presence alone must not classify normal Adventure PVE as server-authoritative');
   assert.equal(settled.ok, true);
   assert.equal(settled.duplicate, false);
   assert.equal(runtime.learning.length, 1, 'academic responses must settle in one batch');
@@ -537,6 +532,36 @@ async function main() {
   handoff.continueBattleResult(result);
   assert.equal(handoff.readBattleRequest().ok, false, 'duplicate result must still be consumed');
   assert.equal(handoff.readBattleResult().ok, false, 'duplicate result must still be consumed');
+
+  const serverMutationCounts = {
+    learning: runtime.learning.length,
+    rewards: runtime.rewards.length,
+    progression: runtime.adventureResults.length
+  };
+  const verifiedServerStage = { ...stage(), serverCombatSessionId: 'server-pve-test-1' };
+  const serverRequest = entry.createPvePilotRequest(verifiedServerStage, {
+    authorityMode: 'server',
+    createdAt: request.value.createdAt + 1000
+  });
+  assert.equal(serverRequest.ok, true, 'verified server PVE fixture must create a BattleRequest');
+  assert.equal(serverRequest.value.sourceContext.authorityMode, 'server', 'explicit verified server proof must classify PVE as server authority');
+  assert.equal(serverRequest.value.sourceContext.stage.serverCombatSessionId, 'server-pve-test-1');
+  assert.equal(handoff.storeBattleRequest(serverRequest.value).ok, true);
+  const serverQuestions = contract.academicQuestionsFromContext(serverRequest.value.academicContext);
+  assert.ok(serverQuestions.length > 0, 'verified server fixture needs an academic response to prove local academic authority stays untouched');
+  const serverResult = contract.createCombat2BattleResult(serverRequest.value, {
+    result: 'victory',
+    survivingState: { player: [{ id: 'hero-1', hp: 100 }], enemy: [], round: 2 },
+    academicResponses: [{ question: serverQuestions[0], correct: true, powId: 'hero-1' }]
+  });
+  assert.equal(handoff.publishBattleResult(serverResult).ok, true);
+  const serverBlocked = await handoff.settleReturnedResult();
+  assert.equal(serverBlocked.ok, false, 'verified server PVE must fail closed until real server settlement exists');
+  assert.equal(serverBlocked.reason, 'online-reward-authority-unavailable');
+  assert.equal(runtime.learning.length, serverMutationCounts.learning, 'verified server PVE must not run local academic authority');
+  assert.equal(runtime.rewards.length, serverMutationCounts.rewards, 'verified server PVE must not run local reward authority');
+  assert.equal(runtime.adventureResults.length, serverMutationCounts.progression, 'verified server PVE must not run local Adventure progression');
+  assert.equal(handoff.readBattleResult().ok, true, 'blocked verified server result must remain recoverable');
 
   const invalidRequest = entry.createPvePilotRequest(stage());
   assert.equal(invalidRequest.ok, true);
