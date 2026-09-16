@@ -1062,7 +1062,9 @@ export class BattleScene extends Phaser.Scene {
     }
     if (this.handoffRequest.battleMode === 'pve') {
       this.stopBattleMusic();
-      (window as any).POWDER_COMBAT_RESULT_CONTROLLER_V1?.present?.();
+      const presented = (window as any).POWDER_COMBAT_RESULT_CONTROLLER_V1?.present?.() === true;
+      if (presented) return;
+      this.showHandoffError(this.scale.width, this.scale.height, 'Không thể mở màn hình kết quả trận đấu.\nKết quả trận đã được lưu.');
       return;
     }
     const win = kind === 'victory';
