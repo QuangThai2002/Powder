@@ -32,7 +32,7 @@ jobs:
 
       - name: Verify exact implementation scope and syntax
         run: |
-          actual="$(git diff --name-only | sort)"
+          actual="$(git status --short | sed -E 's/^.. //' | sort)"
           expected=$'combat2.html\njs/boot-loader-v21004.js\njs/combat-entry-v177.js\njs/combat-result-controller-v1.js\nsrc/game/combat2/scenes/BattleScene.ts\ntools/verify-combat-result-final-flow-v1.mjs'
           printf 'Changed implementation files:\n%s\n' "$actual"
           test "$actual" = "$expected"
