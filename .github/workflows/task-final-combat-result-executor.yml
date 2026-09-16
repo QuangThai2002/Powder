@@ -60,6 +60,11 @@ jobs:
           from pathlib import Path
           p=Path('tools/verify-combat-result-final-flow-v1.mjs')
           s=p.read_text()
+          old="check('8 Academic Reward Progression order',()=>assert.ok(settleBody.indexOf('applyOfflineCombatAcademicOutcome')<settleBody.indexOf('applyOfflineBattleReward')&&settleBody.indexOf('applyOfflineBattleReward')<settleBody.indexOf('applyOfflineAdventureVictory')));"
+          new="check('8 Academic Reward Progression order',()=>assert.ok(settleBody.indexOf('academic.applyOfflineCombatAcademicOutcome({')<settleBody.indexOf('player.applyOfflineBattleReward({')&&settleBody.indexOf('player.applyOfflineBattleReward({')<settleBody.indexOf('progress.applyOfflineAdventureVictory({')));"
+          if old not in s:
+              raise SystemExit('settlement order assertion anchor missing')
+          s=s.replace(old,new)
           a=s.index("check('35 boot manifest matches combat entry'")
           b=s.index("\ncheck('36 combat2 stays lightweight'",a)
           replacement="""check('35 boot manifest matches combat entry',()=>{const marker='const MANIFEST=',start=boot.indexOf(marker),end=boot.indexOf(';\\nconst SCRIPT_ORDER=',start);assert.ok(start>=0&&end>start);const manifest=JSON.parse(boot.slice(start+marker.length,end)),row=manifest.find(x=>x.u==='js/combat-entry-v177.js');assert.ok(row);const bytes=fs.readFileSync(path.join(root,row.u));assert.equal(row.s,bytes.length);assert.equal(row.r,crypto.createHash('sha256').update(bytes).digest('hex').slice(0,12))});"""
