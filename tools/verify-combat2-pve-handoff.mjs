@@ -260,17 +260,18 @@ function createRuntime() {
       return { stats: Object.fromEntries(Object.entries(stats).map(([key, value]) => [key, Math.max(1, Math.round(Number(value) * scale))])) };
     } },
     POWDER_COMBAT_ACADEMIC_AUTHORITY_V1: { applyOfflineCombatAcademicOutcome: () => ({ ok: true }) },
+    POWDER_ADVENTURE_PROGRESSION_AUTHORITY_V1: { applyOfflineAdventureVictory: () => ({ ok: true }) },
     POWDER_APP: {
       getSave: () => plain(saveState),
       getDungeonLearningGate: () => ({ requirement }),
       getCombatQuestionPool: () => [question, secondQuestion, { ...question, id: 'academic-q-invalid', lessonId: 'lesson-x' }],
       applyCombatAcademicOutcome: (entry) => { learning.push(entry); return window.POWDER_SECURE_ECONOMY_V152?.hasAccount?.() ? { ok: false, serverProtected: true } : { ok: true, applied: { responses: entry.responses.length } }; },
       grantBattleRewards: (entry) => { rewards.push(entry); if(window.POWDER_SECURE_ECONOMY_V152?.hasAccount?.())return { ok: false, serverProtected: true, rewardLocked: true };saveState.coins+=entry.coins;saveState.exp+=entry.exp;saveState.wins+=entry.wins;return { ok: true, coins: saveState.coins, exp: saveState.exp, wins: saveState.wins }; },
+      applyAdventureBattleOutcome: (entry) => { adventureResults.push(entry); return { ok: true, progressionApplied: true }; },
       onBossCombatFinished: (entry) => { bossSettlements.push(entry); return { ok: true, reward: entry.win ? { coins: 5 } : null }; },
       showView: (view) => { shownViews.push(view); }
     },
     POWDER_ADVENTURE: {
-      onBattleFinished: (entry) => { adventureResults.push(entry); },
       restoreCombatContext: (entry) => { restoredContexts.push(entry); },
       learningGate: (stage) => String(stage?.id || '') === '1-1' ? {
         ready: true,
@@ -514,8 +515,11 @@ async function main() {
   assert.deepEqual(plain(settled.rewardOutcome), { coins: 25, exp: 15, wins: 1 }, 'receipt amounts must equal the actual save delta');
   assert.equal(runtime.saveState.coins, 125);
   assert.equal(runtime.saveState.exp, 25);
-  assert.equal(runtime.adventureResults.length, 1, 'Adventure must receive the battle result once');
-  assert.deepEqual(plain(runtime.adventureResults[0].summary.players), [{ knowledgeActions: 2, knowledgeSum: 1 }]);
+  assert.equal(runtime.adventureResults.length, 1, 'Adventure authority must receive the battle result once');
+  assert.equal(runtime.adventureResults[0].battleId, result.battleId);
+  assert.equal(runtime.adventureResults[0].battleCreatedAt, request.value.createdAt);
+  assert.equal(runtime.adventureResults[0].stageId, 'island-1-stage-1');
+  assert.deepEqual(plain(runtime.adventureResults[0].battleSummary.players), [{ knowledgeActions: 2, knowledgeSum: 1 }]);
   assert.deepEqual(runtime.shownViews, [], 'result screen must precede Adventure return');
   handoff.continueBattleResult(result);
   assert.deepEqual(runtime.shownViews, ['adventure']);

@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const A=window.POWDER_ADVENTURE_DATA,D=window.POWDER_DATA,ELIGIBILITY=window.POWDER_PLAYER_POW_ELIGIBILITY_V1;if(!A||!D||!ELIGIBILITY)return;
+const A=window.POWDER_ADVENTURE_DATA,D=window.POWDER_DATA,ELIGIBILITY=window.POWDER_PLAYER_POW_ELIGIBILITY_V1,RULES=window.POWDER_ADVENTURE_RULES_V1;if(!A||!D||!ELIGIBILITY||!RULES)return;
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 let selectedIsland=1,selectedStageId=null,quiz=null;
 const app=()=>window.POWDER_APP;
@@ -12,15 +12,11 @@ const element=id=>D.elements?.[id]||{name:id,icon:'◈',color:'#9dd'};
 const combatAsset=id=>`assets/pow-combat-512/${id}.webp?build=13500`;
 const kindLabel=k=>k==='boss'?'BOSS':k==='elite'?'TINH ANH':'THƯỜNG';
 const kindIcon=k=>k==='boss'?'👑':k==='elite'?'◆':'●';
-function islandUnlocked(i,p=progress()){return Number(i.id)<=Number(p.islandsUnlocked||1);}
-function stageUnlocked(stage,p=progress()){
- if(!islandUnlocked(A.islandById(stage.islandId),p))return false;
- if(stage.number===1)return true;
- return !!p.stageWins?.[`${stage.islandId}-${stage.number-1}`];
-}
+function islandUnlocked(i,p=progress()){return RULES.islandUnlocked(i,p);}
+function stageUnlocked(stage,p=progress()){return RULES.stageUnlocked(stage,p);}
 function prepPassed(stage,p=progress()){return !!p.stagePrep?.[stage.id]?.passed;}
-function stageDone(stage,p=progress()){return !!p.stageWins?.[stage.id];}
-function isFreeCombatOnboarding(stage){return String(stage?.id||'')==='1-1'&&Number(stage?.islandId)===1&&Number(stage?.number)===1;}
+function stageDone(stage,p=progress()){return RULES.stageDone(stage,p);}
+function isFreeCombatOnboarding(stage){return RULES.isFreeCombatOnboarding(stage);}
 function learningGate(stage){if(isFreeCombatOnboarding(stage))return{ready:true,onboardingCombat:true,requirement:{RequiredLessonIDs:[],RequiredConceptIDs:[],RequiredMastery:0,Rank:0,Curriculum:{}},masteries:[],missingLessons:[],weak:[],rankOk:true};return app()?.getDungeonLearningGate?.(stage)||{ready:true,requirement:{RequiredLessonIDs:[],RequiredConceptIDs:[],RequiredMastery:0,Rank:0,Curriculum:{}},masteries:[],missingLessons:[],weak:[],rankOk:true}}
 function teamAverageLevel(){const s=app()?.getSave?.()||{},ids=(s.team||[]).filter(id=>s.owned?.[id]);if(!ids.length&&s.starterId)ids.push(s.starterId);return Math.max(1,Math.round(ids.reduce((a,id)=>a+Number(s.owned?.[id]?.level||1),0)/Math.max(1,ids.length)));}
 function teamAverageStars(){const s=app()?.getSave?.()||{},ids=(s.team||[]).filter(id=>s.owned?.[id]);if(!ids.length&&s.starterId)ids.push(s.starterId);return Math.max(0,Math.round(ids.reduce((a,id)=>a+Number(s.owned?.[id]?.stars||0),0)/Math.max(1,ids.length)));}
@@ -28,11 +24,8 @@ function enemyLevel(stage){return Math.min(100,Math.max(stage.recommendedLevel,M
 function enemyStars(stage,powObj){return Math.min(Number(powObj?.maxStars)||7,Math.max(Number(stage?.recommendedStars)||0,teamAverageStars()+(stage?.kind==='boss'?1:stage?.kind==='elite'?1:0)));}
 function pressureBars(stage){const n=Math.max(1,Math.min(5,Number(stage?.pressure)||1));return `${'◆'.repeat(n)}${'◇'.repeat(5-n)}`;}
 function totalStageCount(){return A.islands.reduce((n,i)=>n+i.stages.length,0);}
-function nextStage(stage){const island=A.islandById(stage.islandId),next=island?.stages.find(x=>x.number===stage.number+1);if(next)return next;return A.islandById(stage.islandId+1)?.stages?.[0]||null;}
-function currentSuggested(p=progress()){
- const ci=Math.min(12,Math.max(1,Number(p.currentIsland)||1)),island=A.islandById(ci)||A.islands[0];
- return island.stages.find(s=>stageUnlocked(s,p)&&!stageDone(s,p))||island.stages[island.stages.length-1];
-}
+function nextStage(stage){return RULES.nextStage(stage);}
+function currentSuggested(p=progress()){return RULES.currentSuggested(p);}
 function storyLine(island,stage){
  if(stage.kind==='boss')return `Ngữ Ấn của ${island.name} nằm ngay phía trước. Muốn khôi phục nó, bạn phải đánh bại ${pow(stage.enemyIds[0])?.name||'Boss'} sau khi chứng minh mình thực sự nhớ kiến thức của đảo.`;
  if(stage.kind==='elite')return `Một Pow Tinh Anh đã hấp thụ Màn Sương Vô Ngôn. Đây là điểm kiểm tra lớn: kiến thức của các chặng trước sẽ được gọi lại trước trận.`;
@@ -69,7 +62,7 @@ function finishQuiz(){const {stage,correct,questions}=quiz,total=questions.lengt
 function combatEntryMessage(result){const reason=String(result?.reason||'').trim();if(reason==='academic-gate')return'Chưa đủ điều kiện học thuật để vào trận. Hãy hoàn thành phần học được yêu cầu.';if(reason==='invalid-stage')return'Không thể mở màn này vì dữ liệu màn chơi không hợp lệ.';if(reason==='pve-entry-not-ready')return Array.isArray(result?.errors)&&result.errors.length?`Chưa thể vào trận: ${result.errors.join('; ')}.`:'Chưa thể vào trận. Hãy kiểm tra đội hình và dữ liệu học tập.';return'Combat2 chưa sẵn sàng. Vui lòng thử lại sau.';}
 function showCombatEntryFailure(result){const root=$('#adventureView'),detail=$('.adv-detail',root),footer=$('footer',detail);if(!footer)return;let node=$('[data-adv-entry-feedback]',footer);if(!node){node=document.createElement('div');node.dataset.advEntryFeedback='1';node.setAttribute('role','alert');node.className='adv-entry-feedback';footer.appendChild(node);}node.textContent=combatEntryMessage(result);node.hidden=false;}
 function startBattle(stage){if(!stage)return{ok:false,reason:'invalid-stage',errors:['stage không tồn tại']};const p=progress();if(!stageUnlocked(stage,p))return{ok:false,reason:'stage-locked',errors:['màn chơi chưa mở']};const gate=learningGate(stage);if(!gate.ready){startStudy(stage);return{ok:false,reason:'academic-gate',errors:['chưa đủ điều kiện học thuật']};}const safe=playerStage(stage);if(!safe){const result={ok:false,reason:'invalid-stage',errors:['player eligibility không hợp lệ']};showCombatEntryFailure(result);return result;}const combat=window.POWDER_COMBAT_ENTRY_V177;if(!combat?.startMap){const result={ok:false,reason:'combat-entry-unavailable',errors:['Combat Map chưa sẵn sàng']};showCombatEntryFailure(result);return result;}selectedIsland=stage.islandId;selectedStageId=stage.id;saveProgress({currentIsland:stage.islandId,currentStage:stage.number,lastStage:stage.id});const started=combat.startMap(safe,{learningGate:gate,structured:true}),result=typeof started==='boolean'?(started?(combat.getLastEntryResult?.()||{ok:true,reason:'launched'}):(combat.getLastEntryResult?.()||{ok:false,reason:'pve-entry-not-ready',errors:['không thể mở Combat2']})):started;if(!result?.ok)showCombatEntryFailure(result);return result;}
-function onBattleFinished({stage,win,summary}){if(!stage)return;const p=progress();if(!win){saveProgress({lastStage:stage.id});return;}const gate=learningGate(stage),actions=(summary?.players||[]).reduce((a,x)=>a+(Number(x.knowledgeActions)||0),0),knowledge=actions?(summary.players||[]).reduce((a,x)=>a+(Number(x.knowledgeSum)||0),0)/actions:0,gateMastery=gate.masteries?.length?Math.round(gate.masteries.reduce((a,x)=>a+Number(x.mastery||0),0)/gate.masteries.length):100;let stars=1;if(gateMastery>=90)stars++;if(knowledge>=.95)stars++;const stageStars={...(p.stageStars||{}),[stage.id]:Math.max(Number(p.stageStars?.[stage.id])||0,stars)},stageWins={...(p.stageWins||{}),[stage.id]:true};const next=nextStage(stage);let islandsUnlocked=Number(p.islandsUnlocked)||1,currentIsland=stage.islandId,currentStage=stage.number;if(next){currentIsland=next.islandId;currentStage=next.number;if(next.islandId>stage.islandId)islandsUnlocked=Math.max(islandsUnlocked,next.islandId);}saveProgress({stageStars,stageWins,islandsUnlocked,currentIsland,currentStage,lastStage:stage.id,lastBattleKnowledge:knowledge});}
+function onBattleFinished({stage,win,summary,battleId,battleCreatedAt}={}){if(!win)return{ok:true,progressionApplied:false};return app()?.applyAdventureBattleOutcome?.({battleId,battleCreatedAt,stageId:String(stage?.id||''),battleSummary:summary,result:'victory'})||{ok:false,reason:'adventure-progression-unavailable'};}
 function restoreCombatContext(context={}){const stage=A.stageById(context.stageId);if(stage){selectedIsland=stage.islandId;selectedStageId=stage.id;}render();}
 function openNextStage(id){const current=A.stageById(id),n=current&&nextStage(current);if(!n)return;selectedIsland=n.islandId;selectedStageId=n.id;saveProgress({currentIsland:n.islandId,currentStage:n.number});setTimeout(render,0);}
 function install(){selectedIsland=Number(progress().currentIsland)||1;const suggested=currentSuggested();selectedStageId=suggested?.id||'1-1';render();window.POWDER_ADVENTURE={render,startStudy,startBattle,onBattleFinished,restoreCombatContext,openNextStage,getProgress:progress,stageUnlocked,prepPassed,learningGate};}
