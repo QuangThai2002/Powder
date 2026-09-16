@@ -24,8 +24,39 @@ jobs:
           git merge-base --is-ancestor 275341983e85d4b2f39cdcd10f50f0b5ee5b4642 HEAD
           test -z "$(git status --short)"
 
+      - name: Repair executor range boundaries
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('tools/task-final-combat-result-executor.mjs')
+          lines=p.read_text().splitlines(True)
+          changed=0
+          for i,line in enumerate(lines):
+              if line.startswith("replaceRange(entry,'function playerTeam()'"):
+                  new=line.replace("builderBlock+'function pvePilotErrors'","builderBlock")
+              elif line.startswith("replaceRange(entry,'function scheduleSettlement()'"):
+                  new=line.replace('\\nfunction launchCombat2`);','\\n`);')
+              elif line.startswith("replaceRange(controller,'function online()'"):
+                  new=line.replace('\\nfunction snapshot()\");','\\n\");')
+              elif line.startswith("replaceRange(controller,'function launch(stageData,save,gate,questions)'"):
+                  new=line.replace('\\nasync function act(choice)`);','\\n`);')
+              elif line.startswith("replaceRange(controller,'function present()'"):
+                  new=line.replace('\\nfunction restoreIfAvailable()`);','\\n`);')
+              else:
+                  continue
+              if new==line:
+                  raise SystemExit(f'range repair did not change expected line {i+1}')
+              lines[i]=new
+              changed+=1
+          if changed!=5:
+              raise SystemExit(f'expected 5 range repairs, got {changed}')
+          p.write_text(''.join(lines))
+          PY
+
       - name: Apply Final Combat Result patch
-        run: node tools/task-final-combat-result-executor.mjs
+        run: |
+          node tools/task-final-combat-result-executor.mjs
+          git checkout -- tools/task-final-combat-result-executor.mjs
 
       - name: Refresh canonical boot manifest
         run: node tools/refresh-canonical-reconciliation-boot.mjs
