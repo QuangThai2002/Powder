@@ -45,10 +45,27 @@ jobs:
           from pathlib import Path
           p=Path('tools/verify-combat2-pve-handoff.mjs')
           s=p.read_text()
-          old="""  runtime.window.POWDER_SECURE_ECONOMY_V152 = { hasAccount: () => true };\n  const onlineBlocked = await handoff.settleReturnedResult();\n  assert.equal(onlineBlocked.ok, false, 'Online reward without server authority must not settle');\n  assert.equal(onlineBlocked.reason, 'online-reward-authority-unavailable');\n  assert.equal(runtime.learning.length, 0, 'Online academic result must not be locally settled');\n  assert.equal(runtime.rewards.length, 0, 'Online protected reward must not be journaled as success');\n  assert.equal(handoff.readBattleResult().ok, true, 'failed Online settlement must keep BattleResult');\n  runtime.window.POWDER_SECURE_ECONOMY_V152 = { hasAccount: () => false };\n  const settled = await handoff.settleReturnedResult();\n"""
-          new="""  runtime.window.POWDER_SECURE_ECONOMY_V152 = { hasAccount: () => true };\n  const settled = await handoff.settleReturnedResult();\n  assert.equal(settled.ok, true, 'Login/account presence alone must not classify normal Adventure PVE as server-authoritative');\n"""
-          if s.count(old)!=1: raise SystemExit(f'PVE authority regression anchor count {s.count(old)}')
-          p.write_text(s.replace(old,new,1))
+
+          old_academic="      applyCombatAcademicOutcome: (entry) => { learning.push(entry); return window.POWDER_SECURE_ECONOMY_V152?.hasAccount?.() ? { ok: false, serverProtected: true } : { ok: true, applied: { responses: entry.responses.length } }; },"
+          new_academic="      applyCombatAcademicOutcome: (entry) => { learning.push(entry); return { ok: true, applied: { responses: entry.responses.length } }; },"
+          if s.count(old_academic)!=1: raise SystemExit(f'academic fixture anchor count {s.count(old_academic)}')
+          s=s.replace(old_academic,new_academic,1)
+
+          old_reward="      grantBattleRewards: (entry) => { rewards.push(entry); if(window.POWDER_SECURE_ECONOMY_V152?.hasAccount?.())return { ok: false, serverProtected: true, rewardLocked: true };saveState.coins+=entry.coins;saveState.exp+=entry.exp;saveState.wins+=entry.wins;return { ok: true, coins: saveState.coins, exp: saveState.exp, wins: saveState.wins }; },"
+          new_reward="      grantBattleRewards: (entry) => { rewards.push(entry); saveState.coins+=entry.coins;saveState.exp+=entry.exp;saveState.wins+=entry.wins;return { ok: true, coins: saveState.coins, exp: saveState.exp, wins: saveState.wins }; },"
+          if s.count(old_reward)!=1: raise SystemExit(f'reward fixture anchor count {s.count(old_reward)}')
+          s=s.replace(old_reward,new_reward,1)
+
+          old_case1="""  runtime.window.POWDER_SECURE_ECONOMY_V152 = { hasAccount: () => true };\n  const onlineBlocked = await handoff.settleReturnedResult();\n  assert.equal(onlineBlocked.ok, false, 'Online reward without server authority must not settle');\n  assert.equal(onlineBlocked.reason, 'online-reward-authority-unavailable');\n  assert.equal(runtime.learning.length, 0, 'Online academic result must not be locally settled');\n  assert.equal(runtime.rewards.length, 0, 'Online protected reward must not be journaled as success');\n  assert.equal(handoff.readBattleResult().ok, true, 'failed Online settlement must keep BattleResult');\n  runtime.window.POWDER_SECURE_ECONOMY_V152 = { hasAccount: () => false };\n  const settled = await handoff.settleReturnedResult();\n"""
+          new_case1="""  runtime.window.POWDER_SECURE_ECONOMY_V152 = { hasAccount: () => true };\n  assert.equal(request.value.sourceContext.authorityMode, 'offline', 'logged-in normal Adventure PVE must remain offline authority without explicit server proof');\n  const settled = await handoff.settleReturnedResult();\n  assert.equal(settled.ok, true, 'Login/account presence alone must not classify normal Adventure PVE as server-authoritative');\n"""
+          if s.count(old_case1)!=1: raise SystemExit(f'PVE case1 anchor count {s.count(old_case1)}')
+          s=s.replace(old_case1,new_case1,1)
+
+          duplicate_anchor="""  assert.equal(handoff.readBattleRequest().ok, false, 'duplicate result must still be consumed');\n  assert.equal(handoff.readBattleResult().ok, false, 'duplicate result must still be consumed');\n\n"""
+          server_case="""  assert.equal(handoff.readBattleRequest().ok, false, 'duplicate result must still be consumed');\n  assert.equal(handoff.readBattleResult().ok, false, 'duplicate result must still be consumed');\n\n  const serverMutationCounts = {\n    learning: runtime.learning.length,\n    rewards: runtime.rewards.length,\n    progression: runtime.adventureResults.length\n  };\n  const verifiedServerStage = { ...stage(), serverCombatSessionId: 'server-pve-test-1' };\n  const serverRequest = entry.createPvePilotRequest(verifiedServerStage, {\n    authorityMode: 'server',\n    createdAt: request.value.createdAt + 1000\n  });\n  assert.equal(serverRequest.ok, true, 'verified server PVE fixture must create a BattleRequest');\n  assert.equal(serverRequest.value.sourceContext.authorityMode, 'server', 'explicit verified server proof must classify PVE as server authority');\n  assert.equal(serverRequest.value.sourceContext.stage.serverCombatSessionId, 'server-pve-test-1');\n  assert.equal(handoff.storeBattleRequest(serverRequest.value).ok, true);\n  const serverQuestions = contract.academicQuestionsFromContext(serverRequest.value.academicContext);\n  assert.ok(serverQuestions.length > 0, 'verified server fixture needs an academic response to prove local academic authority stays untouched');\n  const serverResult = contract.createCombat2BattleResult(serverRequest.value, {\n    result: 'victory',\n    survivingState: { player: [{ id: 'hero-1', hp: 100 }], enemy: [], round: 2 },\n    academicResponses: [{ question: serverQuestions[0], correct: true, powId: 'hero-1' }]\n  });\n  assert.equal(handoff.publishBattleResult(serverResult).ok, true);\n  const serverBlocked = await handoff.settleReturnedResult();\n  assert.equal(serverBlocked.ok, false, 'verified server PVE must fail closed until real server settlement exists');\n  assert.equal(serverBlocked.reason, 'online-reward-authority-unavailable');\n  assert.equal(runtime.learning.length, serverMutationCounts.learning, 'verified server PVE must not run local academic authority');\n  assert.equal(runtime.rewards.length, serverMutationCounts.rewards, 'verified server PVE must not run local reward authority');\n  assert.equal(runtime.adventureResults.length, serverMutationCounts.progression, 'verified server PVE must not run local Adventure progression');\n  assert.equal(handoff.readBattleResult().ok, true, 'blocked verified server result must remain recoverable');\n\n"""
+          if s.count(duplicate_anchor)!=1: raise SystemExit(f'PVE case2 insertion anchor count {s.count(duplicate_anchor)}')
+          s=s.replace(duplicate_anchor,server_case,1)
+          p.write_text(s)
           PY
 
       - name: Refresh canonical boot manifest
@@ -103,6 +120,10 @@ jobs:
           git diff --check
           ! grep -Fq 'function nextReadiness' js/combat-result-controller-v1.js
           ! grep -Eq 'runtimePveAuthorityMode[^\n]*(hasSession|hasAccount)' js/combat-entry-v177.js
+          grep -Fq 'function verifiedPveServerAuthority' js/combat-entry-v177.js
+          grep -Fq 'serverCombatSessionId' js/combat-entry-v177.js
+          grep -Fq "authorityMode,stage" js/combat-entry-v177.js
+          grep -Fq 'online-reward-authority-unavailable' js/combat-entry-v177.js
           grep -Fq 'acknowledged:false,acknowledgedAt:null' js/combat-result-controller-v1.js
           grep -Fq 'acknowledged:true,acknowledgedAt:Date.now()' js/combat-result-controller-v1.js
           grep -Fq "finalReceipt.acknowledged===true" js/combat-entry-v177.js
