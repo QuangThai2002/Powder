@@ -29,6 +29,28 @@
     #orientation-guard strong { display:block; font-size:24px; margin-bottom:8px; }
     #orientation-guard span { display:block; color:#b9d4dc; font-size:15px; line-height:1.45; }
     /* Combat2 has a portrait-aware layout. Never block boot behind an orientation overlay. */
+    .powder-final-result { --gold:#e9bd6b; --mint:#8fe7c3; position:fixed; inset:0; z-index:12000; overflow:auto; touch-action:pan-y; overscroll-behavior:contain; padding:clamp(14px,3vw,34px); color:#edf6f2; background:radial-gradient(circle at 48% 8%,rgba(36,95,111,.55),transparent 46%),linear-gradient(150deg,rgba(3,13,23,.97),rgba(5,25,33,.98) 58%,rgba(16,22,31,.98)); }
+    .pfr-card { width:min(1040px,100%); margin:0 auto; padding:clamp(18px,3vw,36px); border:1px solid rgba(233,189,107,.5); border-radius:24px; background:linear-gradient(155deg,rgba(13,39,52,.97),rgba(7,22,32,.97)); box-shadow:0 22px 70px rgba(0,0,0,.42),inset 0 1px rgba(255,255,255,.1); }
+    .pfr-kicker { color:var(--gold); font-size:12px; font-weight:800; letter-spacing:.2em; text-transform:uppercase; }
+    .pfr-title { margin:8px 0; font-size:clamp(34px,6vw,64px); letter-spacing:.06em; line-height:1; }
+    .pfr-title.is-win { color:var(--mint); } .pfr-title.is-loss { color:#ffb1ad; }
+    .pfr-meta { margin:0 0 22px; color:#b5ced6; }
+    .pfr-section { margin:18px 0; padding:18px; border:1px solid rgba(142,203,208,.22); border-radius:18px; background:rgba(3,14,24,.55); }
+    .pfr-section h2 { margin:0 0 14px; color:#f0d49c; font-size:14px; letter-spacing:.12em; }
+    .pfr-mvp { display:flex; align-items:center; gap:20px; white-space:pre-line; font-size:17px; line-height:1.6; }
+    .pfr-art { width:112px; height:112px; object-fit:cover; border-radius:16px; border:1px solid rgba(233,189,107,.48); }
+    .pfr-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
+    .pfr-unit { display:grid; gap:5px; padding:12px; border-radius:13px; background:rgba(24,62,74,.52); }
+    .pfr-unit span,.pfr-unit small { color:#bdd4d9; }
+    .pfr-reward { margin:4px 0; color:#b8c8d1; font-weight:800; }
+    .pfr-reward.is-received { color:var(--mint); }
+    .pfr-amount { margin:8px 0 0; color:#f2d89e; }
+    .pfr-notice { min-height:24px; color:#e8c988; line-height:1.5; }
+    .pfr-actions { display:flex; flex-wrap:wrap; gap:12px; }
+    .pfr-button { min-height:48px; padding:10px 18px; border:1px solid rgba(146,215,220,.5); border-radius:12px; background:#173746; color:#f6faf9; font:800 15px inherit; cursor:pointer; }
+    .pfr-button.is-primary { border-color:rgba(233,189,107,.8); background:linear-gradient(110deg,#bd8741,#e5b968); color:#0b1921; }
+    .pfr-button:disabled { opacity:.48; cursor:not-allowed; }
+    @media(max-width:600px){ .pfr-mvp { gap:12px; font-size:14px; } .pfr-art { width:80px; height:80px; } .pfr-actions { display:grid; } .pfr-button { width:100%; } }
   </style>
 </head>
 <body>
@@ -38,8 +60,22 @@
   <script>
     (()=>{const staticPorts=new Set(['5500','5501']);const wrongServer=staticPorts.has(location.port)||location.protocol==='file:';if(!wrongServer)return;document.getElementById('combat2-launch-guard')?.classList.add('show');document.documentElement.dataset.combat2LaunchBlocked='static-server';window.POWDER_COMBAT2_LAUNCH_GUARD={version:'2.14.6',blocked:true,reason:'vite-required',current:location.href};})();
   </script>
+  <script src="/js/config.js"></script>
+  <script src="/js/data.js"></script>
+  <script src="/js/power-curve-v8.js"></script>
+  <script src="/js/player-pow-eligibility-v1.js"></script>
+  <script src="/js/game-engine.js"></script>
+  <script src="/js/learning-master-v2.js"></script>
+  <script src="/js/pow-growth-v143.js"></script>
+  <script src="/js/adventure-data.js"></script>
+  <script src="/js/combat-boss-bootstrap-v1.js"></script>
+  <script src="/js/player-state-authority-v1.js"></script>
+  <script src="/js/combat-academic-authority-v1.js"></script>
+  <script src="/js/adventure-rules-v1.js"></script>
+  <script src="/js/adventure-progression-authority-v1.js"></script>
   <script src="/js/combat-feature-flags-v1.js?v=task-2b"></script>
   <script src="/js/combat-entry-v177.js"></script>
+  <script src="/js/combat-result-controller-v1.js"></script>
   <script type="module">if(document.documentElement.dataset.combat2LaunchBlocked!=='static-server') import('/src/game/combat2/bootstrap.ts');</script>
 </body>
 </html>

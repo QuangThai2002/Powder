@@ -169,6 +169,7 @@ export class BattleScene extends Phaser.Scene {
       this.showHandoffError(width, height, this.handoffError);
       return;
     }
+    if (this.handoffRequest?.battleMode === 'pve' && (window as any).POWDER_COMBAT_RESULT_CONTROLLER_V1?.restoreIfAvailable?.()) return;
     const runtimeBootstrap = this.handoffRequest?.battleMode === 'boss'
       ? this.handoffRequest.bossContext.bootstrap as CombatBossBootstrapSnapshot | undefined
       : this.handoffRequest?.battleMode === 'pve'
@@ -1057,6 +1058,11 @@ export class BattleScene extends Phaser.Scene {
     const published = publishCombat2BattleResult(result);
     if (!published.ok) {
       this.showHandoffError(this.scale.width, this.scale.height, published.errors?.join('; ') || 'Khong the luu ket qua tran');
+      return;
+    }
+    if (this.handoffRequest.battleMode === 'pve') {
+      this.stopBattleMusic();
+      (window as any).POWDER_COMBAT_RESULT_CONTROLLER_V1?.present?.();
       return;
     }
     const win = kind === 'victory';
