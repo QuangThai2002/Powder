@@ -1,0 +1,98 @@
+name: Final Combat Result executor
+
+on:
+  push:
+    branches:
+      - work/adventure-combat-entry-user-test-v1
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout target branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify WIP ancestry and clean checkout
+        run: |
+          git merge-base --is-ancestor 275341983e85d4b2f39cdcd10f50f0b5ee5b4642 HEAD
+          test -z "$(git status --short)"
+
+      - name: Apply Final Combat Result patch
+        run: node tools/task-final-combat-result-executor.mjs
+
+      - name: Refresh canonical boot manifest
+        run: node tools/refresh-canonical-reconciliation-boot.mjs
+
+      - name: Verify exact implementation scope and syntax
+        run: |
+          actual="$(git diff --name-only | sort)"
+          expected=$'combat2.html\njs/boot-loader-v21004.js\njs/combat-entry-v177.js\njs/combat-result-controller-v1.js\nsrc/game/combat2/scenes/BattleScene.ts\ntools/verify-combat-result-final-flow-v1.mjs'
+          printf 'Changed implementation files:\n%s\n' "$actual"
+          test "$actual" = "$expected"
+          node --check js/combat-entry-v177.js
+          node --check js/combat-result-controller-v1.js
+          node --check tools/verify-combat-result-final-flow-v1.mjs
+          git diff --check
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Player State authority
+        run: node tools/verify-player-state-authority-v1.mjs
+
+      - name: Combat Academic authority
+        run: node tools/verify-combat-academic-authority-v1.mjs
+
+      - name: Adventure Progression authority
+        run: node tools/verify-adventure-progression-authority-v1.mjs
+
+      - name: Final Combat Result flow
+        run: node tools/verify-combat-result-final-flow-v1.mjs
+
+      - name: Combat2 PVE handoff regression
+        run: node tools/verify-combat2-pve-handoff.mjs
+
+      - name: Player Test Readiness regression
+        run: node tools/verify-player-test-readiness.mjs
+
+      - name: Combat final and Boss regression
+        run: node tools/powder-combat-final-contract-v2164.mjs
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Static ownership and diff audit
+        run: |
+          git diff --check
+          grep -Fq "sourceContext:{kind:'adventure',stage:clone(stage),stageId:String(stage?.id||''),authorityMode}" js/combat-entry-v177.js
+          grep -Fq 'POWDER_COMBAT_RESULT_PRESENTATION_V2=Object.freeze({playerResultRows,selectBattleMvp})' js/combat-entry-v177.js
+          grep -Fq "readFinalCombatReceipt(result.value.battleId)" js/combat-entry-v177.js
+          grep -Fq "applyOfflineCombatAcademicOutcome" js/combat-result-controller-v1.js
+          grep -Fq "applyOfflineBattleReward" js/combat-result-controller-v1.js
+          grep -Fq "applyOfflineAdventureVictory" js/combat-result-controller-v1.js
+          grep -Fq "const presented = (window as any).POWDER_COMBAT_RESULT_CONTROLLER_V1?.present?.() === true" src/game/combat2/scenes/BattleScene.ts
+          ! grep -Eq '<script[^>]+app\.js' combat2.html
+
+      - name: Commit validated implementation
+        run: |
+          git config user.name "QuangThai2002"
+          git config user.email "134858800+QuangThai2002@users.noreply.github.com"
+          git rm .github/workflows/task-final-combat-result-executor.yml tools/task-final-combat-result-executor.mjs
+          actual="$(git status --short | sed -E 's/^.. //' | sort)"
+          expected=$'.github/workflows/task-final-combat-result-executor.yml\ncombat2.html\njs/boot-loader-v21004.js\njs/combat-entry-v177.js\njs/combat-result-controller-v1.js\nsrc/game/combat2/scenes/BattleScene.ts\ntools/task-final-combat-result-executor.mjs\ntools/verify-combat-result-final-flow-v1.mjs'
+          printf 'Final commit scope:\n%s\n' "$actual"
+          test "$actual" = "$expected"
+          git add -A
+          git diff --cached --check
+          git commit -m "feat(combat2): finalize offline pve result settlement flow"
+          git push origin HEAD:work/adventure-combat-entry-user-test-v1
