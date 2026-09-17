@@ -100,6 +100,7 @@ export class BattleScene extends Phaser.Scene {
   private resultOverlay: Phaser.GameObjects.Container | null = null;
   private battleStartedAt = 0;
   private turnCount = 0;
+  private readonly deployedPlayerUnits = new Set<string>();
   private readonly battleContributions = new Map<string, { damageDealt: number; damageTaken: number; healingDone: number; shieldDone: number; shieldAbsorbed: number }>();
   private actionBanner: Phaser.GameObjects.Text | null = null;
   private academicQuestions: AcademicCombatQuestion[] = [];
@@ -183,6 +184,8 @@ export class BattleScene extends Phaser.Scene {
       bossContext: this.handoffRequest?.bossContext,
       ...bootstrapOptions
     });
+    this.deployedPlayerUnits.clear();
+    for (const unit of this.combatState.units) if (unit.side === 'player' && unit.fieldSlot !== null) this.deployedPlayerUnits.add(unit.instanceId);
     this.passiveEngine.initializeBattle(this.combatState.units);
     this.turnManager = new TurnManager(this.combatState);
     this.bossMode = BossModeController.from(this.combatState, this.turnManager);
@@ -843,6 +846,7 @@ export class BattleScene extends Phaser.Scene {
       const defeatedView = this.powViews.get(promotion.defeatedUnitId);
       const promotedView = this.powViews.get(promotion.promotedUnitId);
       const promoted = this.combatState.getUnit(promotion.promotedUnitId);
+      if (promotion.side === 'player' && promoted) this.deployedPlayerUnits.add(promoted.instanceId);
       const field = this.activePosition(promotion.side, promotion.fieldSlot);
       if (defeatedView) { await defeatedView.retireFromField(defeatedView.getWorldPosition().x, promotion.side === 'enemy' ? -120 : this.scale.height + 120); defeatedView.container.setVisible(false); }
       if (promotedView && promoted) { await promotedView.enterField(field.x, field.y); promotedView.updateRuntime(promoted); this.turnManager.registerPromoted(promoted.instanceId); this.showFloatingLabel(promotedView, 'DỰ BỊ VÀO SÂN', '#7ce8ff'); }
@@ -1002,6 +1006,7 @@ export class BattleScene extends Phaser.Scene {
   private battleSummary(): Record<string, unknown> {
     const players = this.combatState.units.filter(unit => unit.side === 'player').map(unit => ({
       powId: unit.pow.id,
+      deployed: this.deployedPlayerUnits.has(unit.instanceId),
       ...this.battleContribution(unit),
       survived: unit.alive
     }));

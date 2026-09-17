@@ -11,7 +11,7 @@ function journalKey(base){return `${base}_combat_academic_journal_v1`}
 function txKey(base){return `${base}_combat_academic_tx_v1`}
 function journal(base){const records=parsed(read(journalKey(base)))?.records;return Array.isArray(records)?records.filter(row=>row&&typeof row==='object').slice(-LIMIT):[]}
 function saveJournal(base,records){return write(journalKey(base),{version:1,records:records.slice(-LIMIT)})}
-function receipt(record,snapshot,duplicate=false,stale=false){return{ok:true,duplicate,stale,battleId:record.battleId,battleCreatedAt:record.battleCreatedAt,applied:clone(record.applied)||{responses:0,correct:0,wrong:0},powGrowth:clone(record.powGrowth)||{totalExp:0,byPow:{}},appliedAt:record.appliedAt||0,snapshot:clone(snapshot)}}
+function receipt(record,snapshot,duplicate=false,stale=false){return{ok:true,duplicate,stale,battleId:record.battleId,battleCreatedAt:record.battleCreatedAt,stageId:record.stageId||null,powExpEnabled:record.powExpEnabled!==false,applied:clone(record.applied)||{responses:0,correct:0,wrong:0},powGrowth:clone(record.powGrowth)||{totalExp:0,byPow:{}},appliedAt:record.appliedAt||0,snapshot:clone(snapshot)}}
 function hasApplied(snapshot,tx){const marker=snapshot?.saveMeta?.lastCombatAcademicTx;return marker?.version===1&&marker.battleId===tx?.battleId&&marker.transactionId===tx?.transactionId}
 function reconcile(base,snapshot){const raw=read(txKey(base));if(!raw)return null;const tx=parsed(raw);if(!tx?.battleId||!tx.transactionId)return{state:'ambiguous',tx};const records=journal(base),committed=records.find(row=>row.battleId===tx.battleId&&row.state==='committed');if(committed){remove(txKey(base));return{state:'committed',record:committed}}
 if(!hasApplied(snapshot,tx))return{state:'ambiguous',tx};
@@ -23,11 +23,12 @@ function staleReceipt(battleId,battleCreatedAt,snapshot){return receipt({battleI
 function validateResponses(responses,allowed){if(!Array.isArray(responses)||!responses.length||!Array.isArray(allowed)||!allowed.length)return{ok:false,reason:'invalid-academic-responses'};const pool=new Map();for(const raw of allowed){const id=String(raw?.id||'').trim();if(id&&raw&&typeof raw==='object'&&!pool.has(id))pool.set(id,clone(raw))}const seen=new Set(),out=[];for(const raw of responses){const id=String(raw?.question?.id||'').trim();if(!id||!pool.has(id))return{ok:false,reason:'academic-question-not-allowed'};if(seen.has(id))return{ok:false,reason:'duplicate-academic-question'};if(typeof raw?.correct!=='boolean'||typeof raw?.powId!=='string'||raw.powId.length>160)return{ok:false,reason:'invalid-academic-response'};seen.add(id);out.push({powId:raw.powId.trim(),correct:raw.correct,question:pool.get(id)})}return{ok:true,responses:out}}
 function applyOfflineCombatAcademicOutcome(input={}){
 if(input.authorityMode!=='offline')return{ok:false,reason:'server-authority-required'};
-const base=key(),battleId=String(input.battleId||'').trim(),createdAt=input.battleCreatedAt;
+const base=key(),battleId=String(input.battleId||'').trim(),createdAt=input.battleCreatedAt,stageId=String(input.stageId||'').trim();
 if(!base||!storage())return{ok:false,reason:'academic-storage-unavailable'};
 if(!/^[A-Za-z0-9._:-]{1,160}$/.test(battleId))return{ok:false,reason:'invalid-battle-id'};
-const player=root.POWDER_PLAYER_STATE_AUTHORITY_V1,engine=root.POWDER_ENGINE,learning=root.POWDER_LEARNING_MASTER_V2,growth=root.POWDER_GROWTH_V143,data=root.POWDER_DATA;
-if(typeof player?.loadSnapshot!=='function'||typeof player?.atomicCommit!=='function'||typeof engine?.recordQuestionResult!=='function'||typeof learning?.recordQuestionMastery!=='function'||typeof growth?.combatExp!=='function'||typeof growth?.addPowExperience!=='function'||!Array.isArray(data?.pows))return{ok:false,reason:'academic-dependency-unavailable'};
+const player=root.POWDER_PLAYER_STATE_AUTHORITY_V1,engine=root.POWDER_ENGINE,learning=root.POWDER_LEARNING_MASTER_V2,growth=root.POWDER_GROWTH_V143,data=root.POWDER_DATA,adventure=root.POWDER_ADVENTURE_DATA,rules=root.POWDER_ADVENTURE_RULES_V1;
+if(typeof player?.loadSnapshot!=='function'||typeof player?.atomicCommit!=='function'||typeof engine?.recordQuestionResult!=='function'||typeof learning?.recordQuestionMastery!=='function'||typeof growth?.combatExp!=='function'||typeof growth?.addPowExperience!=='function'||!Array.isArray(data?.pows)||typeof adventure?.stageById!=='function'||typeof rules?.powExpEnabled!=='function')return{ok:false,reason:'academic-dependency-unavailable'};
+const stage=adventure.stageById(stageId);if(!stage)return{ok:false,reason:'invalid-adventure-stage'};const allowPowExp=rules.powExpEnabled(stage);
 const loaded=player.loadSnapshot({storageKey:base});if(!loaded?.ok)return{ok:false,reason:loaded?.reason||'player-load-failed'};
 const persisted=loaded.snapshot,provided=input.snapshot&&typeof input.snapshot==='object'?clone(input.snapshot):null;
 const diskBoundary=boundary(persisted),ramBoundary=boundary(provided);
@@ -50,11 +51,11 @@ const next=clone(source),owned=next.owned&&typeof next.owned==='object'?next.own
 next.battleMistakes=Array.isArray(next.battleMistakes)?next.battleMistakes:[];
 const applied={responses:checked.responses.length,correct:0,wrong:0},powGrowth={totalExp:0,byPow:{}};
 function grow(id,amount){const result=growth.addPowExperience(known.get(id),owned[id],amount);if(!result.gained&&!result.levels)return;const row=powGrowth.byPow[id]||{gained:0,levels:0,level:result.level};row.gained+=result.gained;row.levels+=result.levels;row.level=result.level;powGrowth.byPow[id]=row;powGrowth.totalExp+=result.gained}
-for(const response of checked.responses){const q=response.question;engine.recordQuestionResult(next,q,response.correct);learning.recordQuestionMastery(next,q,response.correct);if(!response.correct){applied.wrong++;next.battleMistakes.push(q.id);continue}applied.correct++;const primary=owned[response.powId]?response.powId:(owned[next.activePowId]?next.activePowId:(next.team||[]).find(id=>owned[id]));if(!primary||!known.has(primary))continue;const gain=growth.combatExp(next.rank);grow(primary,gain.primary);for(const id of next.team||[])if(id!==primary&&owned[id])grow(id,gain.team)}
+for(const response of checked.responses){const q=response.question;engine.recordQuestionResult(next,q,response.correct);learning.recordQuestionMastery(next,q,response.correct);if(!response.correct){applied.wrong++;next.battleMistakes.push(q.id);continue}applied.correct++;if(!allowPowExp)continue;const primary=owned[response.powId]?response.powId:(owned[next.activePowId]?next.activePowId:(next.team||[]).find(id=>owned[id]));if(!primary||!known.has(primary))continue;const gain=growth.combatExp(next.rank);grow(primary,gain.primary);for(const id of next.team||[])if(id!==primary&&owned[id])grow(id,gain.team)}
 learning.normalizeSave?.(next);next.mastery=learning.averageMastery?.(next)||0;
 const appliedAt=Date.now(),transactionId=`combat-academic:${battleId}:${appliedAt}:${Math.random().toString(36).slice(2)}`;
 next.saveMeta={...(next.saveMeta||{}),lastSavedAt:appliedAt,lastReason:'combat-academic-authority',lastCombatAcademicTx:{version:1,battleId,transactionId,appliedAt},combatAcademicBoundary:{version:1,battleCreatedAt:createdAt,battleId,settledAt:appliedAt}};
-const record={version:1,transactionId,battleId,battleCreatedAt:createdAt,applied,powGrowth,appliedAt,state:'pending'};
+const record={version:1,transactionId,battleId,battleCreatedAt:createdAt,stageId:stage.id,powExpEnabled:allowPowExp,applied,powGrowth,appliedAt,state:'pending'};
 if(!write(txKey(base),record))return{ok:false,reason:'academic-transaction-write-failed'};
 if(!saveJournal(base,[...journal(base).filter(row=>row.battleId!==battleId),record])){remove(txKey(base));return{ok:false,reason:'academic-journal-pending-write-failed'}}
 const commit=player.atomicCommit(next,{storageKey:base});if(!commit?.ok){const rows=journal(base);saveJournal(base,rows.filter(row=>row.battleId!==battleId));remove(txKey(base));return{ok:false,reason:commit?.reason||'academic-player-save-failed'}}
@@ -62,5 +63,5 @@ const committedRecord={...record,state:'committed'};if(saveJournal(base,[...jour
 return receipt(committedRecord,commit.snapshot,false)
 }
 function readCombatAcademicReceipt(battleId){const base=key(),loaded=root.POWDER_PLAYER_STATE_AUTHORITY_V1?.loadSnapshot?.({storageKey:base});if(!base||!loaded?.ok)return null;const recovery=reconcile(base,loaded.snapshot),record=journal(base).find(row=>row.battleId===battleId&&row.state==='committed')||(recovery?.record?.battleId===battleId?recovery.record:null);return record?receipt(record,loaded.snapshot,true):null}
-root.POWDER_COMBAT_ACADEMIC_AUTHORITY_V1={version:'1.0.0',applyOfflineCombatAcademicOutcome,readCombatAcademicReceipt};
+root.POWDER_COMBAT_ACADEMIC_AUTHORITY_V1={version:'1.1.0-phase1',applyOfflineCombatAcademicOutcome,readCombatAcademicReceipt};
 })();

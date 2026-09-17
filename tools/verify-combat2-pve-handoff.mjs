@@ -253,6 +253,7 @@ function createRuntime() {
       sanitizeStage: (stage) => plain(stage),
       containsHiddenPow: () => false,
     },
+    POWDER_ADVENTURE_DATA: { stageById: (id) => String(id) === '1-1' ? { ...onboardingStage(), entryPolicy: { minimumTeamSize: 1 } } : String(id) === 'island-1-stage-1' ? { ...stage(), entryPolicy: { minimumTeamSize: 3 } } : null },
     POWDER_POWER_CURVE_V8: { enemyGradeBase: 1.35 },
     POWDER_ENGINE: { createCombatant: (pow, owned = {}, options = {}) => {
       const scale = Math.max(0.1, Number(options.scale) || 1);
@@ -429,6 +430,7 @@ async function main() {
   assert.equal(storyMechanic.controller.snapshot().pending, 'cleanse', 'Story Boss must arm its cleanse response window');
   storyMechanic.controller.beforeEnemyAction(storyMechanic.boss);
   assert.equal(storyMechanic.player.speedDebuffActionsRemaining, 2, 'Story Boss suppression preserves slow timing without a Rage gain');
+  runtime.saveState.team = ['hero-1', 'hero-2', 'hero-3'];
   const launched = entry.startMap(stage());
   assert.equal(launched, true, 'canRunPvePilot must launch Combat2 for an eligible offline PvE request');
   assert.equal(runtime.window.location.pathname, '/combat2.html', 'Main entry must navigate to Combat2');
@@ -454,7 +456,7 @@ async function main() {
   assert.equal(request.value.academicContext.authority, 'main-learning');
   assert.equal(request.value.academicContext.allowedQuestionPool.length, 2, 'snapshot must exclude ineligible questions');
   assert.equal(request.value.rosterContext.source, 'legacy-pve-boundary', 'PvE must snapshot final stats before Combat2 boot');
-  assert.equal(request.value.rosterContext.playerRoster.length, 1, 'PvE player snapshot must match the selected team');
+  assert.equal(request.value.rosterContext.playerRoster.length, 3, 'PvE player snapshot must match the canonical minimum team');
   assert.equal(request.value.rosterContext.enemyRoster.length, 1, 'PvE enemy snapshot must match the stage roster');
   const pvePlayerRow = request.value.rosterContext.playerRoster[0];
   const pveEnemyRow = request.value.rosterContext.enemyRoster[0];
@@ -484,6 +486,7 @@ async function main() {
   const result = contract.createCombat2BattleResult(request.value, {
     result: 'victory',
     survivingState: { player: [{ id: 'hero-1', hp: 100 }], enemy: [], round: 2 },
+    battleSummary: { turnCount: 4, roundCount: 2, players: [{ powId: 'hero-1', deployed: true, survived: true }] },
     academicResponses: [
       { question: eligibleQuestions[0], correct: true, powId: 'hero-1' },
       { question: eligibleQuestions[1], correct: false, powId: 'hero-1' }
@@ -514,7 +517,11 @@ async function main() {
   assert.equal(runtime.adventureResults[0].battleId, result.battleId);
   assert.equal(runtime.adventureResults[0].battleCreatedAt, request.value.createdAt);
   assert.equal(runtime.adventureResults[0].stageId, 'island-1-stage-1');
-  assert.deepEqual(plain(runtime.adventureResults[0].battleSummary.players), [{ knowledgeActions: 2, knowledgeSum: 1 }]);
+  assert.equal(runtime.adventureResults[0].battleSummary.roundCount, 2);
+  assert.deepEqual(plain(runtime.adventureResults[0].battleSummary.players), [{ powId: 'hero-1', deployed: true, survived: true }]);
+  assert.deepEqual(plain(runtime.adventureResults[0].learningSummary.players), [{ knowledgeActions: 2, knowledgeSum: 1 }]);
+  assert.deepEqual(plain(runtime.adventureResults[0].playerTeam), ['hero-1', 'hero-2', 'hero-3']);
+  assert.equal(runtime.learning[0].stageId, 'island-1-stage-1');
   assert.deepEqual(runtime.shownViews, [], 'result screen must precede Adventure return');
   handoff.continueBattleResult(result);
   assert.deepEqual(runtime.shownViews, ['adventure']);

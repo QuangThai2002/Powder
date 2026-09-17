@@ -26,8 +26,8 @@ function boot(storage,initial=state()){
   return{api:window.POWDER_ADVENTURE_PROGRESSION_AUTHORITY_V1,rules:window.POWDER_ADVENTURE_RULES_V1,data:window.POWDER_ADVENTURE_DATA,player,storage,commits:()=>commits}
 }
 function persisted(storage){return JSON.parse(storage.getItem(KEY))}
-function summary(correct=0,total=1){return{players:[{knowledgeActions:total,knowledgeSum:correct}]}}
-function apply(env,battleId,at,stageId='1-1',mastery=100,combat=summary(),extra={}){return env.api.applyOfflineAdventureVictory({authorityMode:'offline',snapshot:persisted(env.storage),battleId,battleCreatedAt:at,stageId,gateMastery:mastery,battleSummary:combat,result:'victory',...extra})}
+function summary(correct=0,total=1,roundCount=12,survivors=['hero-1'],deployed=['hero-1']){const ids=['hero-1','hero-2','hero-3'];return{roundCount,players:ids.map(id=>({powId:id,deployed:deployed.includes(id),survived:survivors.includes(id),knowledgeActions:id==='hero-1'?total:0,knowledgeSum:id==='hero-1'?correct:0}))}}
+function apply(env,battleId,at,stageId='1-1',mastery=100,combat=summary(),extra={}){const playerTeam=stageId==='1-1'?['hero-1']:['hero-1','hero-2','hero-3'];return env.api.applyOfflineAdventureVictory({authorityMode:'offline',snapshot:persisted(env.storage),battleId,battleCreatedAt:at,stageId,gateMastery:mastery,playerTeam,battleSummary:combat,learningSummary:{players:[{knowledgeActions:1,knowledgeSum:0}]},result:'victory',...extra})}
 function unchanged(storage,before){assert.equal(storage.getItem(KEY),before)}
 function unlockedState(stage,env){const next=state();next.adventure.islandsUnlocked=stage.islandId;next.adventure.currentIsland=stage.islandId;next.adventure.currentStage=stage.number;
   if(stage.number>1)next.adventure.stageWins[`${stage.islandId}-${stage.number-1}`]=true;return next}
@@ -38,7 +38,7 @@ function unlockedState(stage,env){const next=state();next.adventure.islandsUnloc
   assert.equal(rules.stageUnlocked('1-1',progress),true);assert.equal(rules.stageUnlocked('1-2',progress),false);
   assert.equal(rules.isFreeCombatOnboarding('1-1'),true);assert.equal(rules.isFreeCombatOnboarding('1-2'),false);
   assert.equal(rules.nextStage('1-1').id,'1-2');assert.equal(rules.areaCompleted('1-1'),false);
-  const a=apply(env,'opening-A',1000,'1-1',100,summary(1,1));
+  const a=apply(env,'opening-A',1000,'1-1',100,summary(1,1,9,['hero-1'],['hero-1']));
   assert.equal(a.ok,true);assert.equal(a.duplicate,false);assert.equal(env.commits(),1);
   assert.equal(a.snapshot.adventure.stageWins['1-1'],true);assert.equal(a.snapshot.adventure.stageStars['1-1'],3);
   assert.equal(a.snapshot.adventure.currentIsland,1);assert.equal(a.snapshot.adventure.currentStage,2);
@@ -46,13 +46,13 @@ function unlockedState(stage,env){const next=state();next.adventure.islandsUnloc
   assert.equal(a.snapshot.adventure.totalStars,3);assert.equal(a.snapshot.coins,500);
   const before=env.storage.getItem(KEY),dup=apply(env,'opening-A',1000);assert.equal(dup.duplicate,true);unchanged(env.storage,before);assert.equal(env.commits(),1);
   const reload=boot(env.storage),again=apply(reload,'opening-A',1000);assert.equal(again.duplicate,true);assert.equal(reload.commits(),0);
-  const replay=apply(env,'opening-B',1001,'1-1',0,summary(0,1));assert.equal(replay.ok,true);assert.equal(replay.duplicate,false);
+  const replay=apply(env,'opening-B',1001,'1-1',0,summary(0,1,12,[],['hero-1']));assert.equal(replay.ok,true);assert.equal(replay.duplicate,false);
   assert.equal(replay.starsAwarded,1);assert.equal(replay.stageStars,3,'best stars must never decrease');
 }
 {
-  const env=boot(new Storage());const one=apply(env,'one-star',1000,'1-1',0,summary(0,1));assert.equal(one.starsAwarded,1);
-  const two=apply(env,'two-star',1001,'1-1',90,summary(0,1));assert.equal(two.starsAwarded,2);
-  const three=apply(env,'three-star',1002,'1-1',90,summary(95,100));assert.equal(three.starsAwarded,3);
+  const env=boot(new Storage());const one=apply(env,'one-star',1000,'1-1',0,summary(0,1,12,[],['hero-1']));assert.equal(one.starsAwarded,1);
+  const two=apply(env,'two-star',1001,'1-1',90,summary(0,1,9,[],['hero-1']));assert.equal(two.starsAwarded,2);
+  const three=apply(env,'three-star',1002,'1-1',0,summary(0,1,9,['hero-1'],['hero-1']));assert.equal(three.starsAwarded,3);
   assert.equal(three.snapshot.adventure.stageStars['1-1'],3);
 }
 {

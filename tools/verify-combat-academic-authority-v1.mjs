@@ -20,7 +20,7 @@ function save(){return{saveVersion:15,coins:500,rank:0,owned:{'hero-1':{stars:1,
 function boot(storage,initial=save()){
   if(!storage.getItem(KEY))storage.setItem(KEY,JSON.stringify(initial));
   const data={pows:[{id:'hero-1'},{id:'hero-2'}],lessons:[{id:'lesson-a',language:'ZH',rank:0,difficulty:'standard',questions,vocabulary:[]}],questions:questions.map(q=>({...q}))};
-  const window={POWDER_CONFIG:{storageKey:KEY},POWDER_DATA:data,localStorage:storage};
+  const window={POWDER_CONFIG:{storageKey:KEY},POWDER_DATA:data,POWDER_ADVENTURE_DATA:{stageById:id=>String(id)==='1-1'?{id:'1-1',growthPolicy:{powExpEnabled:false}}:String(id)==='1-2'?{id:'1-2',growthPolicy:{powExpEnabled:true}}:null},POWDER_ADVENTURE_RULES_V1:{powExpEnabled:stage=>stage?.growthPolicy?.powExpEnabled!==false},localStorage:storage};
   const ctx=vm.createContext({window,globalThis:window,console,JSON,Map,Set,Date,Number,String,Array,Object,Math,RegExp,Error});
   for(const file of ['js/pow-growth-v143.js','js/game-engine.js','js/learning-master-v2.js','js/player-state-authority-v1.js','js/combat-academic-authority-v1.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),ctx,{filename:file});
   let commits=0;const player=window.POWDER_PLAYER_STATE_AUTHORITY_V1,atomic=player.atomicCommit;player.atomicCommit=(...args)=>{commits++;return atomic(...args)};
@@ -28,7 +28,7 @@ function boot(storage,initial=save()){
 }
 function persisted(storage){return JSON.parse(storage.getItem(KEY))}
 function response(id,correct,powId='hero-1'){return{question:{id},correct,powId}}
-function apply(env,id,at,responses,extra={}){return env.api.applyOfflineCombatAcademicOutcome({authorityMode:'offline',snapshot:persisted(env.storage),battleId:id,battleCreatedAt:at,responses,allowedQuestionPool:questions,...extra})}
+function apply(env,id,at,responses,extra={}){return env.api.applyOfflineCombatAcademicOutcome({authorityMode:'offline',snapshot:persisted(env.storage),battleId:id,battleCreatedAt:at,stageId:'1-2',responses,allowedQuestionPool:questions,...extra})}
 function unchanged(storage,before){assert.equal(storage.getItem(KEY),before)}
 
 // Actual Engine, Learning Master and Growth modules run in this harness.
